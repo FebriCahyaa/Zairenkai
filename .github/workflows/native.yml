@@ -9,26 +9,21 @@ on:
     paths: ["kernel/**", "userspace/**", "tests/**", "rust/**"]
   workflow_dispatch:
 
+# Keep only the newest run per ref; lighten the hosted-runner load.
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  rust:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build + test zkfc-sys (libc)
-        working-directory: rust
-        run: |
-          cargo build --release --locked || cargo build --release
-          cargo test
-
-
+  # Jobs are chained with `needs:` so at most one runs at a time. This fits a
+  # small concurrent-runner budget (they queue one after another instead of
+  # all at once).
   crypto:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
-        run: |
-          sudo apt-get update -q
-          python3 -m pip install --quiet cryptography
+        run: python3 -m pip install --quiet cryptography
       - name: Generate vectors
         run: python3 tests/crypto/gen_vectors.py /tmp/vectors.txt
       - name: Build + run crypto tests (ASan/UBSan)
@@ -38,31 +33,8 @@ jobs:
             kernel/crypto/zk_sha512.c kernel/crypto/zk_ed25519.c -o /tmp/crypto_test
           /tmp/crypto_test /tmp/vectors.txt
 
-  userspace:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        abi: [aarch64-linux-android, x86_64-linux-android]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Android NDK
-        uses: nttld/setup-ndk@v1
-        id: ndk
-        with:
-          ndk-version: r27
-      - name: Build zkfctl (${{ matrix.abi }})
-        run: |
-          CC="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.abi }}31-clang"
-          "$CC" -std=c11 -Wall -Wextra -Werror -O2 -fstack-protector-strong -fPIE -pie \
-            -I kernel/include/uapi -I userspace/include -I userspace/lib \
-            userspace/lib/*.c userspace/zkfctl/main.c -o zkfctl-${{ matrix.abi }}
-          file zkfctl-${{ matrix.abi }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: zkfctl-${{ matrix.abi }}
-          path: zkfctl-${{ matrix.abi }}
-
   module-compile:
+    needs: crypto
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,3 +47,40 @@ jobs:
         run: |
           make -C kernel KDIR="/lib/modules/$(uname -r)/build" modules
           file kernel/zkfc.ko
+
+  userspace:
+    needs: module-compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r27
+      - name: Build zkfctl (arm64 + x86_64)
+        run: |
+          TC="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          for triple in aarch64-linux-android x86_64-linux-android; do
+            "$TC/${triple}31-clang" -std=c11 -Wall -Wextra -Werror -O2 \
+              -fstack-protector-strong -fPIE -pie \
+              -I kernel/include/uapi -I userspace/include -I userspace/lib \
+              userspace/lib/*.c userspace/zkfctl/main.c -o "zkfctl-$triple"
+            file "zkfctl-$triple"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zkfctl
+          path: zkfctl-*
+          if-no-files-found: error
+
+  rust:
+    needs: userspace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + test zkfc-sys (libc)
+        working-directory: rust
+        run: |
+          cargo build --release --locked || cargo build --release
+          cargo test
