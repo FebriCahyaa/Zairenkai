@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+[workspace]
+resolver = "2"
+members = ["zkfc-sys"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+panic = "abort"

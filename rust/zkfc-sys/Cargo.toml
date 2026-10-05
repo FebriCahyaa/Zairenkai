@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+[package]
+name = "zkfc-sys"
+version = "1.0.0"
+edition = "2021"
+license = "LicenseRef-Zairenkai-Proprietary"
+description = "Rust FFI bindings to the Zairenkai Kernel Framework Core (/dev/zkfc)"
+authors = ["FebriCahyaa"]
+repository = "https://github.com/FebriCahyaa/Zairenkai"
+
+[dependencies]
+# Raw system bindings: https://github.com/rust-lang/libc
+libc = "0.2"
+
+[[bin]]
+name = "zkfc-info"
+path = "src/bin/zkfc_info.rs"

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <color name="zk_splash_bg">#0E0E16</color>
+    <color name="zk_indigo">#5B5BF0</color>
+    <color name="ic_launcher_background">#0E0E16</color>
+</resources>

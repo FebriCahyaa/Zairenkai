@@ -12,6 +12,7 @@ obj-$(CONFIG_ZKFC) += zkfc.o
 zkfc-y := core/zkfc_main.o \
 	  core/zkfc_log.o \
 	  core/zkfc_policy.o \
+	  core/zkfc_notify.o \
 	  hooks/zkfc_hooks.o \
 	  hooks/zkfc_kprobes.o \
 	  hooks/zkfc_sulog.o \

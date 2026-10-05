@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# ZKFC GKI defconfig fragment. Merge into a device's vendor defconfig:
+#   scripts/kconfig/merge_config.sh -m <defconfig> kernel/gki/zkfc_gki.fragment
+# ZKFC ships as a vendor module on GKI, so it is =m. The GKI core kernel is
+# never modified; only this vendor module is added.
+CONFIG_ZKFC=m
+CONFIG_ZKFC_HOOK_HYBRID=y
+# KPROBES is part of the GKI KMI on all supported branches.
+CONFIG_KPROBES=y

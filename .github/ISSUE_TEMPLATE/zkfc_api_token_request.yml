@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+name: ZKFC API Token request
+description: Request a ZKFC API Token to unlock Zairenkai performance features on your kernel.
+title: "[ZKFC Token] <your kernel / device>"
+labels: ["zkfc-token"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ZKFC API Tokens are issued **only by the owner**, individually.
+        See docs/security/API_TOKENS.md. Do not share private keys here.
+  - type: input
+    id: who
+    attributes:
+      label: Who are you / project
+      description: Name or kernel project this token is for.
+    validations: { required: true }
+  - type: input
+    id: tag
+    attributes:
+      label: Kernel tag (CONFIG_ZKFC_LICENSEE_TAG)
+      placeholder: e.g. acme-sm8250
+    validations: { required: true }
+  - type: dropdown
+    id: use
+    attributes:
+      label: Intended use
+      options: [Personal, Open-source kernel, Commercial]
+    validations: { required: true }
+  - type: dropdown
+    id: kmi
+    attributes:
+      label: GKI KMI branch (or "non-GKI")
+      options:
+        - android12-5.10
+        - android13-5.10
+        - android13-5.15
+        - android14-5.15
+        - android14-6.1
+        - android15-6.6
+        - android16-6.12
+        - android17-6.18
+        - non-GKI
+    validations: { required: true }
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else

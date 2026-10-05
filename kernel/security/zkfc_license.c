@@ -18,6 +18,7 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/string.h>
+#include <linux/jiffies.h>
 #include <linux/timekeeping.h>
 
 #include "../zkfc.h"
@@ -199,11 +200,28 @@ void zkfc_license_status(struct zkfc_license_status *st)
 	mutex_unlock(&zkfc_lic_mutex);
 }
 
+/*
+ * Anti-brute-force: a token's signature is unforgeable, but we still cap the
+ * rate of rejected installs so a process cannot spin on the verifier. After
+ * ZKFC_LIC_FAIL_MAX rejects we refuse further attempts for a cooldown; a valid
+ * install clears the counter. Held under zkfc_lic_mutex.
+ */
+#define ZKFC_LIC_FAIL_MAX 8
+#define ZKFC_LIC_COOLDOWN (30 * HZ)
+static unsigned int zkfc_lic_fails;
+static unsigned long zkfc_lic_cooldown_until;
+
 int zkfc_license_install(const struct zkfc_license_token *tok)
 {
-	u32 state;
+	u32 state = ZKFC_LIC_MALFORMED;
+	bool throttled = false;
 
 	mutex_lock(&zkfc_lic_mutex);
+	if (zkfc_lic_fails >= ZKFC_LIC_FAIL_MAX &&
+	    time_before(jiffies, zkfc_lic_cooldown_until)) {
+		throttled = true;
+		goto out;
+	}
 	state = zkfc_evaluate(tok);
 	/*
 	 * Only replace the active token with one that verifies. A bad token
@@ -212,10 +230,18 @@ int zkfc_license_install(const struct zkfc_license_token *tok)
 	if (state == ZKFC_LIC_VALID) {
 		zkfc_tok = *tok;
 		zkfc_have_tok = true;
+		zkfc_lic_fails = 0;
 		zkfc_commit();
+	} else if (++zkfc_lic_fails >= ZKFC_LIC_FAIL_MAX) {
+		zkfc_lic_cooldown_until = jiffies + ZKFC_LIC_COOLDOWN;
 	}
+out:
 	mutex_unlock(&zkfc_lic_mutex);
 
+	if (throttled) {
+		zkfc_w("API token install throttled (too many rejects)");
+		return -EAGAIN;
+	}
 	if (state == ZKFC_LIC_VALID)
 		zkfc_i("API token %llx installed for '%.32s'",
 		       le64_to_cpu(tok->payload.license_id), tok->payload.licensee);

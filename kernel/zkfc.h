@@ -118,6 +118,11 @@ bool zkfc_kprobes_active(void);
 u32 zkfc_arch_id(void);
 const char *zkfc_arch_name(void);
 
+/* ---- core/zkfc_notify.c ---- */
+int zkfc_notify_init(void);
+void zkfc_notify_exit(void);
+bool zkfc_is_going_down(void);
+
 /* ---- core/zkfc_main.c ---- */
 u32 zkfc_features_available(void);
 

@@ -1,0 +1,15 @@
+#!/sbin/sh
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Generic Magisk/KernelSU/APatch module trampoline.
+umask 022
+OUTFD=$2
+ZIPFILE=$3
+mkdir -p /dev/tmp
+unzip -o "$ZIPFILE" customize.sh -d /dev/tmp >&2
+if [ ! -f /dev/tmp/customize.sh ]; then
+  echo "! Invalid package" >&2
+  exit 1
+fi
+# Defer to Magisk's module installer if present.
+. /dev/tmp/customize.sh 2>/dev/null
+exit 0
