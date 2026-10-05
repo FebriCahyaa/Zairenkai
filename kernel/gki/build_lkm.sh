@@ -24,7 +24,9 @@ ZKFC_SRC="$(dirname "$HERE")"
 MATRIX="$HERE/kmi_matrix.txt"
 ARCH="arm64"
 KERNEL_DIR=""
-OUT="$ZKFC_SRC/out/lkm"
+# Keep output OUTSIDE the module tree: `make clean` removes every *.ko under
+# the module source dir recursively, which would wipe a copy placed in it.
+OUT="$(dirname "$ZKFC_SRC")/out/lkm"
 JOBS="$(nproc)"
 
 info() { printf '\033[1;36m[zkfc-lkm]\033[0m %s\n' "$*"; }
@@ -81,11 +83,13 @@ build_one() {
 	[ -f "$kdir/Module.symvers" ] || die "no Module.symvers in $kdir"
 	mkdir -p "$OUT/$kmi-$ARCH"
 	info "building $tag ($ARCH, kernel $kver, api $api)"
+	# Note: do NOT pass KBUILD_EXTRA_SYMBOLS=$kdir/Module.symvers — kbuild
+	# already consumes the kernel's own symbols; passing it again makes
+	# modpost report every kernel export "exported twice".
 	make -C "$kdir" M="$ZKFC_SRC" \
 		ARCH="$karch" CROSS_COMPILE="$cross" \
 		CONFIG_ZKFC=m CONFIG_ZKFC_HOOK_HYBRID=y \
 		ZKFC_TAG="gki-$kmi" \
-		KBUILD_EXTRA_SYMBOLS="$kdir/Module.symvers" \
 		-j"$JOBS" modules
 
 	cp "$ZKFC_SRC/zkfc.ko" "$OUT/$kmi-$ARCH/zkfc.ko"

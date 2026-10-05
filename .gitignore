@@ -10,3 +10,12 @@ keys/
 build/
 *.o
 *.ko
+
+local.properties
+.gradle/
+app/build/
+build/
+*.apk
+*.keystore
+/out/
+kernel/out/

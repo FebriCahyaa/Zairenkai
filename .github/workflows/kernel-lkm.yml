@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Build ZKFC as a GKI vendor module for one KMI branch (manual trigger; a full
+# GKI build is heavy, so this is dispatch-only and selects a single branch).
+name: GKI LKM
+
+on:
+  workflow_dispatch:
+    inputs:
+      kmi:
+        description: "KMI branch (see kernel/gki/kmi_matrix.txt)"
+        required: true
+        default: "android15-6.6"
+        type: choice
+        options:
+          - android12-5.10
+          - android13-5.10
+          - android13-5.15
+          - android14-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+          - android17-6.18
+      arch:
+        description: "Target architecture"
+        required: true
+        default: "arm64"
+        type: choice
+        options: [arm64, x86_64, riscv64]
+
+jobs:
+  lkm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install repo + build deps
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q bc bison build-essential ccache flex git \
+            libssl-dev libelf-dev
+          mkdir -p ~/bin
+          curl -s https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod +x ~/bin/repo
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+      - name: Build module
+        run: bash kernel/gki/build_lkm.sh "${{ inputs.kmi }}" --arch "${{ inputs.arch }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zkfc-${{ inputs.kmi }}-${{ inputs.arch }}
+          path: kernel/out/lkm/${{ inputs.kmi }}-${{ inputs.arch }}/zkfc.ko
+          if-no-files-found: error

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <style name="Theme.Zairenkai" parent="android:Theme.Material.NoActionBar" />
+</resources>

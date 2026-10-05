@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#5B5BF0"
+        android:pathData="M54,22 L80,37 L80,71 L54,86 L28,71 L28,37 Z" />
+    <path android:fillColor="#00C2B8"
+        android:pathData="M54,34 L69,43 L69,61 L54,70 L39,61 L39,43 Z" />
+    <path android:fillColor="#FFB64A"
+        android:pathData="M54,45 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+</vector>
