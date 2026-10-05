@@ -4,12 +4,23 @@ name: Native (crypto + userspace + module compile)
 on:
   push:
     branches: [main]
-    paths: ["kernel/**", "userspace/**", "tests/**", ".github/workflows/native.yml"]
+    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", ".github/workflows/native.yml"]
   pull_request:
-    paths: ["kernel/**", "userspace/**", "tests/**"]
+    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**"]
   workflow_dispatch:
 
 jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + test zkfc-sys (libc)
+        working-directory: rust
+        run: |
+          cargo build --release --locked || cargo build --release
+          cargo test
+
+
   crypto:
     runs-on: ubuntu-latest
     steps:

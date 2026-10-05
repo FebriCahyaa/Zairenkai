@@ -26,3 +26,5 @@ keystore.properties
 *.gpg
 secring.*
 .kotlin/
+
+/rust/target/
