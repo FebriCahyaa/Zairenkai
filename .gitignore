@@ -19,3 +19,10 @@ build/
 *.keystore
 /out/
 kernel/out/
+
+keystore.properties
+*.jks
+*.p12
+*.gpg
+secring.*
+.kotlin/

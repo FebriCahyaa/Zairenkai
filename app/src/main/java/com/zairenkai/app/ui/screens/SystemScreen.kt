@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.data.SignatureGuard
+import com.zairenkai.app.data.SignatureState
 import com.zairenkai.app.data.ZkfctlClient
 import com.zairenkai.app.ui.SystemViewModel
 import com.zairenkai.app.ui.VmFactory
@@ -55,6 +57,19 @@ fun SystemScreen(factory: VmFactory) {
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val sig = remember { SignatureGuard.check(ctx) }
+            SectionCard("Integritas aplikasi") {
+                val (txt, col) = when (sig) {
+                    SignatureState.OFFICIAL -> "Resmi (tanda tangan cocok)" to ZkGood
+                    SignatureState.MODIFIED -> "Termodifikasi / dikemas ulang" to ZkBad
+                    SignatureState.UNKNOWN -> "Tidak diverifikasi (debug/spoofed)" to ZkWarn
+                }
+                LabeledRow("Status", txt, col)
+                SignatureGuard.currentSha256(ctx)?.let {
+                    LabeledRow("Sidik tanda tangan", it.take(16) + "…")
+                }
+            }
+
             val lic = ui.license
             SectionCard("Lisensi API (ZKFC)") {
                 LabeledRow("Status", lic?.state ?: "—",

@@ -23,8 +23,18 @@ jobs:
       - run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build app (debug)
-        run: ./gradlew :app:assembleDebug --stacktrace
+      - name: Build signed release APK
+        env:
+          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleStandardRelease --stacktrace
+
+      - name: Verify the APK is signed
+        run: |
+          APK=$(find app/build/outputs/apk/standard/release -name '*.apk' | head -1)
+          "$ANDROID_HOME"/build-tools/37.0.0/apksigner verify --verbose "$APK"
 
       - name: Build userspace (arm64 + x86_64)
         run: |
@@ -48,5 +58,5 @@ jobs:
         with:
           files: |
             Zairenkai-module.zip
-            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/standard/release/*.apk
           generate_release_notes: true

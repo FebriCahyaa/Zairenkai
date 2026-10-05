@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+import java.io.FileInputStream
+import java.util.Base64
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -6,6 +9,24 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+/*
+ * Release signing material is NEVER stored in the repo. It comes from either:
+ *   - environment variables (CI secrets): ZK_KEYSTORE_BASE64 or ZK_KEYSTORE_FILE,
+ *     ZK_KEYSTORE_PASSWORD, ZK_KEY_ALIAS, ZK_KEY_PASSWORD; or
+ *   - a local, git-ignored keystore.properties (storeFile/storePassword/keyAlias/keyPassword).
+ * When nothing is provided, the release build is simply left unsigned.
+ */
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) FileInputStream(keystorePropsFile).use { load(it) }
+}
+fun secret(env: String, prop: String): String? =
+    System.getenv(env) ?: keystoreProps.getProperty(prop)
+
+// The spoofed variant only changes the package name; override with
+// -PspoofedAppId=<id>. Default stays within our own namespace.
+val spoofedAppId = (project.findProperty("spoofedAppId") as String?) ?: "com.zairenkai.app.spoofed"
 
 android {
     namespace = "com.zairenkai.app"
@@ -18,6 +39,46 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         vectorDrawables { useSupportLibrary = true }
+        // Expected signer (SHA-256). Empty => self-check reports "unknown" and
+        // never blocks (debug/spoofed). Set for official release below.
+        buildConfigField("String", "EXPECTED_CERT_SHA256", "\"\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            val b64 = System.getenv("ZK_KEYSTORE_BASE64")
+            val ksPath = secret("ZK_KEYSTORE_FILE", "storeFile")
+            when {
+                b64 != null -> {
+                    val out = layout.buildDirectory.file("zk-release.jks").get().asFile
+                    out.parentFile.mkdirs()
+                    out.writeBytes(Base64.getDecoder().decode(b64.trim()))
+                    storeFile = out
+                }
+                ksPath != null -> storeFile = file(ksPath)
+            }
+            storePassword = secret("ZK_KEYSTORE_PASSWORD", "storePassword")
+            keyAlias = secret("ZK_KEY_ALIAS", "keyAlias")
+            keyPassword = secret("ZK_KEY_PASSWORD", "keyPassword")
+            // Strongest APK signature schemes available.
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
+        }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("standard") {
+            dimension = "distribution"
+            isDefault = true
+        }
+        create("spoofed") {
+            dimension = "distribution"
+            applicationId = spoofedAppId
+            versionNameSuffix = "-spoofed"
+        }
     }
 
     buildTypes {
@@ -28,10 +89,19 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Sign only when signing material was actually supplied.
+            val cfg = signingConfigs.getByName("release")
+            signingConfig = if (cfg.storeFile != null && cfg.storePassword != null) cfg else null
+            // SHA-256 of the official Zairenkai release certificate.
+            buildConfigField(
+                "String", "EXPECTED_CERT_SHA256",
+                "\"4A75FAD8658A518BBC29058403B819E6D2D70CB51B5C7892EAC8559759CCDD7D\"",
+            )
         }
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable = true
+            // Debug is auto-signed by Android's debug keystore; no release key needed.
         }
     }
 
@@ -39,7 +109,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }

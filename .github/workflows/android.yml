@@ -34,16 +34,26 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Assemble debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+      # Debug builds are auto-signed with Android's debug key — no release key
+      # needed. assembleDebug builds BOTH flavors: standard and the
+      # spoofed-package variant (different applicationId, for side-by-side).
+      - name: Assemble debug APKs (standard + spoofed)
+        run: ./gradlew :app:assembleStandardDebug :app:assembleSpoofedDebug --stacktrace
 
       - name: Lint
-        run: ./gradlew :app:lintDebug --stacktrace
+        run: ./gradlew :app:lintStandardDebug --stacktrace
         continue-on-error: true
 
-      - name: Upload APK
+      - name: Upload standard debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: zairenkai-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: zairenkai-standard-debug
+          path: app/build/outputs/apk/standard/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload spoofed debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: zairenkai-spoofed-debug
+          path: app/build/outputs/apk/spoofed/debug/*.apk
           if-no-files-found: error
