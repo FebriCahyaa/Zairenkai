@@ -1,0 +1,28 @@
+Zairenkai
+Copyright (C) 2026 FebriCahyaa
+
+This product includes or depends on the following third-party components.
+
+1. TweetNaCl (portions of kernel/crypto/zk_ed25519.c, zk_sha512.c)
+   Daniel J. Bernstein, Bernard van Gastel, Wesley Janssen, Tanja Lange,
+   Peter Schwabe, Sjaak Smetsers.
+   Public domain. https://tweetnacl.cr.yp.to/
+   The Zairenkai version is restructured for verification only, uses a
+   streaming SHA-512, rejects non-canonical signatures (S >= L) and avoids
+   undefined shifts of negative values.
+
+2. Linux kernel interfaces
+   The kernel/ directory is a Linux kernel driver and is licensed under
+   GPL-2.0-only, as required for code that links against the kernel.
+
+3. AndroidX, Jetpack Compose, Material Components (Material 3 Expressive)
+   Copyright The Android Open Source Project.
+   Apache License, Version 2.0. https://www.apache.org/licenses/LICENSE-2.0
+
+4. Kotlin standard library and kotlinx.coroutines
+   Copyright JetBrains s.r.o. and Kotlin Programming Language contributors.
+   Apache License, Version 2.0.
+
+5. Android NDK / Bionic headers
+   Copyright The Android Open Source Project. Apache License, Version 2.0 and
+   BSD-style licenses as noted in the NDK.

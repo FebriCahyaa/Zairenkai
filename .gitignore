@@ -1,0 +1,12 @@
+# Never commit owner keys or issued tokens
+*.pem
+*.key
+*.zkl
+*.zkcrl
+keys/
+.zkfc/
+
+# Build outputs
+build/
+*.o
+*.ko

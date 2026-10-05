@@ -1,0 +1,32 @@
+Zairenkai
+Copyright (C) 2026 FebriCahyaa. All rights reserved.
+
+Zairenkai is made of several components with different licenses. Every source
+file carries an SPDX-License-Identifier header; that header is authoritative.
+
+  Component                                   Path                 License
+  ------------------------------------------- -------------------- ------------------------------------------
+  Zairenkai Android application               app/                 LicenseRef-Zairenkai-Proprietary
+  zkfctl / zkfcd userspace engine             userspace/           LicenseRef-Zairenkai-Proprietary
+  Boot module (Magisk/KernelSU/APatch)        module/              LicenseRef-Zairenkai-Proprietary
+  License tooling                             tools/               LicenseRef-Zairenkai-Proprietary
+  ZKFC kernel framework                       kernel/              GPL-2.0-only
+  ZKFC UAPI headers                           kernel/include/uapi  GPL-2.0 WITH Linux-syscall-note
+  Shared Ed25519/SHA-512 verifier             kernel/crypto/       GPL-2.0-only OR MIT
+  Documentation                               docs/, *.md          LicenseRef-Zairenkai-Proprietary
+
+Full license texts are in the LICENSES/ directory. Third-party notices are in
+NOTICE.
+
+Trademarks
+----------
+"Zairenkai", "ZKFC" (Zairenkai Kernel Framework Core) and the Zairenkai logo
+are names of the Owner. They may not be used to identify unofficial builds,
+forks or derived products without written permission, regardless of the
+license of the underlying code.
+
+ZKFC API Tokens
+---------------
+ZKFC API Tokens are signed by the Owner's private Ed25519 key, which is never
+stored in this repository. Tokens are issued individually and only with the
+Owner's permission. See docs/security/API_TOKENS.md.

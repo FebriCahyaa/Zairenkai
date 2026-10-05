@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Zairenkai Kernel Framework Core (ZKFC)
+# Copyright (C) 2026 FebriCahyaa
+#
+
+menuconfig ZKFC
+	tristate "Zairenkai Kernel Framework Core (ZKFC)"
+	depends on CPU_FREQ && INPUT
+	depends on ARM64 || X86_64 || (RISCV && 64BIT)
+	default n
+	help
+	  Kernel side of the Zairenkai performance manager. Provides
+	  /dev/zkfc with input boost, per-task uclamp boost, cpufreq QoS,
+	  a thermal guard, sulog and integrity reports.
+
+	  Performance features require a ZKFC API Token issued by the
+	  Zairenkai owner. Without a token only the information API works.
+
+	  Say M to build a loadable module (GKI) or Y to build it in.
+
+if ZKFC
+
+choice
+	prompt "ZKFC hook mode"
+	default ZKFC_HOOK_HYBRID
+
+config ZKFC_HOOK_HYBRID
+	bool "Hybrid (kprobes, no source patches)"
+	help
+	  Uses kprobes on stable kernel functions. Works on GKI kernels and on
+	  any kernel with CONFIG_KPROBES=y. If kprobes are missing ZKFC still
+	  loads, but sulog of su execution and boost inheritance are disabled.
+
+config ZKFC_HOOK_MANUAL
+	bool "Manual (patched kernel source)"
+	depends on ZKFC=y
+	help
+	  The kernel source calls ZKFC directly. Use this for kernels without
+	  kprobes and for kernels that are not maintained in the Zairenkai
+	  source tree. Apply the changes described in
+	  hooks/manual/README.md to fs/exec.c and kernel/fork.c.
+
+config ZKFC_HOOK_NONE
+	bool "None (information and tuning API only)"
+
+endchoice
+
+config ZKFC_LICENSEE_TAG
+	string "Kernel binding tag"
+	default ""
+	help
+	  Identifier of this kernel project, e.g. "acme-kernel-sm8250". It is
+	  hashed into the kernel binding; ZKFC API Tokens issued for a tag
+	  only work on kernels built with the same tag. Leave empty only for
+	  tokens issued without a binding.
+
+config ZKFC_FORCE_GKI
+	bool "Report the kernel as GKI"
+	default n
+	help
+	  ZKFC detects GKI kernels from the "-android" release suffix. Select
+	  this if your GKI build uses a custom release string.
+
+config ZKFC_DEBUG
+	bool "Verbose ZKFC logging by default"
+	default n
+
+endif

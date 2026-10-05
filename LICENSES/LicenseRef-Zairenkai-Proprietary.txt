@@ -1,0 +1,103 @@
+ZAIRENKAI PROPRIETARY LICENSE
+Version 1.0, 2026
+
+Copyright (C) 2026 FebriCahyaa. All rights reserved.
+
+This license governs every file in the Zairenkai project that carries the
+SPDX identifier "LicenseRef-Zairenkai-Proprietary", including the Zairenkai
+Android application, the zkfctl/zkfcd userspace programs, the license tooling
+and all associated artwork, names and logos (together, the "Software").
+
+1. DEFINITIONS
+
+   "Owner" means FebriCahyaa, the copyright holder of the Software.
+   "You" means any individual or legal entity exercising rights under this
+   license.
+   "ZKFC API Token" means a license token for the Zairenkai Kernel Framework
+   Core that is cryptographically signed with the Owner's private key.
+   "Written Permission" means a statement from the Owner, in writing (e-mail
+   or a signed document), that names You and the rights granted.
+
+2. PERMITTED USE (NO PERMISSION REQUIRED)
+
+   Subject to the conditions of this license, You may:
+   a) read and study the source code of the Software;
+   b) build the Software from source for Your own personal, non-commercial
+      evaluation on devices You own;
+   c) install and use official binary releases published by the Owner;
+   d) submit contributions back to the official repository under the terms
+      of Section 6.
+
+3. ACTIONS THAT REQUIRE WRITTEN PERMISSION
+
+   You may NOT do any of the following without prior Written Permission from
+   the Owner:
+   a) redistribute the Software, in source or binary form, modified or
+      unmodified, including republishing APKs, modules or ZIP packages;
+   b) publish forks, derivatives, re-brands or "mods" of the Software;
+   c) use the Software, or any part of it, for commercial purposes, including
+      bundling it with paid kernels, ROMs, devices or services;
+   d) obtain, use, generate, share or sell ZKFC API Tokens, or integrate the
+      Zairenkai Kernel Framework Core into a kernel that is distributed to
+      third parties while claiming Zairenkai compatibility;
+   e) remove, bypass, weaken or tamper with license verification, integrity
+      checks, signature checks, revocation checks or access-control policy of
+      the Software;
+   f) use the names "Zairenkai", "ZKFC" or the Zairenkai logo to identify any
+      product or service that is not an official release.
+
+   ZKFC API Tokens are issued only by the Owner, individually, on request.
+   Every token is bound to a named licensee and may be revoked by the Owner
+   at any time if these terms are violated.
+
+4. KERNEL COMPONENTS
+
+   The kernel components located in the "kernel/" directory are NOT covered by
+   this license. They are licensed under the GNU General Public License,
+   version 2 only (see LICENSES/GPL-2.0-only.txt), and the UAPI headers are
+   licensed under GPL-2.0 WITH Linux-syscall-note. Nothing in this license
+   restricts the rights that the GPL grants for those files. Section 3(d) and
+   3(f) still apply to the use of the Zairenkai and ZKFC names and to the
+   ZKFC API Tokens, which are not part of the kernel source code.
+
+5. THIRD-PARTY COMPONENTS
+
+   Third-party components keep their own licenses, as listed in the NOTICE
+   file. This license does not change the terms of those components.
+
+6. CONTRIBUTIONS
+
+   By submitting a contribution (pull request, patch, issue attachment) You
+   confirm that You have the right to do so and You grant the Owner a
+   perpetual, worldwide, royalty-free, irrevocable license to use, modify,
+   sublicense and distribute that contribution as part of the Software under
+   any license. Contributions to "kernel/" are additionally licensed under
+   GPL-2.0-only.
+
+7. TERMINATION
+
+   Any violation of this license terminates Your rights under it
+   automatically. Upon termination You must stop using and distributing the
+   Software and destroy all copies in Your possession. ZKFC API Tokens issued
+   to You may be revoked.
+
+8. NO WARRANTY
+
+   THE SOFTWARE MODIFIES LOW-LEVEL SYSTEM PARAMETERS (CPU, GPU, MEMORY,
+   THERMAL, DISPLAY AND BATTERY SETTINGS) AND REQUIRES ROOT ACCESS. IT IS
+   PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+   A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+
+9. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, INCLUDING DEVICE DAMAGE, DATA LOSS, OVERHEATING, BATTERY
+   DEGRADATION OR VOIDED WARRANTIES, ARISING FROM, OUT OF OR IN CONNECTION
+   WITH THE SOFTWARE OR ITS USE.
+
+10. CONTACT
+
+   Requests for Written Permission or ZKFC API Tokens:
+   https://github.com/FebriCahyaa/Zairenkai (open an issue using the
+   "ZKFC API Token request" template, or contact the Owner directly).
