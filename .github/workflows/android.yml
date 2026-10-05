@@ -27,9 +27,14 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The obsolete 'tools' package no longer exists; default would fail.
+          packages: platform-tools
 
       - name: Install SDK platform 37
-        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
