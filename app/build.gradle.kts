@@ -59,7 +59,10 @@ android {
             }
             storePassword = secret("ZK_KEYSTORE_PASSWORD", "storePassword")
             keyAlias = secret("ZK_KEY_ALIAS", "keyAlias")
+            // PKCS12 keystores protect the key with the store password, so the
+            // key password defaults to the store password when not given.
             keyPassword = secret("ZK_KEY_PASSWORD", "keyPassword")
+                ?: secret("ZK_KEYSTORE_PASSWORD", "storePassword")
             // Strongest APK signature schemes available.
             enableV1Signing = true
             enableV2Signing = true
@@ -95,7 +98,7 @@ android {
             // SHA-256 of the official Zairenkai release certificate.
             buildConfigField(
                 "String", "EXPECTED_CERT_SHA256",
-                "\"4A75FAD8658A518BBC29058403B819E6D2D70CB51B5C7892EAC8559759CCDD7D\"",
+                "\"02B4596737261F5C154CCC323B27467A483034A5880A9DB0822EEED66FAC1944\"",
             )
         }
         debug {
