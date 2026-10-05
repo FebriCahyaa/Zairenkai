@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# ZKFC non-GKI defconfig fragment (legacy / vendor kernels, e.g. MSM, MTK,
+# Exynos). Built-in is recommended on non-GKI so manual hooks are available
+# and the module is present before userspace starts.
+CONFIG_ZKFC=y
+# Pick ONE hook mode:
+CONFIG_ZKFC_HOOK_HYBRID=y
+# CONFIG_ZKFC_HOOK_MANUAL=y   # if the kernel has no kprobes; see hooks/manual/
+CONFIG_KPROBES=y
+CONFIG_UCLAMP_TASK=y
+CONFIG_UCLAMP_TASK_GROUP=y
