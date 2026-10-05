@@ -348,6 +348,7 @@ static int __init zkfc_init(void)
 	zkfc_input_boost_ok = !zkfc_input_boost_init();
 	zkfc_thermal_init();
 	zkfc_hooks_init();
+	zkfc_notify_init();	/* reboot/panic fail-safe */
 
 	ret = misc_register(&zkfc_misc);
 	if (ret) {
@@ -362,6 +363,7 @@ static int __init zkfc_init(void)
 	return 0;
 
 err_perf:
+	zkfc_notify_exit();
 	zkfc_hooks_exit();
 	zkfc_thermal_exit();
 	if (zkfc_input_boost_ok)
@@ -377,6 +379,7 @@ err_policy:
 static void __exit zkfc_exit(void)
 {
 	misc_deregister(&zkfc_misc);
+	zkfc_notify_exit();
 	zkfc_hooks_exit();
 	zkfc_thermal_exit();
 	if (zkfc_input_boost_ok)

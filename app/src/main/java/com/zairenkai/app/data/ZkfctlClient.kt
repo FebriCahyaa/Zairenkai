@@ -107,5 +107,12 @@ class ZkfctlClient {
     suspend fun policy(): PolicyResult =
         json.decodeFromString(raw("policy", false, 6000))
 
+    suspend fun safeStatus(): SafeStatus =
+        json.decodeFromString(raw("safe status", false, 5000))
+
+    suspend fun safeConfirm() {
+        raw("safe confirm", false, 5000)
+    }
+
     private fun shellQuote(s: String) = "'" + s.replace("'", "'\\''") + "'"
 }

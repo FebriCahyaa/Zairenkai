@@ -205,6 +205,13 @@ data class PolicyResult(
 )
 
 @Serializable
+data class SafeStatus(
+    val ok: Boolean = false,
+    @SerialName("safe_mode") val safeMode: Boolean = false,
+    val pending: Long = 0,
+)
+
+@Serializable
 data class BoostStatus(
     val ok: Boolean = false,
     val error: String? = null,

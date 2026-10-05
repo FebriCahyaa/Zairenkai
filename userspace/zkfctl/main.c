@@ -565,6 +565,63 @@ static int cmd_policy(struct zkfc *z, struct zk_json *j)
 	return 0;
 }
 
+/* ---------------------------------------------------------------- safe-mode */
+#define ZKFC_STATE_DIR "/data/adb/zkfc"
+#define ZKFC_PENDING ZKFC_STATE_DIR "/boot_pending"
+#define ZKFC_SAFE ZKFC_STATE_DIR "/safe_mode"
+
+static long read_count(const char *path)
+{
+	FILE *f = fopen(path, "r");
+	long n = 0;
+
+	if (!f)
+		return -1;
+	if (fscanf(f, "%ld", &n) != 1)
+		n = 0;
+	fclose(f);
+	return n;
+}
+
+/*
+ * Boot fail-safe. The module increments boot_pending before applying the boot
+ * profile; the app calls "safe confirm" once it is up, which clears it. If a
+ * boot never confirms (sudden reboot / kernel panic / bootloop), the pending
+ * count climbs and the module stops applying the boot profile — safe mode.
+ */
+static int cmd_safe(struct zk_json *j, int argc, char **argv)
+{
+	const char *sub = argc >= 2 ? argv[1] : "status";
+
+	if (!strcmp(sub, "confirm")) {
+		unlink(ZKFC_PENDING);
+		zj_obj_open(j, NULL);
+		zj_bool(j, "ok", 1);
+		zj_str(j, "action", "confirmed");
+		zj_obj_close(j);
+		zj_finish(j);
+		return 0;
+	}
+	if (!strcmp(sub, "clear")) {
+		unlink(ZKFC_PENDING);
+		unlink(ZKFC_SAFE);
+		zj_obj_open(j, NULL);
+		zj_bool(j, "ok", 1);
+		zj_str(j, "action", "cleared");
+		zj_obj_close(j);
+		zj_finish(j);
+		return 0;
+	}
+	/* status */
+	zj_obj_open(j, NULL);
+	zj_bool(j, "ok", 1);
+	zj_bool(j, "safe_mode", access(ZKFC_SAFE, F_OK) == 0);
+	zj_int(j, "pending", read_count(ZKFC_PENDING));
+	zj_obj_close(j);
+	zj_finish(j);
+	return 0;
+}
+
 static void usage(void)
 {
 	fprintf(stderr,
@@ -604,9 +661,11 @@ int main(int argc, char **argv)
 	cmd = argv[1];
 	argc--; argv++;
 
-	/* Tweaks and monitor work without the module; others need /dev/zkfc. */
+	/* Tweaks, safe-mode and monitor work without the module. */
 	if (!strcmp(cmd, "tweak"))
 		return cmd_tweak(&j, argc, argv, lite);
+	if (!strcmp(cmd, "safe"))
+		return cmd_safe(&j, argc, argv);
 
 	z = zkfc_open(&err);
 	if (!z && strcmp(cmd, "monitor"))

@@ -28,6 +28,7 @@ data class OverviewState(
     val info: InfoResult? = null,
     val license: LicenseResult? = null,
     val boost: BoostStatus? = null,
+    val safeMode: Boolean = false,
     val message: String? = null,
 )
 
@@ -45,10 +46,16 @@ class OverviewViewModel(private val c: AppContainer) : ViewModel() {
                 _state.value = OverviewState(loading = false, rootAvailable = false)
                 return@launch
             }
+            // Read safe-mode BEFORE confirming, then confirm this boot healthy.
+            val safe = runCatching { c.repository.safeStatus() }.getOrNull()
+            runCatching { c.repository.safeConfirm() }
             val info = runCatching { c.repository.info() }.getOrNull()
             val lic = runCatching { c.repository.license() }.getOrNull()
             val boost = runCatching { c.repository.boostStatus() }.getOrNull()
-            _state.value = OverviewState(false, true, info, lic, boost)
+            _state.value = OverviewState(
+                loading = false, rootAvailable = true, info = info, license = lic,
+                boost = boost, safeMode = safe?.safeMode == true,
+            )
         }
     }
 

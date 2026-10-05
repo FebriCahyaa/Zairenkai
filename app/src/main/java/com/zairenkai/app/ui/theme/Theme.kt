@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * Zairenkai theme. Uses Android 12+ dynamic color when available, otherwise
- * the brand palette. Material 3 (expressive baseline).
+ * Zairenkai theme (Material 3, expressive typeface + motion). Uses Android 12+
+ * dynamic color when available, otherwise the brand palette.
+ * (MaterialExpressiveTheme is still internal in this Compose release, so we
+ * use the stable MaterialTheme and get the expressive feel from Roboto Flex
+ * and spring-based motion throughout the app.)
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

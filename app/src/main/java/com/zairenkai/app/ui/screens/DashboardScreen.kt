@@ -66,6 +66,22 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        // Safe-mode banner (last boot(s) crashed / rebooted unexpectedly)
+        if (s.safeMode) {
+            Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.large) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Mode Aman aktif", style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer)
+                    Text(
+                        "Boot sebelumnya gagal/restart mendadak, jadi profil boot tidak diterapkan. " +
+                            "Periksa tweak terakhir sebelum mengaktifkannya lagi.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
+
         // License / API banner
         val apiOutdated = info?.api?.outdated == true || info?.licenseState == "api_outdated"
         if (apiOutdated) {

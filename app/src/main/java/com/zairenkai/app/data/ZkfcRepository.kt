@@ -25,6 +25,8 @@ class ZkfcRepository(val client: ZkfctlClient = ZkfctlClient()) {
     suspend fun sulog(fromSeq: Long) = client.sulog(fromSeq)
     suspend fun policy() = client.policy()
     suspend fun setLogLevel(level: String) = client.logSetLevel(level)
+    suspend fun safeStatus() = client.safeStatus()
+    suspend fun safeConfirm() = client.safeConfirm()
 
     data class ApplyReport(val requested: Int, val applied: Int)
 

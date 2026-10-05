@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "zairenkai")
 
 data class AppSettings(
+    val onboarded: Boolean = false,
     val liteMode: Boolean = false,
     val deviceMitigation: Boolean = false,
     val logLevel: String = "info",
@@ -29,6 +30,7 @@ data class AppSettings(
 
 class SettingsStore(private val context: Context) {
     private object Keys {
+        val ONBOARDED = booleanPreferencesKey("onboarded")
         val LITE = booleanPreferencesKey("lite_mode")
         val MITIGATION = booleanPreferencesKey("device_mitigation")
         val LOG = stringPreferencesKey("log_level")
@@ -39,6 +41,7 @@ class SettingsStore(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
         AppSettings(
+            onboarded = p[Keys.ONBOARDED] ?: false,
             liteMode = p[Keys.LITE] ?: false,
             deviceMitigation = p[Keys.MITIGATION] ?: false,
             logLevel = p[Keys.LOG] ?: "info",
@@ -48,6 +51,7 @@ class SettingsStore(private val context: Context) {
         )
     }
 
+    suspend fun setOnboarded(v: Boolean) = context.dataStore.edit { it[Keys.ONBOARDED] = v }
     suspend fun setLite(v: Boolean) = context.dataStore.edit { it[Keys.LITE] = v }
     suspend fun setMitigation(v: Boolean) = context.dataStore.edit { it[Keys.MITIGATION] = v }
     suspend fun setLogLevel(v: String) = context.dataStore.edit { it[Keys.LOG] = v }

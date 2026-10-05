@@ -5,6 +5,11 @@
  */
 package com.zairenkai.app.ui
 
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -65,6 +70,15 @@ fun ZairenkaiRoot(container: AppContainer) {
             navController = nav,
             startDestination = Dest.DASHBOARD.route,
             modifier = Modifier.padding(inner),
+            // Smooth, springy cross-fade + subtle zoom between tabs.
+            enterTransition = {
+                fadeIn(spring(stiffness = 600f)) + scaleIn(spring(stiffness = 500f), initialScale = 0.96f)
+            },
+            exitTransition = { fadeOut(spring(stiffness = 800f)) },
+            popEnterTransition = {
+                fadeIn(spring(stiffness = 600f)) + scaleIn(spring(stiffness = 500f), initialScale = 0.96f)
+            },
+            popExitTransition = { fadeOut(spring(stiffness = 800f)) },
         ) {
             composable(Dest.DASHBOARD.route) { DashboardScreen(factory, onOpenSettings = { nav.navigate("settings") }) }
             composable(Dest.MONITOR.route) { MonitorScreen(factory) }
