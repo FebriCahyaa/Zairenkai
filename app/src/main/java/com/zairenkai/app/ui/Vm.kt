@@ -201,6 +201,12 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     fun setLite(v: Boolean) = viewModelScope.launch { c.settings.setLite(v) }
     fun setMitigation(v: Boolean) = viewModelScope.launch { c.settings.setMitigation(v) }
     fun setDynamicColor(v: Boolean) = viewModelScope.launch { c.settings.setDynamicColor(v) }
+    fun setThemeMode(v: String) = viewModelScope.launch { c.settings.setThemeMode(v) }
+    fun setAccent(v: String) = viewModelScope.launch { c.settings.setAccent(v) }
+    fun setGlass(v: Boolean) = viewModelScope.launch { c.settings.setGlass(v) }
+    fun setGlassOpacity(v: Float) = viewModelScope.launch { c.settings.setGlassOpacity(v) }
+    fun setGlassBlur(v: Float) = viewModelScope.launch { c.settings.setGlassBlur(v) }
+    fun setGlassTint(v: Float) = viewModelScope.launch { c.settings.setGlassTint(v) }
     fun setLogLevel(level: String) = viewModelScope.launch {
         c.settings.setLogLevel(level)
         runCatching { c.repository.setLogLevel(level) }

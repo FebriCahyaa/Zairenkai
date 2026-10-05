@@ -52,7 +52,7 @@ fun SystemScreen(factory: VmFactory) {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Sistem & Keamanan") }) }) { inner ->
+    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text("Sistem & Keamanan") }) }) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

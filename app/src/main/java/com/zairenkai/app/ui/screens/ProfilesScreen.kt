@@ -30,7 +30,7 @@ fun ProfilesScreen(factory: VmFactory) {
     val vm: ProfilesViewModel = viewModel(factory = factory)
     val ui by vm.ui.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Profil") }) }) { inner ->
+    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text("Profil") }) }) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

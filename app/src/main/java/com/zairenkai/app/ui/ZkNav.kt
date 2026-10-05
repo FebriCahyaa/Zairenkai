@@ -43,11 +43,17 @@ fun ZairenkaiRoot(container: AppContainer) {
     val nav = rememberNavController()
     val factory = remember(container) { VmFactory(container) }
 
+    val glass = com.zairenkai.app.ui.theme.LocalGlass.current
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             val backStack by nav.currentBackStackEntryAsState()
             val current = backStack?.destination
-            NavigationBar {
+            NavigationBar(
+                containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
+                    MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass,
+                ),
+            ) {
                 bottomDests.forEach { dest ->
                     val selected = current?.hierarchy?.any { it.route == dest.route } == true
                     NavigationBarItem(
@@ -85,7 +91,15 @@ fun ZairenkaiRoot(container: AppContainer) {
             composable(Dest.TWEAKS.route) { TweaksScreen(factory) }
             composable(Dest.PROFILES.route) { ProfilesScreen(factory) }
             composable(Dest.SYSTEM.route) { SystemScreen(factory) }
-            composable("settings") { SettingsScreen(factory) }
+            composable("settings") {
+                SettingsScreen(
+                    factory,
+                    onOpenTheme = { nav.navigate("theme") },
+                    onOpenAbout = { nav.navigate("about") },
+                )
+            }
+            composable("theme") { ThemeScreen(factory, onBack = { nav.popBackStack() }) }
+            composable("about") { AboutScreen(onBack = { nav.popBackStack() }) }
         }
     }
 }

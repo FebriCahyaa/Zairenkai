@@ -10,6 +10,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.zairenkai.app.domain.ProfileId
@@ -26,6 +27,13 @@ data class AppSettings(
     val activeProfile: ProfileId? = null,
     val autoProfile: Boolean = false,
     val dynamicColor: Boolean = true,
+    // Theme
+    val themeMode: String = "system",   // system | light | dark
+    val accent: String = "indigo",      // indigo | violet | aqua | amber | rose | mono
+    val glass: Boolean = false,
+    val glassOpacity: Float = 0.6f,     // 0.35 .. 0.95
+    val glassBlur: Float = 18f,         // 0 .. 40 (dp)
+    val glassTint: Float = 0.12f,       // 0 .. 0.4 accent tint
 )
 
 class SettingsStore(private val context: Context) {
@@ -37,6 +45,12 @@ class SettingsStore(private val context: Context) {
         val PROFILE = stringPreferencesKey("active_profile")
         val AUTO = booleanPreferencesKey("auto_profile")
         val DYNAMIC = booleanPreferencesKey("dynamic_color")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val ACCENT = stringPreferencesKey("accent")
+        val GLASS = booleanPreferencesKey("glass")
+        val GLASS_OPACITY = floatPreferencesKey("glass_opacity")
+        val GLASS_BLUR = floatPreferencesKey("glass_blur")
+        val GLASS_TINT = floatPreferencesKey("glass_tint")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -48,6 +62,12 @@ class SettingsStore(private val context: Context) {
             activeProfile = p[Keys.PROFILE]?.let { runCatching { ProfileId.valueOf(it) }.getOrNull() },
             autoProfile = p[Keys.AUTO] ?: false,
             dynamicColor = p[Keys.DYNAMIC] ?: true,
+            themeMode = p[Keys.THEME_MODE] ?: "system",
+            accent = p[Keys.ACCENT] ?: "indigo",
+            glass = p[Keys.GLASS] ?: false,
+            glassOpacity = p[Keys.GLASS_OPACITY] ?: 0.6f,
+            glassBlur = p[Keys.GLASS_BLUR] ?: 18f,
+            glassTint = p[Keys.GLASS_TINT] ?: 0.12f,
         )
     }
 
@@ -60,4 +80,10 @@ class SettingsStore(private val context: Context) {
     }
     suspend fun setAutoProfile(v: Boolean) = context.dataStore.edit { it[Keys.AUTO] = v }
     suspend fun setDynamicColor(v: Boolean) = context.dataStore.edit { it[Keys.DYNAMIC] = v }
+    suspend fun setThemeMode(v: String) = context.dataStore.edit { it[Keys.THEME_MODE] = v }
+    suspend fun setAccent(v: String) = context.dataStore.edit { it[Keys.ACCENT] = v }
+    suspend fun setGlass(v: Boolean) = context.dataStore.edit { it[Keys.GLASS] = v }
+    suspend fun setGlassOpacity(v: Float) = context.dataStore.edit { it[Keys.GLASS_OPACITY] = v }
+    suspend fun setGlassBlur(v: Float) = context.dataStore.edit { it[Keys.GLASS_BLUR] = v }
+    suspend fun setGlassTint(v: Float) = context.dataStore.edit { it[Keys.GLASS_TINT] = v }
 }

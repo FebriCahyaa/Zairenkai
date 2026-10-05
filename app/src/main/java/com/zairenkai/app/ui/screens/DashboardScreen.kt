@@ -33,6 +33,7 @@ fun DashboardScreen(factory: VmFactory, onOpenSettings: () -> Unit) {
     val s by vm.state.collectAsState()
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("Zairenkai") },

@@ -23,6 +23,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import com.zairenkai.app.ui.theme.LocalGlass
+import com.zairenkai.app.ui.theme.glassContainerColor
+import com.zairenkai.app.ui.theme.glassEdge
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 
@@ -107,10 +110,12 @@ fun StatTile(
     modifier: Modifier = Modifier,
     sub: String? = null,
 ) {
+    val glass = LocalGlass.current
+    val shape = RoundedCornerShape(20.dp)
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.glassEdge(glass, shape),
+        shape = shape,
+        color = glassContainerColor(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.primary, glass),
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -144,10 +149,12 @@ fun MeterBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
 
 @Composable
 fun SectionCard(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    val glass = LocalGlass.current
+    val shape = RoundedCornerShape(24.dp)
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = modifier.fillMaxWidth().glassEdge(glass, shape),
+        shape = shape,
+        color = glassContainerColor(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass),
     ) {
         Column(Modifier.padding(18.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)

@@ -30,7 +30,7 @@ fun TweaksScreen(factory: VmFactory) {
     val ui by vm.ui.collectAsState()
     var editing by remember { mutableStateOf<Tweak?>(null) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Tweaks") }) }) { inner ->
+    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text("Tweaks") }) }) { inner ->
         if (ui.loading) {
             Box(Modifier.fillMaxSize().padding(inner), contentAlignment = androidx.compose.ui.Alignment.Center) {
                 CircularProgressIndicator()

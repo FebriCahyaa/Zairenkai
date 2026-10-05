@@ -5,8 +5,13 @@
  */
 package com.zairenkai.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,7 +28,11 @@ private val logLevels = listOf("verbose", "debug", "info", "warn", "error", "sil
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(factory: VmFactory) {
+fun SettingsScreen(
+    factory: VmFactory,
+    onOpenTheme: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+) {
     val vm: SettingsViewModel = viewModel(factory = factory)
     val settings by vm.settings.collectAsState(initial = AppSettings())
     val log by vm.log.collectAsState()
@@ -33,12 +42,18 @@ fun SettingsScreen(factory: VmFactory) {
         onDispose { vm.stopLog() }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Pengaturan") }) }) { inner ->
+    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text("Pengaturan") }) }) { inner ->
         LazyColumn(
             Modifier.fillMaxSize().padding(inner),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                SectionCard("Tampilan") {
+                    NavRow(Icons.Rounded.Palette, "Tema", "Mode, aksen, warna dinamis & Glass UI", onOpenTheme)
+                    NavRow(Icons.Rounded.Info, "Tentang", "Versi, lisensi & kredit", onOpenAbout)
+                }
+            }
             item {
                 SectionCard("Umum") {
                     ToggleRow("Mode Lite", "Sembunyikan tweak berat, kurangi overhead.",
@@ -85,6 +100,22 @@ fun SettingsScreen(factory: VmFactory) {
             }
             item { Spacer(Modifier.height(24.dp)) }
         }
+    }
+}
+
+@Composable
+private fun NavRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, sub: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
