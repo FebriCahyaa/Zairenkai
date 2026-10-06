@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Publishes a small, installable (debug-signed, minified) preview APK to a
+# GitHub prerelease, so it can be downloaded as a raw .apk (no nested artifact
+# zip to mis-extract) and verified against a published SHA-256.
+name: Preview APK
+
+on:
+  push:
+    branches: [ccr-076d8b15-osiupp]
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/preview-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: preview-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install SDK platform 37
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build minified debug-signed preview APK
+        run: ./gradlew :app:assembleStandardPreview --stacktrace
+
+      - name: Stage APK + checksum
+        id: stage
+        run: |
+          APK=$(find app/build/outputs/apk/standard/preview -name '*.apk' | head -1)
+          SHORT=$(git rev-parse --short HEAD)
+          OUT="Zairenkai-standard-preview-$SHORT.apk"
+          cp "$APK" "$OUT"
+          sha256sum "$OUT" | tee "$OUT.sha256"
+          # sanity: reject a zip with bad CRCs before we ever publish it
+          unzip -t "$OUT" >/dev/null
+          echo "apk=$OUT" >> "$GITHUB_OUTPUT"
+          echo "sha=$(cut -d' ' -f1 "$OUT.sha256")" >> "$GITHUB_OUTPUT"
+          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
+
+      - name: Publish preview release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: preview
+          name: "Zairenkai preview APK"
+          prerelease: true
+          body: |
+            Minified, debug-signed **preview** build (installs without a release
+            keystore). Download the `.apk` directly — this is a raw file, not a
+            nested artifact zip, so it won't be corrupted by extraction.
+
+            Commit: `${{ steps.stage.outputs.short }}`
+            SHA-256: `${{ steps.stage.outputs.sha }}`
+
+            After downloading, verify before installing:
+            `sha256sum Zairenkai-standard-preview-*.apk`
+            If the hash matches and your installer still reports "Bad file CRC",
+            the file was corrupted in transit — re-download over a stable link.
+          files: |
+            ${{ steps.stage.outputs.apk }}
+            ${{ steps.stage.outputs.apk }}.sha256

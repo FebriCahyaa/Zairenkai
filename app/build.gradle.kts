@@ -106,6 +106,21 @@ android {
             isDebuggable = true
             // Debug is auto-signed by Android's debug keystore; no release key needed.
         }
+        // A small, installable build: minified + resource-shrunk like release
+        // (tree-shakes material-icons-extended etc., cutting the APK from ~64 MB
+        // to a few MB), but signed with the debug key so it needs no release
+        // keystore. Use this to sideload for testing on real devices.
+        create("preview") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+            // Not the official signer -> self-check reports "unknown", not "modified".
+            buildConfigField("String", "EXPECTED_CERT_SHA256", "\"\"")
+        }
     }
 
     compileOptions {
