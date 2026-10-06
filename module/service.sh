@@ -43,5 +43,13 @@ else
       [ -n "$id" ] && "$STATE/zkfctl" tweak set "$id" "$val" >/dev/null 2>&1
     done < "$STATE/boot_profile"
   fi
+
+  # Start the zperfd performance engine (reacts to foreground app + mode file).
+  # Skipped in safe mode so a bad profile can never contribute to a bootloop.
+  ZPERF=/data/adb/zperf
+  if [ -x "$ZPERF/zperfd" ]; then
+    "$ZPERF/zperfd" daemon --state "$ZPERF" >/dev/null 2>&1 &
+    log -t zairenkai "zperfd daemon started"
+  fi
 fi
 # The app calls `zkfctl safe confirm` once it is up, which clears boot_pending.

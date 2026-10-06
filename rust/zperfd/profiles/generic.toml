@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Zairenkai zperfd generic profile.
+#
+# Device-agnostic: frequencies are keywords/percentages resolved against the
+# device's real OPP table at apply time, and the engine picks uclamp (GKI) vs
+# schedtune (non-GKI), the right cpu_boost path, and the GPU devfreq itself.
+# Works on both GKI and non-GKI kernels; override per SoC with a catalog file.
+
+[meta]
+name = "generic"
+soc = "generic"
+default_mode = "balance"
+
+# ---------------- powersave ----------------
+[mode.powersave.cpu]
+max_perf_pct = 55
+min_freq = "min"
+governor = ["schedutil", "interactive", "powersave"]
+uclamp_min_pct = 0
+input_boost_ms = 0
+
+[mode.powersave.gpu]
+max_perf_pct = 55
+governor = ["msm-adreno-tz", "simple_ondemand", "powersave"]
+
+[mode.powersave.mem]
+swappiness = 100
+vfs_cache_pressure = 120
+
+[mode.powersave.io]
+scheduler = ["mq-deadline", "cfq", "noop"]
+read_ahead_kb = 128
+
+# ---------------- balance ----------------
+[mode.balance.cpu]
+max_freq = "max"
+min_freq = "min"
+governor = ["schedutil", "walt", "interactive"]
+uclamp_min_pct = 0
+input_boost_pct = 45
+input_boost_ms = 800
+
+[mode.balance.gpu]
+max_freq = "max"
+min_freq = "min"
+governor = ["msm-adreno-tz", "simple_ondemand"]
+
+[mode.balance.mem]
+swappiness = 100
+vfs_cache_pressure = 120
+
+[mode.balance.io]
+scheduler = ["mq-deadline", "cfq"]
+read_ahead_kb = 128
+
+# ---------------- performance ----------------
+[mode.performance.cpu]
+max_freq = "max"
+min_freq = "30%"
+governor = ["schedutil", "performance", "interactive"]
+uclamp_min_pct = 20
+input_boost_pct = 60
+input_boost_ms = 2000
+
+[mode.performance.gpu]
+max_freq = "max"
+min_freq = "40%"
+governor = ["msm-adreno-tz", "performance"]
+
+[mode.performance.mem]
+swappiness = 80
+vfs_cache_pressure = 100
+
+[mode.performance.io]
+scheduler = ["mq-deadline", "cfq"]
+read_ahead_kb = 256
+nr_requests = 256
+
+# ---------------- fast ----------------
+[mode.fast.cpu]
+max_freq = "max"
+min_freq = "50%"
+governor = ["performance", "schedutil"]
+uclamp_min_pct = 40
+input_boost_pct = 80
+input_boost_ms = 2000
+
+[mode.fast.gpu]
+max_freq = "max"
+min_freq = "60%"
+governor = ["performance", "msm-adreno-tz"]
+
+[mode.fast.mem]
+swappiness = 60
+vfs_cache_pressure = 100
+
+[mode.fast.io]
+scheduler = ["mq-deadline"]
+read_ahead_kb = 256
+
+# Per-app overrides (user-editable). Games default to performance.
+[perapp]
+"com.tencent.tmgp.sgame" = "performance"
+"com.miHoYo.Yuanshen" = "performance"
+"com.miHoYo.GenshinImpact" = "performance"
+"com.mobile.legends" = "performance"
+"com.tencent.ig" = "performance"

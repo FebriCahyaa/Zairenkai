@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 [workspace]
 resolver = "2"
-members = ["zkfc-sys"]
+members = ["zkfc-sys", "zperfd"]
 
 [profile.release]
 opt-level = "z"

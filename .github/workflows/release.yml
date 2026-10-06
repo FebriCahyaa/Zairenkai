@@ -53,6 +53,32 @@ jobs:
             "$TC/llvm-strip" module/bin/$abi/zkfctl
           done
 
+      - name: Set up Rust (Android targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, x86_64-linux-android
+
+      - name: Build zperfd engine (arm64 + x86_64)
+        working-directory: rust
+        run: |
+          NDK="$ANDROID_HOME/ndk/30.0.16248370"
+          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TC/aarch64-linux-android31-clang"
+          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$TC/x86_64-linux-android31-clang"
+          export CC_aarch64_linux_android="$TC/aarch64-linux-android31-clang"
+          export CC_x86_64_linux_android="$TC/x86_64-linux-android31-clang"
+          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            triple="${t%%:*}"; abi="${t##*:}"
+            cargo build -p zperfd --release --target "$triple"
+            mkdir -p ../module/bin/$abi
+            cp "target/$triple/release/zperfd" ../module/bin/$abi/zperfd
+          done
+
+      - name: Stage zperf catalog
+        run: |
+          mkdir -p module/zperf/catalog
+          cp rust/zperfd/profiles/*.toml module/zperf/catalog/
+
       - name: Package module zip
         run: |
           cd module && zip -r9 ../Zairenkai-module.zip . -x '*.git*' && cd ..

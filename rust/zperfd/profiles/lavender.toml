@@ -1,0 +1,99 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Xiaomi Redmi Note 7 (lavender) — SDM660, Adreno 512, non-GKI 4.19.
+# Octa-core: policy0 = 4x Kryo 260 Silver (A53), policy4 = 4x Kryo 260 Gold
+# (A73). schedtune + msm_performance present; engine uses those automatically.
+# sdm660 runs warm, so fast mode keeps a sane GPU floor rather than pinning it.
+
+[meta]
+name = "lavender"
+soc = "sdm660"
+default_mode = "balance"
+
+[mode.powersave.cpu]
+max_perf_pct = 55
+min_freq = "min"
+governor = ["schedutil", "interactive", "powersave"]
+uclamp_min_pct = 0
+input_boost_ms = 0
+
+[mode.powersave.gpu]
+max_perf_pct = 55
+governor = ["msm-adreno-tz", "simple_ondemand", "powersave"]
+
+[mode.powersave.mem]
+swappiness = 100
+vfs_cache_pressure = 120
+
+[mode.powersave.io]
+scheduler = ["cfq", "mq-deadline", "noop"]
+read_ahead_kb = 128
+
+[mode.balance.cpu]
+max_freq = "max"
+min_freq = "min"
+governor = ["schedutil", "interactive"]
+uclamp_min_pct = 0
+input_boost_pct = 45
+input_boost_ms = 800
+
+[mode.balance.gpu]
+max_freq = "max"
+min_freq = "min"
+governor = ["msm-adreno-tz", "simple_ondemand"]
+
+[mode.balance.mem]
+swappiness = 100
+vfs_cache_pressure = 120
+
+[mode.balance.io]
+scheduler = ["cfq", "mq-deadline"]
+read_ahead_kb = 128
+
+[mode.performance.cpu]
+max_freq = "max"
+min_freq = "25%"
+governor = ["schedutil", "performance", "interactive"]
+uclamp_min_pct = 20
+input_boost_pct = 60
+input_boost_ms = 2000
+
+[mode.performance.gpu]
+max_freq = "max"
+min_freq = "40%"
+governor = ["msm-adreno-tz", "performance"]
+
+[mode.performance.mem]
+swappiness = 80
+vfs_cache_pressure = 100
+
+[mode.performance.io]
+scheduler = ["cfq", "mq-deadline"]
+read_ahead_kb = 256
+nr_requests = 256
+
+[mode.fast.cpu]
+max_freq = "max"
+min_freq = "40%"
+governor = ["performance", "schedutil"]
+uclamp_min_pct = 35
+input_boost_pct = 75
+input_boost_ms = 2000
+
+[mode.fast.gpu]
+max_freq = "max"
+min_freq = "50%"
+governor = ["performance", "msm-adreno-tz"]
+
+[mode.fast.mem]
+swappiness = 70
+vfs_cache_pressure = 100
+
+[mode.fast.io]
+scheduler = ["cfq", "mq-deadline"]
+read_ahead_kb = 256
+
+[perapp]
+"com.tencent.ig" = "performance"
+"com.mobile.legends" = "performance"
+"com.garena.game.kgid" = "performance"
+"com.miHoYo.GenshinImpact" = "fast"

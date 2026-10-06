@@ -1,0 +1,11 @@
+{
+  "version": "zairenkai-zperfd 0.1",
+  "author": "FebriCahyaa",
+  "state": "/data/adb/zperf/mode",
+  "module": "uperf,fas-rs,scene-perfd",
+  "features": {
+    "pedestal": false,
+    "fas": false,
+    "limiter": false
+  }
+}

@@ -44,8 +44,30 @@ for abi in arm64-v8a arm64 x86_64; do
     break
   fi
 done
+
+# ---- Install the zperfd performance engine + profile catalog ----
+mkdir -p /data/adb/zperf/catalog
+for abi in arm64-v8a arm64 x86_64; do
+  if [ -f "$MODPATH/bin/$abi/zperfd" ]; then
+    cp "$MODPATH/bin/$abi/zperfd" /data/adb/zperf/zperfd
+    ui_print "- zperfd engine installed ($abi)"
+    break
+  fi
+done
+if [ -d "$MODPATH/zperf/catalog" ]; then
+  cp "$MODPATH"/zperf/catalog/*.toml /data/adb/zperf/catalog/ 2>/dev/null
+fi
+# Scene / vtools external-scheduler contract.
+if [ -f "$MODPATH/zperf/powercfg.sh" ]; then
+  cp "$MODPATH/zperf/powercfg.sh" /data/powercfg.sh && chmod 0755 /data/powercfg.sh
+  [ -f "$MODPATH/zperf/powercfg.json" ] && cp "$MODPATH/zperf/powercfg.json" /data/powercfg.json
+  ui_print "- Scene powercfg contract installed (/data/powercfg.sh)"
+fi
+[ -f /data/adb/zperf/mode ] || echo balance > /data/adb/zperf/mode
+
 rm -rf "$MODPATH/bin"
 set_perm /data/adb/zkfc/zkfctl 0 0 0755 u:object_r:system_file:s0 2>/dev/null
+[ -f /data/adb/zperf/zperfd ] && set_perm /data/adb/zperf/zperfd 0 0 0755 u:object_r:system_file:s0 2>/dev/null
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 
 ui_print "- Installed zkfctl to /data/adb/zkfc/zkfctl"
