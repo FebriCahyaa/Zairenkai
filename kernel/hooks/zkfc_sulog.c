@@ -37,7 +37,7 @@ void zkfc_sulog_add(u32 event, int result, u32 detail, const char *path)
 	struct zkfc_sulog_record *r;
 	unsigned long flags;
 
-	rec.ts_ns = ktime_get_boottime_ns();
+	rec.ts_ns = zkfc_boottime_ns();
 	rec.event = event;
 	rec.result = result;
 	rec.detail = detail;
