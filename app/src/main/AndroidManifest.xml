@@ -41,5 +41,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Background usage/power history recorder. -->
+        <service
+            android:name=".data.ZkMonitorService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Records battery/power and foreground-app usage history for the user" />
+        </service>
     </application>
 </manifest>

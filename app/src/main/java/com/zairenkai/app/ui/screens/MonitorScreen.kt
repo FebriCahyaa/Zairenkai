@@ -8,6 +8,8 @@ package com.zairenkai.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +24,7 @@ import com.zairenkai.app.ui.components.*
 import com.zairenkai.app.ui.theme.*
 
 @Composable
-fun MonitorScreen(factory: VmFactory) {
+fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
     val vm: MonitorViewModel = viewModel(factory = factory)
     val ui by vm.ui.collectAsState()
     DisposableEffect(Unit) {
@@ -40,7 +42,27 @@ fun MonitorScreen(factory: VmFactory) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        FilledTonalButton(onClick = onOpenHistory, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Rounded.History, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Riwayat Penggunaan")
+        }
+
         SectionCard("FPS  •  ${"%.0f".format(frame.current)} / ${"%.0f".format(refreshHz)} Hz") {
+            // Whole-session summary grid (matches Scene's game FPS card).
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                FpsCell("MAX", "%.0f".format(frame.maxFps))
+                FpsCell("MIN", "%.0f".format(frame.minFps))
+                FpsCell("AVG", "%.0f".format(frame.avgFps))
+                FpsCell("VARIANCE", "%.1f".format(frame.varianceFps))
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                FpsCell("≥${frame.smoothnessTarget}FPS", "%.1f%%".format(frame.smoothnessPct), ZkGood)
+                FpsCell("5% Low", "%.0f".format(frame.low5Fps), ZkWarn)
+                FpsCell("Frames", "${frame.totalFrames}", MaterialTheme.colorScheme.onSurface)
+            }
+            Spacer(Modifier.height(12.dp))
             FpsGraph(
                 fps = frame.fps,
                 drops = frame.drops,
@@ -92,6 +114,18 @@ fun MonitorScreen(factory: VmFactory) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RowScope.FpsCell(
+    label: String,
+    value: String,
+    accent: androidx.compose.ui.graphics.Color = ZkFps,
+) {
+    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

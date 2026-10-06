@@ -129,6 +129,26 @@ fun StatTile(
     }
 }
 
+/** Like [SectionCard] but with no title and a click action (list rows). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SectionCardClickable(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val glass = LocalGlass.current
+    val shape = RoundedCornerShape(24.dp)
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().glassEdge(glass, shape),
+        shape = shape,
+        color = glassContainerColor(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass),
+    ) {
+        Column(Modifier.padding(16.dp)) { content() }
+    }
+}
+
 @Composable
 fun MeterBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
     Box(

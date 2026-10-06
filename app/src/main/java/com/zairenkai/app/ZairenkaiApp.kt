@@ -6,12 +6,16 @@
 package com.zairenkai.app
 
 import android.app.Application
+import android.content.Context
 import com.zairenkai.app.data.SettingsStore
+import com.zairenkai.app.data.UsageSessionStore
 import com.zairenkai.app.data.ZkfcRepository
 
 class AppContainer(app: Application) {
+    val appContext: Context = app.applicationContext
     val repository = ZkfcRepository()
     val settings = SettingsStore(app)
+    val usageStore = UsageSessionStore(app)
 }
 
 class ZairenkaiApp : Application() {

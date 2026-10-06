@@ -87,7 +87,23 @@ fun ZairenkaiRoot(container: AppContainer) {
             popExitTransition = { fadeOut(spring(stiffness = 800f)) },
         ) {
             composable(Dest.DASHBOARD.route) { DashboardScreen(factory, onOpenSettings = { nav.navigate("settings") }) }
-            composable(Dest.MONITOR.route) { MonitorScreen(factory) }
+            composable(Dest.MONITOR.route) {
+                MonitorScreen(factory, onOpenHistory = { nav.navigate("usage") })
+            }
+            composable("usage") {
+                UsageHistoryScreen(
+                    factory,
+                    onBack = { nav.popBackStack() },
+                    onOpenSession = { id -> nav.navigate("session/$id") },
+                )
+            }
+            composable("session/{id}") { entry ->
+                SessionDetailScreen(
+                    factory,
+                    sessionId = entry.arguments?.getString("id").orEmpty(),
+                    onBack = { nav.popBackStack() },
+                )
+            }
             composable(Dest.TWEAKS.route) { TweaksScreen(factory) }
             composable(Dest.PROFILES.route) { ProfilesScreen(factory) }
             composable(Dest.SYSTEM.route) { SystemScreen(factory) }

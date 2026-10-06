@@ -104,6 +104,38 @@ class MonitorViewModel(private val c: AppContainer) : ViewModel() {
     override fun onCleared() { stop() }
 }
 
+/* ---------------- usage history ---------------- */
+data class UsageHistoryUi(
+    val loading: Boolean = true,
+    val sessions: List<UsageSession> = emptyList(),
+    val hasUsageAccess: Boolean = true,
+)
+
+class UsageHistoryViewModel(private val c: AppContainer) : ViewModel() {
+    private val _ui = MutableStateFlow(UsageHistoryUi())
+    val ui: StateFlow<UsageHistoryUi> = _ui.asStateFlow()
+
+    init { load() }
+
+    fun load() = viewModelScope.launch {
+        val list = runCatching { c.usageStore.load() }.getOrDefault(emptyList())
+        val access = runCatching { ForegroundApp(c.appContext).hasUsageAccess() }.getOrDefault(false)
+        _ui.value = UsageHistoryUi(false, list, access)
+    }
+
+    fun delete(id: String) = viewModelScope.launch {
+        val list = runCatching { c.usageStore.delete(id) }.getOrDefault(_ui.value.sessions)
+        _ui.value = _ui.value.copy(sessions = list)
+    }
+
+    fun clearAll() = viewModelScope.launch {
+        runCatching { c.usageStore.clear() }
+        _ui.value = _ui.value.copy(sessions = emptyList())
+    }
+
+    fun find(id: String): UsageSession? = _ui.value.sessions.firstOrNull { it.id == id }
+}
+
 /* ---------------- tweaks ---------------- */
 data class TweaksUi(
     val loading: Boolean = true,
@@ -238,6 +270,7 @@ class VmFactory(private val c: AppContainer) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(OverviewViewModel::class.java) -> OverviewViewModel(c)
         modelClass.isAssignableFrom(MonitorViewModel::class.java) -> MonitorViewModel(c)
+        modelClass.isAssignableFrom(UsageHistoryViewModel::class.java) -> UsageHistoryViewModel(c)
         modelClass.isAssignableFrom(TweaksViewModel::class.java) -> TweaksViewModel(c)
         modelClass.isAssignableFrom(ProfilesViewModel::class.java) -> ProfilesViewModel(c)
         modelClass.isAssignableFrom(SystemViewModel::class.java) -> SystemViewModel(c)
