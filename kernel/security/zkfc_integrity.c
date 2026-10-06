@@ -94,7 +94,7 @@ void zkfc_integrity_sys(struct zkfc_sys_security *s)
 		if (test_taint(i))
 			s->taint_mask |= 1ULL << i;
 
-	s->uptime_ns = ktime_get_boottime_ns();
+	s->uptime_ns = zkfc_boottime_ns();
 	memcpy(s->zkfc_config_digest, zkfc_cfg_digest, sizeof(s->zkfc_config_digest));
 }
 

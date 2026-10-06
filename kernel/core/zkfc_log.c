@@ -80,7 +80,7 @@ void zkfc_log(u32 level, const char *fmt, ...)
 	spin_lock_irqsave(&zkfc_ring_lock, flags);
 	r = &zkfc_ring[zkfc_ring_next & (ZKFC_LOG_RING - 1)];
 	r->seq = zkfc_ring_next++;
-	r->ts_ns = ktime_get_boottime_ns();
+	r->ts_ns = zkfc_boottime_ns();
 	r->level = level;
 	r->pid = in_task() ? task_pid_nr(current) : 0;
 	r->uid = in_task() ? from_kuid(&init_user_ns, current_uid()) : 0;

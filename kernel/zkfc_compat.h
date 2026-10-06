@@ -11,9 +11,22 @@
 #include <linux/timekeeping.h>
 #include <linux/fs.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0)
-#define ktime_get_boottime_ns() ktime_get_boot_ns()
-#endif
+/*
+ * Monotonic nanoseconds since boot.
+ *
+ * ktime_get_boottime_ns() is mainline only from 5.3; the pre-5.3 spelling was
+ * ktime_get_boot_ns(). But Android LTS trees (notably 4.19, e.g. sdm660) back-
+ * port ktime_get_boottime_ns() *and drop* ktime_get_boot_ns(), so a plain
+ * LINUX_VERSION_CODE test picks the missing name on exactly those kernels and
+ * fails with "implicit declaration of ktime_get_boot_ns". ktime_get_boottime()
+ * -> ktime_t is stable on 4.18+ and every GKI branch, and ktime_to_ns() of it
+ * is precisely what the kernel's own helper computes, so derive the value
+ * directly and never reference the version-fragile wrapper names.
+ */
+static inline u64 zkfc_boottime_ns(void)
+{
+	return ktime_to_ns(ktime_get_boottime());
+}
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0)
 #ifdef CONFIG_COMPAT
