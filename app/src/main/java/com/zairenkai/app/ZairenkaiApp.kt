@@ -10,12 +10,14 @@ import android.content.Context
 import com.zairenkai.app.data.SettingsStore
 import com.zairenkai.app.data.UsageSessionStore
 import com.zairenkai.app.data.ZkfcRepository
+import com.zairenkai.app.data.ZperfClient
 
 class AppContainer(app: Application) {
     val appContext: Context = app.applicationContext
     val repository = ZkfcRepository()
     val settings = SettingsStore(app)
     val usageStore = UsageSessionStore(app)
+    val zperf = ZperfClient()
 }
 
 class ZairenkaiApp : Application() {

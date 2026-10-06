@@ -185,6 +185,8 @@ class ProfilesViewModel(private val c: AppContainer) : ViewModel() {
     fun apply(profile: Profile) = viewModelScope.launch {
         _ui.value = _ui.value.copy(applying = profile.id)
         val report = runCatching { c.repository.applyProfile(profile, false) }.getOrNull()
+        // Drive the zperfd performance engine (authoritative perf mode).
+        runCatching { c.zperf.apply(ZperfClient.modeFor(profile.id)) }
         c.settings.setActiveProfile(profile.id)
         _ui.value = _ui.value.copy(applying = null, active = profile.id, lastReport = report)
     }
@@ -202,6 +204,7 @@ data class SystemUi(
     val license: LicenseResult? = null,
     val policy: PolicyResult? = null,
     val info: InfoResult? = null,
+    val zperf: ZperfProbe? = null,
 )
 
 class SystemViewModel(private val c: AppContainer) : ViewModel() {
@@ -218,6 +221,7 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
             license = runCatching { c.repository.license() }.getOrNull(),
             policy = runCatching { c.repository.policy() }.getOrNull(),
             info = runCatching { c.repository.info() }.getOrNull(),
+            zperf = runCatching { c.zperf.probe() }.getOrNull(),
         )
     }
 }

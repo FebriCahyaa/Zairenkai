@@ -130,6 +130,29 @@ fun SystemScreen(factory: VmFactory) {
                 }
             }
 
+            ui.zperf?.let { z ->
+                SectionCard("Mesin performa (zperfd)") {
+                    LabeledRow("Kernel", z.flavor, if (z.gki) ZkGood else ZkWarn)
+                    if (z.release.isNotBlank()) LabeledRow("Rilis", z.release)
+                    LabeledRow("Boost",
+                        buildList {
+                            if (z.boost.uclamp) add("uclamp")
+                            if (z.boost.schedtune) add("schedtune")
+                            if (z.boost.cpuBoost) add("input")
+                        }.joinToString("+").ifEmpty { "—" })
+                    z.policies.forEach { p ->
+                        LabeledRow(
+                            p.name,
+                            "${p.minHw / 1000}–${p.maxHw / 1000} MHz · ${p.opps} OPP",
+                        )
+                    }
+                    z.gpu?.let { g ->
+                        val div = if (g.max > 10_000_000) 1_000_000 else 1000
+                        LabeledRow("GPU (${g.kind})", "${g.min / div}–${g.max / div} MHz · ${g.opps} OPP")
+                    }
+                }
+            }
+
             ui.policy?.let { pol ->
                 SectionCard("Policy akses (UID/GID/Grup)") {
                     if (pol.entries.isEmpty())
