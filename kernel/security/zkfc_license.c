@@ -117,6 +117,13 @@ static u32 zkfc_evaluate(const struct zkfc_license_token *t)
 	    le16_to_cpu(p->format) != ZKFC_LICENSE_FORMAT)
 		return ZKFC_LIC_MALFORMED;
 
+	if (le32_to_cpu(p->flags) & ~(ZKFC_LICF_DEVELOPER | ZKFC_LICF_COMMERCIAL | ZKFC_LICF_OWNER))
+		return ZKFC_LIC_MALFORMED;
+	if (le32_to_cpu(p->features) & ~ZKFC_FEAT_ALL)
+		return ZKFC_LIC_MALFORMED;
+	if (le64_to_cpu(p->license_id) == 0)
+		return ZKFC_LIC_MALFORMED;
+
 	ret = zkfc_verify_sig(p, sizeof(*p), t->signature);
 	if (ret == -ENOMEM)
 		return ZKFC_LIC_MALFORMED;
@@ -125,6 +132,8 @@ static u32 zkfc_evaluate(const struct zkfc_license_token *t)
 
 	if (le16_to_cpu(p->api_major) < ZKFC_API_MAJOR)
 		return ZKFC_LIC_API_OUTDATED;
+	if (le16_to_cpu(p->api_major) > ZKFC_API_MAJOR)
+		return ZKFC_LIC_API_INCOMPATIBLE;
 	if (!zkfc_binding_is_any(p->binding) &&
 	    memcmp(p->binding, zkfc_binding, ZKFC_BINDING_SIZE))
 		return ZKFC_LIC_WRONG_BINDING;

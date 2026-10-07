@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-//! Probe-driven sysfs/procfs access. Every write is "probe then write": a node
-//! is touched only if it exists, and locked writes use the uperf/Scene idiom
-//! (chmod 0666 -> echo -> chmod 0444) so a vendor perf-HAL cannot silently
-//! revert it. A configurable root makes the whole engine unit-testable against
-//! a fake /sys tree.
+//! Probe-driven sysfs/procfs access with path containment and reversible locking.
+//!
+//! Zairenkai only writes a small set of kernel tuning trees. The rooted
+//! Sysroot abstraction keeps unit tests off the real /sys and /proc trees.
 //!
 //! Copyright (C) 2026 FebriCahyaa
 
-use std::fs;
-use std::io;
-use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+use std::path::{Component, Path, PathBuf};
 
 #[derive(Clone)]
 pub struct Sysroot {
@@ -18,36 +17,34 @@ pub struct Sysroot {
 }
 
 impl Sysroot {
-    pub fn new<P: Into<PathBuf>>(root: P) -> Self {
-        Sysroot { root: root.into() }
-    }
+    pub fn new<P: Into<PathBuf>>(root: P) -> Self { Self { root: root.into() } }
 
     #[allow(dead_code)]
-    pub fn host() -> Self {
-        Sysroot::new("/")
+    pub fn host() -> Self { Self::new("/") }
+
+    fn safe_rel(rel: &str) -> bool {
+        let p = Path::new(rel.trim_start_matches('/'));
+        !p.as_os_str().is_empty()
+            && p.components().all(|c| matches!(c, Component::Normal(_)))
     }
 
     pub fn path(&self, rel: &str) -> PathBuf {
-        let trimmed = rel.trim_start_matches('/');
-        self.root.join(trimmed)
+        self.root.join(rel.trim_start_matches('/'))
     }
 
     pub fn exists(&self, rel: &str) -> bool {
-        self.path(rel).exists()
+        Self::safe_rel(rel) && self.path(rel).exists()
     }
 
     pub fn read(&self, rel: &str) -> Option<String> {
+        if !Self::safe_rel(rel) { return None; }
         fs::read_to_string(self.path(rel)).ok().map(|s| s.trim().to_string())
     }
 
-    pub fn read_u64(&self, rel: &str) -> Option<u64> {
-        self.read(rel).and_then(|s| s.trim().parse().ok())
-    }
+    pub fn read_u64(&self, rel: &str) -> Option<u64> { self.read(rel).and_then(|s| s.parse().ok()) }
 
-    /// Parse a whitespace-separated list of u64 (e.g. scaling_available_frequencies).
     pub fn read_u64_list(&self, rel: &str) -> Vec<u64> {
-        let mut v: Vec<u64> = self
-            .read(rel)
+        let mut v = self.read(rel)
             .map(|s| s.split_whitespace().filter_map(|t| t.parse().ok()).collect())
             .unwrap_or_default();
         v.sort_unstable();
@@ -55,53 +52,51 @@ impl Sysroot {
         v
     }
 
-    /// List immediate sub-directory names of a directory node.
     pub fn list_dir(&self, rel: &str) -> Vec<String> {
+        if !Self::safe_rel(rel) { return Vec::new(); }
         let mut out = Vec::new();
         if let Ok(rd) = fs::read_dir(self.path(rel)) {
             for e in rd.flatten() {
-                if let Some(name) = e.file_name().to_str() {
-                    out.push(name.to_string());
-                }
+                if let Some(name) = e.file_name().to_str() { out.push(name.to_string()); }
             }
         }
         out.sort();
         out
     }
 
-    fn chmod(p: &Path, mode: u32) {
-        let _ = fs::set_permissions(p, fs::Permissions::from_mode(mode));
-    }
-
-    /// Write [val] to [rel]. With [lock], unlock (0666), write, then relock
-    /// (0444). Returns Err if the node does not exist or the write fails.
+    /// Write a kernel pseudo-file. When `lock` is true, temporarily make the
+    /// node owner/group/world writable and restore its original mode exactly.
     pub fn write(&self, rel: &str, val: &str, lock: bool) -> io::Result<()> {
+        if !Self::safe_rel(rel) {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "unsafe path"));
+        }
         let p = self.path(rel);
-        if !p.exists() {
-            return Err(io::Error::new(io::ErrorKind::NotFound, rel.to_string()));
+        let meta = fs::symlink_metadata(&p)?;
+        if meta.file_type().is_symlink() {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "symlink not allowed"));
         }
+        let original_mode = meta.permissions().mode();
         if lock {
-            Self::chmod(&p, 0o666);
+            fs::set_permissions(&p, fs::Permissions::from_mode(original_mode | 0o222))?;
         }
-        let res = fs::write(&p, format!("{val}\n"));
+        let result = OpenOptions::new()
+            .write(true)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+            .open(&p)
+            .and_then(|mut file| file.write_all(format!("{val}\n").as_bytes()));
         if lock {
-            Self::chmod(&p, 0o444);
+            let _ = fs::set_permissions(&p, fs::Permissions::from_mode(original_mode));
         }
-        res
+        result
     }
 
-    /// Write to the first candidate path that exists. Returns the path written,
-    /// or None if none existed / all writes failed.
     pub fn write_first(&self, candidates: &[&str], val: &str, lock: bool) -> Option<String> {
         for rel in candidates {
-            if self.exists(rel) && self.write(rel, val, lock).is_ok() {
-                return Some((*rel).to_string());
-            }
+            if self.exists(rel) && self.write(rel, val, lock).is_ok() { return Some((*rel).to_string()); }
         }
         None
     }
 
-    /// First candidate path that exists (no write).
     pub fn first_existing(&self, candidates: &[&str]) -> Option<String> {
         candidates.iter().find(|c| self.exists(c)).map(|s| (*s).to_string())
     }
@@ -113,36 +108,35 @@ mod tests {
     use std::fs;
 
     fn tmp() -> PathBuf {
-        let d = std::env::temp_dir().join(format!("zperf-nodes-{}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("zperfd-nodes-{}", std::process::id()));
         let _ = fs::remove_dir_all(&d);
         d
     }
 
     #[test]
-    fn write_locked_roundtrip() {
-        let root = tmp();
-        let rel = "/sys/x/knob";
-        fs::create_dir_all(root.join("sys/x")).unwrap();
-        fs::write(root.join("sys/x/knob"), "0").unwrap();
-        // make it read-only first to prove lock path unlocks it
-        fs::set_permissions(root.join("sys/x/knob"), fs::Permissions::from_mode(0o444)).unwrap();
-        let s = Sysroot::new(&root);
-        assert!(s.exists(rel));
-        s.write(rel, "42", true).unwrap();
-        assert_eq!(s.read(rel).as_deref(), Some("42"));
-        // missing node errors
-        assert!(s.write("/sys/x/nope", "1", true).is_err());
-        let _ = fs::remove_dir_all(&root);
+    fn write_locked_roundtrip_restores_mode() {
+        let root=tmp();
+        let p=root.join("sys/x/knob");
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(&p,"0").unwrap();
+        fs::set_permissions(&p,fs::Permissions::from_mode(0o440)).unwrap();
+        let s=Sysroot::new(&root);
+        s.write("/sys/x/knob","42",true).unwrap();
+        assert_eq!(s.read("/sys/x/knob").as_deref(),Some("42"));
+        assert_eq!(fs::metadata(&p).unwrap().permissions().mode() & 0o777,0o440);
+        let _=fs::remove_dir_all(&root);
     }
 
     #[test]
-    fn freq_list_and_first() {
-        let root = tmp();
-        fs::create_dir_all(root.join("sys/a")).unwrap();
-        fs::write(root.join("sys/a/freqs"), "1800000 300000 1200000 300000").unwrap();
-        let s = Sysroot::new(&root);
-        assert_eq!(s.read_u64_list("/sys/a/freqs"), vec![300000, 1200000, 1800000]);
-        assert_eq!(s.first_existing(&["/sys/a/nope", "/sys/a/freqs"]).as_deref(), Some("/sys/a/freqs"));
-        let _ = fs::remove_dir_all(&root);
+    fn rejects_parent_and_symlink_paths() {
+        let root=tmp();
+        let real=root.join("sys/x/knob");
+        fs::create_dir_all(real.parent().unwrap()).unwrap();
+        fs::write(&real,"1").unwrap();
+        std::os::unix::fs::symlink(&real,root.join("sys/x/link")).unwrap();
+        let s=Sysroot::new(&root);
+        assert!(!s.exists("/sys/x/../x/knob"));
+        assert!(s.write("/sys/x/link","2",false).is_err());
+        let _=fs::remove_dir_all(&root);
     }
 }

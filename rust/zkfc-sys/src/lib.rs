@@ -13,6 +13,8 @@ use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
 
 pub const ZKFC_DEVICE_PATH: &str = "/dev/zkfc";
+pub const ZKFC_API_VERSION: u32 = (1u32 << 16);
+pub const ZKFC_API_MIN_SUPPORTED: u32 = (1u32 << 16);
 const ZKFC_IOC_MAGIC: u32 = b'Z' as u32;
 
 // asm-generic ioctl encoding (arm64 / x86_64 / riscv64).
@@ -70,6 +72,10 @@ impl VersionInfo {
     pub fn api_patch(&self) -> u8 {
         (self.api_version & 0xff) as u8
     }
+    pub fn api_compatible(&self) -> bool {
+        self.api_major() == ((ZKFC_API_VERSION >> 16) & 0xff) as u8
+            && self.api_min_supported <= ZKFC_API_VERSION
+    }
     pub fn arch_name(&self) -> &'static str {
         match self.arch {
             1 => "arm64",
@@ -98,6 +104,7 @@ impl VersionInfo {
             6 => "malformed",
             7 => "no_owner_key",
             8 => "revoked",
+            9 => "api_incompatible",
             _ => "missing",
         }
     }
@@ -109,12 +116,52 @@ impl VersionInfo {
     }
 }
 
+
+/// `struct zkfc_license_payload` (136 bytes, little-endian wire layout).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct LicensePayload {
+    pub magic: u32,
+    pub format: u16,
+    pub api_major: u16,
+    pub license_id: u64,
+    pub issued_at: u64,
+    pub expires_at: u64,
+    pub features: u32,
+    pub flags: u32,
+    pub binding: [u8; 32],
+    pub licensee: [u8; 64],
+}
+
+/// `struct zkfc_license_token` (200 bytes).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct LicenseToken {
+    pub payload: LicensePayload,
+    pub signature: [u8; 64],
+}
+
+/// `struct zkfc_license_status` (288 bytes).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct LicenseStatus {
+    pub state: u32,
+    pub has_token: u32,
+    pub owner_key_provisioned: u32,
+    pub clock_trusted: u32,
+    pub crl_serial: u64,
+    pub owner_key_fingerprint: [u8; 32],
+    pub kernel_binding: [u8; 32],
+    pub token: LicenseToken,
+}
+
 fn cstr_lossy(buf: &[u8]) -> String {
     let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
     String::from_utf8_lossy(&buf[..end]).into_owned()
 }
 
 const IOC_GET_VERSION: u64 = ior(0x00, std::mem::size_of::<VersionInfo>() as u32);
+const IOC_GET_LICENSE: u64 = ior(0x01, std::mem::size_of::<LicenseStatus>() as u32);
 
 /// An open handle to `/dev/zkfc`.
 pub struct Zkfc {
@@ -144,6 +191,28 @@ impl Zkfc {
             return Err(io::Error::last_os_error());
         }
         Ok(v)
+    }
+
+    /// Read the complete kernel license status. The wire structure is fixed
+    /// at 288 bytes so the ioctl number remains ABI-compatible with C.
+    pub fn license_status(&self) -> io::Result<LicenseStatus> {
+        let mut status: LicenseStatus = unsafe { std::mem::zeroed() };
+        let rc = unsafe {
+            libc::ioctl(
+                self.fd,
+                IOC_GET_LICENSE as libc::c_ulong,
+                &mut status as *mut LicenseStatus,
+            )
+        };
+        if rc < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(status)
+    }
+
+    /// Convenience accessor used by mutation engines.
+    pub fn license_state(&self) -> io::Result<u32> {
+        Ok(self.license_status()?.state)
     }
 }
 
@@ -187,7 +256,16 @@ mod tests {
     }
 
     #[test]
-    fn version_struct_is_160_bytes() {
+    fn wire_struct_sizes_match_uapi() {
         assert_eq!(std::mem::size_of::<VersionInfo>(), 160);
+        assert_eq!(std::mem::size_of::<LicensePayload>(), 136);
+        assert_eq!(std::mem::size_of::<LicenseToken>(), 200);
+        assert_eq!(std::mem::size_of::<LicenseStatus>(), 288);
+    }
+
+    #[test]
+    fn license_ioctl_number_matches_uapi() {
+        let expected: u64 = (2u64 << 30) | (288u64 << 16) | ((b'Z' as u64) << 8) | 1;
+        assert_eq!(IOC_GET_LICENSE, expected);
     }
 }

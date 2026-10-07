@@ -154,6 +154,7 @@ const char *zkfc_license_state_str(uint32_t s)
 	case ZKFC_LIC_MALFORMED: return "malformed";
 	case ZKFC_LIC_NO_OWNER_KEY: return "no_owner_key";
 	case ZKFC_LIC_REVOKED: return "revoked";
+	case ZKFC_LIC_API_INCOMPATIBLE: return "api_incompatible";
 	default: return "unknown";
 	}
 }
@@ -192,5 +193,15 @@ const char *zkfc_log_level_str(uint32_t l)
 
 bool zkfc_api_outdated(const struct zkfc_version_info *v)
 {
-	return v && ZKFC_VER_MAJOR(v->api_version) < LIBZKFC_EXPECT_MAJOR;
+	const uint32_t expected = ZKFC_API_VERSION;
+
+	if (!v)
+		return true;
+	/* Major mismatch is incompatible in both directions. */
+	if (ZKFC_VER_MAJOR(v->api_version) != LIBZKFC_EXPECT_MAJOR)
+		return true;
+	/* A newer kernel may stop serving an older manager API. */
+	if (v->api_min_supported > expected)
+		return true;
+	return false;
 }

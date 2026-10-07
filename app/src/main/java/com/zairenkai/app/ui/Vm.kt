@@ -46,12 +46,20 @@ class OverviewViewModel(private val c: AppContainer) : ViewModel() {
                 _state.value = OverviewState(loading = false, rootAvailable = false)
                 return@launch
             }
-            // Read safe-mode BEFORE confirming, then confirm this boot healthy.
             val safe = runCatching { c.repository.safeStatus() }.getOrNull()
-            runCatching { c.repository.safeConfirm() }
             val info = runCatching { c.repository.info() }.getOrNull()
             val lic = runCatching { c.repository.license() }.getOrNull()
             val boost = runCatching { c.repository.boostStatus() }.getOrNull()
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(15_000)
+                val engineHealthy = runCatching { c.zperf.status()?.ok == true }.getOrDefault(false)
+                val probeHealthy = runCatching { c.zperf.probe() != null }.getOrDefault(false)
+                // A missing license is a normal state, not a boot-health failure.
+                // Boot confirmation only proves the engine/probe path is stable.
+                if (info != null && engineHealthy && probeHealthy && (safe?.safeMode != true)) {
+                    runCatching { c.repository.safeConfirm() }
+                }
+            }
             _state.value = OverviewState(
                 loading = false, rootAvailable = true, info = info, license = lic,
                 boost = boost, safeMode = safe?.safeMode == true,
@@ -62,6 +70,11 @@ class OverviewViewModel(private val c: AppContainer) : ViewModel() {
     fun resetBoosts() = viewModelScope.launch {
         val b = runCatching { c.repository.boostReset() }.getOrNull()
         _state.value = _state.value.copy(boost = b)
+    }
+
+    fun clearSafeMode() = viewModelScope.launch {
+        runCatching { ZkfctlClient().safeClear() }
+        refresh()
     }
 }
 
@@ -142,6 +155,7 @@ data class TweaksUi(
     val lite: Boolean = false,
     val tweaks: List<Tweak> = emptyList(),
     val busyId: String? = null,
+    val error: String? = null,
 )
 
 class TweaksViewModel(private val c: AppContainer) : ViewModel() {
@@ -158,8 +172,19 @@ class TweaksViewModel(private val c: AppContainer) : ViewModel() {
 
     fun set(id: String, value: String) = viewModelScope.launch {
         _ui.value = _ui.value.copy(busyId = id)
-        val list = runCatching { c.repository.setTweak(id, value, _ui.value.lite) }.getOrNull()
-        _ui.value = _ui.value.copy(busyId = null, tweaks = list?.tweaks ?: _ui.value.tweaks)
+        val daemonAvailable = runCatching { c.zperf.available() }.getOrDefault(false)
+        val success = if (daemonAvailable) {
+            // zperfd is the only supported mutation path; it snapshots and rolls back.
+            runCatching { c.zperf.setTweak(id, value, _ui.value.lite) }.getOrDefault(false)
+        } else {
+            false
+        }
+        val list = if (success) runCatching { c.repository.tweaks(_ui.value.lite) }.getOrNull() else null
+        _ui.value = _ui.value.copy(
+            busyId = null,
+            tweaks = list?.tweaks ?: _ui.value.tweaks,
+            error = if (!success) "zperfd tidak tersedia atau tweak ditolak; perubahan tidak diterapkan." else null,
+        )
     }
 }
 
@@ -168,7 +193,8 @@ data class ProfilesUi(
     val active: ProfileId? = null,
     val auto: Boolean = false,
     val applying: ProfileId? = null,
-    val lastReport: ZkfcRepository.ApplyReport? = null,
+    val lastApplied: ProfileId? = null,
+    val error: String? = null,
 )
 
 class ProfilesViewModel(private val c: AppContainer) : ViewModel() {
@@ -178,23 +204,68 @@ class ProfilesViewModel(private val c: AppContainer) : ViewModel() {
     init {
         viewModelScope.launch {
             val s = c.settings.settings.first()
-            _ui.value = _ui.value.copy(active = s.activeProfile, auto = s.autoProfile)
+            val daemon = runCatching { c.zperf.status() }.getOrNull()
+            _ui.value = _ui.value.copy(
+                active = s.activeProfile,
+                auto = daemon?.auto ?: s.autoProfile,
+            )
         }
     }
 
     fun apply(profile: Profile) = viewModelScope.launch {
-        _ui.value = _ui.value.copy(applying = profile.id)
-        val report = runCatching { c.repository.applyProfile(profile, false) }.getOrNull()
-        // Drive the zperfd performance engine (authoritative perf mode).
-        runCatching { c.zperf.apply(ZperfClient.modeFor(profile.id)) }
-        c.settings.setActiveProfile(profile.id)
-        _ui.value = _ui.value.copy(applying = null, active = profile.id, lastReport = report)
+        _ui.value = _ui.value.copy(applying = profile.id, error = null)
+        val available = runCatching { c.zperf.available() }.getOrDefault(false)
+        if (!available) {
+            _ui.value = _ui.value.copy(
+                applying = null,
+                error = "zperfd belum aktif. Profil tidak diterapkan agar tidak melewati transaction engine.",
+            )
+            return@launch
+        }
+        val applied = runCatching { c.zperf.apply(ZperfClient.modeFor(profile.id)) }.getOrDefault(false)
+        if (applied) {
+            c.settings.setActiveProfile(profile.id)
+            _ui.value = _ui.value.copy(
+                applying = null,
+                active = profile.id,
+                lastApplied = profile.id,
+            )
+        } else {
+            _ui.value = _ui.value.copy(
+                applying = null,
+                error = "Profil gagal diterapkan. Engine melakukan rollback dan status aktif tidak diubah.",
+            )
+        }
     }
 
     fun setAuto(enabled: Boolean) = viewModelScope.launch {
+        _ui.value = _ui.value.copy(error = null)
+        val settings = c.settings.settings.first()
+        val fallback = settings.activeProfile
+            ?.takeIf { it != ProfileId.AUTO }
+            ?.let(ZperfClient::modeFor)
+            ?: "balance"
+        val mode = if (enabled) "auto" else fallback
+        val result = runCatching {
+            c.zperf.available() && c.zperf.apply(mode)
+        }.getOrDefault(false)
+        if (!result) {
+            _ui.value = _ui.value.copy(error = "Mode otomatis membutuhkan zperfd yang aktif dan berlisensi.")
+            return@launch
+        }
         c.settings.setAutoProfile(enabled)
-        _ui.value = _ui.value.copy(auto = enabled)
+        // Keep the last explicit profile in persistent state; Auto is a mode,
+        // not a replacement for the user's selected profile.
+        if (!enabled && settings.activeProfile != null && settings.activeProfile != ProfileId.AUTO) {
+            _ui.value = _ui.value.copy(
+                auto = false,
+                active = settings.activeProfile,
+            )
+        } else {
+            _ui.value = _ui.value.copy(auto = enabled)
+        }
     }
+
 }
 
 /* ---------------- system / security ---------------- */

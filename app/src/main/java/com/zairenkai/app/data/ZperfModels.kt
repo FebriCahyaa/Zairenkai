@@ -44,3 +44,13 @@ data class ZperfProbe(
     val policies: List<ZperfPolicy> = emptyList(),
     val gpu: ZperfGpu? = null,
 )
+
+@Serializable
+data class ZperfStatus(
+    val ok: Boolean = false,
+    val desired: String = "balance",
+    val effective: String = "balance",
+    val auto: Boolean = false,
+    @SerialName("pending_transaction") val pendingTransaction: Boolean = false,
+    @SerialName("safe_mode") val safeMode: Boolean = false,
+)

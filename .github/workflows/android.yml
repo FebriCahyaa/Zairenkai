@@ -47,7 +47,6 @@ jobs:
 
       - name: Lint
         run: ./gradlew :app:lintStandardDebug --stacktrace
-        continue-on-error: true
 
       - name: Upload standard debug APK
         uses: actions/upload-artifact@v4

@@ -79,8 +79,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build + test zkfc-sys (libc)
+      - name: Set up Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup component add rustfmt clippy --toolchain stable
+      - name: Format + test Rust workspace
         working-directory: rust
         run: |
-          cargo build --release --locked || cargo build --release
-          cargo test
+          cargo fmt --check
+          cargo build --release --locked
+          cargo test --workspace --all-targets --locked
+          cargo clippy --workspace --all-targets --all-features -- -D warnings

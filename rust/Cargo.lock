@@ -174,4 +174,5 @@ dependencies = [
  "libc",
  "serde",
  "toml",
+ "zkfc-sys",
 ]

@@ -138,6 +138,7 @@ enum zkfc_license_state {
 	ZKFC_LIC_MALFORMED = 6,
 	ZKFC_LIC_NO_OWNER_KEY = 7,	/* kernel built without the Owner key */
 	ZKFC_LIC_REVOKED = 8,
+	ZKFC_LIC_API_INCOMPATIBLE = 9,	/* token targets another API major */
 };
 
 /* ------------------------------------------------------------------------

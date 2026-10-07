@@ -6,7 +6,6 @@
  */
 package com.zairenkai.app.data
 
-import com.zairenkai.app.domain.Profile
 
 class ZkfcRepository(val client: ZkfctlClient = ZkfctlClient()) {
 
@@ -17,7 +16,6 @@ class ZkfcRepository(val client: ZkfctlClient = ZkfctlClient()) {
     suspend fun installToken(path: String) = client.installToken(path)
     suspend fun security() = client.security()
     suspend fun tweaks(lite: Boolean) = client.tweaks(lite)
-    suspend fun setTweak(id: String, value: String, lite: Boolean) = client.setTweak(id, value, lite)
     suspend fun monitor(intervalMs: Int) = client.monitor(intervalMs)
     suspend fun boostStatus() = client.boostStatus()
     suspend fun boostReset() = client.boostReset()
@@ -28,16 +26,16 @@ class ZkfcRepository(val client: ZkfctlClient = ZkfctlClient()) {
     suspend fun safeStatus() = client.safeStatus()
     suspend fun safeConfirm() = client.safeConfirm()
 
-    data class ApplyReport(val requested: Int, val applied: Int)
-
-    /** Apply every tweak of [profile]; skips ones the device lacks. */
-    suspend fun applyProfile(profile: Profile, lite: Boolean): ApplyReport {
-        var applied = 0
-        for ((id, value) in profile.tweaks) {
-            if (client.applyTweak(id, value, lite || profile.lite)) applied++
+    suspend fun setTweak(id: String, value: String, @Suppress("UNUSED_PARAMETER") lite: Boolean): TweakList {
+        if (!zperf.available() || !zperf.setTweak(id, value)) {
+            return TweakList(ok = false, error = "zperfd tidak tersedia atau menolak perubahan", tweaks = emptyList())
         }
-        return ApplyReport(profile.tweaks.size, applied)
+        return runCatching { client.tweaks(lite) }.getOrElse {
+            TweakList(ok = false, error = it.message ?: "gagal membaca status", tweaks = emptyList())
+        }
     }
+
+    private val zperf = ZperfClient()
 
     fun invalidate() {
         RootShell.invalidate()

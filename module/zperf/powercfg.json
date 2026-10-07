@@ -1,11 +1,13 @@
 {
-  "version": "zairenkai-zperfd 0.1",
+  "version": "zairenkai-zperfd 1.0",
   "author": "FebriCahyaa",
   "state": "/data/adb/zperf/mode",
-  "module": "uperf,fas-rs,scene-perfd",
+  "module": "zperfd",
   "features": {
-    "pedestal": false,
+    "pedestal": "mapped-to-fast",
     "fas": false,
-    "limiter": false
+    "limiter": false,
+    "transactional_state": true,
+    "safe_mode": true
   }
 }

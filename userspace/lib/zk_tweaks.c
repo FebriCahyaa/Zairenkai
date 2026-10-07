@@ -269,7 +269,7 @@ int zk_tweak_read(const struct zk_tweak *t, char *buf, size_t len)
 	}
 }
 
-void zk_tweaks_dump(struct zk_json *j)
+void zk_tweaks_dump(struct zk_json *j, int lite_mode)
 {
 	size_t i;
 
@@ -277,6 +277,9 @@ void zk_tweaks_dump(struct zk_json *j)
 	for (i = 0; i < CATALOG_N; i++) {
 		const struct zk_tweak *t = &catalog[i];
 		char cur[160];
+
+		if (lite_mode && t->lite)
+			continue;
 		int have = (zk_tweak_read(t, cur, sizeof(cur)) == 0) && cur[0];
 
 		zj_obj_open(j, NULL);

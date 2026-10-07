@@ -74,11 +74,20 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
                     Text("Mode Aman aktif", style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer)
                     Text(
-                        "Boot sebelumnya gagal/restart mendadak, jadi profil boot tidak diterapkan. " +
-                            "Periksa tweak terakhir sebelum mengaktifkannya lagi.",
+                        "Boot sebelumnya gagal/restart mendadak, jadi profil performa dipulihkan ke baseline. " +
+                            "Keluar dari mode aman hanya setelah penyebabnya diperiksa.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
+                    Spacer(Modifier.height(10.dp))
+                    TextButton(
+                        onClick = vm::clearSafeMode,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ),
+                    ) {
+                        Text("Keluar mode aman")
+                    }
                 }
             }
         }

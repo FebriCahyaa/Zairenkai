@@ -114,6 +114,50 @@ impl Profile {
     }
 }
 
+impl Profile {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.meta.name.trim().is_empty() || self.meta.name.len() > 64 { return Err("invalid profile name".into()); }
+        if self.meta.default_mode.is_empty() || !self.mode.contains_key(&self.meta.default_mode) {
+            return Err(format!("default_mode '{}' has no matching mode", self.meta.default_mode));
+        }
+        if self.mode.is_empty() { return Err("profile has no modes".into()); }
+        for (name, mode) in &self.mode {
+            if name.is_empty() || name.len() > 32 || !name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-')) {
+                return Err(format!("invalid mode name '{name}'"));
+            }
+            mode.validate()?;
+        }
+        for (pkg, mode) in &self.perapp {
+            let valid = pkg.split('.').count() >= 2 && pkg.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_');
+            if !valid || pkg.len() > 255 { return Err(format!("invalid package '{pkg}'")); }
+            if !self.mode.contains_key(mode) { return Err(format!("perapp '{pkg}' references unknown mode '{mode}'")); }
+        }
+        Ok(())
+    }
+}
+
+impl Mode {
+    pub fn validate(&self) -> Result<(), String> {
+        let pct = |v: Option<u32>, n: &str| -> Result<(), String> { if v.unwrap_or(0) > 100 { Err(format!("{n} must be 0..100")) } else { Ok(()) } };
+        pct(self.cpu.min_perf_pct, "cpu.min_perf_pct")?; pct(self.cpu.max_perf_pct, "cpu.max_perf_pct")?;
+        pct(self.cpu.uclamp_min_pct, "cpu.uclamp_min_pct")?; pct(self.cpu.uclamp_max_pct, "cpu.uclamp_max_pct")?;
+        pct(self.cpu.input_boost_pct, "cpu.input_boost_pct")?; pct(self.gpu.min_perf_pct, "gpu.min_perf_pct")?; pct(self.gpu.max_perf_pct, "gpu.max_perf_pct")?;
+        if let (Some(a), Some(b)) = (self.cpu.uclamp_min_pct, self.cpu.uclamp_max_pct) { if a > b { return Err("uclamp_min_pct > uclamp_max_pct".into()); } }
+        if self.cpu.input_boost_ms.unwrap_or(0) > 10_000 { return Err("input_boost_ms too large".into()); }
+        if !(-100..=100).contains(&self.cpu.sched_boost.unwrap_or(0)) { return Err("sched_boost must be -100..100".into()); }
+        if self.mem.swappiness.unwrap_or(0) > 200 || self.mem.vfs_cache_pressure.unwrap_or(0) > 1000 { return Err("memory value out of safe range".into()); }
+        if self.io.read_ahead_kb.unwrap_or(0) > 4096 || self.io.nr_requests.map(|v| v == 0 || v > 4096).unwrap_or(false) { return Err("io value out of safe range".into()); }
+        for list in [&self.cpu.governor, &self.gpu.governor, &self.io.scheduler] {
+            if list.len() > 16 || list.iter().any(|x| x.is_empty() || x.len() > 64 || x.chars().any(|c| c.is_whitespace() || c == '/' || c == '\\')) {
+                return Err("invalid candidate list".into());
+            }
+        }
+        Ok(())
+    }
+}
+
+pub fn uclamp_from_pct(pct: u32) -> u32 { ((pct.min(100) as u64 * 1024 + 50) / 100) as u32 }
+
 /// Resolve a [FreqSpec] against a device's available-frequency table (kHz,
 /// sorted ascending). The result is snapped to a real OPP: for a ceiling we
 /// pick the highest OPP `<=` the request, for a floor the lowest OPP `>=` it.
@@ -149,6 +193,7 @@ fn parse_freq_str(s: &str, lo: u64, hi: u64) -> Option<u64> {
     }
     if let Some(p) = t.strip_suffix('%') {
         let pct: f64 = p.trim().parse().ok()?;
+        if !(0.0..=100.0).contains(&pct) { return None; }
         return Some(((hi as f64) * pct / 100.0) as u64);
     }
     // max-relative, e.g. "-300MHz"

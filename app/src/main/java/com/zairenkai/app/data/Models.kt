@@ -222,3 +222,4 @@ data class BoostStatus(
     @SerialName("thermal_tripped") val thermalTripped: Boolean = false,
     @SerialName("thermal_last_mdeg") val thermalLastMdeg: Int = 0,
 )
+

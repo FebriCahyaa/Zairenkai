@@ -60,8 +60,33 @@ class ZkfctlClient {
     suspend fun license(): LicenseResult =
         json.decodeFromString(raw("license", false, 8000))
 
-    suspend fun installToken(path: String): LicenseResult =
-        json.decodeFromString(raw("license install ${shellQuote(path)}", false, 8000))
+    suspend fun installToken(path: String): LicenseResult {
+        val stage = RootShell.run(
+            "mkdir -p /data/adb/zkfc && chmod 0700 /data/adb/zkfc && " +
+                "cp -f ${shellQuote(path)} /data/adb/zkfc/token.pending && " +
+                "chmod 0600 /data/adb/zkfc/token.pending",
+            4000,
+        )
+        if (!stage.ok) {
+            return LicenseResult(ok = false, state = "storage_error", error = "Gagal menyiapkan token secara persisten.")
+        }
+        val result: LicenseResult = json.decodeFromString(
+            raw("license install '/data/adb/zkfc/token.pending'", false, 8000),
+        )
+        if (result.state == "valid") {
+            val promote = RootShell.run(
+                "mv -f /data/adb/zkfc/token.pending /data/adb/zkfc/token.zkl && " +
+                    "chmod 0600 /data/adb/zkfc/token.zkl",
+                3000,
+            )
+            if (!promote.ok) {
+                return result.copy(ok = false, state = "storage_error", error = "Token diterima kernel, tetapi promosi state gagal.")
+            }
+        } else {
+            RootShell.run("rm -f /data/adb/zkfc/token.pending", 2000)
+        }
+        return result
+    }
 
     suspend fun security(): SecurityResult =
         json.decodeFromString(raw("security", false, 8000))
@@ -113,6 +138,9 @@ class ZkfctlClient {
     suspend fun safeConfirm() {
         raw("safe confirm", false, 5000)
     }
+
+    suspend fun safeClear(): SafeStatus =
+        json.decodeFromString(raw("safe clear", false, 5000))
 
     private fun shellQuote(s: String) = "'" + s.replace("'", "'\\''") + "'"
 }

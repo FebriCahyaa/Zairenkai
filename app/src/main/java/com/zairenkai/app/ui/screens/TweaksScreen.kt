@@ -50,6 +50,14 @@ fun TweaksScreen(factory: VmFactory) {
                         Modifier.padding(14.dp), style = MaterialTheme.typography.bodySmall)
                 }
             }
+            ui.error?.let { message ->
+                item {
+                    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.large) {
+                        Text(message, Modifier.padding(14.dp), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                }
+            }
             if (available.isEmpty()) item {
                 Text("Tidak ada tunable yang terbaca pada perangkat ini.",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

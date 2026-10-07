@@ -14,6 +14,7 @@ use crate::topo::Topology;
 pub struct ApplyReport {
     pub applied: Vec<String>,
     pub skipped: Vec<String>,
+    pub failed: Vec<String>,
 }
 
 impl ApplyReport {
@@ -22,6 +23,9 @@ impl ApplyReport {
     }
     fn skip(&mut self, what: String) {
         self.skipped.push(what);
+    }
+    fn fail(&mut self, what: String) {
+        self.failed.push(what);
     }
 }
 
@@ -35,6 +39,54 @@ pub struct Engine<'a> {
 impl<'a> Engine<'a> {
     pub fn new(s: &'a Sysroot, t: &'a Topology) -> Self {
         Engine { s, t, lock: true }
+    }
+
+    fn record_write(&self, r: &mut ApplyReport, node: String, label: String, lock: bool) {
+        match self.s.write(&node, &label, lock) {
+            Ok(()) => r.ok(format!("{node}={label}")),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+            Err(e) => r.fail(format!("{node}={label}: {e}")),
+        }
+    }
+
+    /// Enumerate nodes this engine may mutate. This is used by the persistent
+    /// state layer to capture an exact pre-change snapshot before mutation.
+    pub fn managed_nodes(&self) -> Vec<String> {
+        let mut out = vec![
+            "/proc/sys/vm/swappiness".into(),
+            "/proc/sys/vm/vfs_cache_pressure".into(),
+            "/proc/sys/vm/watermark_scale_factor".into(),
+            "/proc/sys/vm/page-cluster".into(),
+            "/proc/sys/vm/extra_free_kbytes".into(),
+            "/proc/sys/walt/sched_boost".into(),
+            "/proc/sys/kernel/sched_boost".into(),
+        ];
+        for p in &self.t.policies {
+            for leaf in ["scaling_min_freq","scaling_max_freq","scaling_governor"] {
+                out.push(p.rel(leaf));
+            }
+        }
+        if self.t.has_msm_perf {
+            out.push("/sys/module/msm_performance/parameters/cpu_min_freq".into());
+            out.push("/sys/module/msm_performance/parameters/cpu_max_freq".into());
+        }
+        if let Some(dir)=&self.t.top_app_uclamp {
+            out.push(format!("{dir}/cpu.uclamp.min"));
+            out.push(format!("{dir}/cpu.uclamp.max"));
+        }
+        if let Some(dir)=&self.t.stune_top { out.push(format!("{dir}/schedtune.boost")); }
+        if let Some(dir)=&self.t.cpu_boost_dir {
+            out.push(format!("{dir}/input_boost_ms"));
+            out.push(format!("{dir}/input_boost_freq"));
+        }
+        if let Some(g)=&self.t.gpu {
+            for leaf in ["min_freq","max_freq","governor"] { out.push(g.rel(leaf)); }
+        }
+        for dev in self.s.list_dir("/sys/block") {
+            let q=format!("/sys/block/{dev}/queue");
+            for leaf in ["scheduler","read_ahead_kb","nr_requests"] { out.push(format!("{q}/{leaf}")); }
+        }
+        out.sort(); out.dedup(); out
     }
 
     pub fn apply_mode(&self, m: &Mode) -> ApplyReport {
@@ -65,18 +117,39 @@ impl<'a> Engine<'a> {
                 other => other,
             };
 
-            if let Some(ma) = maxf {
-                let node = p.rel("scaling_max_freq");
-                match self.s.write(&node, &ma.to_string(), self.lock) {
-                    Ok(_) => r.ok(format!("{}=max {ma}", p.name)),
-                    Err(_) => r.skip(node),
+            let current_min = self.s.read_u64(&p.rel("scaling_min_freq"));
+            let current_max = self.s.read_u64(&p.rel("scaling_max_freq"));
+
+            // Changing a cpufreq range can fail when the intermediate state has
+            // min > max. Move the constraining side first.
+            let write_min_first = matches!((minf, maxf, current_min),
+                (Some(mi), Some(ma), Some(cur_min)) if ma < cur_min && mi <= ma);
+
+            let mut write_limit = |leaf: &str, value: u64, label: String| {
+                let node = p.rel(leaf);
+                match self.s.write(&node, &value.to_string(), self.lock) {
+                    Ok(_) => r.ok(label),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                    Err(e) => r.fail(format!("{label}: {e}")),
                 }
-            }
-            if let Some(mi) = minf {
-                let node = p.rel("scaling_min_freq");
-                match self.s.write(&node, &mi.to_string(), self.lock) {
-                    Ok(_) => r.ok(format!("{}=min {mi}", p.name)),
-                    Err(_) => r.skip(node),
+            };
+
+            if write_min_first {
+                if let Some(mi) = minf {
+                    write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name));
+                }
+                if let Some(ma) = maxf {
+                    write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name));
+                }
+            } else {
+                if let Some(ma) = maxf {
+                    // If max is being raised above the current min, raising max
+                    // first avoids the symmetric intermediate min > max case.
+                    let _ = current_max;
+                    write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name));
+                }
+                if let Some(mi) = minf {
+                    write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name));
                 }
             }
             if !c.governor.is_empty() {
@@ -87,10 +160,20 @@ impl<'a> Engine<'a> {
         // msm_performance mirror (non-GKI Qualcomm) — "cpuIdx:freq ..." form.
         if self.t.has_msm_perf {
             if let Some(ma) = self.perf_param_str(c, false) {
-                let _ = self.s.write("/sys/module/msm_performance/parameters/cpu_max_freq", &ma, self.lock);
+                let node = "/sys/module/msm_performance/parameters/cpu_max_freq".to_string();
+                match self.s.write(&node, &ma, self.lock) {
+                    Ok(()) => r.ok(format!("msm_performance.max={ma}")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                    Err(e) => r.fail(format!("msm_performance.max={ma}: {e}")),
+                }
             }
             if let Some(mi) = self.perf_param_str(c, true) {
-                let _ = self.s.write("/sys/module/msm_performance/parameters/cpu_min_freq", &mi, self.lock);
+                let node = "/sys/module/msm_performance/parameters/cpu_min_freq".to_string();
+                match self.s.write(&node, &mi, self.lock) {
+                    Ok(()) => r.ok(format!("msm_performance.min={mi}")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                    Err(e) => r.fail(format!("msm_performance.min={mi}: {e}")),
+                }
             }
         }
 
@@ -138,9 +221,16 @@ impl<'a> Engine<'a> {
         let have: Vec<&str> = avail.split_whitespace().collect();
         for g in pref {
             if have.is_empty() || have.contains(&g.as_str()) {
-                if self.s.write(&p.rel("scaling_governor"), g, false).is_ok() {
-                    r.ok(format!("{} gov={g}", p.name));
-                    return;
+                let node = p.rel("scaling_governor");
+                match self.s.write(&node, g, false) {
+                    Ok(()) => {
+                        r.ok(format!("{} gov={g}", p.name));
+                        return;
+                    }
+                    Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                        r.fail(format!("{node}={g}: {e}"));
+                    }
+                    Err(_) => {}
                 }
             }
         }
@@ -151,17 +241,31 @@ impl<'a> Engine<'a> {
         // top-app perf hint: uclamp on GKI, schedtune on non-GKI.
         if let Some(min) = c.uclamp_min_pct {
             if let Some(dir) = &self.t.top_app_uclamp {
-                let _ = self.s.write(&format!("{dir}/cpu.uclamp.min"), &min.to_string(), false);
-                r.ok(format!("uclamp.min={min}"));
+                let node = format!("{dir}/cpu.uclamp.min");
+                let scaled = config::uclamp_from_pct(min);
+                match self.s.write(&node, &scaled.to_string(), false) {
+                    Ok(()) => r.ok(format!("uclamp.min={scaled} ({min}%)")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                    Err(e) => r.fail(format!("uclamp.min={min}: {e}")),
+                }
             } else if let Some(dir) = &self.t.stune_top {
-                let _ = self.s.write(&format!("{dir}/schedtune.boost"), &min.to_string(), false);
-                r.ok(format!("schedtune.boost={min}"));
+                let node = format!("{dir}/schedtune.boost");
+                match self.s.write(&node, &min.to_string(), false) {
+                    Ok(()) => r.ok(format!("schedtune.boost={min}")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                    Err(e) => r.fail(format!("schedtune.boost={min}: {e}")),
+                }
             }
         }
         if let Some(max) = c.uclamp_max_pct {
             if let Some(dir) = &self.t.top_app_uclamp {
-                let _ = self.s.write(&format!("{dir}/cpu.uclamp.max"), &max.to_string(), false);
-                r.ok(format!("uclamp.max={max}"));
+                let node = format!("{dir}/cpu.uclamp.max");
+                let scaled = config::uclamp_from_pct(max);
+                match self.s.write(&node, &scaled.to_string(), false) {
+                    Ok(()) => r.ok(format!("uclamp.max={scaled} ({max}%)")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                    Err(e) => r.fail(format!("uclamp.max={max}: {e}")),
+                }
             }
         }
     }
@@ -172,8 +276,12 @@ impl<'a> Engine<'a> {
             None => return,
         };
         if let Some(ms) = c.input_boost_ms {
-            let _ = self.s.write(&format!("{dir}/input_boost_ms"), &ms.to_string(), false);
-            r.ok(format!("input_boost_ms={ms}"));
+            let node = format!("{dir}/input_boost_ms");
+            match self.s.write(&node, &ms.to_string(), false) {
+                Ok(()) => r.ok(format!("input_boost_ms={ms}")),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                Err(e) => r.fail(format!("input_boost_ms={ms}: {e}")),
+            }
         }
         if let Some(pct) = c.input_boost_pct {
             let mut parts = Vec::new();
@@ -184,8 +292,12 @@ impl<'a> Engine<'a> {
                 }
             }
             if !parts.is_empty() {
-                let _ = self.s.write(&format!("{dir}/input_boost_freq"), &parts.join(" "), false);
-                r.ok("input_boost_freq".into());
+                let node = format!("{dir}/input_boost_freq");
+                match self.s.write(&node, &parts.join(" "), false) {
+                    Ok(()) => r.ok("input_boost_freq".into()),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                    Err(e) => r.fail(format!("input_boost_freq: {e}")),
+                }
             }
         }
     }
@@ -196,34 +308,57 @@ impl<'a> Engine<'a> {
             None => return,
         };
         if !node.avail.is_empty() {
-            if let Some(ma) = g
+            let max_target = g
                 .max_freq
                 .as_ref()
                 .and_then(|f| config::resolve_freq(f, &node.avail, false))
-                .or_else(|| g.max_perf_pct.and_then(|pct| config::resolve_pct(pct, &node.avail, false)))
-            {
-                if self.s.write(&node.rel("max_freq"), &ma.to_string(), self.lock).is_ok() {
-                    r.ok(format!("gpu max={ma}"));
-                }
-            }
-            if let Some(mi) = g
+                .or_else(|| g.max_perf_pct.and_then(|pct| config::resolve_pct(pct, &node.avail, false)));
+            let min_target = g
                 .min_freq
                 .as_ref()
                 .and_then(|f| config::resolve_freq(f, &node.avail, true))
-                .or_else(|| g.min_perf_pct.and_then(|pct| config::resolve_pct(pct, &node.avail, true)))
-            {
-                if self.s.write(&node.rel("min_freq"), &mi.to_string(), self.lock).is_ok() {
-                    r.ok(format!("gpu min={mi}"));
+                .or_else(|| g.min_perf_pct.and_then(|pct| config::resolve_pct(pct, &node.avail, true)));
+            let current_min = self.s.read_u64(&node.rel("min_freq"));
+            let current_max = self.s.read_u64(&node.rel("max_freq"));
+            let min_first = matches!((min_target, max_target, current_min),
+                (Some(mi), Some(ma), Some(cur)) if ma < cur && mi <= ma);
+            let write_min = |value: u64, r: &mut ApplyReport| {
+                let path = node.rel("min_freq");
+                match self.s.write(&path, &value.to_string(), self.lock) {
+                    Ok(()) => r.ok(format!("gpu min={value}")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
+                    Err(e) => r.fail(format!("gpu min={value}: {e}")),
                 }
+            };
+            let write_max = |value: u64, r: &mut ApplyReport| {
+                let path = node.rel("max_freq");
+                match self.s.write(&path, &value.to_string(), self.lock) {
+                    Ok(()) => r.ok(format!("gpu max={value}")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
+                    Err(e) => r.fail(format!("gpu max={value}: {e}")),
+                }
+            };
+            if min_first {
+                if let Some(mi) = min_target { write_min(mi, r); }
+                if let Some(ma) = max_target { write_max(ma, r); }
+            } else {
+                if let Some(ma) = max_target { write_max(ma, r); }
+                if let Some(mi) = min_target { write_min(mi, r); }
             }
+            let _ = current_max;
         }
         for gov in &g.governor {
             let avail = self.s.read(&node.rel("available_governors")).unwrap_or_default();
             let have: Vec<&str> = avail.split_whitespace().collect();
             if have.is_empty() || have.contains(&gov.as_str()) {
-                if self.s.write(&node.rel("governor"), gov, false).is_ok() {
-                    r.ok(format!("gpu gov={gov}"));
-                    break;
+                let path = node.rel("governor");
+                match self.s.write(&path, gov, false) {
+                    Ok(()) => {
+                        r.ok(format!("gpu gov={gov}"));
+                        break;
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(e) => r.fail(format!("gpu gov={gov}: {e}")),
                 }
             }
         }
@@ -231,8 +366,11 @@ impl<'a> Engine<'a> {
 
     fn set_proc_vm(&self, leaf: &str, val: Option<String>, r: &mut ApplyReport) {
         if let Some(v) = val {
-            if self.s.write(&format!("/proc/sys/vm/{leaf}"), &v, false).is_ok() {
-                r.ok(format!("vm.{leaf}"));
+            let node = format!("/proc/sys/vm/{leaf}");
+            match self.s.write(&node, &v, false) {
+                Ok(()) => r.ok(format!("vm.{leaf}")),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                Err(e) => r.fail(format!("vm.{leaf}={v}: {e}")),
             }
         }
     }
@@ -257,17 +395,34 @@ impl<'a> Engine<'a> {
             if !io.scheduler.is_empty() {
                 let avail = self.s.read(&format!("{q}/scheduler")).unwrap_or_default();
                 for sched in &io.scheduler {
-                    if avail.contains(sched.as_str()) && self.s.write(&format!("{q}/scheduler"), sched, false).is_ok() {
-                        r.ok(format!("{dev} iosched={sched}"));
-                        break;
+                    if avail.contains(sched.as_str()) {
+                        let path = format!("{q}/scheduler");
+                        match self.s.write(&path, sched, false) {
+                            Ok(()) => {
+                                r.ok(format!("{dev} iosched={sched}"));
+                                break;
+                            }
+                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                            Err(e) => r.fail(format!("{dev} iosched={sched}: {e}")),
+                        }
                     }
                 }
             }
             if let Some(ra) = io.read_ahead_kb {
-                let _ = self.s.write(&format!("{q}/read_ahead_kb"), &ra.to_string(), false);
+                let path = format!("{q}/read_ahead_kb");
+                match self.s.write(&path, &ra.to_string(), false) {
+                    Ok(()) => r.ok(format!("{dev} read_ahead_kb={ra}")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
+                    Err(e) => r.fail(format!("{dev} read_ahead_kb={ra}: {e}")),
+                }
             }
             if let Some(nr) = io.nr_requests {
-                let _ = self.s.write(&format!("{q}/nr_requests"), &nr.to_string(), false);
+                let path = format!("{q}/nr_requests");
+                match self.s.write(&path, &nr.to_string(), false) {
+                    Ok(()) => r.ok(format!("{dev} nr_requests={nr}")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
+                    Err(e) => r.fail(format!("{dev} nr_requests={nr}: {e}")),
+                }
             }
         }
     }
@@ -276,12 +431,28 @@ impl<'a> Engine<'a> {
     pub fn reset(&self) -> ApplyReport {
         let mut r = ApplyReport::default();
         for p in &self.t.policies {
-            if p.max_hw > 0 {
-                let _ = self.s.write(&p.rel("scaling_max_freq"), &p.max_hw.to_string(), false);
-            }
-            if p.min_hw > 0 {
-                let _ = self.s.write(&p.rel("scaling_min_freq"), &p.min_hw.to_string(), false);
-            }
+            let current_min = self.s.read_u64(&p.rel("scaling_min_freq"));
+            let min_first = matches!(current_min, Some(cur) if p.max_hw > 0 && p.min_hw > 0 && p.max_hw < cur);
+            let write_min = |r: &mut ApplyReport| {
+                if p.min_hw == 0 { return; }
+                let path = p.rel("scaling_min_freq");
+                match self.s.write(&path, &p.min_hw.to_string(), false) {
+                    Ok(()) => r.ok(format!("{}=min_hw {}", p.name, p.min_hw)),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
+                    Err(e) => r.fail(format!("{}=min_hw {}: {e}", p.name, p.min_hw)),
+                }
+            };
+            let write_max = |r: &mut ApplyReport| {
+                if p.max_hw == 0 { return; }
+                let path = p.rel("scaling_max_freq");
+                match self.s.write(&path, &p.max_hw.to_string(), false) {
+                    Ok(()) => r.ok(format!("{}=max_hw {}", p.name, p.max_hw)),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
+                    Err(e) => r.fail(format!("{}=max_hw {}: {e}", p.name, p.max_hw)),
+                }
+            };
+            if min_first { write_min(&mut r); write_max(&mut r); }
+            else { write_max(&mut r); write_min(&mut r); }
             self.apply_governor(p, &["schedutil".to_string(), "walt".to_string()], &mut r);
         }
         if let Some(dir) = &self.t.top_app_uclamp {

@@ -1,17 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-//! zperfd — Zairenkai universal performance engine.
+//! zperfd — resident Zairenkai performance policy engine.
 //!
-//! A probe-driven userspace daemon that applies 4-mode performance profiles
-//! (powersave/balance/performance/fast) on both GKI and non-GKI kernels. It
-//! resolves device-agnostic profiles against the real OPP tables, picks uclamp
-//! vs schedtune automatically, and reacts to the foreground app.
-//!
-//! Subcommands:
-//!   zperfd probe   [--root R] [--json]
-//!   zperfd modes   [--profile F]
-//!   zperfd apply   <mode> [--profile F] [--root R] [--no-lock]
-//!   zperfd reset   [--root R]
-//!   zperfd daemon  [--profile F] [--state DIR] [--interval MS] [--root R]
+//! Mutations are transactional, durable and kernel-license-gated. The daemon
+//! owns desired/effective mode state; the Android app is a client.
 //!
 //! Copyright (C) 2026 FebriCahyaa
 
@@ -19,19 +10,24 @@ mod config;
 mod engine;
 mod nodes;
 mod scene;
+mod state;
 mod topo;
+mod tweak;
 
 use config::Profile;
 use engine::Engine;
 use nodes::Sysroot;
-use std::fs;
-use std::path::{Path, PathBuf};
+use state::StateStore;
+use std::fs::{self, File, OpenOptions};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use topo::Topology;
+use zkfc_sys::{Zkfc, ZKFC_API_VERSION};
 
 const GENERIC: &str = include_str!("../profiles/generic.toml");
 const LAVENDER: &str = include_str!("../profiles/lavender.toml");
+const SAFE_MODE: &str = "/data/adb/zkfc/safe_mode";
 
 static STOP: AtomicBool = AtomicBool::new(false);
 
@@ -47,11 +43,12 @@ struct Args {
     state: String,
     interval_ms: u64,
     no_lock: bool,
+    lite: bool,
     json: bool,
 }
 
 fn parse_args() -> Args {
-    let mut a = Args {
+    let mut args = Args {
         cmd: String::new(),
         positional: Vec::new(),
         root: "/".into(),
@@ -59,194 +56,425 @@ fn parse_args() -> Args {
         state: "/data/adb/zperf".into(),
         interval_ms: 1500,
         no_lock: false,
+        lite: false,
         json: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
         match arg.as_str() {
-            "--root" => a.root = it.next().unwrap_or_else(|| "/".into()),
-            "--profile" => a.profile = it.next(),
-            "--state" => a.state = it.next().unwrap_or_else(|| a.state.clone()),
-            "--interval" => a.interval_ms = it.next().and_then(|v| v.parse().ok()).unwrap_or(1500),
-            "--no-lock" => a.no_lock = true,
-            "--json" => a.json = true,
+            "--root" => args.root = it.next().unwrap_or_else(|| "/".into()),
+            "--profile" => args.profile = it.next(),
+            "--state" => args.state = it.next().unwrap_or_else(|| args.state.clone()),
+            "--interval" => {
+                args.interval_ms = it.next().and_then(|v| v.parse().ok()).unwrap_or(1500)
+            }
+            "--no-lock" => args.no_lock = true,
+            "--lite" => args.lite = true,
+            "--json" => args.json = true,
             "-h" | "--help" => {
                 print_help();
                 std::process::exit(0);
             }
-            _ => {
-                if a.cmd.is_empty() {
-                    a.cmd = arg;
-                } else {
-                    a.positional.push(arg);
-                }
-            }
+            _ if args.cmd.is_empty() => args.cmd = arg,
+            _ => args.positional.push(arg),
         }
     }
-    a
+    args
 }
 
 fn print_help() {
     eprintln!(
-        "zperfd — Zairenkai performance engine\n\
-         usage:\n  \
-         zperfd probe  [--root R] [--json]\n  \
-         zperfd modes  [--profile F]\n  \
-         zperfd apply  <mode> [--profile F] [--root R] [--no-lock]\n  \
-         zperfd reset  [--root R]\n  \
-         zperfd daemon [--profile F] [--state DIR] [--interval MS] [--root R]"
+        "zperfd — Zairenkai performance engine\n\n\
+  probe [--json]\n\
+  modes\n\
+  tweak list|get <id>|set <id> <value>\n\
+  apply <mode>\n\
+  set <mode|auto>\n\
+  reset\n\
+  status [--json]\n\
+  daemon"
     );
 }
 
-fn load_profile(explicit: Option<&str>, state: &Path, soc: Option<&str>) -> Result<Profile, String> {
-    if let Some(p) = explicit {
-        let text = fs::read_to_string(p).map_err(|e| format!("read {p}: {e}"))?;
-        return Profile::parse(&text);
-    }
-    let f = state.join("profile.toml");
-    if f.exists() {
-        let text = fs::read_to_string(&f).map_err(|e| e.to_string())?;
-        return Profile::parse(&text);
-    }
-    if let Some(soc) = soc {
-        let cat = state.join("catalog").join(format!("{soc}.toml"));
-        if cat.exists() {
-            let text = fs::read_to_string(&cat).map_err(|e| e.to_string())?;
-            return Profile::parse(&text);
+fn load_profile(
+    explicit: Option<&str>,
+    state: &Path,
+    soc: Option<&str>,
+) -> Result<Profile, String> {
+    let text = if let Some(path) = explicit {
+        fs::read_to_string(path).map_err(|e| format!("read {path}: {e}"))?
+    } else if state.join("profile.toml").exists() {
+        fs::read_to_string(state.join("profile.toml")).map_err(|e| e.to_string())?
+    } else if let Some(soc) = soc {
+        let catalog = state.join("catalog").join(format!("{soc}.toml"));
+        if catalog.exists() {
+            fs::read_to_string(catalog).map_err(|e| e.to_string())?
+        } else if soc.contains("660") {
+            LAVENDER.into()
+        } else {
+            GENERIC.into()
         }
-        if soc.contains("660") {
-            return Profile::parse(LAVENDER);
-        }
-    }
-    Profile::parse(GENERIC)
+    } else {
+        GENERIC.into()
+    };
+    let profile = Profile::parse(&text)?;
+    profile.validate()?;
+    Ok(profile)
 }
 
 fn json_escape(s: &str) -> String {
-    let mut o = String::with_capacity(s.len() + 2);
-    for c in s.chars() {
-        match c {
-            '"' => o.push_str("\\\""),
-            '\\' => o.push_str("\\\\"),
-            '\n' => o.push_str("\\n"),
-            '\r' => o.push_str("\\r"),
-            '\t' => o.push_str("\\t"),
-            c if (c as u32) < 0x20 => o.push_str(&format!("\\u{:04x}", c as u32)),
-            c => o.push(c),
+    let mut out = String::with_capacity(s.len() + 2);
+    for ch in s.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
         }
     }
-    o
+    out
+}
+
+fn kernel_license_ok() -> Result<(), String> {
+    let z = Zkfc::open().map_err(|e| format!("ZKFC unavailable: {e}"))?;
+    let version = z
+        .version()
+        .map_err(|e| format!("ZKFC version query failed: {e}"))?;
+    if !version.api_compatible() {
+        return Err(format!(
+            "incompatible ZKFC API {}.{}.{} (min supported {}.{}.{})",
+            version.api_major(),
+            version.api_minor(),
+            version.api_patch(),
+            (version.api_min_supported >> 16) & 0xff,
+            (version.api_min_supported >> 8) & 0xff,
+            version.api_min_supported & 0xff,
+        ));
+    }
+    let status = z
+        .license_state()
+        .map_err(|e| format!("ZKFC license query failed: {e}"))?;
+    if status != 1 {
+        return Err(format!("ZKFC license state {status}; performance mutation locked"));
+    }
+    Ok(())
+}
+
+fn all_managed_nodes(s: &Sysroot, t: &Topology, engine: &Engine<'_>) -> Vec<String> {
+    let mut nodes = engine.managed_nodes();
+    nodes.extend(tweak::managed_nodes(s, t));
+    nodes.sort();
+    nodes.dedup();
+    nodes
+}
+
+fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Result<String, String> {
+    let mode = if requested == "auto" {
+        scene::resolve_auto(sysroot)
+    } else {
+        requested
+    };
+    if !profile.mode.contains_key(mode) {
+        return Err(format!("unknown mode '{mode}'"));
+    }
+    Ok(mode.to_string())
 }
 
 fn cmd_probe(s: &Sysroot, json: bool) -> i32 {
-    let t = Topology::detect(s);
+    let topology = Topology::detect(s);
     if json {
-        let mut pol = Vec::new();
-        for p in &t.policies {
-            pol.push(format!(
-                "{{\"name\":\"{}\",\"min_hw\":{},\"max_hw\":{},\"opps\":{},\"min_opp\":{},\"max_opp\":{}}}",
-                json_escape(&p.name),
-                p.min_hw,
-                p.max_hw,
-                p.avail.len(),
-                p.avail.first().copied().unwrap_or(0),
-                p.avail.last().copied().unwrap_or(0),
-            ));
-        }
-        let gpu = match &t.gpu {
-            Some(g) => format!(
-                "{{\"kind\":\"{:?}\",\"opps\":{},\"min\":{},\"max\":{}}}",
-                g.kind,
+        let policies = topology
+            .policies
+            .iter()
+            .map(|p| {
+                format!(
+                    "{{\"name\":\"{}\",\"min_hw\":{},\"max_hw\":{},\"opps\":{},\"min_opp\":{},\"max_opp\":{}}}",
+                    json_escape(&p.name),
+                    p.min_hw,
+                    p.max_hw,
+                    p.avail.len(),
+                    p.avail.first().copied().unwrap_or(0),
+                    p.avail.last().copied().unwrap_or(0)
+                )
+            })
+            .collect::<Vec<_>>();
+        let boost = format!(
+            "{{\"uclamp\":{},\"schedtune\":{},\"cpu_boost\":{}}}",
+            topology.top_app_uclamp.is_some(),
+            topology.stune_top.is_some(),
+            topology.cpu_boost_dir.is_some(),
+        );
+        let gpu = topology.gpu.as_ref().map(|g| {
+            let kind = match g.kind {
+                topo::GpuKind::Kgsl => "kgsl",
+                topo::GpuKind::Mali => "mali",
+            };
+            format!(
+                "{{\"kind\":\"{}\",\"opps\":{},\"min\":{},\"max\":{}}}",
+                kind,
                 g.avail.len(),
                 g.avail.first().copied().unwrap_or(0),
                 g.avail.last().copied().unwrap_or(0),
-            ),
-            None => "null".into(),
-        };
+            )
+        }).unwrap_or_else(|| "null".into());
         println!(
-            "{{\"flavor\":\"{}\",\"gki\":{},\"release\":\"{}\",\"cgroup_v2\":{},\"has_msm_perf\":{},\
-             \"boost\":{{\"uclamp\":{},\"schedtune\":{},\"cpu_boost\":{}}},\"policies\":[{}],\"gpu\":{}}}",
-            t.flavor(),
-            t.gki,
-            json_escape(&t.release),
-            t.cgroup_v2,
-            t.has_msm_perf,
-            t.top_app_uclamp.is_some(),
-            t.stune_top.is_some(),
-            t.cpu_boost_dir.is_some(),
-            pol.join(","),
+            "{{\"ok\":true,\"flavor\":\"{}\",\"gki\":{},\"release\":\"{}\",\"cgroup_v2\":{},\"has_msm_perf\":{},\"boost\":{},\"policies\":[{}],\"gpu\":{}}}",
+            topology.flavor(),
+            topology.gki,
+            json_escape(&topology.release),
+            topology.cgroup_v2,
+            topology.has_msm_perf,
+            boost,
+            policies.join(","),
             gpu,
         );
     } else {
-        println!("flavor      : {}", t.flavor());
-        println!("release     : {}", t.release);
-        println!("cgroup v2   : {}", t.cgroup_v2);
-        println!("msm_perf    : {}", t.has_msm_perf);
         println!(
-            "boost       : uclamp={} schedtune={} cpu_boost={}",
-            t.top_app_uclamp.is_some(),
-            t.stune_top.is_some(),
-            t.cpu_boost_dir.is_some()
+            "flavor      : {}\nrelease     : {}\ncgroup v2   : {}\nmsm_perf    : {}",
+            topology.flavor(),
+            topology.release,
+            topology.cgroup_v2,
+            topology.has_msm_perf
         );
-        for p in &t.policies {
+        for p in &topology.policies {
             println!(
-                "{:<9}  : {} OPPs  {}..{} kHz",
+                "{:<9}: {} OPPs {}..{} kHz",
                 p.name,
                 p.avail.len(),
                 p.avail.first().copied().unwrap_or(0),
                 p.avail.last().copied().unwrap_or(0)
             );
         }
-        match &t.gpu {
-            Some(g) => println!("gpu         : {:?}  {} OPPs  {}..{}", g.kind, g.avail.len(),
-                g.avail.first().copied().unwrap_or(0), g.avail.last().copied().unwrap_or(0)),
-            None => println!("gpu         : none detected"),
-        }
     }
     0
 }
 
-fn cmd_apply(a: &Args, mode: &str) -> i32 {
-    let s = Sysroot::new(&a.root);
-    let t = Topology::detect(&s);
-    let prof = match load_profile(a.profile.as_deref(), Path::new(&a.state), scene::soc_platform().as_deref()) {
+fn apply_transaction(args: &Args, requested: &str) -> i32 {
+    if let Err(e) = kernel_license_ok() {
+        eprintln!("apply blocked: {e}");
+        return 4;
+    }
+
+    let s = Sysroot::new(&args.root);
+    let topology = Topology::detect(&s);
+    let mut engine = Engine::new(&s, &topology);
+    engine.lock = !args.no_lock;
+    let nodes = all_managed_nodes(&s, &topology, &engine);
+    let mut state = StateStore::new(&args.state);
+
+    if let Err(e) = state.ensure_boot(&s, &nodes) {
+        eprintln!("state init failed: {e}");
+        return 3;
+    }
+    if let Err(e) = state.recover(&s) {
+        eprintln!("state recovery failed: {e}");
+        return 3;
+    }
+
+    let profile = match load_profile(
+        args.profile.as_deref(),
+        Path::new(&args.state),
+        scene::soc_platform().as_deref(),
+    ) {
         Ok(p) => p,
         Err(e) => {
             eprintln!("profile error: {e}");
             return 2;
         }
     };
-    let m = match prof.mode(mode) {
-        Some(m) => m,
-        None => {
-            eprintln!("unknown mode '{mode}' (have: {})", prof.mode.keys().cloned().collect::<Vec<_>>().join(", "));
+    let effective = match requested_mode(&profile, &s, requested) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{e}");
             return 2;
         }
     };
-    let mut eng = Engine::new(&s, &t);
-    eng.lock = !a.no_lock;
-    let rep = eng.apply_mode(m);
-    println!("[{}] applied {} node(s), skipped {}", mode, rep.applied.len(), rep.skipped.len());
-    for x in &rep.applied {
-        println!("  + {x}");
+
+    if let Err(e) = state.begin(&s, &nodes) {
+        eprintln!("transaction begin failed: {e}");
+        return 3;
+    }
+    let report = engine.apply_mode(profile.mode(&effective).expect("validated mode"));
+    if !report.failed.is_empty() || report.applied.is_empty() {
+        let rollback = state.rollback(&s);
+        if let Err(e) = rollback {
+            eprintln!("rollback failed: {e}");
+        }
+        eprintln!(
+            "apply failed: {} failed, {} applied, {} skipped",
+            report.failed.len(),
+            report.applied.len(),
+            report.skipped.len()
+        );
+        for failure in report.failed {
+            eprintln!("  ! {failure}");
+        }
+        return 3;
+    }
+
+    if let Err(e) = state.commit(Some(requested), Some(&effective)) {
+        // Commit can fail after the durable commit marker. Recovery completes
+        // that publication when possible, or rolls back an uncommitted txn.
+        let recovery = state.recover(&s);
+        if let Err(recovery_error) = recovery {
+            eprintln!("state commit failed: {e}; recovery failed: {recovery_error}");
+        } else {
+            eprintln!("state commit failed: {e}; recovery attempted");
+        }
+        return 3;
+    }
+
+    println!(
+        "mode={requested} effective={effective} applied={} skipped={}",
+        report.applied.len(),
+        report.skipped.len()
+    );
+    for item in report.applied {
+        println!("  + {item}");
+    }
+    for item in report.skipped {
+        println!("  - {item}");
     }
     0
 }
 
-fn cmd_reset(a: &Args) -> i32 {
-    let s = Sysroot::new(&a.root);
-    let t = Topology::detect(&s);
-    let eng = Engine::new(&s, &t);
-    let rep = eng.reset();
-    println!("reset: {} node(s)", rep.applied.len());
-    0
+fn cmd_tweak(args: &Args) -> i32 {
+    let sub = args.positional.first().map(String::as_str).unwrap_or("list");
+    let s = Sysroot::new(&args.root);
+    let topology = Topology::detect(&s);
+
+    match sub {
+        "list" => {
+            for spec in tweak::specs().filter(|spec| !(args.lite && spec.lite)) {
+                let value = tweak::read(spec.id, &s, &topology).unwrap_or_else(|| "".into());
+                println!(
+                    "{}\t{}\t{}\t{}",
+                    spec.id,
+                    spec.category,
+                    spec.title,
+                    value
+                );
+            }
+            0
+        }
+        "get" => {
+            let Some(id) = args.positional.get(1) else {
+                eprintln!("usage: tweak get <id>");
+                return 2;
+            };
+            if tweak::find(id).is_none() {
+                eprintln!("unknown tweak '{id}'");
+                return 2;
+            }
+            match tweak::read(id, &s, &topology) {
+                Some(value) => println!("{value}"),
+                None => {
+                    eprintln!("tweak '{id}' unavailable");
+                    return 3;
+                }
+            }
+            0
+        }
+        "set" => {
+            let (Some(id), Some(value)) = (args.positional.get(1), args.positional.get(2)) else {
+                eprintln!("usage: tweak set <id> <value>");
+                return 2;
+            };
+            if let Err(e) = kernel_license_ok() {
+                eprintln!("tweak blocked: {e}");
+                return 4;
+            }
+            let Some(spec) = tweak::find(id) else {
+                eprintln!("unknown tweak '{id}'");
+                return 2;
+            };
+            if args.lite && spec.lite {
+                eprintln!("tweak '{id}' is disabled in lite mode");
+                return 2;
+            }
+
+            let mut engine = Engine::new(&s, &topology);
+            engine.lock = !args.no_lock;
+            let mut nodes = all_managed_nodes(&s, &topology, &engine);
+            nodes.extend(tweak::managed_nodes(&s, &topology));
+            nodes.sort();
+            nodes.dedup();
+            let mut state = StateStore::new(&args.state);
+            if let Err(e) = state.ensure_boot(&s, &nodes).and_then(|_| state.recover(&s)) {
+                eprintln!("state recovery failed: {e}");
+                return 3;
+            }
+            if let Err(e) = state.begin(&s, &nodes) {
+                eprintln!("transaction begin failed: {e}");
+                return 3;
+            }
+            match tweak::apply(id, value, &s, &topology) {
+                Ok(effective) => match state.commit(None, None) {
+                    Ok(()) => {
+                        println!("{{\"ok\":true,\"id\":\"{}\",\"value\":\"{}\"}}", json_escape(id), json_escape(&effective));
+                        0
+                    }
+                    Err(e) => {
+                        let _ = state.recover(&s);
+                        eprintln!("state commit failed: {e}");
+                        3
+                    }
+                },
+                Err(e) => {
+                    if let Err(rollback) = state.rollback(&s) {
+                        eprintln!("rollback failed: {rollback}");
+                    }
+                    eprintln!("tweak failed: {e}");
+                    3
+                }
+            }
+        }
+        _ => {
+            eprintln!("usage: tweak list|get <id>|set <id> <value>");
+            2
+        }
+    }
 }
 
-fn cmd_modes(a: &Args) -> i32 {
-    match load_profile(a.profile.as_deref(), Path::new(&a.state), scene::soc_platform().as_deref()) {
-        Ok(p) => {
-            println!("profile: {} (soc={})", p.meta.name, p.meta.soc);
-            println!("default: {}", p.meta.default_mode);
-            println!("modes  : {}", p.mode.keys().cloned().collect::<Vec<_>>().join(", "));
+fn cmd_reset(args: &Args) -> i32 {
+    let s = Sysroot::new(&args.root);
+    let topology = Topology::detect(&s);
+    let engine = Engine::new(&s, &topology);
+    let nodes = all_managed_nodes(&s, &topology, &engine);
+    let mut state = StateStore::new(&args.state);
+    if let Err(e) = state.ensure_boot(&s, &nodes) {
+        eprintln!("state init failed: {e}");
+        return 3;
+    }
+    match state.restore_baseline(&s, &nodes) {
+        Ok(count) => {
+            println!("restored baseline: {count} node(s)");
+            0
+        }
+        Err(e) => {
+            eprintln!("baseline reset failed: {e}");
+            3
+        }
+    }
+}
+
+fn cmd_modes(args: &Args) -> i32 {
+    match load_profile(
+        args.profile.as_deref(),
+        Path::new(&args.state),
+        scene::soc_platform().as_deref(),
+    ) {
+        Ok(profile) => {
+            println!(
+                "profile: {} (soc={})\ndefault: {}\nmodes: {}",
+                profile.meta.name,
+                profile.meta.soc,
+                profile.meta.default_mode,
+                profile.mode.keys().cloned().collect::<Vec<_>>().join(", ")
+            );
             0
         }
         Err(e) => {
@@ -256,90 +484,196 @@ fn cmd_modes(a: &Args) -> i32 {
     }
 }
 
-fn cmd_daemon(a: &Args) -> i32 {
-    unsafe {
-        libc::signal(libc::SIGTERM, on_signal as *const () as libc::sighandler_t);
-        libc::signal(libc::SIGINT, on_signal as *const () as libc::sighandler_t);
+fn cmd_status(args: &Args) -> i32 {
+    let s = Sysroot::new(&args.root);
+    let topology = Topology::detect(&s);
+    let engine = Engine::new(&s, &topology);
+    let nodes = all_managed_nodes(&s, &topology, &engine);
+    let mut state = StateStore::new(&args.state);
+    let _ = state.ensure_boot(&s, &nodes);
+    let _ = state.recover(&s);
+    let desired = state.mode().unwrap_or_else(|| "balance".into());
+    let effective = state.effective_mode().unwrap_or_else(|| {
+        if desired == "auto" {
+            scene::resolve_auto(&Sysroot::new(&args.root)).into()
+        } else {
+            desired.clone()
+        }
+    });
+    let auto = desired == "auto";
+    if args.json {
+        println!(
+            "{{\"ok\":true,\"desired\":\"{}\",\"effective\":\"{}\",\"auto\":{},\"pending_transaction\":{},\"safe_mode\":{}}}",
+            json_escape(&desired),
+            json_escape(&effective),
+            auto,
+            state.has_pending_transaction(),
+            Path::new(SAFE_MODE).exists(),
+        );
+    } else {
+        println!("desired   : {desired}\neffective : {effective}\nauto      : {auto}");
     }
-    let s = Sysroot::new(&a.root);
-    let t = Topology::detect(&s);
-    let state = PathBuf::from(&a.state);
-    let _ = fs::create_dir_all(&state);
-    let prof = match load_profile(a.profile.as_deref(), &state, scene::soc_platform().as_deref()) {
+    0
+}
+
+
+fn acquire_daemon_lock(state: &Path) -> std::io::Result<File> {
+    fs::create_dir_all(state)?;
+    let file = OpenOptions::new()
+        .create(true)
+        .read(true)
+        .write(true)
+        .open(state.join("daemon.lock"))?;
+    let rc = unsafe { libc::flock(std::os::fd::AsRawFd::as_raw_fd(&file), libc::LOCK_EX | libc::LOCK_NB) };
+    if rc != 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(file)
+}
+
+fn cmd_daemon(args: &Args) -> i32 {
+    let _daemon_lock = match acquire_daemon_lock(Path::new(&args.state)) {
+        Ok(lock) => lock,
+        Err(e) => {
+            eprintln!("zperfd: another daemon instance is already active or lock failed: {e}");
+            return 5;
+        }
+    };
+
+    unsafe {
+        libc::signal(libc::SIGTERM, on_signal as libc::sighandler_t);
+        libc::signal(libc::SIGINT, on_signal as libc::sighandler_t);
+    }
+
+    let s = Sysroot::new(&args.root);
+    let topology = Topology::detect(&s);
+    let mut engine = Engine::new(&s, &topology);
+    engine.lock = !args.no_lock;
+    let nodes = all_managed_nodes(&s, &topology, &engine);
+    let mut state = StateStore::new(&args.state);
+    if let Err(e) = state.ensure_boot(&s, &nodes) {
+        eprintln!("zperfd: state init failed: {e}");
+        return 3;
+    }
+    if let Err(e) = state.recover(&s) {
+        eprintln!("zperfd: state recovery failed: {e}");
+        return 3;
+    }
+
+    let profile = match load_profile(
+        args.profile.as_deref(),
+        Path::new(&args.state),
+        scene::soc_platform().as_deref(),
+    ) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("profile error: {e}");
+            eprintln!("zperfd: profile error: {e}");
             return 2;
         }
     };
-    let mut eng = Engine::new(&s, &t);
-    eng.lock = !a.no_lock;
+    eprintln!("zperfd: {} profile '{}'", topology.flavor(), profile.meta.name);
 
-    eprintln!(
-        "zperfd: {} profile '{}', {} policies, default '{}'",
-        t.flavor(),
-        prof.meta.name,
-        t.policies.len(),
-        prof.meta.default_mode
-    );
-
-    let mode_file = state.join("mode");
-    let mut last_applied = String::new();
-    let mut last_pkg = String::new();
-
+    let mut last = String::new();
+    let mut was_safe = false;
     while !STOP.load(Ordering::SeqCst) {
-        let base = fs::read_to_string(&mode_file).ok().map(|s| s.trim().to_string()).unwrap_or_else(|| prof.meta.default_mode.clone());
-        let pkg = scene::foreground_pkg();
-        let eff = pkg
-            .as_ref()
-            .and_then(|p| prof.perapp.get(p).cloned())
-            .unwrap_or_else(|| base.clone());
+        let safe = Path::new(SAFE_MODE).exists();
+        if safe {
+            if !was_safe {
+                if let Err(e) = state.restore_baseline(&s, &nodes) {
+                    eprintln!("zperfd: SAFE MODE restore failed: {e}");
+                } else {
+                    eprintln!("zperfd: SAFE MODE active; baseline restored");
+                }
+            }
+            was_safe = true;
+            last.clear();
+            std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
+            continue;
+        }
+        if was_safe {
+            // The user explicitly cleared safe mode. Re-apply the desired
+            // policy even when its effective name has not changed.
+            last.clear();
+            was_safe = false;
+        }
 
-        if eff != last_applied || pkg != Some(last_pkg.clone()) {
-            if let Some(m) = prof.mode(&eff) {
-                let rep = eng.apply_mode(m);
-                eprintln!(
-                    "zperfd: mode '{}' ({}), applied {}",
-                    eff,
-                    pkg.as_deref().unwrap_or("-"),
-                    rep.applied.len()
-                );
-                last_applied = eff;
-                last_pkg = pkg.unwrap_or_default();
+        let desired = state.mode().unwrap_or_else(|| profile.meta.default_mode.clone());
+        let mut effective = if desired == "auto" {
+            scene::resolve_auto(&s).to_string()
+        } else {
+            desired.clone()
+        };
+        if let Some(package) = scene::foreground_pkg() {
+            if let Some(mode) = profile.perapp.get(&package) {
+                effective = mode.clone();
             }
         }
-        // sleep in short slices so a signal stops us promptly.
-        let mut slept = 0u64;
-        while slept < a.interval_ms && !STOP.load(Ordering::SeqCst) {
-            std::thread::sleep(Duration::from_millis(100));
-            slept += 100;
+
+        if profile.mode.contains_key(&effective) && effective != last {
+            match kernel_license_ok() {
+                Ok(()) => {
+                    if let Err(e) = state.begin(&s, &nodes) {
+                        eprintln!("zperfd: transaction begin failed: {e}");
+                    } else {
+                        let report = engine.apply_mode(profile.mode(&effective).expect("validated mode"));
+                        if report.failed.is_empty() && !report.applied.is_empty() {
+                            match state.commit(Some(&desired), Some(&effective)) {
+                                Ok(()) => {
+                                    last = effective.clone();
+                                    eprintln!(
+                                        "zperfd: {} -> {} applied={} skipped={}",
+                                        desired,
+                                        effective,
+                                        report.applied.len(),
+                                        report.skipped.len()
+                                    );
+                                }
+                                Err(e) => {
+                                    let _ = state.recover(&s);
+                                    eprintln!("zperfd: commit failed: {e}");
+                                }
+                            }
+                        } else {
+                            if let Err(e) = state.rollback(&s) {
+                                eprintln!("zperfd: rollback failed: {e}");
+                            }
+                            eprintln!("zperfd: apply {effective} failed");
+                            for failure in report.failed {
+                                eprintln!("zperfd:   ! {failure}");
+                            }
+                        }
+                    }
+                }
+                Err(e) => eprintln!("zperfd: mutation locked: {e}"),
+            }
         }
+
+        std::thread::sleep(Duration::from_millis(args.interval_ms.max(250)));
     }
-    eprintln!("zperfd: stopping, restoring stock limits");
-    let _ = eng.reset();
+    eprintln!("zperfd: stopping");
     0
 }
 
 fn main() {
-    let a = parse_args();
-    let code = match a.cmd.as_str() {
-        "probe" => cmd_probe(&Sysroot::new(&a.root), a.json),
-        "apply" => match a.positional.first() {
-            Some(m) => cmd_apply(&a, &m.clone()),
-            None => {
-                eprintln!("apply: missing <mode>");
-                2
-            }
-        },
-        "reset" => cmd_reset(&a),
-        "modes" => cmd_modes(&a),
-        "daemon" => cmd_daemon(&a),
+    let args = parse_args();
+    let code = match args.cmd.as_str() {
+        "probe" => cmd_probe(&Sysroot::new(&args.root), args.json),
+        "modes" => cmd_modes(&args),
+        "tweak" => cmd_tweak(&args),
+        "apply" | "set" => args
+            .positional
+            .first()
+            .map(|mode| apply_transaction(&args, mode))
+            .unwrap_or(2),
+        "reset" => cmd_reset(&args),
+        "status" => cmd_status(&args),
+        "daemon" => cmd_daemon(&args),
         "" => {
             print_help();
             1
         }
-        other => {
-            eprintln!("unknown command '{other}'");
+        command => {
+            eprintln!("unknown command '{command}'");
             print_help();
             1
         }

@@ -7,11 +7,57 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  gki-lkm:
+    name: GKI LKM / ${{ matrix.kmi }}
+    strategy:
+      fail-fast: false
+      matrix:
+        kmi:
+          - android12-5.10
+          - android13-5.10
+          - android13-5.15
+          - android14-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+          - android17-6.18
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GKI build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q bc bison build-essential ccache flex git libelf-dev libssl-dev
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod +x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Build ZKFC vendor module
+        run: |
+          set -euo pipefail
+          bash kernel/gki/build_lkm.sh "${{ matrix.kmi }}" --arch arm64
+          mkdir -p "module/lkm/${{ matrix.kmi }}-arm64"
+          cp "out/lkm/${{ matrix.kmi }}-arm64/zkfc.ko" "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko"
+          sha256sum "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko" | tee "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko.sha256"
+
+      - name: Upload LKM
+        uses: actions/upload-artifact@v4
+        with:
+          name: zairenkai-lkm-${{ matrix.kmi }}
+          path: module/lkm/${{ matrix.kmi }}-arm64/
+          if-no-files-found: error
+
+  package:
+    name: Package release
+    needs: gki-lkm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -22,66 +68,97 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
-      - run: |
+      - name: Install Android SDK
+        run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build signed release APK
+      - name: Build and verify signed APK
         env:
           ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
           ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleStandardRelease --stacktrace
+        run: ./gradlew :app:assembleStandardRelease :app:testStandardDebugUnitTest --stacktrace
 
-      - name: Verify the APK is signed
+      - name: Verify APK certificate
         run: |
+          set -euo pipefail
           APK=$(find app/build/outputs/apk/standard/release -name '*.apk' | head -1)
-          "$ANDROID_HOME"/build-tools/37.0.0/apksigner verify --verbose "$APK"
+          BT="$ANDROID_HOME/build-tools/37.0.0"
+          "$BT/apksigner" verify --verbose "$APK"
+          EXPECTED='02B4596737261F5C154CCC323B27467A483034A5880A9DB0822EEED66FAC1944'
+          ACTUAL=$(
+            "$BT/apksigner" verify --print-certs "$APK" |
+              sed -n 's/Signer #1 certificate SHA-256 digest: //p' |
+              head -1 | tr -d '[:space:]' | tr 'a-f' 'A-F'
+          )
+          test "$ACTUAL" = "$EXPECTED"
 
-      - name: Build userspace (arm64 + x86_64)
-        run: |
-          NDK="$ANDROID_HOME/ndk/30.0.16248370"
-          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            triple="${t%%:*}"; abi="${t##*:}"
-            mkdir -p module/bin/$abi
-            "$TC/${triple}31-clang" -std=c11 -O2 -fstack-protector-strong -fPIE -pie \
-              -I kernel/include/uapi -I userspace/include -I userspace/lib \
-              userspace/lib/*.c userspace/zkfctl/main.c -o module/bin/$abi/zkfctl
-            "$TC/llvm-strip" module/bin/$abi/zkfctl
-          done
-
-      - name: Set up Rust (Android targets)
+      - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android, x86_64-linux-android
-
-      - name: Build zperfd engine (arm64 + x86_64)
+          toolchain: stable
+          targets: aarch64-linux-android,x86_64-linux-android
+      - name: Build zperfd and validate workspace
         working-directory: rust
+        env:
+          NDK: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
         run: |
-          NDK="$ANDROID_HOME/ndk/30.0.16248370"
+          set -euo pipefail
+          cargo fmt --check
+          cargo test --workspace --all-targets --locked
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
           TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
           export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TC/aarch64-linux-android31-clang"
           export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$TC/x86_64-linux-android31-clang"
-          export CC_aarch64_linux_android="$TC/aarch64-linux-android31-clang"
-          export CC_x86_64_linux_android="$TC/x86_64-linux-android31-clang"
           for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            triple="${t%%:*}"; abi="${t##*:}"
-            cargo build -p zperfd --release --target "$triple"
-            mkdir -p ../module/bin/$abi
-            cp "target/$triple/release/zperfd" ../module/bin/$abi/zperfd
+            target="${t%%:*}"; abi="${t##*:}"
+            cargo build -p zperfd --release --target "$target" --locked
+            mkdir -p "../module/bin/$abi"
+            cp "target/$target/release/zperfd" "../module/bin/$abi/zperfd"
+            "$TC/llvm-strip" "../module/bin/$abi/zperfd"
           done
 
-      - name: Stage zperf catalog
+      - name: Build zkfctl userspace
         run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/30.0.16248370"
+          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            triple="${t%%:*}"; abi="${t##*:}"
+            mkdir -p "module/bin/$abi"
+            "$TC/${triple}31-clang" -std=c11 -O2 -Wall -Wextra -Werror \
+              -fstack-protector-strong -fPIE -pie \
+              -I kernel/include/uapi -I userspace/include -I userspace/lib \
+              userspace/lib/*.c userspace/zkfctl/main.c -o "module/bin/$abi/zkfctl"
+            "$TC/llvm-strip" "module/bin/$abi/zkfctl"
+          done
+
+      - name: Stage zperf catalog and checksum manifest
+        run: |
+          set -euo pipefail
           mkdir -p module/zperf/catalog
           cp rust/zperfd/profiles/*.toml module/zperf/catalog/
+          : > module/SHA256SUMS
+          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
 
-      - name: Package module zip
+      - name: Download GKI LKM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: zairenkai-lkm-*
+          merge-multiple: true
+          path: module/lkm
+
+      - name: Package module
         run: |
-          cd module && zip -r9 ../Zairenkai-module.zip . -x '*.git*' && cd ..
+          set -euo pipefail
+          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
+          cd module
+          zip -r9 ../Zairenkai-module.zip . -x '*.git*'
+          cd ..
+          sha256sum Zairenkai-module.zip
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -89,4 +166,5 @@ jobs:
           files: |
             Zairenkai-module.zip
             app/build/outputs/apk/standard/release/*.apk
+            module/SHA256SUMS
           generate_release_notes: true

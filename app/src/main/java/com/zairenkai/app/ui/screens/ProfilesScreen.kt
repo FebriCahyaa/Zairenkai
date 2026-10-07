@@ -60,9 +60,13 @@ fun ProfilesScreen(factory: VmFactory) {
                 )
             }
 
-            ui.lastReport?.let {
-                Text("Terakhir diterapkan: ${it.applied}/${it.requested} tweak.",
+            ui.lastApplied?.let { id ->
+                val appliedName = Profiles.all.firstOrNull { it.id == id }?.name ?: id.name
+                Text("Profil terakhir diterapkan: $appliedName.",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            ui.error?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
         }
     }

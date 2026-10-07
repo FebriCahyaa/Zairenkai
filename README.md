@@ -50,18 +50,25 @@ for third-party attributions.
 ## How the pieces talk
 
 ```
-Android app ──su──▶ zkfctl ──ioctl──▶ /dev/zkfc (ZKFC kernel module)
-     (Compose)        (C engine)         (signed API, policy, boosts, thermal)
+Android app ──su──▶ zperfd ──libzkfc/ioctl──▶ /dev/zkfc (ZKFC)
+    Compose          state + transaction          kernel policy/boost/thermal
+       │
+       └───────────────▶ zkfctl (diagnostic / compatibility CLI)
 ```
 
-The app shells out to `zkfctl`, which prints JSON. `zkfctl` performs sysfs
-tweaks directly and calls `/dev/zkfc` for the licensed in-kernel features.
+`zperfd` is the authoritative root-side performance engine. It owns profiles,
+Auto mode, durable transactions, baseline snapshots, rollback and device-aware
+capability discovery. The Android app is a client and never mutates managed
+sysfs state directly. `zkfctl` remains the low-level diagnostic and license
+management CLI, while `/dev/zkfc` remains the kernel authority for licensed
+performance controls.
 
 ## Build
 
 - **App:** `./gradlew :app:assembleDebug` (AGP 9.4.1, Gradle 9.8.0, Kotlin 2.4.20,
   SDK 37). See [`app/`](app).
-- **Engine:** `userspace/build.sh android` (NDK). See [`userspace/`](userspace).
+- **Engine:** `rust/zperfd` (resident Rust daemon) plus `userspace/zkfctl` (C CLI/compatibility engine).
+  See [`rust/zperfd/`](rust/zperfd) and [`userspace/`](userspace).
 - **Kernel (GKI LKM):** `kernel/gki/build_lkm.sh <kmi-branch>`. See
   [`kernel/README.md`](kernel/README.md) for the KMI matrix and non-GKI paths.
 

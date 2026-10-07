@@ -34,8 +34,8 @@ struct zk_tweak {
 
 const char *zk_tweak_cat_name(enum zk_tweak_cat c);
 
-/* Walk the whole catalog, emitting id/title/category/current/available. */
-void zk_tweaks_dump(struct zk_json *j);
+/* Walk the catalog, omitting heavy entries when lite_mode is non-zero. */
+void zk_tweaks_dump(struct zk_json *j, int lite_mode);
 
 /* Find a tweak by id, or NULL. */
 const struct zk_tweak *zk_tweak_find(const char *id);

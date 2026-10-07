@@ -24,8 +24,7 @@ object SignatureGuard {
             val s = info.signingInfo
             when {
                 s == null -> emptyArray()
-                s.hasMultipleSigners() -> s.apkContentsSigners
-                else -> s.signingCertificateHistory
+                else -> s.apkContentsSigners
             }
         } else {
             @Suppress("DEPRECATION")

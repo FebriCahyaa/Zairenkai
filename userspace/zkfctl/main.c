@@ -11,6 +11,9 @@
  */
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -79,6 +82,106 @@ static int cmd_info(struct zkfc *z, struct zk_json *j)
 }
 
 /* --------------------------------------------------------------- license */
+static int persist_file_root(const char *src, const char *dst, mode_t mode)
+{
+    char tmp[PATH_MAX];
+    const char *slash;
+    unsigned char buf[8192];
+    ssize_t n;
+    int in = -1, out = -1, dirfd = -1, rc = 0;
+
+    if (snprintf(tmp, sizeof(tmp), "%s.tmp", dst) >= (int)sizeof(tmp))
+        return -ENAMETOOLONG;
+
+    in = open(src, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (in < 0)
+        return -errno;
+    unlink(tmp);
+    out = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW, mode);
+    if (out < 0) {
+        rc = -errno;
+        goto fail;
+    }
+
+    for (;;) {
+        n = read(in, buf, sizeof(buf));
+        if (n == 0)
+            break;
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            rc = -errno;
+            goto fail;
+        }
+        for (ssize_t off = 0; off < n;) {
+            ssize_t w = write(out, buf + off, (size_t)(n - off));
+            if (w < 0) {
+                if (errno == EINTR)
+                    continue;
+                rc = -errno;
+                goto fail;
+            }
+            if (w == 0) {
+                rc = -EIO;
+                goto fail;
+            }
+            off += w;
+        }
+    }
+
+    if (fchmod(out, mode) != 0) {
+        rc = -errno;
+        goto fail;
+    }
+    if (fsync(out) != 0) {
+        rc = -errno;
+        goto fail;
+    }
+    if (close(out) != 0) {
+        rc = -errno;
+        goto fail_unlink;
+    }
+    if (close(in) != 0) {
+        in = -1;
+        rc = -errno;
+        goto fail_unlink;
+    }
+    in = -1;
+
+    if (rename(tmp, dst) != 0) {
+        rc = -errno;
+        goto fail_unlink;
+    }
+
+    /* Make the rename durable across power loss when the backing fs supports it. */
+    slash = strrchr(dst, '/');
+    if (slash) {
+        char dir[PATH_MAX];
+        size_t len = (size_t)(slash - dst);
+        if (len == 0)
+            len = 1;
+        if (len < sizeof(dir)) {
+            memcpy(dir, dst, len);
+            dir[len] = '\0';
+            dirfd = open(dir, O_RDONLY | O_CLOEXEC | O_DIRECTORY);
+            if (dirfd >= 0) {
+                if (fsync(dirfd) != 0)
+                    rc = -errno;
+                close(dirfd);
+            }
+        }
+    }
+    return rc;
+
+fail:
+    if (out >= 0)
+        close(out);
+fail_unlink:
+    if (in >= 0)
+        close(in);
+    unlink(tmp);
+    return rc;
+}
 static int cmd_license(struct zkfc *z, struct zk_json *j, int argc, char **argv)
 {
 	if (argc >= 2 && !strcmp(argv[1], "install")) {
@@ -93,6 +196,12 @@ static int cmd_license(struct zkfc *z, struct zk_json *j, int argc, char **argv)
 		r = zkfc_install_license(z, &tok);
 		if (r)
 			return fail(j, "kernel rejected token", r);
+		if (mkdir("/data/adb/zkfc", 0700) != 0 && errno != EEXIST)
+			return fail(j, "cannot create persistent license directory", -errno);
+		chmod("/data/adb/zkfc", 0700);
+		r = persist_file_root(argv[2], "/data/adb/zkfc/token.zkl", 0600);
+		if (r)
+			return fail(j, "token accepted but persistence failed", r);
 	} else if (argc >= 2 && !strcmp(argv[1], "crl")) {
 		struct zkfc_crl crl;
 		int r;
@@ -105,6 +214,12 @@ static int cmd_license(struct zkfc *z, struct zk_json *j, int argc, char **argv)
 		r = zkfc_install_crl(z, &crl);
 		if (r)
 			return fail(j, "kernel rejected CRL", r);
+		if (mkdir("/data/adb/zkfc", 0700) != 0 && errno != EEXIST)
+			return fail(j, "cannot create persistent license directory", -errno);
+		chmod("/data/adb/zkfc", 0700);
+		r = persist_file_root(argv[2], "/data/adb/zkfc/crl.zkcrl", 0600);
+		if (r)
+			return fail(j, "CRL accepted but persistence failed", r);
 	}
 
 	struct zkfc_license_status s;
@@ -205,13 +320,14 @@ static int cmd_security(struct zkfc *z, struct zk_json *j, int argc, char **argv
 }
 
 /* ---------------------------------------------------------------- tweaks */
-static int cmd_tweak(struct zk_json *j, int argc, char **argv, int lite)
+static int cmd_tweak(struct zk_json *j, struct zkfc *z, int argc, char **argv, int lite)
 {
+	(void)z; /* mutation is delegated to zperfd; read-only paths do not need the fd. */
 	if (argc >= 2 && !strcmp(argv[1], "list")) {
 		zj_obj_open(j, NULL);
 		zj_bool(j, "ok", 1);
 		zj_bool(j, "lite_mode", lite);
-		zk_tweaks_dump(j);
+		zk_tweaks_dump(j, lite);
 		zj_obj_close(j);
 		zj_finish(j);
 		return 0;
@@ -231,21 +347,18 @@ static int cmd_tweak(struct zk_json *j, int argc, char **argv, int lite)
 		return 0;
 	}
 	if (argc >= 4 && !strcmp(argv[1], "set")) {
+		/* All mutation now belongs to zperfd, which owns license/state/rollback. */
 		const struct zk_tweak *t = zk_tweak_find(argv[2]);
-		int r;
+		char *const child[] = {
+			"zperfd", "tweak", "set", argv[2], argv[3], NULL,
+		};
 
 		if (!t)
 			return fail(j, "unknown tweak", EINVAL);
-		r = zk_tweak_apply(t, argv[3], lite);
-		if (r)
-			return fail(j, "apply failed", r);
-		zj_obj_open(j, NULL);
-		zj_bool(j, "ok", 1);
-		zj_str(j, "id", t->id);
-		zj_str(j, "value", argv[3]);
-		zj_obj_close(j);
-		zj_finish(j);
-		return 0;
+		if (lite && t->lite)
+			return fail(j, "tweak disabled in lite mode", ENOTSUP);
+		execv("/data/adb/zperf/zperfd", child);
+		return fail(j, "zperfd engine unavailable", errno);
 	}
 	return fail(j, "usage: tweak list|get <id>|set <id> <value>", EINVAL);
 }
@@ -661,9 +774,11 @@ int main(int argc, char **argv)
 	cmd = argv[1];
 	argc--; argv++;
 
-	/* Tweaks, safe-mode and monitor work without the module. */
-	if (!strcmp(cmd, "tweak"))
-		return cmd_tweak(&j, argc, argv, lite);
+	/* Read-only tweak discovery and safe-mode status do not need /dev/zkfc.
+	 * A tweak write does: it must cross the kernel license boundary. */
+	if (!strcmp(cmd, "tweak") && argc >= 2 &&
+	    (!strcmp(argv[1], "list") || !strcmp(argv[1], "get")))
+		return cmd_tweak(&j, NULL, argc, argv, lite);
 	if (!strcmp(cmd, "safe"))
 		return cmd_safe(&j, argc, argv);
 
@@ -674,6 +789,7 @@ int main(int argc, char **argv)
 	if (!strcmp(cmd, "info")) rc = cmd_info(z, &j);
 	else if (!strcmp(cmd, "license")) rc = cmd_license(z, &j, argc, argv);
 	else if (!strcmp(cmd, "security")) rc = cmd_security(z, &j, argc, argv);
+	else if (!strcmp(cmd, "tweak")) rc = cmd_tweak(&j, z, argc, argv, lite);
 	else if (!strcmp(cmd, "boost")) rc = cmd_boost(z, &j, argc, argv);
 	else if (!strcmp(cmd, "monitor")) rc = cmd_monitor(z, &j, argc, argv);
 	else if (!strcmp(cmd, "log")) rc = cmd_log(z, &j, argc, argv);

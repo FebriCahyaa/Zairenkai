@@ -48,4 +48,7 @@ conflicting modules such as uperf).
 for SDM660 (Adreno 512). The catalog is installed to `/data/adb/zperf/catalog/`
 and selected by `ro.board.platform`; a user `profile.toml` overrides it.
 
-Frame-aware scheduling (FAS) is a separate component (phase 2).
+The engine persists a current-boot baseline and a crash-safe transaction journal.
+A failed write is rolled back; a committed journal can finish its state update
+after power loss. `auto` uses battery percentage, charging state, thermal data,
+and the profile's per-app overrides.

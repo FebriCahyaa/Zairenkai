@@ -22,6 +22,8 @@ case "$mode" in
 esac
 
 mkdir -p "$STATE"
-echo "$mode" > "$STATE/mode"
-[ -x "$BIN" ] && "$BIN" apply "$mode" >/dev/null 2>&1
-exit 0
+# Never publish desired state before the engine accepts and commits the change.
+# zperfd is the single state owner; this contract is intentionally a thin adapter.
+[ -x "$BIN" ] || exit 0
+"$BIN" set "$mode" >/dev/null 2>&1
+exit $?
