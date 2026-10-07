@@ -64,7 +64,6 @@ if [ -f "$MODPATH/zperf/powercfg.sh" ]; then
   ui_print "- Scene powercfg contract installed (/data/powercfg.sh)"
 fi
 [ -f /data/adb/zperf/mode ] || echo balance > /data/adb/zperf/mode
-chmod 0600 /data/adb/zperf/mode 2>/dev/null || true
 chmod 0700 /data/adb/zperf 2>/dev/null || true
 chmod 0600 /data/adb/zperf/mode 2>/dev/null || true
 

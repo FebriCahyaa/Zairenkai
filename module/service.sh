@@ -30,6 +30,9 @@ if [ -x "$STATE/zkfctl" ] && [ -f "$STATE/token.zkl" ]; then
     log -t zairenkai "persistent API token rejected; performance stays locked"
   fi
 fi
+# A staged token is never trusted at boot. It is an interrupted hand-off and
+# may contain sensitive or incomplete material, so discard it fail-closed.
+rm -f "$STATE/token.pending"
 
 # Boot fail-safe. Two consecutive boots without a healthy app confirmation put
 # the device in SAFE MODE. zperfd also observes this marker and restores its

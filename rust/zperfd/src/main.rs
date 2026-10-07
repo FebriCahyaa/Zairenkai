@@ -20,8 +20,9 @@ use nodes::Sysroot;
 use state::StateStore;
 use std::fs::{self, File, OpenOptions};
 use std::path::Path;
+use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use topo::Topology;
 use zkfc_sys::{Zkfc, ZKFC_API_VERSION};
 
@@ -42,7 +43,6 @@ struct Args {
     profile: Option<String>,
     state: String,
     interval_ms: u64,
-    no_lock: bool,
     lite: bool,
     json: bool,
 }
@@ -55,7 +55,6 @@ fn parse_args() -> Args {
         profile: None,
         state: "/data/adb/zperf".into(),
         interval_ms: 1500,
-        no_lock: false,
         lite: false,
         json: false,
     };
@@ -68,7 +67,6 @@ fn parse_args() -> Args {
             "--interval" => {
                 args.interval_ms = it.next().and_then(|v| v.parse().ok()).unwrap_or(1500)
             }
-            "--no-lock" => args.no_lock = true,
             "--lite" => args.lite = true,
             "--json" => args.json = true,
             "-h" | "--help" => {
@@ -171,6 +169,26 @@ fn all_managed_nodes(s: &Sysroot, t: &Topology, engine: &Engine<'_>) -> Vec<Stri
     nodes
 }
 
+/// Cheap non-cryptographic fingerprint of the live nodes controlled by zperfd.
+/// It is a drift detector, not a security primitive: the transaction journal
+/// remains authoritative for rollback and the kernel remains authoritative for
+/// licensed operations.
+fn runtime_fingerprint(s: &Sysroot, nodes: &[String]) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for node in nodes {
+        node.hash(&mut hasher);
+        match (s.exists(node), s.read(node)) {
+            (false, _) => 0u8.hash(&mut hasher),
+            (true, Some(value)) => {
+                1u8.hash(&mut hasher);
+                value.hash(&mut hasher);
+            }
+            (true, None) => 2u8.hash(&mut hasher),
+        }
+    }
+    hasher.finish()
+}
+
 fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Result<String, String> {
     let mode = if requested == "auto" {
         scene::resolve_auto(sysroot)
@@ -260,8 +278,7 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
 
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let mut engine = Engine::new(&s, &topology);
-    engine.lock = !args.no_lock;
+    let engine = Engine::new(&s, &topology);
     let nodes = all_managed_nodes(&s, &topology, &engine);
     let mut state = StateStore::new(&args.state);
 
@@ -297,7 +314,12 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
         eprintln!("transaction begin failed: {e}");
         return 3;
     }
-    let report = engine.apply_mode(profile.mode(&effective).expect("validated mode"));
+    let Some(mode) = profile.mode(&effective) else {
+        let _ = state.rollback(&s);
+        eprintln!("apply failed: validated profile is missing mode '{effective}'");
+        return 3;
+    };
+    let report = engine.apply_mode(mode);
     if !report.failed.is_empty() || report.applied.is_empty() {
         let rollback = state.rollback(&s);
         if let Err(e) = rollback {
@@ -396,8 +418,7 @@ fn cmd_tweak(args: &Args) -> i32 {
                 return 2;
             }
 
-            let mut engine = Engine::new(&s, &topology);
-            engine.lock = !args.no_lock;
+            let engine = Engine::new(&s, &topology);
             let mut nodes = all_managed_nodes(&s, &topology, &engine);
             nodes.extend(tweak::managed_nodes(&s, &topology));
             nodes.sort();
@@ -490,8 +511,14 @@ fn cmd_status(args: &Args) -> i32 {
     let engine = Engine::new(&s, &topology);
     let nodes = all_managed_nodes(&s, &topology, &engine);
     let mut state = StateStore::new(&args.state);
-    let _ = state.ensure_boot(&s, &nodes);
-    let _ = state.recover(&s);
+    if let Err(e) = state.ensure_boot(&s, &nodes) {
+        eprintln!("state init failed: {e}");
+        return 3;
+    }
+    if let Err(e) = state.recover(&s) {
+        eprintln!("state recovery failed: {e}");
+        return 3;
+    }
     let desired = state.mode().unwrap_or_else(|| "balance".into());
     let effective = state.effective_mode().unwrap_or_else(|| {
         if desired == "auto" {
@@ -547,9 +574,8 @@ fn cmd_daemon(args: &Args) -> i32 {
 
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let mut engine = Engine::new(&s, &topology);
-    engine.lock = !args.no_lock;
-    let nodes = all_managed_nodes(&s, &topology, &engine);
+    let engine = Engine::new(&s, &topology);
+    let mut nodes = all_managed_nodes(&s, &topology, &engine);
     let mut state = StateStore::new(&args.state);
     if let Err(e) = state.ensure_boot(&s, &nodes) {
         eprintln!("zperfd: state init failed: {e}");
@@ -574,6 +600,9 @@ fn cmd_daemon(args: &Args) -> i32 {
     eprintln!("zperfd: {} profile '{}'", topology.flavor(), profile.meta.name);
 
     let mut last = String::new();
+    let mut last_observed = None;
+    let mut next_reconcile = Instant::now();
+    let reconcile_every = Duration::from_millis(args.interval_ms.saturating_mul(4).max(2_000));
     let mut was_safe = false;
     while !STOP.load(Ordering::SeqCst) {
         let safe = Path::new(SAFE_MODE).exists();
@@ -587,6 +616,8 @@ fn cmd_daemon(args: &Args) -> i32 {
             }
             was_safe = true;
             last.clear();
+            last_observed = None;
+            next_reconcile = Instant::now() + reconcile_every;
             std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
             continue;
         }
@@ -597,9 +628,15 @@ fn cmd_daemon(args: &Args) -> i32 {
             was_safe = false;
         }
 
-        let desired = state.mode().unwrap_or_else(|| profile.meta.default_mode.clone());
+        let desired_raw = state.mode().unwrap_or_else(|| profile.meta.default_mode.clone());
+        let desired = if desired_raw == "auto" || profile.mode.contains_key(&desired_raw) {
+            desired_raw
+        } else {
+            eprintln!("zperfd: invalid persisted mode '{desired_raw}', falling back to '{}'", profile.meta.default_mode);
+            profile.meta.default_mode.clone()
+        };
         let mut effective = if desired == "auto" {
-            scene::resolve_auto(&s).to_string()
+            scene::resolve_auto_with_previous(&s, (!last.is_empty()).then_some(last.as_str())).to_string()
         } else {
             desired.clone()
         };
@@ -609,17 +646,42 @@ fn cmd_daemon(args: &Args) -> i32 {
             }
         }
 
-        if profile.mode.contains_key(&effective) && effective != last {
+        let now = Instant::now();
+        let check_drift = now >= next_reconcile;
+        if check_drift {
+            let refreshed_nodes = all_managed_nodes(&s, &topology, &engine);
+            if refreshed_nodes != nodes {
+                if let Err(e) = state.ensure_boot(&s, &refreshed_nodes) {
+                    eprintln!("zperfd: managed-node refresh failed: {e}");
+                    next_reconcile = now + reconcile_every;
+                    std::thread::sleep(Duration::from_millis(args.interval_ms.max(250)));
+                    continue;
+                }
+                nodes = refreshed_nodes;
+                last_observed = None;
+            }
+        }
+        let observed = check_drift.then(|| runtime_fingerprint(&s, &nodes));
+        let drifted = check_drift && observed != last_observed;
+        let needs_apply = effective != last || drifted;
+        if profile.mode.contains_key(&effective) && needs_apply {
+            next_reconcile = now + reconcile_every;
             match kernel_license_ok() {
                 Ok(()) => {
                     if let Err(e) = state.begin(&s, &nodes) {
                         eprintln!("zperfd: transaction begin failed: {e}");
                     } else {
-                        let report = engine.apply_mode(profile.mode(&effective).expect("validated mode"));
+                        let Some(mode) = profile.mode(&effective) else {
+        let _ = state.rollback(&s);
+        eprintln!("apply failed: validated profile is missing mode '{effective}'");
+        return 3;
+    };
+    let report = engine.apply_mode(mode);
                         if report.failed.is_empty() && !report.applied.is_empty() {
                             match state.commit(Some(&desired), Some(&effective)) {
                                 Ok(()) => {
                                     last = effective.clone();
+                                    last_observed = Some(runtime_fingerprint(&s, &nodes));
                                     eprintln!(
                                         "zperfd: {} -> {} applied={} skipped={}",
                                         desired,
@@ -646,6 +708,9 @@ fn cmd_daemon(args: &Args) -> i32 {
                 }
                 Err(e) => eprintln!("zperfd: mutation locked: {e}"),
             }
+        } else if let Some(observed) = observed {
+            last_observed = Some(observed);
+            next_reconcile = now + reconcile_every;
         }
 
         std::thread::sleep(Duration::from_millis(args.interval_ms.max(250)));

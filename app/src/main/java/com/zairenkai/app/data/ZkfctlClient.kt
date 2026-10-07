@@ -73,17 +73,12 @@ class ZkfctlClient {
         val result: LicenseResult = json.decodeFromString(
             raw("license install '/data/adb/zkfc/token.pending'", false, 8000),
         )
-        if (result.state == "valid") {
-            val promote = RootShell.run(
-                "mv -f /data/adb/zkfc/token.pending /data/adb/zkfc/token.zkl && " +
-                    "chmod 0600 /data/adb/zkfc/token.zkl",
-                3000,
-            )
-            if (!promote.ok) {
-                return result.copy(ok = false, state = "storage_error", error = "Token diterima kernel, tetapi promosi state gagal.")
-            }
-        } else {
-            RootShell.run("rm -f /data/adb/zkfc/token.pending", 2000)
+        // zkfctl persists an accepted token atomically. The staged file is
+        // therefore only an input hand-off and must not be moved over the
+        // canonical token a second time. Remove the staging copy instead.
+        val cleanup = RootShell.run("rm -f /data/adb/zkfc/token.pending", 2000)
+        if (result.state == "valid" && !cleanup.ok) {
+            return result.copy(ok = false, state = "storage_error", error = "Token diterima, tetapi file staging gagal dibersihkan.")
         }
         return result
     }
@@ -121,7 +116,7 @@ class ZkfctlClient {
         raw("boost task $pid $min $max ${if (inherit) "inherit" else ""}", false, 6000)
 
     suspend fun logSetLevel(level: String): String =
-        raw("log level $level", false, 5000)
+        raw("log level ${shellQuote(level)}", false, 5000)
 
     suspend fun log(fromSeq: Long): LogResult =
         json.decodeFromString(raw("log $fromSeq", false, 6000))
@@ -135,9 +130,8 @@ class ZkfctlClient {
     suspend fun safeStatus(): SafeStatus =
         json.decodeFromString(raw("safe status", false, 5000))
 
-    suspend fun safeConfirm() {
-        raw("safe confirm", false, 5000)
-    }
+    suspend fun safeConfirm(): Boolean =
+        raw("safe confirm", false, 5000).contains("\"ok\":true")
 
     suspend fun safeClear(): SafeStatus =
         json.decodeFromString(raw("safe clear", false, 5000))

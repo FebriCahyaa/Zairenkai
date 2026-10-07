@@ -123,6 +123,11 @@ static u32 zkfc_evaluate(const struct zkfc_license_token *t)
 		return ZKFC_LIC_MALFORMED;
 	if (le64_to_cpu(p->license_id) == 0)
 		return ZKFC_LIC_MALFORMED;
+	if (!le64_to_cpu(p->issued_at))
+		return ZKFC_LIC_MALFORMED;
+	if (le64_to_cpu(p->expires_at) &&
+	    le64_to_cpu(p->expires_at) <= le64_to_cpu(p->issued_at))
+		return ZKFC_LIC_MALFORMED;
 
 	ret = zkfc_verify_sig(p, sizeof(*p), t->signature);
 	if (ret == -ENOMEM)
@@ -142,7 +147,7 @@ static u32 zkfc_evaluate(const struct zkfc_license_token *t)
 
 	zkfc_clock_trusted = now >= ZKFC_EPOCH_SANE;
 	if (p->expires_at && zkfc_clock_trusted &&
-	    (u64)now > le64_to_cpu(p->expires_at))
+	    (u64)now >= le64_to_cpu(p->expires_at))
 		return ZKFC_LIC_EXPIRED;
 
 	return ZKFC_LIC_VALID;
@@ -168,7 +173,7 @@ static void zkfc_check_expiry(void)
 	if (READ_ONCE(zkfc_lic_state) != ZKFC_LIC_VALID || !zkfc_lic_expires)
 		return;
 	now = ktime_get_real_seconds();
-	if (now >= ZKFC_EPOCH_SANE && (u64)now > zkfc_lic_expires) {
+	if (now >= ZKFC_EPOCH_SANE && (u64)now >= zkfc_lic_expires) {
 		WRITE_ONCE(zkfc_lic_feat, 0);
 		WRITE_ONCE(zkfc_lic_state, ZKFC_LIC_EXPIRED);
 		zkfc_w("API token expired");

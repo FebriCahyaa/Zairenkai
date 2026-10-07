@@ -25,3 +25,13 @@ grep -q 'daemon.lock' rust/zperfd/src/main.rs
 grep -q 'args.lite' rust/zperfd/src/main.rs
 grep -q 't->lite' userspace/zkfctl/main.c
 grep -q 'setTweak(id, value, _ui.value.lite)' app/src/main/java/com/zairenkai/app/ui/Vm.kt
+grep -q 'MAX_JOURNAL_BYTES' rust/zperfd/src/state.rs
+grep -q 'write_commit_marker' rust/zperfd/src/state.rs
+grep -q 'O_NOFOLLOW | libc::O_CLOEXEC' rust/zperfd/src/nodes.rs
+grep -q 'rust-toolchain.toml' .github/workflows/release.yml || test -f rust-toolchain.toml
+! grep -R -q 'dtolnay/rust-toolchain' .github/workflows
+! grep -R -q 'expect("validated mode")' rust/zperfd/src
+
+grep -q 'refreshed_nodes != nodes' rust/zperfd/src/main.rs
+grep -q 'version=1' rust/zperfd/src/state.rs
+grep -q 'managed node .*exceeds' rust/zperfd/src/state.rs

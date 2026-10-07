@@ -43,14 +43,15 @@ root execution boundary
    requests changes and reflects confirmed results.
 3. A profile is not active until its application succeeds to completion.
 4. Every privileged write is capability-gated, bounded, and observable.
-5. Recovery restores the last known safe state instead of guessing vendor
-   defaults.
+5. Recovery restores the first observed state of each managed node for the
+   current boot instead of guessing vendor defaults; newly appearing nodes are
+   captured on first observation.
 6. CI must fail on build, test, lint, ABI or packaging regressions.
 
 ## State lifecycle
 
 ```text
-REQUEST -> VALIDATE -> SNAPSHOT -> APPLY -> READBACK -> COMMIT
+REQUEST -> VALIDATE -> SNAPSHOT -> APPLY -> COMMIT
                                   |
                                   +----FAIL----> ROLLBACK -> REPORT
 ```
@@ -77,15 +78,21 @@ security-sensitive operations such as API-token validation and licensed boosts.
 The durable state directory is `/data/adb/zperf/`. A per-boot baseline is keyed
 by `/proc/sys/kernel/random/boot_id`, while `transaction.pending` and
 `transaction.committed` make mutation recovery idempotent across process or
-power failure. A failed apply never becomes the active mode.
+power failure. The commit marker records exactly which semantic state files
+are expected; recovery accepts an already-completed atomic rename but fails
+closed if a required publication target is missing. A failed apply never
+becomes the active mode.
 
 ## Capability discovery
 
 The engine does not assume that a device exposes one universal Qualcomm/MediaTek
 sysfs layout. It discovers cpufreq policies and real OPPs, GPU devfreq, cgroup
 uClamp, schedtune and vendor input-boost surfaces. Frequency requests are snapped
-to real OPPs; integer tuning knobs are range checked before any write and the
-result is read back by the transaction layer where appropriate.
+to real OPPs; integer tuning knobs are range checked before any write. Runtime status/probe
+paths inspect live nodes after an apply, while write failures remain
+transaction-fatal and trigger rollback. The resident daemon additionally compares
+a lightweight live-state fingerprint against its last confirmed state and
+re-applies the desired profile when external writers cause observable drift.
 
 ## Release invariants
 

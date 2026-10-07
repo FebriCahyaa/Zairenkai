@@ -5,7 +5,7 @@
 
 **Root-powered Android performance & tweaks suite, driven by a signed kernel API.**
 
-Android 12 → 17 · GKI & non-GKI · arm64 / x86_64 / riscv64 · Material 3 Expressive
+Android 12 → 17 · GKI & non-GKI · userspace arm64 / x86_64 · kernel arm64 / x86_64 / riscv64 · Material 3 Expressive
 
 </div>
 
@@ -39,7 +39,8 @@ for third-party attributions.
   ratios, VFS), network (TCP), refresh/scheduler, display color, battery, and a
   broad "old-SoC" optimization set — all multi-SoC with graceful fallback.
 - **Profiles** — Game, Harian, Media, Hemat Baterai, Seimbang, and an
-  **Otomatis** mode that adapts to charging, battery level and temperature.
+  **Otomatis** mode that adapts conservatively to charging, battery level and
+  temperature with hysteresis to avoid rapid profile flapping.
 - **Tweaks engine in-kernel** — input boost, per-task uclamp boost with thread
   inheritance, cpufreq QoS, and a thermal guard that backs boosts off when hot.
 - **System & security** — UID/GID/groups, kernel integrity, ZKFC license,
@@ -68,7 +69,8 @@ performance controls.
 - **App:** `./gradlew :app:assembleDebug` (AGP 9.4.1, Gradle 9.8.0, Kotlin 2.4.20,
   SDK 37). See [`app/`](app).
 - **Engine:** `rust/zperfd` (resident Rust daemon) plus `userspace/zkfctl` (C CLI/compatibility engine).
-  See [`rust/zperfd/`](rust/zperfd) and [`userspace/`](userspace).
+  See [`rust/zperfd/`](rust/zperfd) and [`userspace/`](userspace). CI/release builds pin Rust
+  to the reviewed stable toolchain declared in [`rust-toolchain.toml`](rust-toolchain.toml).
 - **Kernel (GKI LKM):** `kernel/gki/build_lkm.sh <kmi-branch>`. See
   [`kernel/README.md`](kernel/README.md) for the KMI matrix and non-GKI paths.
 

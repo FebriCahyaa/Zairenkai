@@ -707,7 +707,8 @@ static int cmd_safe(struct zk_json *j, int argc, char **argv)
 	const char *sub = argc >= 2 ? argv[1] : "status";
 
 	if (!strcmp(sub, "confirm")) {
-		unlink(ZKFC_PENDING);
+		if (unlink(ZKFC_PENDING) != 0 && errno != ENOENT)
+			return fail(j, "unable to confirm boot", errno);
 		zj_obj_open(j, NULL);
 		zj_bool(j, "ok", 1);
 		zj_str(j, "action", "confirmed");
@@ -716,8 +717,9 @@ static int cmd_safe(struct zk_json *j, int argc, char **argv)
 		return 0;
 	}
 	if (!strcmp(sub, "clear")) {
-		unlink(ZKFC_PENDING);
-		unlink(ZKFC_SAFE);
+		if ((unlink(ZKFC_PENDING) != 0 && errno != ENOENT) ||
+		    (unlink(ZKFC_SAFE) != 0 && errno != ENOENT))
+			return fail(j, "unable to clear safe mode", errno);
 		zj_obj_open(j, NULL);
 		zj_bool(j, "ok", 1);
 		zj_str(j, "action", "cleared");

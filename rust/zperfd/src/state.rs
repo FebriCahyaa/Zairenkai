@@ -13,6 +13,7 @@ use crate::nodes::Sysroot;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::os::fd::AsRawFd;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 const BASELINE: &str = "baseline.v1";
@@ -24,6 +25,10 @@ const MODE: &str = "mode";
 const EFFECTIVE: &str = "effective_mode";
 const BOOT_ID: &str = "boot.id";
 const LOCK_FILE: &str = ".lock";
+const MAX_JOURNAL_BYTES: u64 = 1 << 20;
+const MAX_JOURNAL_ENTRIES: usize = 4096;
+const MAX_ENTRY_PATH_BYTES: usize = 4096;
+const MAX_ENTRY_VALUE_BYTES: usize = 64 * 1024;
 
 #[derive(Clone, Debug)]
 struct Entry {
@@ -123,6 +128,19 @@ impl StateStore {
         fs::create_dir_all(&self.root)
     }
 
+    fn snapshot_value(&self, s: &Sysroot, path: &str) -> io::Result<String> {
+        let value = s.read(path).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::PermissionDenied, format!("cannot snapshot {path}"))
+        })?;
+        if value.len() > MAX_ENTRY_VALUE_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("managed node {path} exceeds {MAX_ENTRY_VALUE_BYTES} bytes"),
+            ));
+        }
+        Ok(value)
+    }
+
     fn file(&self, name: &str) -> PathBuf {
         self.root.join(name)
     }
@@ -145,14 +163,47 @@ impl StateStore {
     }
 
     fn read_entries(&self, name: &str) -> io::Result<Vec<Entry>> {
-        let text = fs::read_to_string(self.file(name))?;
+        let path = self.file(name);
+        let size = fs::metadata(&path)?.len();
+        if size > MAX_JOURNAL_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("{name} journal exceeds {MAX_JOURNAL_BYTES} bytes"),
+            ));
+        }
+        let text = fs::read_to_string(path)?;
         let mut entries = Vec::new();
-        for line in text.lines() {
+        for (line_no, line) in text.lines().enumerate() {
+            if line.is_empty() {
+                continue;
+            }
+            if entries.len() >= MAX_JOURNAL_ENTRIES {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("{name} journal has too many entries"),
+                ));
+            }
             let mut parts = line.splitn(2, '\t');
-            let path = parts.next().and_then(unhex);
-            let value = parts.next().and_then(unhex);
-            if let (Some(path), Some(value)) = (path, value) {
-                entries.push(Entry { path, value });
+            let path_hex = parts.next();
+            let value_hex = parts.next();
+            let path = path_hex.and_then(unhex);
+            let value = value_hex.and_then(unhex);
+            match (path, value) {
+                (Some(path), Some(value))
+                    if !path.is_empty()
+                        && path.len() <= MAX_ENTRY_PATH_BYTES
+                        && value.len() <= MAX_ENTRY_VALUE_BYTES
+                        && path.starts_with('/')
+                        && !path.bytes().any(|b| b == 0) =>
+                {
+                    entries.push(Entry { path, value });
+                }
+                _ => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("invalid {name} journal entry at line {}", line_no + 1),
+                    ));
+                }
             }
         }
         Ok(entries)
@@ -170,17 +221,52 @@ impl StateStore {
         atomic_write(&self.file(name), &data)
     }
 
-    fn current_boot_id(&self, s: &Sysroot) -> String {
-        s.read("/proc/sys/kernel/random/boot_id")
-            .or_else(|| fs::read_to_string("/proc/sys/kernel/random/boot_id").ok().map(|v| v.trim().to_string()))
-            .unwrap_or_else(|| "unknown".to_string())
+    fn current_boot_id(&self, s: &Sysroot) -> io::Result<String> {
+        let value = s
+            .read("/proc/sys/kernel/random/boot_id")
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "kernel boot_id unavailable"))?;
+        if value.is_empty() {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "kernel boot_id is empty"));
+        }
+        Ok(value)
+    }
+
+    fn ensure_baseline_nodes_unlocked(&self, s: &Sysroot, nodes: &[String]) -> io::Result<()> {
+        let mut entries = if self.file(BASELINE).exists() {
+            self.read_entries(BASELINE)?
+        } else {
+            Vec::new()
+        };
+        let mut known = entries
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect::<HashSet<_>>();
+        let mut changed = false;
+
+        // A per-boot baseline is immutable for an already-seen node, but newly
+        // appearing kernel nodes are captured at their first observation. This
+        // matters for dynamic block devices and late-created sysfs surfaces.
+        for path in nodes {
+            if known.contains(path) || !s.exists(path) {
+                continue;
+            }
+            let value = self.snapshot_value(s, path)?;
+            entries.push(Entry { path: path.clone(), value });
+            known.insert(path.clone());
+            changed = true;
+        }
+
+        if changed || !self.file(BASELINE).exists() {
+            self.write_entries(BASELINE, &entries)?;
+        }
+        Ok(())
     }
 
     /// The baseline is per boot. A previous boot's pseudo-file values must
     /// never be replayed after the kernel has reinitialized its tunables.
     fn ensure_boot_unlocked(&self, s: &Sysroot, nodes: &[String]) -> io::Result<()> {
         self.ensure()?;
-        let current = self.current_boot_id(s);
+        let current = self.current_boot_id(s)?;
         let stored = fs::read_to_string(self.file(BOOT_ID)).ok().map(|v| v.trim().to_string());
         if stored.as_deref() != Some(current.as_str()) {
             remove_if_exists(&self.file(BASELINE))?;
@@ -191,18 +277,7 @@ impl StateStore {
             self.write_value(BOOT_ID, &current)?;
         }
 
-        if !self.file(BASELINE).exists() {
-            let mut entries = Vec::new();
-            for path in nodes {
-                if s.exists(path) {
-                    if let Some(value) = s.read(path) {
-                        entries.push(Entry { path: path.clone(), value });
-                    }
-                }
-            }
-            self.write_entries(BASELINE, &entries)?;
-        }
-        Ok(())
+        self.ensure_baseline_nodes_unlocked(s, nodes)
     }
 
     pub fn ensure_boot(&mut self, s: &Sysroot, nodes: &[String]) -> io::Result<()> {
@@ -212,17 +287,64 @@ impl StateStore {
         result
     }
 
+    fn write_commit_marker(&self, mode: bool, effective: bool) -> io::Result<()> {
+        let data = format!(
+            "version=1\nmode={}\neffective={}\n",
+            if mode { 1 } else { 0 },
+            if effective { 1 } else { 0 },
+        );
+        atomic_write(&self.file(COMMITTED), &data)
+    }
+
+    fn read_commit_marker(&self) -> io::Result<(bool, bool)> {
+        let text = fs::read_to_string(self.file(COMMITTED))?;
+        let mut version = None;
+        let mut mode = None;
+        let mut effective = None;
+        for line in text.lines() {
+            let Some((key, value)) = line.split_once('=') else {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "malformed commit marker"));
+            };
+            match key {
+                "version" => version = value.parse::<u32>().ok(),
+                "mode" => mode = value.parse::<u8>().ok().filter(|v| *v <= 1),
+                "effective" => effective = value.parse::<u8>().ok().filter(|v| *v <= 1),
+                _ => return Err(io::Error::new(io::ErrorKind::InvalidData, "unknown commit marker field")),
+            }
+        }
+        if version != Some(1) || mode.is_none() || effective.is_none() {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid commit marker"));
+        }
+        Ok((mode == Some(1), effective == Some(1)))
+    }
+
     /// If a transaction exists without a commit marker, restore it. If the
-    /// commit marker exists, complete the publication of the state files.
+    /// commit marker exists, complete the publication of the explicitly
+    /// recorded state files; missing required publication files are fatal.
     fn recover_unlocked(&self, s: &Sysroot) -> io::Result<bool> {
         let pending = self.file(TXN);
         let committed = self.file(COMMITTED);
         if committed.exists() {
-            if self.file(NEXT_MODE).exists() {
-                fs::rename(self.file(NEXT_MODE), self.file(MODE))?;
+            let (publish_mode, publish_effective) = self.read_commit_marker()?;
+            if publish_mode {
+                if self.file(NEXT_MODE).exists() {
+                    fs::rename(self.file(NEXT_MODE), self.file(MODE))?;
+                } else if !self.file(MODE).exists() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "commit marker requires unpublished mode state",
+                    ));
+                }
             }
-            if self.file(NEXT_EFFECTIVE).exists() {
-                fs::rename(self.file(NEXT_EFFECTIVE), self.file(EFFECTIVE))?;
+            if publish_effective {
+                if self.file(NEXT_EFFECTIVE).exists() {
+                    fs::rename(self.file(NEXT_EFFECTIVE), self.file(EFFECTIVE))?;
+                } else if !self.file(EFFECTIVE).exists() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "commit marker requires unpublished effective mode state",
+                    ));
+                }
             }
             remove_if_exists(&pending)?;
             remove_if_exists(&committed)?;
@@ -236,7 +358,7 @@ impl StateStore {
         let mut first_error = None;
         for entry in entries {
             if s.exists(&entry.path) {
-                if let Err(e) = s.write(&entry.path, &entry.value, false) {
+                if let Err(e) = s.write(&entry.path, &entry.value) {
                     first_error.get_or_insert(e);
                 }
             }
@@ -270,9 +392,8 @@ impl StateStore {
         let mut entries = Vec::new();
         for path in nodes {
             if s.exists(path) {
-                if let Some(value) = s.read(path) {
-                    entries.push(Entry { path: path.clone(), value });
-                }
+                let value = self.snapshot_value(s, path)?;
+                entries.push(Entry { path: path.clone(), value });
             }
         }
         if let Err(e) = self.write_entries(TXN, &entries).and_then(|_| {
@@ -297,13 +418,15 @@ impl StateStore {
         if self.guard.is_none() {
             return Err(io::Error::other("commit without begin"));
         }
-        if let Some(value) = requested {
-            self.write_value(NEXT_MODE, value)?;
+        let publish_mode = requested.is_some();
+        let publish_effective = effective.is_some();
+        if publish_mode {
+            self.write_value(NEXT_MODE, requested.unwrap_or_default())?;
         }
-        if let Some(value) = effective {
-            self.write_value(NEXT_EFFECTIVE, value)?;
+        if publish_effective {
+            self.write_value(NEXT_EFFECTIVE, effective.unwrap_or_default())?;
         }
-        self.write_value(COMMITTED, "1")?;
+        self.write_commit_marker(publish_mode, publish_effective)?;
         if self.file(NEXT_MODE).exists() {
             fs::rename(self.file(NEXT_MODE), self.file(MODE))?;
         }
@@ -325,7 +448,7 @@ impl StateStore {
             let mut first_error = None;
             for entry in entries {
                 if s.exists(&entry.path) {
-                    if let Err(e) = s.write(&entry.path, &entry.value, false) {
+                    if let Err(e) = s.write(&entry.path, &entry.value) {
                         first_error.get_or_insert(e);
                     }
                 }
@@ -346,28 +469,83 @@ impl StateStore {
 
     /// Restore the first observed state of this boot. This is the recovery
     /// target for SAFE MODE and an explicit stock-reset operation.
+    fn rollback_unlocked(&self, s: &Sysroot) -> io::Result<()> {
+        if !self.file(TXN).exists() {
+            return Ok(());
+        }
+        let entries = self.read_entries(TXN)?;
+        let mut first_error = None;
+        for entry in entries {
+            if s.exists(&entry.path) {
+                if let Err(e) = s.write(&entry.path, &entry.value) {
+                    first_error.get_or_insert(e);
+                }
+            }
+        }
+        if let Some(e) = first_error {
+            return Err(e);
+        }
+        remove_if_exists(&self.file(TXN))?;
+        remove_if_exists(&self.file(COMMITTED))?;
+        remove_if_exists(&self.file(NEXT_MODE))?;
+        remove_if_exists(&self.file(NEXT_EFFECTIVE))?;
+        Ok(())
+    }
+
     pub fn restore_baseline(&mut self, s: &Sysroot, nodes: &[String]) -> io::Result<usize> {
         self.acquire()?;
         let result = (|| {
             self.ensure_boot_unlocked(s, nodes)?;
             self.recover_unlocked(s)?;
-            let entries = self.read_entries(BASELINE)?;
-            let mut restored = 0usize;
-            let mut first_error = None;
-            for entry in entries {
-                if s.exists(&entry.path) {
-                    match s.write(&entry.path, &entry.value, false) {
-                        Ok(()) => restored += 1,
-                        Err(e) => first_error.get_or_insert(e),
-                    }
+
+            // Snapshot the current runtime first. If baseline restoration or
+            // state publication fails half-way, the current state remains a
+            // durable rollback target for this process and the next recovery
+            // pass instead of leaving a mixed runtime.
+            let mut current = Vec::new();
+            for path in nodes {
+                if s.exists(path) {
+                    let value = self.snapshot_value(s, path)?;
+                    current.push(Entry { path: path.clone(), value });
                 }
             }
-            if let Some(e) = first_error {
-                return Err(e);
+            self.write_entries(TXN, &current)?;
+            remove_if_exists(&self.file(COMMITTED))?;
+            remove_if_exists(&self.file(NEXT_MODE))?;
+            remove_if_exists(&self.file(NEXT_EFFECTIVE))?;
+
+            let apply = (|| {
+                let entries = self.read_entries(BASELINE)?;
+                let mut restored = 0usize;
+                for entry in entries {
+                    if s.exists(&entry.path) {
+                        s.write(&entry.path, &entry.value)?;
+                        restored += 1;
+                    }
+                }
+
+                // Publish the semantic state only after every runtime node
+                // has been restored successfully. The committed marker makes
+                // publication idempotent across power loss.
+                self.write_value(NEXT_MODE, "stock")?;
+                self.write_value(NEXT_EFFECTIVE, "stock")?;
+                self.write_commit_marker(true, true)?;
+                fs::rename(self.file(NEXT_MODE), self.file(MODE))?;
+                fs::rename(self.file(NEXT_EFFECTIVE), self.file(EFFECTIVE))?;
+                remove_if_exists(&self.file(TXN))?;
+                remove_if_exists(&self.file(COMMITTED))?;
+                Ok(restored)
+            })();
+
+            match apply {
+                Ok(restored) => Ok(restored),
+                Err(error) => match self.rollback_unlocked(s) {
+                    Ok(()) => Err(error),
+                    Err(rollback_error) => Err(io::Error::other(format!(
+                        "baseline restore failed: {error}; rollback failed: {rollback_error}"
+                    ))),
+                },
             }
-            self.write_value(MODE, "stock")?;
-            self.write_value(EFFECTIVE, "stock")?;
-            Ok(restored)
         })();
         self.release();
         result
@@ -430,7 +608,7 @@ mod tests {
         let mut state = StateStore::new(root.join("state"));
         state.ensure_boot(&s, &["/proc/sys/x".into()]).unwrap();
         state.begin(&s, &["/proc/sys/x".into()]).unwrap();
-        s.write("/proc/sys/x", "new", false).unwrap();
+        s.write("/proc/sys/x", "new").unwrap();
         assert!(state.recover(&s).unwrap());
         assert_eq!(s.read("/proc/sys/x").as_deref(), Some("old"));
         let _ = fs::remove_dir_all(root);
@@ -445,11 +623,115 @@ mod tests {
         let mut state = StateStore::new(root.join("state"));
         state.ensure_boot(&s, &["/proc/sys/x".into()]).unwrap();
         state.begin(&s, &["/proc/sys/x".into()]).unwrap();
-        s.write("/proc/sys/x", "new", false).unwrap();
+        s.write("/proc/sys/x", "new").unwrap();
         state.commit(Some("balance"), Some("balance")).unwrap();
         assert!(!state.recover(&s).unwrap());
         assert_eq!(state.mode().as_deref(), Some("balance"));
         assert_eq!(s.read("/proc/sys/x").as_deref(), Some("new"));
+        let _ = fs::remove_dir_all(root);
+    }
+
+
+    #[test]
+    fn committed_marker_is_idempotent_after_first_rename() {
+        let root = root("commit-marker-idempotent");
+        write(&root, "/proc/sys/x", "old");
+        write(&root, "/proc/sys/kernel/random/boot_id", "boot-a");
+        let state_root = root.join("state");
+        fs::create_dir_all(&state_root).unwrap();
+        fs::write(state_root.join(COMMITTED), "version=1\nmode=1\neffective=1\n").unwrap();
+        fs::write(state_root.join(MODE), "balance\n").unwrap();
+        fs::write(state_root.join(NEXT_EFFECTIVE), "balance\n").unwrap();
+        let s = Sysroot::new(&root);
+        let mut state = StateStore::new(&state_root);
+        assert!(!state.recover(&s).unwrap());
+        assert_eq!(fs::read_to_string(state_root.join(MODE)).unwrap().trim(), "balance");
+        assert_eq!(fs::read_to_string(state_root.join(EFFECTIVE)).unwrap().trim(), "balance");
+        assert!(!state_root.join(COMMITTED).exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn committed_marker_refuses_missing_required_publication() {
+        let root = root("commit-marker-missing");
+        write(&root, "/proc/sys/x", "old");
+        write(&root, "/proc/sys/kernel/random/boot_id", "boot-a");
+        let state_root = root.join("state");
+        fs::create_dir_all(&state_root).unwrap();
+        fs::write(state_root.join(COMMITTED), "version=1\nmode=1\neffective=1\n").unwrap();
+        fs::write(state_root.join(NEXT_MODE), "balance\n").unwrap();
+        let s = Sysroot::new(&root);
+        let mut state = StateStore::new(&state_root);
+        let err = state.recover(&s).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(state_root.join(COMMITTED).exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn commit_marker_records_partial_publication_contract() {
+        let root = root("commit-marker-contract");
+        write(&root, "/proc/sys/x", "old");
+        write(&root, "/proc/sys/kernel/random/boot_id", "boot-a");
+        let state_root = root.join("state");
+        fs::create_dir_all(&state_root).unwrap();
+        fs::write(state_root.join(COMMITTED), "version=1\nmode=1\neffective=0\n").unwrap();
+        fs::write(state_root.join(NEXT_MODE), "balance\n").unwrap();
+        let s = Sysroot::new(&root);
+        let mut state = StateStore::new(&state_root);
+        assert!(!state.recover(&s).unwrap());
+        assert_eq!(fs::read_to_string(state_root.join(MODE)).unwrap().trim(), "balance");
+        assert!(!state_root.join(COMMITTED).exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn malformed_transaction_is_rejected_and_preserved() {
+        let root = root("malformed");
+        write(&root, "/proc/sys/x", "old");
+        write(&root, "/proc/sys/kernel/random/boot_id", "boot-a");
+        let state_root = root.join("state");
+        fs::create_dir_all(&state_root).unwrap();
+        fs::write(state_root.join(TXN), "not-a-valid-journal-entry\n").unwrap();
+        let s = Sysroot::new(&root);
+        let mut state = StateStore::new(&state_root);
+        let err = state.recover(&s).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(state_root.join(TXN).exists(), "corrupt journal must be retained");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn missing_boot_id_fails_closed_without_refreshing_state() {
+        let root = root("missing-boot-id");
+        write(&root, "/proc/sys/x", "old");
+        let state_root = root.join("state");
+        fs::create_dir_all(&state_root).unwrap();
+        fs::write(state_root.join(BOOT_ID), "old-boot").unwrap();
+        fs::write(state_root.join(BASELINE), "").unwrap();
+        let s = Sysroot::new(&root);
+        let mut state = StateStore::new(&state_root);
+        let err = state.ensure_boot(&s, &["/proc/sys/x".into()]).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::NotFound);
+        assert_eq!(fs::read_to_string(state_root.join(BOOT_ID)).unwrap(), "old-boot");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn baseline_adopts_nodes_that_appear_later_in_the_same_boot() {
+        let root = root("dynamic-node");
+        write(&root, "/proc/sys/x", "old");
+        write(&root, "/proc/sys/kernel/random/boot_id", "boot-a");
+        let s = Sysroot::new(&root);
+        let mut state = StateStore::new(root.join("state"));
+        state.ensure_boot(&s, &["/proc/sys/x".into()]).unwrap();
+
+        write(&root, "/proc/sys/y", "stock-y");
+        state.ensure_boot(&s, &["/proc/sys/x".into(), "/proc/sys/y".into()]).unwrap();
+        s.write("/proc/sys/y", "changed-y").unwrap();
+        state.restore_baseline(&s, &["/proc/sys/x".into(), "/proc/sys/y".into()]).unwrap();
+
+        assert_eq!(s.read("/proc/sys/y").as_deref(), Some("stock-y"));
         let _ = fs::remove_dir_all(root);
     }
 
@@ -462,7 +744,7 @@ mod tests {
         let mut state = StateStore::new(root.join("state"));
         state.ensure_boot(&s, &["/proc/sys/x".into()]).unwrap();
         state.begin(&s, &["/proc/sys/x".into()]).unwrap();
-        s.write("/proc/sys/x", "new-a", false).unwrap();
+        s.write("/proc/sys/x", "new-a").unwrap();
 
         write(&root, "/proc/sys/x", "stock-b");
         write(&root, "/proc/sys/kernel/random/boot_id", "boot-b");

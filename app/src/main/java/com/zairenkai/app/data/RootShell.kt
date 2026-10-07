@@ -11,12 +11,11 @@
  */
 package com.zairenkai.app.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.TimeoutCancellationException
 import java.util.concurrent.TimeUnit
 
 private const val DEFAULT_TIMEOUT_MS = 10_000L
@@ -35,10 +34,12 @@ object RootShell {
     private var cachedAvailable: Boolean? = null
 
     suspend fun isRootAvailable(): Boolean = withContext(Dispatchers.IO) {
-        cachedAvailable?.let { return@withContext it }
+        if (cachedAvailable == true) return@withContext true
         val result = run("id -u", 4000)
         val available = result.ok && result.stdout.trim() == "0"
-        cachedAvailable = available
+        // Cache only a positive root result. A denied/unavailable su can become
+        // available later after the user grants root or a root manager starts.
+        if (available) cachedAvailable = true
         available
     }
 
@@ -60,14 +61,24 @@ object RootShell {
                 coroutineScope {
                     val out = async(Dispatchers.IO) { readCapped(process.inputStream) }
                     val err = async(Dispatchers.IO) { readCapped(process.errorStream) }
-                    val code = withTimeout(timeoutMs.coerceIn(250, 120_000)) {
-                        process.waitFor()
+                    val timeout = timeoutMs.coerceIn(250, 120_000)
+                    val finished = process.waitFor(timeout, TimeUnit.MILLISECONDS)
+                    if (!finished) {
+                        // Destroy the child before leaving this coroutine scope.
+                        // Otherwise the stream readers remain children of the
+                        // scope and can wait forever for EOF from the still-live
+                        // process, turning the timeout path into a deadlock.
+                        destroyProcess(process)
+                        out.cancel()
+                        err.cancel()
+                        ShellResult(124, "", "timeout")
+                    } else {
+                        ShellResult(process.exitValue(), out.await(), err.await())
                     }
-                    ShellResult(code, out.await(), err.await())
                 }
-            } catch (_: TimeoutCancellationException) {
+            } catch (e: CancellationException) {
                 destroyProcess(process)
-                ShellResult(124, "", "timeout")
+                throw e
             } catch (e: Exception) {
                 destroyProcess(process)
                 ShellResult(125, "", e.message ?: "root process failed")

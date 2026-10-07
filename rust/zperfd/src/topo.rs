@@ -92,7 +92,11 @@ impl Topology {
     }
 
     fn is_gki(release: &str, has_msm_perf: bool, cgroup_v2: bool, has_uclamp_cg: bool) -> bool {
-        if release.contains("-android") {
+        // Android GKI releases carry an explicit Android/KMI generation in
+        // the release string (for example 5.15.x-android13-*-...). A loose
+        // substring check would misclassify vendor releases such as
+        // "5.15.x-androidish-oem".
+        if has_gki_release_format(release) {
             return true;
         }
         // Mainline >= 5.10 with unified cgroup + uclamp cgroup and no vendor
@@ -155,6 +159,24 @@ impl Topology {
     }
 }
 
+fn has_gki_release_format(release: &str) -> bool {
+    let mut parts = release.split('-');
+    let version = parts.next().unwrap_or_default();
+    let android = parts.next().unwrap_or_default();
+    let kmi = parts.next().unwrap_or_default();
+
+    let mut nums = version.split('.');
+    let major_ok = nums.next().map(|v| !v.is_empty() && v.chars().all(|c| c.is_ascii_digit())).unwrap_or(false);
+    let minor_ok = nums.next().map(|v| !v.is_empty() && v.chars().all(|c| c.is_ascii_digit())).unwrap_or(false);
+    let patch_ok = nums.next().map(|v| !v.is_empty() && v.chars().all(|c| c.is_ascii_digit())).unwrap_or(false);
+    let no_extra_version = nums.next().is_none();
+    let android_num = android.strip_prefix("android").unwrap_or_default();
+    let android_ok = !android_num.is_empty() && android_num.chars().all(|c| c.is_ascii_digit());
+    let kmi_ok = !kmi.is_empty() && kmi.chars().all(|c| c.is_ascii_digit());
+
+    major_ok && minor_ok && patch_ok && no_extra_version && android_ok && kmi_ok
+}
+
 fn parse_kver(release: &str) -> Option<(u32, u32)> {
     let mut it = release.split(|c: char| c == '.' || c == '-');
     let maj: u32 = it.next()?.parse().ok()?;
@@ -205,6 +227,13 @@ mod tests {
         assert_eq!(t.gpu.as_ref().unwrap().avail, vec![160000000, 465000000, 650000000]);
         assert!(t.stune_top.is_some());
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn gki_release_format_is_strict() {
+        assert!(has_gki_release_format("5.15.74-android13-8-00001"));
+        assert!(!has_gki_release_format("5.15.74-androidish-8-00001"));
+        assert!(!has_gki_release_format("5.15-android13-8"));
     }
 
     #[test]

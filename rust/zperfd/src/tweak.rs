@@ -99,7 +99,7 @@ pub fn read(id: &str, s: &Sysroot, t: &Topology) -> Option<String> {
 
 
 fn write_checked(s: &Sysroot, path: &str, value: &str) -> Result<(), String> {
-    s.write(path, value, false).map_err(|e| format!("{path}: {e}"))
+    s.write(path, value).map_err(|e| format!("{path}: {e}"))
 }
 
 fn parse_range(value: &str, min: i64, max: i64) -> Result<String, String> {
@@ -154,15 +154,14 @@ fn validate_kcal(value: &str) -> Result<String, String> {
     Ok(nums.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "))
 }
 
-fn zram_size_limit(s: &Sysroot) -> u64 {
+fn zram_size_limit(s: &Sysroot) -> Option<u64> {
     let mem_kb = s
         .read("/proc/meminfo")
         .and_then(|text| text.lines().find(|line| line.starts_with("MemTotal:")))
         .and_then(|line| line.split_whitespace().nth(1))
-        .and_then(|v| v.parse::<u64>().ok())
-        .unwrap_or(2 * 1024 * 1024);
+        .and_then(|v| v.parse::<u64>().ok())?;
     // Permit up to 2x physical RAM, but never more than 16 GiB.
-    (mem_kb.saturating_mul(1024).saturating_mul(2)).min(16 * 1024 * 1024 * 1024)
+    Some((mem_kb.saturating_mul(1024).saturating_mul(2)).min(16 * 1024 * 1024 * 1024))
 }
 
 pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String, String> {
@@ -205,6 +204,20 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             let lo = *g.avail.first().unwrap();
             let hi = *g.avail.last().unwrap();
             if n < lo || n > hi { return Err(format!("GPU frequency outside {lo}..{hi} kHz")); }
+            let current_min = s.read_u64(&g.rel("min_freq"));
+            let current_max = s.read_u64(&g.rel("max_freq"));
+            if id == "gpu_min_freq" && current_max.is_none() {
+                return Err("GPU current maximum frequency unavailable".into());
+            }
+            if id == "gpu_max_freq" && current_min.is_none() {
+                return Err("GPU current minimum frequency unavailable".into());
+            }
+            if id == "gpu_min_freq" && current_max.is_some_and(|max| n > max) {
+                return Err(format!("GPU minimum {n} kHz exceeds current maximum"));
+            }
+            if id == "gpu_max_freq" && current_min.is_some_and(|min| n < min) {
+                return Err(format!("GPU maximum {n} kHz is below current minimum"));
+            }
             let snapped = if id == "gpu_min_freq" {
                 g.avail.iter().copied().find(|f| *f >= n).unwrap_or(hi)
             } else {
@@ -235,7 +248,7 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         }
         "zram_disksize" => {
             let n: u64 = value.trim().parse().map_err(|_| "zram size must be bytes".to_string())?;
-            let max = zram_size_limit(s);
+            let max = zram_size_limit(s).ok_or_else(|| "physical memory size unavailable".to_string())?;
             if n > max { return Err(format!("zram size exceeds safe cap {max} bytes")); }
             let node = "/sys/block/zram0/disksize";
             write_checked(s, node, &n.to_string())?;
@@ -272,10 +285,10 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         }
         "kcal_sat" => write_sys_first(s, &["/sys/devices/platform/kcal_ctrl.0/kcal_sat"], value, 128, 383),
         "charge_limit" => {
-            let node = first_existing(s, &[
-                "/sys/class/power_supply/battery/charge_control_limit",
-                "/sys/class/power_supply/battery/batt_slate_mode",
-            ]).ok_or_else(|| "battery charge-limit node unavailable".to_string())?;
+            let node = "/sys/class/power_supply/battery/charge_control_limit";
+            if !s.exists(node) {
+                return Err("battery charge_control_limit node unavailable".into());
+            }
             let v = parse_range(value, 0, 100)?;
             write_checked(s, &node, &v)?;
             Ok(v)

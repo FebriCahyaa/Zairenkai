@@ -193,7 +193,7 @@ fn parse_freq_str(s: &str, lo: u64, hi: u64) -> Option<u64> {
     }
     if let Some(p) = t.strip_suffix('%') {
         let pct: f64 = p.trim().parse().ok()?;
-        if !(0.0..=100.0).contains(&pct) { return None; }
+        if !pct.is_finite() || !(0.0..=100.0).contains(&pct) { return None; }
         return Some(((hi as f64) * pct / 100.0) as u64);
     }
     // max-relative, e.g. "-300MHz"
@@ -214,14 +214,17 @@ fn parse_unit_khz(body: &str) -> Option<u64> {
     let b = body.trim().to_ascii_lowercase();
     if let Some(v) = b.strip_suffix("ghz") {
         let f: f64 = v.trim().parse().ok()?;
+        if !f.is_finite() || f < 0.0 { return None; }
         return Some((f * 1_000_000.0) as u64);
     }
     if let Some(v) = b.strip_suffix("mhz") {
         let f: f64 = v.trim().parse().ok()?;
+        if !f.is_finite() || f < 0.0 { return None; }
         return Some((f * 1_000.0) as u64);
     }
     if let Some(v) = b.strip_suffix("khz") {
         let f: f64 = v.trim().parse().ok()?;
+        if !f.is_finite() || f < 0.0 { return None; }
         return Some(f as u64);
     }
     b.parse().ok()

@@ -4,12 +4,59 @@
 //! Copyright (C) 2026 FebriCahyaa
 
 use crate::nodes::Sysroot;
-use std::process::Command;
+use std::io::Read;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
+
+const DUMPSYS_TIMEOUT: Duration = Duration::from_millis(750);
+const COMMAND_CAPTURE_BYTES: usize = 256 * 1024;
+
+fn bounded_output(command: &mut Command, timeout: Duration) -> Option<Vec<u8>> {
+    let mut child = command.stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
+    let Some(mut stdout) = child.stdout.take() else {
+        let _ = child.kill();
+        let _ = child.wait();
+        return None;
+    };
+    let reader = thread::spawn(move || {
+        let mut buf = Vec::with_capacity(COMMAND_CAPTURE_BYTES.min(64 * 1024));
+        let mut chunk = [0u8; 16 * 1024];
+        loop {
+            let n = stdout.read(&mut chunk).ok()?;
+            if n == 0 { break; }
+            let remaining = COMMAND_CAPTURE_BYTES.saturating_sub(buf.len());
+            if remaining > 0 {
+                buf.extend_from_slice(&chunk[..n.min(remaining)]);
+            }
+        }
+        Some(buf)
+    });
+
+    let deadline = Instant::now() + timeout;
+    let status = loop {
+        if let Ok(Some(status)) = child.try_wait() {
+            break Some(status);
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = reader.join();
+            return None;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }?;
+
+    let output = reader.join().ok()??;
+    status.success().then_some(output)
+}
 
 pub fn foreground_pkg() -> Option<String> {
-    let out = Command::new("dumpsys").args(["activity", "activities"]).output().ok()?;
-    if !out.status.success() { return None; }
-    let text = String::from_utf8_lossy(&out.stdout);
+    let out = bounded_output(
+        Command::new("dumpsys").args(["activity", "activities"]),
+        DUMPSYS_TIMEOUT,
+    )?;
+    let text = String::from_utf8_lossy(&out);
     for line in text.lines() {
         if !line.contains("mResumedActivity") && !line.contains("topResumedActivity") { continue; }
         for tok in line.split_whitespace() {
@@ -27,9 +74,8 @@ fn valid_package(s: &str) -> bool {
 
 pub fn getprop(key: &str) -> Option<String> {
     if key.is_empty() || !key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-') { return None; }
-    let out = Command::new("getprop").arg(key).output().ok()?;
-    if !out.status.success() { return None; }
-    let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let out = bounded_output(Command::new("getprop").arg(key), DUMPSYS_TIMEOUT)?;
+    let v = String::from_utf8_lossy(&out).trim().to_string();
     (!v.is_empty()).then_some(v)
 }
 
@@ -60,11 +106,70 @@ pub fn hottest_c(s: &Sysroot) -> Option<f32> {
     hottest
 }
 
+/// Decide Auto mode from current telemetry. Missing telemetry is treated as
+/// unsafe for performance selection instead of optimistic defaults.
+pub fn decide_auto(
+    battery: Option<u32>,
+    hot: Option<f32>,
+    charge: bool,
+    previous: Option<&str>,
+) -> &'static str {
+    let low_battery = battery.map(|v| v <= 20).unwrap_or(false);
+    let hot_limit = hot.map(|v| v >= 46.0).unwrap_or(false);
+    if low_battery || hot_limit {
+        return "powersave";
+    }
+
+    // Hysteresis prevents rapid performance <-> balance and powersave <- based
+    // oscillation when telemetry sits on a boundary.
+    match previous {
+        Some("powersave")
+            if battery.map(|v| v <= 25).unwrap_or(true)
+                || hot.map(|v| v >= 43.0).unwrap_or(true) =>
+        {
+            return "powersave";
+        }
+        Some("performance")
+            if charge && hot.map(|v| v < 44.0).unwrap_or(false) =>
+        {
+            return "performance";
+        }
+        _ => {}
+    }
+
+    if charge && hot.map(|v| v < 42.0).unwrap_or(false) {
+        "performance"
+    } else {
+        "balance"
+    }
+}
+
 pub fn resolve_auto(s: &Sysroot) -> &'static str {
-    let battery = battery_percent(s).unwrap_or(50);
-    let hot = hottest_c(s).unwrap_or(35.0);
-    let charge = charging(s);
-    if battery <= 20 || hot >= 46.0 { "powersave" }
-    else if charge && hot < 42.0 { "performance" }
-    else { "balance" }
+    decide_auto(battery_percent(s), hottest_c(s), charging(s), None)
+}
+
+pub fn resolve_auto_with_previous(s: &Sysroot, previous: Option<&str>) -> &'static str {
+    decide_auto(battery_percent(s), hottest_c(s), charging(s), previous)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decide_auto;
+
+    #[test]
+    fn unknown_thermal_data_never_selects_performance() {
+        assert_eq!(decide_auto(Some(80), None, true, None), "balance");
+    }
+
+    #[test]
+    fn performance_has_thermal_hysteresis() {
+        assert_eq!(decide_auto(Some(80), Some(43.0), true, Some("performance")), "performance");
+        assert_eq!(decide_auto(Some(80), Some(44.0), true, Some("performance")), "balance");
+    }
+
+    #[test]
+    fn powersave_has_recovery_hysteresis() {
+        assert_eq!(decide_auto(Some(23), Some(40.0), false, Some("powersave")), "powersave");
+        assert_eq!(decide_auto(Some(26), Some(40.0), false, Some("powersave")), "balance");
+    }
 }

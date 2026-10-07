@@ -19,22 +19,26 @@ picks the right mechanism automatically:
 | input boost | `cpu_boost` (module or per-cpu path) | same, if present |
 | GPU | KGSL / Mali devfreq | KGSL / Mali devfreq |
 
-Every write is **probe-gated** (only touched if the node exists) and sysfs
-writes are **locked** (`chmod 0666 → echo → 0444`) so a vendor perf-HAL cannot
-silently revert them.
+Every write is **probe-gated** (only touched if the node exists) and serialized
+by the zperfd transaction lock. The engine never changes sysfs/procfs
+permissions to simulate a lock: privileged vendor services can still overwrite
+the same node, so external writers are treated as an observable drift rather
+than something the engine pretends it can prevent.
 
 ## Usage
 
 ```
 zperfd probe  [--root R] [--json]          # detected topology / flavor
 zperfd modes  [--profile F]                # list modes in the active profile
-zperfd apply  <mode> [--profile F] [--no-lock]
+zperfd apply  <mode> [--profile F]
 zperfd reset                               # restore stock-ish limits
 zperfd daemon [--state DIR] [--interval MS]
 ```
 
 The daemon watches `<state>/mode` (default `/data/adb/zperf/mode`) and the
 foreground app, applying per-app overrides from the profile's `[perapp]` table.
+It also reconciles the live managed-node state periodically, so an external
+privileged writer cannot silently leave the selected policy drifted forever.
 
 ## Scene / vtools interop
 
@@ -49,6 +53,10 @@ for SDM660 (Adreno 512). The catalog is installed to `/data/adb/zperf/catalog/`
 and selected by `ro.board.platform`; a user `profile.toml` overrides it.
 
 The engine persists a current-boot baseline and a crash-safe transaction journal.
-A failed write is rolled back; a committed journal can finish its state update
-after power loss. `auto` uses battery percentage, charging state, thermal data,
-and the profile's per-app overrides.
+The durable commit marker records which `mode`/`effective_mode` publications
+are required, so recovery remains idempotent even if power fails between atomic
+renames. A failed write is rolled back; a committed journal can finish its state
+update after power loss. Newly appearing managed nodes are adopted into the
+current boot baseline without replacing the baseline of already-seen nodes. `auto` uses
+battery percentage, charging state and thermal data with conservative handling
+of missing telemetry and hysteresis around transition boundaries.

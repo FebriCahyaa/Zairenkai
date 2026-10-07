@@ -4,8 +4,9 @@
 #
 # Columns: kmi_branch  kernel_version  android_api  aosp_branch                 clang_toolchain
 # Used by gki/build_lkm.sh and the GitHub Actions matrix. ZKFC is built as a
-# GKI vendor module (LKM, .ko) against each branch's KMI so one .ko loads on
-# every device that ships that branch.
+# GKI vendor module (LKM, .ko) against each branch's KMI. Compatibility is
+# branch/KMI/configuration specific and must be validated against the target
+# GKI build; a module is not universally interchangeable across branches.
 android12-5.10   5.10   31   common-android12-5.10   r416183b
 android13-5.10   5.10   33   common-android13-5.10   r450784e
 android13-5.15   5.15   33   common-android13-5.15   r450784e

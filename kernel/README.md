@@ -47,9 +47,11 @@ below the dashed line in userspace talks only through the stable UAPI header.
 | GKI     | android12-5.10 ... android17-6.18 | vendor module (`.ko`, =m) | hybrid (kprobes)|
 | non-GKI | 4.14 ... 6.x vendor kernels        | built-in (=y) or module   | hybrid or manual|
 
-GKI branches are listed in [`gki/kmi_matrix.txt`](gki/kmi_matrix.txt). Because
-a GKI `.ko` is built against a branch's KMI, one module per `(branch, arch)`
-loads on every device shipping that branch.
+GKI branches are listed in [`gki/kmi_matrix.txt`](gki/kmi_matrix.txt). A GKI
+module is compatible only with the exact KMI/config/toolchain contract it was
+built for; the branch name alone is not a universal loadability guarantee.
+Device-side module signature and enforcement policy can impose additional
+constraints.
 
 ### Build a GKI vendor module (LKM)
 

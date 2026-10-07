@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-//! Probe-driven sysfs/procfs access with path containment and reversible locking.
+//! Probe-driven sysfs/procfs access with path containment and race-free writes.
 //!
 //! Zairenkai only writes a small set of kernel tuning trees. The rooted
 //! Sysroot abstraction keeps unit tests off the real /sys and /proc trees.
@@ -8,7 +8,9 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+use std::os::fd::{AsRawFd, FromRawFd};
+use std::os::unix::ffi::OsStrExt;
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Component, Path, PathBuf};
 
 #[derive(Clone)]
@@ -64,35 +66,76 @@ impl Sysroot {
         out
     }
 
-    /// Write a kernel pseudo-file. When `lock` is true, temporarily make the
-    /// node owner/group/world writable and restore its original mode exactly.
-    pub fn write(&self, rel: &str, val: &str, lock: bool) -> io::Result<()> {
+    fn open_write_beneath(&self, rel: &str) -> io::Result<File> {
         if !Self::safe_rel(rel) {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "unsafe path"));
         }
-        let p = self.path(rel);
-        let meta = fs::symlink_metadata(&p)?;
-        if meta.file_type().is_symlink() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "symlink not allowed"));
+
+        // Resolve every path component without following symlinks. O_NOFOLLOW
+        // on only the final file is insufficient because an attacker could
+        // replace a parent directory with a symlink between checks.
+        let mut components = Path::new(rel.trim_start_matches('/')).components();
+        let mut dir = OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_DIRECTORY | libc::O_CLOEXEC | libc::O_NOFOLLOW)
+            .open(&self.root)?;
+
+        let final_name = components
+            .next_back()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "empty path"))?;
+
+        for component in components {
+            let Component::Normal(name) = component else {
+                return Err(io::Error::new(io::ErrorKind::InvalidInput, "unsafe path"));
+            };
+            let c_name = std::ffi::CString::new(name.as_bytes())
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "NUL in path"))?;
+            let fd = unsafe {
+                libc::openat(
+                    dir.as_raw_fd(),
+                    c_name.as_ptr(),
+                    libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+                )
+            };
+            if fd < 0 {
+                return Err(io::Error::last_os_error());
+            }
+            dir = unsafe { File::from_raw_fd(fd) };
         }
-        let original_mode = meta.permissions().mode();
-        if lock {
-            fs::set_permissions(&p, fs::Permissions::from_mode(original_mode | 0o222))?;
+
+        let Component::Normal(name) = final_name else {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "unsafe path"));
+        };
+        let c_name = std::ffi::CString::new(name.as_bytes())
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "NUL in path"))?;
+        let fd = unsafe {
+            libc::openat(
+                dir.as_raw_fd(),
+                c_name.as_ptr(),
+                libc::O_WRONLY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+            )
+        };
+        if fd < 0 {
+            return Err(io::Error::last_os_error());
         }
-        let result = OpenOptions::new()
-            .write(true)
-            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
-            .open(&p)
-            .and_then(|mut file| file.write_all(format!("{val}\n").as_bytes()));
-        if lock {
-            let _ = fs::set_permissions(&p, fs::Permissions::from_mode(original_mode));
-        }
-        result
+        Ok(unsafe { File::from_raw_fd(fd) })
     }
 
-    pub fn write_first(&self, candidates: &[&str], val: &str, lock: bool) -> Option<String> {
+    /// Write a kernel pseudo-file without changing its permissions.
+    ///
+    /// Cross-process serialization belongs to StateStore. Sysroot deliberately
+    /// has no permission-toggling or pseudo-locking facility because changing
+    /// sysfs/procfs modes around a write is race-prone and cannot prevent a
+    /// separate privileged writer from changing the same node. Path resolution
+    /// is descriptor-based so intermediate and final symlinks are rejected.
+    pub fn write(&self, rel: &str, val: &str) -> io::Result<()> {
+        let mut file = self.open_write_beneath(rel)?;
+        file.write_all(format!("{val}\n").as_bytes())
+    }
+
+    pub fn write_first(&self, candidates: &[&str], val: &str) -> Option<String> {
         for rel in candidates {
-            if self.exists(rel) && self.write(rel, val, lock).is_ok() { return Some((*rel).to_string()); }
+            if self.exists(rel) && self.write(rel, val).is_ok() { return Some((*rel).to_string()); }
         }
         None
     }
@@ -106,6 +149,7 @@ impl Sysroot {
 mod tests {
     use super::*;
     use std::fs;
+    use std::os::unix::fs::PermissionsExt;
 
     fn tmp() -> PathBuf {
         let d = std::env::temp_dir().join(format!("zperfd-nodes-{}", std::process::id()));
@@ -114,16 +158,16 @@ mod tests {
     }
 
     #[test]
-    fn write_locked_roundtrip_restores_mode() {
+    fn write_roundtrip_preserves_mode_without_permission_toggle() {
         let root=tmp();
         let p=root.join("sys/x/knob");
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(&p,"0").unwrap();
-        fs::set_permissions(&p,fs::Permissions::from_mode(0o440)).unwrap();
+        fs::set_permissions(&p,fs::Permissions::from_mode(0o640)).unwrap();
         let s=Sysroot::new(&root);
-        s.write("/sys/x/knob","42",true).unwrap();
+        s.write("/sys/x/knob","42").unwrap();
         assert_eq!(s.read("/sys/x/knob").as_deref(),Some("42"));
-        assert_eq!(fs::metadata(&p).unwrap().permissions().mode() & 0o777,0o440);
+        assert_eq!(fs::metadata(&p).unwrap().permissions().mode() & 0o777,0o640);
         let _=fs::remove_dir_all(&root);
     }
 
@@ -134,9 +178,12 @@ mod tests {
         fs::create_dir_all(real.parent().unwrap()).unwrap();
         fs::write(&real,"1").unwrap();
         std::os::unix::fs::symlink(&real,root.join("sys/x/link")).unwrap();
+        let parent_link=root.join("sys/parent-link");
+        std::os::unix::fs::symlink(root.join("sys/x"), &parent_link).unwrap();
         let s=Sysroot::new(&root);
         assert!(!s.exists("/sys/x/../x/knob"));
-        assert!(s.write("/sys/x/link","2",false).is_err());
+        assert!(s.write("/sys/x/link","2").is_err());
+        assert!(s.write("/sys/parent-link/knob","2").is_err());
         let _=fs::remove_dir_all(&root);
     }
 }

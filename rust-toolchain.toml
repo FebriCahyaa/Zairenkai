@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Pin the Rust toolchain used by CI/release builds so native runtime binaries
+# are reproducible and do not silently change with the moving stable channel.
+[toolchain]
+channel = "1.99.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
+targets = ["aarch64-linux-android", "x86_64-linux-android"]
