@@ -142,3 +142,8 @@ non-GKI support is adapter-based and must be compiled against the concrete
 vendor tree. A modern vendor tree can backport interfaces, so `LINUX_VERSION_CODE`
 is used only as a lower-bound compatibility hint where necessary; runtime
 capabilities and actual compilation remain authoritative.
+
+
+## Thermal and property control
+
+Thermal policy is monotonic: observed thermal pressure can reduce a requested performance envelope but never increase it. Property mutation is deny-by-default and limited to explicitly registered Zairenkai-owned keys; arbitrary vendor/system `setprop` is outside the framework boundary.

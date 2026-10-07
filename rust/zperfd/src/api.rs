@@ -109,6 +109,8 @@ fn dispatch(args: &Args, request: &Request) -> Response {
         "device.optimize" => Some(zairenkai_core::operation::Operation::ReadPerformance),
         "safety.evaluate" => None,
         "runtime.status" => Some(zairenkai_core::operation::Operation::ReadStatus),
+        "thermal.status" => Some(zairenkai_core::operation::Operation::ReadThermal),
+        "property.list" | "property.get" => Some(zairenkai_core::operation::Operation::ReadStatus),
         _ => None,
     };
     if let Some(operation) = required {
@@ -168,8 +170,42 @@ fn dispatch(args: &Args, request: &Request) -> Response {
             p.insert("reasons".into(), decision.reasons.iter().map(|r| format!("{:?}", r)).collect::<Vec<_>>().join(","));
             Response::ok(request, "Sentinel evaluation", p)
         }
+        "thermal.status" => thermal_status(args, request),
+        "property.list" => property_list(request),
+        "property.get" => property_get(request),
         "runtime.status" => runtime_status(args, request),
         _ => Response::error(request.request_id, "method_not_supported", "method is not available in ZLP v1"),
+    }
+}
+
+fn thermal_status(args: &Args, request: &Request) -> Response {
+    let s = super::Sysroot::new(&args.root);
+    let topology = super::topo::Topology::detect(&s);
+    let snap = super::thermal::snapshot(&s, &topology);
+    let env = super::thermal::envelope(snap);
+    let mut p = BTreeMap::new();
+    p.insert("band".into(), format!("{:?}", env.band));
+    p.insert("boost_permille".into(), env.boost_permille.to_string());
+    p.insert("hottest_mdeg".into(), snap.hottest_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("control_temp_mdeg".into(), snap.control_temp_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("performance_trip_mdeg".into(), snap.performance_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("critical_trip_mdeg".into(), snap.critical_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("external_power".into(), snap.external_power.to_string());
+    p.insert("reason".into(), env.reason.into());
+    Response::ok(request, "thermal status", p)
+}
+
+fn property_list(request: &Request) -> Response {
+    let mut p = BTreeMap::new();
+    p.insert("properties".into(), super::properties::list().map(|s| s.key).collect::<Vec<_>>().join(","));
+    Response::ok(request, "property registry", p)
+}
+
+fn property_get(request: &Request) -> Response {
+    let Some(key) = request.args.get("key") else { return Response::error(request.request_id, "missing_argument", "key is required"); };
+    match super::properties::get(key) {
+        Ok(value) => { let mut p = BTreeMap::new(); p.insert("key".into(), key.clone()); p.insert("value".into(), value); Response::ok(request, "property value", p) }
+        Err(e) => Response::error(request.request_id, "property_read_failed", e),
     }
 }
 

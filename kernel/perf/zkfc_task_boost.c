@@ -48,6 +48,7 @@ static LIST_HEAD(zkfc_tb_groups);
 static DEFINE_SPINLOCK(zkfc_tb_lock);
 static DEFINE_MUTEX(zkfc_tb_mutex);
 static bool zkfc_tb_suspended;
+static atomic_t zkfc_tb_thermal_scale = ATOMIC_INIT(1000);
 
 static DEFINE_SPINLOCK(zkfc_tb_fifo_lock);
 static DECLARE_KFIFO(zkfc_tb_fifo, struct pid *, 128);
@@ -66,11 +67,13 @@ bool zkfc_uclamp_available(void)
 static int zkfc_tb_apply_one(struct task_struct *p, u32 umin, u32 umax, bool reset)
 {
 #ifdef ZKFC_HAVE_UCLAMP
+	u32 scale = (u32)atomic_read(&zkfc_tb_thermal_scale);
+	u32 effective_min = reset ? 0 : (umin * scale) / 1000U;
 	struct sched_attr attr = {
 		.size = sizeof(attr),
 		.sched_policy = p->policy,
 		.sched_flags = SCHED_FLAG_KEEP_ALL | SCHED_FLAG_UTIL_CLAMP,
-		.sched_util_min = reset ? 0 : umin,
+		.sched_util_min = effective_min,
 		.sched_util_max = reset ? SCHED_CAPACITY_SCALE : umax,
 	};
 
@@ -323,6 +326,18 @@ static void zkfc_tb_reapply_all(bool reset)
 				  snap[i].umin, snap[i].umax, reset, NULL, NULL);
 		put_pid(snap[i].target_pid);
 	}
+}
+
+void zkfc_task_boost_thermal_scale(u32 permille)
+{
+	if (permille > 1000)
+		permille = 1000;
+	atomic_set(&zkfc_tb_thermal_scale, (int)permille);
+	mutex_lock(&zkfc_tb_mutex);
+	zkfc_tb_prune_dead();
+	if (!zkfc_tb_suspended)
+		zkfc_tb_reapply_all(false);
+	mutex_unlock(&zkfc_tb_mutex);
 }
 
 void zkfc_task_boost_suspend(bool suspend)

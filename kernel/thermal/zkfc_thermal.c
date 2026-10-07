@@ -14,6 +14,7 @@
  *
  * Copyright (C) 2026 FebriCahyaa
  */
+#include <linux/atomic.h>
 #include <linux/jiffies.h>
 #include <linux/kernel.h>
 #include <linux/mutex.h>
@@ -28,6 +29,7 @@ static DEFINE_MUTEX(zkfc_tg_mutex);
 static bool zkfc_tg_tripped;
 static int zkfc_tg_last = INT_MIN;
 static u64 zkfc_tg_trips;
+static atomic_t zkfc_tg_boost_scale = ATOMIC_INIT(1000);
 
 static void zkfc_tg_fn(struct work_struct *w);
 static DECLARE_DELAYED_WORK(zkfc_tg_work, zkfc_tg_fn);
@@ -55,6 +57,36 @@ int zkfc_thermal_read(struct zkfc_thermal_read *rd)
 	return 0;
 }
 
+static u32 zkfc_tg_scale_for_temp(const struct zkfc_thermal_guard *cfg,
+					 int temp, bool telemetry_ok)
+{
+	u32 span, remaining;
+
+	if (!telemetry_ok)
+		return 0;
+	if (temp <= cfg->release_mdeg)
+		return 1000;
+	if (temp >= cfg->limit_mdeg)
+		return 0;
+	span = (u32)(cfg->limit_mdeg - cfg->release_mdeg);
+	remaining = (u32)(cfg->limit_mdeg - temp);
+	return (remaining * 1000U) / span;
+}
+
+static void zkfc_tg_set_scale(u32 permille)
+{
+	u32 old;
+
+	if (permille > 1000)
+		permille = 1000;
+	old = (u32)atomic_xchg(&zkfc_tg_boost_scale, (int)permille);
+	if (old == permille)
+		return;
+	zkfc_input_boost_thermal_scale(permille);
+	zkfc_task_boost_thermal_scale(permille);
+	zkfc_d("thermal boost envelope: %u -> %u permille", old, permille);
+}
+
 static void zkfc_tg_set_tripped(bool tripped, int temp)
 {
 	if (zkfc_tg_tripped == tripped)
@@ -68,6 +100,7 @@ static void zkfc_tg_set_tripped(bool tripped, int temp)
 	}
 	zkfc_input_boost_suspend(tripped);
 	zkfc_task_boost_suspend(tripped);
+	zkfc_tg_set_scale(tripped ? 0 : 1000);
 }
 
 static void zkfc_tg_fn(struct work_struct *w)
@@ -79,6 +112,7 @@ static void zkfc_tg_fn(struct work_struct *w)
 	mutex_lock(&zkfc_tg_mutex);
 	cfg = zkfc_tg_cfg;
 	if (!cfg.enabled) {
+		zkfc_tg_set_scale(1000);
 		mutex_unlock(&zkfc_tg_mutex);
 		return;
 	}
@@ -100,6 +134,7 @@ static void zkfc_tg_fn(struct work_struct *w)
 	}
 
 	zkfc_tg_last = hottest;
+	zkfc_tg_set_scale(zkfc_tg_scale_for_temp(&cfg, hottest == INT_MIN ? cfg.limit_mdeg : hottest, telemetry_ok));
 	if (!telemetry_ok) {
 		/* Missing telemetry is unsafe: never leave a performance boost armed
 		 * while the safety sensor set is incomplete. */
@@ -158,6 +193,11 @@ bool zkfc_thermal_tripped(void)
 	return READ_ONCE(zkfc_tg_tripped);
 }
 
+u32 zkfc_thermal_boost_scale(void)
+{
+	return (u32)atomic_read(&zkfc_tg_boost_scale);
+}
+
 void zkfc_thermal_status(struct zkfc_perf_status *st)
 {
 	mutex_lock(&zkfc_tg_mutex);
@@ -179,5 +219,6 @@ void zkfc_thermal_exit(void)
 	mutex_lock(&zkfc_tg_mutex);
 	zkfc_tg_cfg.enabled = 0;
 	zkfc_tg_tripped = false;
+	zkfc_tg_set_scale(1000);
 	mutex_unlock(&zkfc_tg_mutex);
 }

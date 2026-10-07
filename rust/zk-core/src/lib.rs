@@ -43,7 +43,7 @@ mod tests {
     fn full_runtime_authority_covers_every_operation() {
         let caps = CapabilitySet::full_runtime();
         let ops = [
-            Operation::Probe, Operation::ReadStatus, Operation::ReadLogs, Operation::ReadInventory,
+            Operation::Probe, Operation::ReadStatus, Operation::ReadPerformance, Operation::ReadThermal, Operation::ReadLogs, Operation::ReadInventory,
             Operation::ReadStorage, Operation::ReadNetwork, Operation::ReadMemory, Operation::ReadSecurity,
             Operation::ApplyProfile, Operation::SetCpuTweak,
             Operation::SetGpuTweak, Operation::SetMemoryTweak,
@@ -51,6 +51,7 @@ mod tests {
             Operation::SetThermalPolicy, Operation::ResetRuntime,
             Operation::TuneStorage, Operation::TuneNetwork, Operation::TuneZram,
             Operation::ManageDeviceRegistry, Operation::ManageDataSources, Operation::ManageEvidence, Operation::ManageRecovery,
+            Operation::SetProperty,
             Operation::InstallLicense, Operation::ModifyPolicy,
             Operation::ManageHooks,
         ];
@@ -97,6 +98,28 @@ mod tests {
         });
         assert!(!d.allowed);
         assert!(d.reasons.contains(&sentinel::SentinelReason::ThermalLimit));
+    }
+
+    #[test]
+    fn sentinel_allows_registered_framework_configuration_without_kernel_access() {
+        let d = sentinel::evaluate(&sentinel::SentinelInput {
+            operation: Operation::SetProperty,
+            kernel_api_compatible: false,
+            persistent_state_valid: false,
+            safe_mode_active: true,
+            runtime_reconciled: false,
+            hottest_mdeg: Some(55_000),
+            battery_pct: Some(1),
+            external_power: false,
+            storage_health: sentinel::StorageHealth::Critical,
+            boot_integrity: sentinel::BootIntegrity::Unknown,
+            device_known: false,
+            evidence_level: intelligence::EvidenceLevel::Unknown,
+            lite_mode: true,
+        });
+        assert!(d.allowed);
+        assert_eq!(d.class, sentinel::SafetyClass::FrameworkConfig);
+        assert_eq!(d.reasons, vec![sentinel::SentinelReason::ConfigurationOnly]);
     }
 
     #[test]

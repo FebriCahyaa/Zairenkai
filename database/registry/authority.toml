@@ -11,7 +11,7 @@ capabilities = [
   "security.license", "security.policy", "control.hooks", "control.reset",
   "read.storage", "read.network", "read.memory", "read.security",
   "tune.storage", "tune.network", "tune.zram",
-  "manage.device_registry", "manage.data_sources", "manage.evidence", "manage.recovery",
+  "manage.device_registry", "manage.data_sources", "manage.evidence", "manage.recovery", "tune.properties",
 ]
 
 [principals.android]

@@ -129,7 +129,7 @@ impl<'a> Engine<'a> {
         if let Some(g)=&self.t.gpu {
             for leaf in ["min_freq","max_freq","governor"] { out.push(g.rel(leaf)); }
         }
-        for dev in self.s.list_dir("/sys/block") {
+        for dev in crate::storage::safe_block_devices(self.s) {
             let q=format!("/sys/block/{dev}/queue");
             for leaf in ["scheduler","read_ahead_kb","nr_requests"] { out.push(format!("{q}/{leaf}")); }
         }
@@ -436,7 +436,17 @@ impl<'a> Engine<'a> {
     }
 
     fn apply_mem(&self, m: &Mem, r: &mut ApplyReport) {
-        self.set_proc_vm("swappiness", m.swappiness.map(|v| v.to_string()), r);
+        let inv = crate::inventory::collect(self.s, self.t.identity.clone());
+        let envelope = crate::memory::envelope(&inv);
+        let swappiness = match (m.swappiness, envelope.recommended_swappiness_floor, envelope.pressure) {
+            (Some(v), Some(floor), crate::memory::Pressure::Critical | crate::memory::Pressure::Elevated) if v < floor => {
+                r.ok(format!("vm.swappiness safety-floor: {v} -> {floor}"));
+                Some(floor)
+            }
+            (Some(v), _, _) => Some(v),
+            (None, _, _) => None,
+        };
+        self.set_proc_vm("swappiness", swappiness.map(|v| v.to_string()), r);
         self.set_proc_vm("vfs_cache_pressure", m.vfs_cache_pressure.map(|v| v.to_string()), r);
         self.set_proc_vm("watermark_scale_factor", m.watermark_scale_factor.map(|v| v.to_string()), r);
         self.set_proc_vm("page-cluster", m.page_cluster.map(|v| v.to_string()), r);
@@ -447,7 +457,7 @@ impl<'a> Engine<'a> {
         if io.scheduler.is_empty() && io.read_ahead_kb.is_none() && io.nr_requests.is_none() {
             return;
         }
-        for dev in self.s.list_dir("/sys/block") {
+        for dev in crate::storage::safe_block_devices(self.s) {
             let q = format!("/sys/block/{dev}/queue");
             if !self.s.exists(&format!("{q}/scheduler")) {
                 continue;

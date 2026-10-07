@@ -59,7 +59,22 @@ fn storage(s: &Sysroot) -> Vec<StorageInfo> {
         } else {
             "generic-block"
         };
-        let health=if s.exists(&format!("{base}/device/pre_eol_info")) || s.exists(&format!("{base}/device/life_time")) || s.exists(&format!("{base}/device/life_time_a")) { "reported" } else { "unknown" };
+        let health = match s.read(&format!("{base}/device/pre_eol_info")).and_then(|raw| parse_u32_auto(&raw).ok()) {
+            Some(1) => "good",
+            Some(2) => "warning",
+            Some(v) if v >= 3 => "critical",
+            _ => {
+                if let Some(v) = s.read(&format!("{base}/device/life_time_a")).and_then(|raw| parse_u32_auto(&raw).ok())
+                    .or_else(|| s.read(&format!("{base}/device/life_time")).and_then(|raw| parse_u32_auto(&raw).ok())) {
+                    match v {
+                        1..=8 => "good",
+                        9 => "warning",
+                        10..=u32::MAX => "critical",
+                        _ => "unknown",
+                    }
+                } else { "unknown" }
+            }
+        };
         out.push(StorageInfo { name, kind:kind.into(), model, size_bytes:s.read_u64(&format!("{base}/size")).map(|v|v.saturating_mul(512)), scheduler:s.read(&format!("{base}/queue/scheduler")), read_ahead_kb:s.read_u64(&format!("{base}/queue/read_ahead_kb")), health:health.into() });
     }
     out.sort_by(|a,b|a.name.cmp(&b.name)); out
@@ -92,9 +107,20 @@ pub fn storage_health(s: &Sysroot) -> zairenkai_core::sentinel::StorageHealth {
     for name in s.list_dir("/sys/block") {
         let base=format!("/sys/block/{name}/device");
         if let Some(raw)=s.read(&format!("{base}/pre_eol_info")) {
-            if let Ok(v)=parse_u32_auto(&raw) { if v >= 3 { return zairenkai_core::sentinel::StorageHealth::Critical; } }
+            if let Ok(v)=parse_u32_auto(&raw) {
+                if v >= 3 { return zairenkai_core::sentinel::StorageHealth::Critical; }
+                if v == 2 { return zairenkai_core::sentinel::StorageHealth::Warning; }
+            }
         }
-        if s.exists(&format!("{base}/life_time_a")) || s.exists(&format!("{base}/life_time")) { return zairenkai_core::sentinel::StorageHealth::Good; }
+        if let Some(v) = s.read(&format!("{base}/life_time_a")).and_then(|raw| parse_u32_auto(&raw).ok())
+            .or_else(|| s.read(&format!("{base}/life_time")).and_then(|raw| parse_u32_auto(&raw).ok())) {
+            return match v {
+                1..=8 => zairenkai_core::sentinel::StorageHealth::Good,
+                9 => zairenkai_core::sentinel::StorageHealth::Warning,
+                10..=u32::MAX => zairenkai_core::sentinel::StorageHealth::Critical,
+                _ => zairenkai_core::sentinel::StorageHealth::Unknown,
+            };
+        }
     }
     zairenkai_core::sentinel::StorageHealth::Unknown
 }

@@ -26,6 +26,7 @@ const TYPESHIFT: u32 = NRSHIFT + NRBITS;
 const SIZESHIFT: u32 = TYPESHIFT + TYPEBITS;
 const DIRSHIFT: u32 = SIZESHIFT + SIZEBITS;
 const DIR_READ: u32 = 2;
+const DIR_WRITE: u32 = 1;
 
 const fn ioc(dir: u32, ty: u32, nr: u32, size: u32) -> u64 {
     (((dir) << DIRSHIFT)
@@ -36,6 +37,11 @@ const fn ioc(dir: u32, ty: u32, nr: u32, size: u32) -> u64 {
 const fn ior(nr: u32, size: u32) -> u64 {
     ioc(DIR_READ, ZKFC_IOC_MAGIC, nr, size)
 }
+const fn iow(nr: u32, size: u32) -> u64 {
+    ioc(DIR_WRITE, ZKFC_IOC_MAGIC, nr, size)
+}
+
+pub const ZKFC_CAP_TUNE_THERMAL: u64 = 1u64 << 3;
 
 /// `struct zkfc_version_info` (160 bytes, fixed layout).
 #[repr(C)]
@@ -194,6 +200,25 @@ impl CapabilityInfo {
 
 const IOC_GET_CAPABILITIES: u64 = ior(0x05, std::mem::size_of::<CapabilityInfo>() as u32);
 
+/// `struct zkfc_thermal_guard` (152 bytes).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct ThermalGuard {
+    pub enabled: u32,
+    pub interval_ms: u32,
+    pub limit_mdeg: i32,
+    pub release_mdeg: i32,
+    pub zone_count: u32,
+    pub reserved: u32,
+    pub zones: [[u8; 32]; 4],
+}
+
+impl Default for ThermalGuard {
+    fn default() -> Self { unsafe { std::mem::zeroed() } }
+}
+
+const IOC_THERMAL_GUARD: u64 = iow(0x13, std::mem::size_of::<ThermalGuard>() as u32);
+
 /// An open handle to `/dev/zkfc`.
 pub struct Zkfc {
     fd: RawFd,
@@ -253,6 +278,27 @@ impl Zkfc {
     pub fn license_state(&self) -> io::Result<u32> {
         Ok(self.license_status()?.state)
     }
+
+    pub fn thermal_guard_config(&self, interval_ms: u32, limit_mdeg: i32, release_mdeg: i32, zones: &[String]) -> io::Result<()> {
+        let mut cfg = ThermalGuard::default();
+        cfg.enabled = 1;
+        cfg.interval_ms = interval_ms;
+        cfg.limit_mdeg = limit_mdeg;
+        cfg.release_mdeg = release_mdeg;
+        cfg.zone_count = zones.len().min(4) as u32;
+        for (i, zone) in zones.iter().take(4).enumerate() {
+            if zone.is_empty() || zone.len() >= 32 || zone.as_bytes().contains(&0) {
+                return Err(io::Error::new(io::ErrorKind::InvalidInput, "thermal zone name is invalid"));
+            }
+            cfg.zones[i][..zone.len()].copy_from_slice(zone.as_bytes());
+        }
+        if cfg.zone_count == 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "thermal guard requires at least one zone"));
+        }
+        let rc = unsafe { libc::ioctl(self.fd, IOC_THERMAL_GUARD as libc::c_ulong, &cfg as *const ThermalGuard) };
+        if rc < 0 { return Err(io::Error::last_os_error()); }
+        Ok(())
+    }
 }
 
 impl AsRawFd for Zkfc {
@@ -301,12 +347,19 @@ mod tests {
         assert_eq!(std::mem::size_of::<LicenseToken>(), 200);
         assert_eq!(std::mem::size_of::<LicenseStatus>(), 288);
         assert_eq!(std::mem::size_of::<CapabilityInfo>(), 168);
+        assert_eq!(std::mem::size_of::<ThermalGuard>(), 152);
     }
 
     #[test]
     fn capability_ioctl_number_matches_uapi() {
         let expected: u64 = (2u64 << 30) | (168u64 << 16) | ((b'Z' as u64) << 8) | 5;
         assert_eq!(IOC_GET_CAPABILITIES, expected);
+    }
+
+    #[test]
+    fn thermal_guard_ioctl_number_matches_uapi() {
+        let expected: u64 = (1u64 << 30) | (152u64 << 16) | ((b'Z' as u64) << 8) | 0x13;
+        assert_eq!(IOC_THERMAL_GUARD, expected);
     }
 
     #[test]

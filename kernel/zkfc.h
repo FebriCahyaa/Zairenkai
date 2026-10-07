@@ -74,6 +74,7 @@ void zkfc_task_boost_exit(void);
 int zkfc_task_boost(struct zkfc_task_boost *tb);
 void zkfc_task_boost_reset_all(void);
 void zkfc_task_boost_suspend(bool suspend);
+void zkfc_task_boost_thermal_scale(u32 permille);
 u32 zkfc_task_boost_count(u32 *inherit_groups);
 void zkfc_task_boost_on_new_task(struct task_struct *p);
 bool zkfc_uclamp_available(void);
@@ -91,6 +92,7 @@ int zkfc_input_boost_init(void);
 void zkfc_input_boost_exit(void);
 int zkfc_input_boost_config(const struct zkfc_input_boost *cfg);
 void zkfc_input_boost_suspend(bool suspend);
+void zkfc_input_boost_thermal_scale(u32 permille);
 void zkfc_input_boost_status(struct zkfc_perf_status *st);
 
 /* ---- thermal/zkfc_thermal.c ---- */
@@ -99,6 +101,7 @@ void zkfc_thermal_exit(void);
 int zkfc_thermal_read(struct zkfc_thermal_read *rd);
 int zkfc_thermal_guard_config(const struct zkfc_thermal_guard *cfg);
 bool zkfc_thermal_tripped(void);
+u32 zkfc_thermal_boost_scale(void);
 void zkfc_thermal_status(struct zkfc_perf_status *st);
 
 /* ---- hooks/ ---- */

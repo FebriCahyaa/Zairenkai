@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Zairenkai subsystem identity registry.
+schema_version = 1
+core_id = "zairenkai.core"
+
+[[subsystem]]
+id = "zairenkai.atlas"
+name = "Zairenkai Atlas"
+version = 1
+class = "device-intelligence"
+authority = "core"
+
+[[subsystem]]
+id = "zairenkai.sentinel"
+name = "Zairenkai Sentinel"
+version = 1
+class = "safety-security"
+authority = "core"
+
+[[subsystem]]
+id = "zairenkai.thermoguard"
+name = "Zairenkai ThermoGuard"
+version = 1
+class = "thermal-safety"
+authority = "zkfc"
+properties = ["runtime-trip-aware", "boost-scaling", "fail-closed"]
+
+[[subsystem]]
+id = "zairenkai.zperfd"
+name = "Zairenkai Runtime Performance Engine"
+version = 1
+class = "runtime-orchestrator"
+authority = "core-sentinel-zkfc"

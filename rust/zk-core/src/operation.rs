@@ -7,6 +7,8 @@ use crate::capability::Capability;
 pub enum Operation {
     Probe,
     ReadStatus,
+    ReadPerformance,
+    ReadThermal,
     ReadLogs,
     ApplyProfile,
     SetCpuTweak,
@@ -31,6 +33,7 @@ pub enum Operation {
     ManageDataSources,
     ManageEvidence,
     ManageRecovery,
+    SetProperty,
 }
 
 impl Operation {
@@ -39,6 +42,8 @@ impl Operation {
         match self {
             Self::Probe => ReadDevice,
             Self::ReadStatus => ReadPerformance,
+            Self::ReadPerformance => ReadPerformance,
+            Self::ReadThermal => ReadThermal,
             Self::ReadLogs => ReadLogs,
             Self::ApplyProfile => TuneCpu,
             Self::SetCpuTweak => TuneCpu,
@@ -63,18 +68,20 @@ impl Operation {
             Self::ManageDataSources => ManageDataSources,
             Self::ManageEvidence => ManageEvidence,
             Self::ManageRecovery => ManageRecovery,
+            Self::SetProperty => TuneProperties,
         }
     }
 
     pub const fn risk_weight(self) -> u8 {
         match self {
-            Self::Probe | Self::ReadStatus | Self::ReadLogs => 1,
+            Self::Probe | Self::ReadStatus | Self::ReadPerformance | Self::ReadThermal | Self::ReadLogs => 1,
             Self::ApplyProfile | Self::SetCpuTweak | Self::SetGpuTweak |
             Self::SetMemoryTweak | Self::SetIoTweak | Self::SetPowerTweak => 3,
             Self::SetThermalPolicy | Self::ResetRuntime => 4,
             Self::InstallLicense | Self::ModifyPolicy | Self::ManageHooks |
             Self::ManageDeviceRegistry | Self::ManageDataSources | Self::ManageEvidence |
             Self::ManageRecovery => 5,
+            Self::SetProperty => 2,
             Self::TuneStorage | Self::TuneNetwork | Self::TuneZram => 3,
             Self::ReadInventory | Self::ReadStorage | Self::ReadNetwork |
             Self::ReadMemory | Self::ReadSecurity => 1,

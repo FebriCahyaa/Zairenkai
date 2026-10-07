@@ -10,3 +10,4 @@ supported_kernel_generations = ["4.14", "4.19", "5.4", "5.10", "5.15", "6.1", "6
 atlas_api = 1
 sentinel_api = 1
 local_api = 1
+subsystem_registry = "subsystems.toml"

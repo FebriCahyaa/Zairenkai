@@ -76,3 +76,6 @@ captured the device identity, exact kernel release/flavor, workload and profile.
 `tools/zperf_analyze.py` is intentionally descriptive. It reports coverage,
 median, p95, MAD, thermal slope and relative changes without claiming causality
 or statistical significance from short time-series samples.
+
+
+**Zairenkai ThermoGuard** is the runtime thermal safety subsystem. The runtime thermal envelope can constrain profiles before mutation and can configure the kernel-side guard from discovered thermal trip points. Property access uses a bounded Android `getprop`/`setprop` broker; only registered Zairenkai-owned properties are mutable.

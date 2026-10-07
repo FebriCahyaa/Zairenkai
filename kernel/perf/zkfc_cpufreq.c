@@ -230,6 +230,12 @@ int zkfc_cpufreq_set_boost_floor(unsigned int cpu, unsigned int min_khz)
 		mutex_unlock(&zkfc_cq_mutex);
 		return -ENODEV;
 	}
+	if (min_khz && c->user_max)
+		min_khz = min(min_khz, c->user_max);
+#ifdef ZKFC_HAVE_FREQ_QOS
+	if (min_khz)
+		min_khz = min(min_khz, c->policy->max);
+#endif
 	c->boost_min = min_khz;
 	ret = zkfc_cq_update(c);
 	mutex_unlock(&zkfc_cq_mutex);

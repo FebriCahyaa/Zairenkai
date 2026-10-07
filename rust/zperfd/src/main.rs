@@ -18,6 +18,10 @@ mod platform;
 mod scene;
 mod state;
 mod telemetry;
+mod thermal;
+mod memory;
+mod properties;
+mod storage;
 mod topo;
 mod tweak;
 
@@ -237,7 +241,7 @@ fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Resu
 
 pub(crate) fn permission_names() -> String {
     const NAMES: &[&str] = &[
-        "read.device", "read.status", "read.logs", "read.inventory", "read.storage",
+        "read.device", "read.kernel", "read.thermal", "read.performance", "read.logs", "read.inventory", "read.storage",
         "read.network", "read.memory", "read.security", "apply.profile", "tune.cpu",
         "tune.gpu", "tune.memory", "tune.io", "tune.power", "tune.thermal",
         "tune.storage", "tune.network", "tune.zram", "control.reset", "security.license",
@@ -251,6 +255,8 @@ fn cmd_core_permissions(json: bool) -> i32 {
     const OPS: &[(Operation, &str)] = &[
         (Operation::Probe, "probe"),
         (Operation::ReadStatus, "read.status"),
+        (Operation::ReadPerformance, "read.performance"),
+        (Operation::ReadThermal, "read.thermal"),
         (Operation::ReadLogs, "read.logs"),
         (Operation::ReadInventory, "read.inventory"),
         (Operation::ReadStorage, "read.storage"),
@@ -264,6 +270,7 @@ fn cmd_core_permissions(json: bool) -> i32 {
         (Operation::SetIoTweak, "tune.io"),
         (Operation::SetPowerTweak, "tune.power"),
         (Operation::SetThermalPolicy, "tune.thermal"),
+        (Operation::SetProperty, "tune.properties"),
         (Operation::TuneStorage, "tune.storage"),
         (Operation::TuneNetwork, "tune.network"),
         (Operation::TuneZram, "tune.zram"),
@@ -414,6 +421,23 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
     0
 }
 
+fn configure_kernel_thermal_guard(args: &Args, topology: &Topology, snapshot: thermal::Snapshot) -> Result<(), String> {
+    let zones = thermal::guard_zones(topology);
+    if zones.is_empty() {
+        return Err("no thermal control zones available; refusing performance mutation".into());
+    }
+    let z = Zkfc::open().map_err(|e| format!("ZKFC unavailable for thermal guard: {e}"))?;
+    let caps = z.capabilities().map_err(|e| format!("ZKFC capability query failed: {e}"))?;
+    if caps.kernel_caps() & zkfc_sys::ZKFC_CAP_TUNE_THERMAL == 0 {
+        return Err("kernel does not advertise ZKFC thermal capability".into());
+    }
+    let interval_ms = args.interval_ms.clamp(250, 5000) as u32;
+    let limit = thermal::kernel_guard_limit(snapshot);
+    let release = thermal::kernel_guard_release(limit);
+    z.thermal_guard_config(interval_ms, limit, release, &zones)
+        .map_err(|e| format!("ZKFC thermal guard configuration failed: {e}"))
+}
+
 fn apply_transaction(args: &Args, requested: &str) -> i32 {
     if let Err(e) = core_authorize(Operation::ApplyProfile) { eprintln!("{e}"); return 1; }
     if let Err(e) = kernel_license_ok() {
@@ -423,6 +447,11 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
 
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
+    let thermal_snapshot = thermal::snapshot(&s, &topology);
+    if let Err(e) = configure_kernel_thermal_guard(args, &topology, thermal_snapshot) {
+        eprintln!("apply blocked: {e}");
+        return 4;
+    }
     let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     let engine = Engine::new(&s, &topology, &plan);
@@ -471,7 +500,10 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
         eprintln!("apply failed: validated profile is missing mode '{effective}'");
         return 3;
     };
-    let report = engine.apply_mode(mode);
+    let therm = thermal::envelope(thermal_snapshot);
+    let constrained = thermal::constrain_mode(mode, therm);
+    eprintln!("thermal envelope: band={:?} boost={}‰ cap={:?} reason={}", therm.band, therm.boost_permille, therm.max_perf_cap_pct, therm.reason);
+    let report = engine.apply_mode(&constrained);
     if !report.failed.is_empty() || report.applied.is_empty() {
         let rollback = state.rollback(&s);
         if let Err(e) = rollback {
@@ -638,6 +670,66 @@ fn cmd_inventory(args: &Args) -> i32 {
     0
 }
 
+
+fn cmd_thermal(args: &Args) -> i32 {
+    if let Err(e) = core_authorize(Operation::ReadThermal) { eprintln!("{e}"); return 1; }
+    let s = Sysroot::new(&args.root);
+    let topology = Topology::detect(&s);
+    let snap = thermal::snapshot(&s, &topology);
+    let env = thermal::envelope(snap);
+    if args.json {
+        println!(
+            "{{\"band\":\"{:?}\",\"boost_permille\":{},\"max_perf_cap_pct\":{},\"hottest_mdeg\":{},\"control_temp_mdeg\":{},\"performance_trip_mdeg\":{},\"critical_trip_mdeg\":{},\"battery_pct\":{},\"external_power\":{},\"reason\":\"{}\"}}",
+            env.band,
+            env.boost_permille,
+            env.max_perf_cap_pct.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.hottest_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.control_temp_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.performance_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.critical_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.battery_pct.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.external_power,
+            json_escape(env.reason),
+        );
+    } else {
+        println!("band          : {:?}\nboost budget  : {}‰\nmax perf cap  : {}\nhottest       : {:?} mC\ncontrol temp  : {:?} mC\nperformance tp: {:?} mC\ncritical tp   : {:?} mC\nbattery       : {:?}%\nexternal power: {}\nreason        : {}",
+            env.band, env.boost_permille,
+            env.max_perf_cap_pct.map(|v| format!("{v}%")).unwrap_or_else(|| "none".into()),
+            snap.hottest_mdeg, snap.control_temp_mdeg, snap.performance_trip_mdeg,
+            snap.critical_trip_mdeg, snap.battery_pct, snap.external_power, env.reason);
+    }
+    0
+}
+
+fn cmd_prop(args: &Args) -> i32 {
+    match args.positional.first().map(String::as_str).unwrap_or("list") {
+        "list" => {
+            if let Err(e) = core_authorize(Operation::ReadStatus) { eprintln!("{e}"); return 1; }
+            for spec in properties::list() { println!("{}\t{:?}\t{}", spec.key, spec.scope, spec.description); }
+            0
+        }
+        "get" => {
+            if let Err(e) = core_authorize(Operation::ReadStatus) { eprintln!("{e}"); return 1; }
+            let Some(key) = args.positional.get(1) else { eprintln!("usage: prop get <key>"); return 2; };
+            match properties::get(key) {
+                Ok(v) => { println!("{v}"); 0 }
+                Err(e) => { eprintln!("property read failed: {e}"); 3 }
+            }
+        }
+        "set" => {
+            if let Err(e) = core_authorize(Operation::SetProperty) { eprintln!("{e}"); return 1; }
+            let (Some(key), Some(value)) = (args.positional.get(1), args.positional.get(2)) else {
+                eprintln!("usage: prop set <key> <value>"); return 2;
+            };
+            match properties::set(key, value) {
+                Ok(()) => { println!("{{\"ok\":true,\"key\":\"{}\"}}", json_escape(key)); 0 }
+                Err(e) => { eprintln!("property write failed: {e}"); 3 }
+            }
+        }
+        _ => { eprintln!("usage: prop list|get <key>|set <key> <value>"); 2 }
+    }
+}
+
 fn cmd_optimize(args: &Args) -> i32 {
     if let Err(e) = core_authorize(Operation::ReadPerformance) { eprintln!("{e}"); return 1; }
     let s = Sysroot::new(&args.root);
@@ -666,6 +758,7 @@ fn parse_operation_name(name: &str) -> Option<Operation> {
         "tune.io" => Operation::SetIoTweak,
         "tune.power" => Operation::SetPowerTweak,
         "tune.thermal" => Operation::SetThermalPolicy,
+        "tune.properties" => Operation::SetProperty,
         "tune.storage" => Operation::TuneStorage,
         "tune.network" => Operation::TuneNetwork,
         "tune.zram" => Operation::TuneZram,
@@ -970,7 +1063,17 @@ fn cmd_daemon(args: &Args) -> i32 {
                             eprintln!("apply failed: validated profile is missing mode '{effective}'");
                             return 3;
                         };
-                        let report = engine.apply_mode(mode);
+                        let thermal_snapshot = thermal::snapshot(&s, &topology);
+                        if let Err(e) = configure_kernel_thermal_guard(args, &topology, thermal_snapshot) {
+                            eprintln!("zperfd: thermal guard configuration failed: {e}");
+                            let _ = state.rollback(&s);
+                            std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
+                            continue;
+                        }
+                        let therm = thermal::envelope(thermal_snapshot);
+                        let constrained = thermal::constrain_mode(mode, therm);
+                        eprintln!("zperfd: thermal envelope band={:?} boost={}‰ cap={:?}", therm.band, therm.boost_permille, therm.max_perf_cap_pct);
+                        let report = engine.apply_mode(&constrained);
                         if report.failed.is_empty() && !report.applied.is_empty() {
                             match state.commit(Some(&desired), Some(&effective)) {
                                 Ok(()) => {
@@ -1028,6 +1131,8 @@ fn main() {
         "status" => cmd_status(&args),
         "inventory" => cmd_inventory(&args),
         "optimize" => cmd_optimize(&args),
+        "thermal" => cmd_thermal(&args),
+        "prop" => cmd_prop(&args),
         "sentinel" => cmd_sentinel(&args),
         "core" => if args.positional.first().map(|x| x.as_str()) == Some("permissions") { cmd_core_permissions(args.json) } else { cmd_core(args.json) },
         "api" => api::run(&args),

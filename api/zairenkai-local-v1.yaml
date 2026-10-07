@@ -27,7 +27,7 @@ methods:
     permission: read.device
   device.inventory:
     class: observe
-    permission: read.inventory
+    permission: read.device
   device.optimize:
     class: observe
     permission: read.performance
@@ -36,7 +36,16 @@ methods:
     permission: read.security
   runtime.status:
     class: observe
-    permission: read.status
+    permission: read.performance
+  thermal.status:
+    class: observe
+    permission: read.thermal
+  property.list:
+    class: observe
+    permission: read.performance
+  property.get:
+    class: observe
+    permission: read.performance
 invariants:
   - 'API is local-only'
   - 'API v1 cannot mutate kernel state'

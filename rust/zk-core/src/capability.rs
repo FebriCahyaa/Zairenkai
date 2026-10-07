@@ -32,6 +32,7 @@ pub enum Capability {
     ManageEvidence,
     ManageRecovery,
     Experimental,
+    TuneProperties,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,7 +53,7 @@ impl CapabilitySet {
             ReadStorage, ReadNetwork, ReadMemory, ReadSecurity,
             TuneStorage, TuneNetwork, TuneZram,
             ManageDeviceRegistry, ManageDataSources, ManageEvidence,
-            ManageRecovery,
+            ManageRecovery, TuneProperties,
         ])
     }
 

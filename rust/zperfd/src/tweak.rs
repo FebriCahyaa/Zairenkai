@@ -34,13 +34,19 @@ const SPECS: &[Spec] = &[
     Spec { id: "vfs_cache_pressure", category: "memory", title: "VFS cache pressure", lite: false },
     Spec { id: "min_free_kbytes", category: "memory", title: "Min free memory (KiB)", lite: false },
     Spec { id: "vm_stat_interval", category: "memory", title: "VM stat interval (s)", lite: true },
+    Spec { id: "vm_page_cluster", category: "memory", title: "VM page cluster", lite: true },
+    Spec { id: "dirty_expire_centisecs", category: "memory", title: "Dirty expiry (centisecs)", lite: false },
+    Spec { id: "dirty_writeback_centisecs", category: "memory", title: "Dirty writeback (centisecs)", lite: false },
     Spec { id: "lmk_minfree", category: "memory", title: "LMK minfree", lite: true },
     Spec { id: "zram_comp_algorithm", category: "zram", title: "zram compression", lite: false },
     Spec { id: "zram_disksize", category: "zram", title: "zram size (bytes)", lite: true },
     Spec { id: "zram_max_comp_streams", category: "zram", title: "zram comp streams", lite: true },
+    Spec { id: "zram_mem_limit", category: "zram", title: "zram memory limit (bytes)", lite: true },
     Spec { id: "io_scheduler", category: "io", title: "I/O scheduler", lite: false },
     Spec { id: "io_read_ahead_kb", category: "io", title: "I/O read-ahead (KiB)", lite: false },
     Spec { id: "io_nr_requests", category: "io", title: "I/O queue depth", lite: false },
+    Spec { id: "io_rq_affinity", category: "io", title: "I/O rq affinity", lite: true },
+    Spec { id: "io_nomerges", category: "io", title: "I/O request merging", lite: true },
     Spec { id: "fsync", category: "io", title: "fsync enabled", lite: true },
     Spec { id: "tcp_congestion_control", category: "network", title: "TCP congestion control", lite: false },
     Spec { id: "tcp_fastopen", category: "network", title: "TCP fast open", lite: false },
@@ -94,13 +100,19 @@ pub fn read(id: &str, s: &Sysroot, t: &Topology) -> Option<String> {
         "vfs_cache_pressure" => s.read("/proc/sys/vm/vfs_cache_pressure"),
         "min_free_kbytes" => s.read("/proc/sys/vm/min_free_kbytes"),
         "vm_stat_interval" => s.read("/proc/sys/vm/stat_interval"),
+        "vm_page_cluster" => s.read("/proc/sys/vm/page-cluster"),
+        "dirty_expire_centisecs" => s.read("/proc/sys/vm/dirty_expire_centisecs"),
+        "dirty_writeback_centisecs" => s.read("/proc/sys/vm/dirty_writeback_centisecs"),
         "lmk_minfree" => s.read("/sys/module/lowmemorykiller/parameters/minfree"),
         "zram_comp_algorithm" => s.read("/sys/block/zram0/comp_algorithm"),
         "zram_disksize" => s.read("/sys/block/zram0/disksize"),
         "zram_max_comp_streams" => s.read("/sys/block/zram0/max_comp_streams"),
-        "io_scheduler" => s.list_dir("/sys/block").into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/scheduler"))),
-        "io_read_ahead_kb" => s.list_dir("/sys/block").into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/read_ahead_kb"))),
-        "io_nr_requests" => s.list_dir("/sys/block").into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nr_requests"))),
+        "zram_mem_limit" => s.read("/sys/block/zram0/mem_limit"),
+        "io_scheduler" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/scheduler"))),
+        "io_read_ahead_kb" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/read_ahead_kb"))),
+        "io_nr_requests" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nr_requests"))),
+        "io_rq_affinity" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/rq_affinity"))),
+        "io_nomerges" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nomerges"))),
         "fsync" => s.read("/sys/module/sync/parameters/fsync_enabled"),
         "tcp_congestion_control" => s.read("/proc/sys/net/ipv4/tcp_congestion_control"),
         "tcp_fastopen" => s.read("/proc/sys/net/ipv4/tcp_fastopen"),
@@ -135,8 +147,12 @@ fn parse_choice(value: &str, available: &str) -> Result<String, String> {
     let choices: Vec<&str> = available
         .split_whitespace()
         .map(|token| token.trim_matches(['[', ']']))
+        .filter(|token| !token.is_empty())
         .collect();
-    if !choices.is_empty() && !choices.contains(&value) {
+    if choices.is_empty() {
+        return Err("device did not expose a runtime allowlist for this choice".into());
+    }
+    if !choices.contains(&value) {
         return Err(format!("'{value}' is not supported by this device"));
     }
     Ok(value.to_string())
@@ -248,6 +264,9 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         "vfs_cache_pressure" => write_proc(s, "/proc/sys/vm/vfs_cache_pressure", value, 0, 500),
         "min_free_kbytes" => write_proc(s, "/proc/sys/vm/min_free_kbytes", value, 1024, 262_144),
         "vm_stat_interval" => write_proc(s, "/proc/sys/vm/stat_interval", value, 1, 120),
+        "vm_page_cluster" => write_proc(s, "/proc/sys/vm/page-cluster", value, 0, 7),
+        "dirty_expire_centisecs" => write_proc(s, "/proc/sys/vm/dirty_expire_centisecs", value, 100, 60_000),
+        "dirty_writeback_centisecs" => write_proc(s, "/proc/sys/vm/dirty_writeback_centisecs", value, 100, 60_000),
         "lmk_minfree" => {
             let node = "/sys/module/lowmemorykiller/parameters/minfree";
             let v = validate_lmk(value)?;
@@ -256,6 +275,9 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         }
         "zram_comp_algorithm" => {
             let node = "/sys/block/zram0/comp_algorithm";
+            if !crate::memory::zram_uninitialized(s, "zram0") {
+                return Err("zram0 is initialized; compression algorithm is no longer mutable".into());
+            }
             let available = s.read(node).ok_or_else(|| "zram0 compression node unavailable".to_string())?;
             let choice = parse_choice(value, &available)?;
             write_checked(s, node, &choice)?;
@@ -264,15 +286,27 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         "zram_disksize" => {
             let n: u64 = value.trim().parse().map_err(|_| "zram size must be bytes".to_string())?;
             let max = zram_size_limit(s).ok_or_else(|| "physical memory size unavailable".to_string())?;
+            if n == 0 { return Err("zram size must be greater than zero".into()); }
             if n > max { return Err(format!("zram size exceeds safe cap {max} bytes")); }
+            if !crate::memory::zram_uninitialized(s, "zram0") {
+                return Err("zram0 is initialized; disk size cannot be changed without an explicit reset".into());
+            }
             let node = "/sys/block/zram0/disksize";
             write_checked(s, node, &n.to_string())?;
             Ok(n.to_string())
         }
         "zram_max_comp_streams" => write_sys_first(s, &["/sys/block/zram0/max_comp_streams"], value, 1, 16),
+        "zram_mem_limit" => {
+            let n: u64 = value.trim().parse().map_err(|_| "zram memory limit must be bytes".to_string())?;
+            let max = zram_size_limit(s).ok_or_else(|| "physical memory size unavailable".to_string())?;
+            if n > max { return Err(format!("zram memory limit exceeds safe cap {max} bytes")); }
+            let node = "/sys/block/zram0/mem_limit";
+            write_checked(s, node, &n.to_string())?;
+            Ok(n.to_string())
+        }
         "io_scheduler" => {
             let mut count = 0usize;
-            for dev in s.list_dir("/sys/block") {
+            for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/scheduler");
                 if !s.exists(&node) { continue; }
                 let avail = s.read(&node).unwrap_or_default();
@@ -286,7 +320,7 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         "io_read_ahead_kb" => {
             let v = parse_range(value, 0, 2048)?;
             let mut count = 0usize;
-            for dev in s.list_dir("/sys/block") {
+            for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/read_ahead_kb");
                 if !s.exists(&node) { continue; }
                 write_checked(s, &node, &v)?;
@@ -298,7 +332,7 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         "io_nr_requests" => {
             let v = parse_range(value, 4, 1024)?;
             let mut count = 0usize;
-            for dev in s.list_dir("/sys/block") {
+            for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/nr_requests");
                 if !s.exists(&node) { continue; }
                 write_checked(s, &node, &v)?;
@@ -307,10 +341,39 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             if count == 0 { return Err("no block queue-depth nodes found".into()); }
             Ok(format!("{count} block devices -> {v}"))
         }
+        "io_rq_affinity" => {
+            let v = parse_range(value, 0, 2)?;
+            let mut count = 0usize;
+            for dev in crate::storage::safe_block_devices(s) {
+                let node = format!("/sys/block/{dev}/queue/rq_affinity");
+                if !s.exists(&node) { continue; }
+                write_checked(s, &node, &v)?;
+                count += 1;
+            }
+            if count == 0 { return Err("no safe rq_affinity nodes found".into()); }
+            Ok(format!("{count} block devices -> {v}"))
+        }
+        "io_nomerges" => {
+            let v = parse_range(value, 0, 2)?;
+            let mut count = 0usize;
+            for dev in crate::storage::safe_block_devices(s) {
+                let node = format!("/sys/block/{dev}/queue/nomerges");
+                if !s.exists(&node) { continue; }
+                write_checked(s, &node, &v)?;
+                count += 1;
+            }
+            if count == 0 { return Err("no safe nomerges nodes found".into()); }
+            Ok(format!("{count} block devices -> {v}"))
+        }
         "fsync" => write_sys_first(s, &["/sys/module/sync/parameters/fsync_enabled"], value, 0, 1),
         "tcp_congestion_control" => {
             let node = "/proc/sys/net/ipv4/tcp_congestion_control";
-            let avail = s.read("/proc/sys/net/ipv4/tcp_allowed_congestion_control").unwrap_or_default();
+            let allowed = s.read("/proc/sys/net/ipv4/tcp_allowed_congestion_control").unwrap_or_default();
+            let avail = if allowed.split_whitespace().next().is_some() {
+                allowed
+            } else {
+                s.read("/proc/sys/net/ipv4/tcp_available_congestion_control").unwrap_or_default()
+            };
             let choice = parse_choice(value, &avail)?;
             write_checked(s, node, &choice)?;
             Ok(choice)
@@ -365,6 +428,11 @@ mod tests {
     fn choice_validation_accepts_plain_lists() {
         assert_eq!(parse_choice("schedutil", "schedutil performance").unwrap(), "schedutil");
     }
+
+    #[test]
+    fn choice_validation_fails_closed_without_runtime_allowlist() {
+        assert!(parse_choice("cubic", "").is_err());
+    }
 }
 
 pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
@@ -380,10 +448,14 @@ pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
         "/proc/sys/vm/vfs_cache_pressure",
         "/proc/sys/vm/min_free_kbytes",
         "/proc/sys/vm/stat_interval",
+        "/proc/sys/vm/page-cluster",
+        "/proc/sys/vm/dirty_expire_centisecs",
+        "/proc/sys/vm/dirty_writeback_centisecs",
         "/sys/module/lowmemorykiller/parameters/minfree",
         "/sys/block/zram0/comp_algorithm",
         "/sys/block/zram0/disksize",
         "/sys/block/zram0/max_comp_streams",
+        "/sys/block/zram0/mem_limit",
         "/sys/module/sync/parameters/fsync_enabled",
         "/proc/sys/net/ipv4/tcp_congestion_control",
         "/proc/sys/net/ipv4/tcp_fastopen",
@@ -401,7 +473,7 @@ pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
         out.push(p.rel("scaling_max_freq"));
     }
     for dev in s.list_dir("/sys/block") {
-        for leaf in ["scheduler", "read_ahead_kb", "nr_requests"] {
+        for leaf in ["scheduler", "read_ahead_kb", "nr_requests", "rq_affinity", "nomerges"] {
             out.push(format!("/sys/block/{dev}/queue/{leaf}"));
         }
     }

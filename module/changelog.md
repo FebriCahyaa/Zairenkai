@@ -1,3 +1,11 @@
+## v1.1.0
+- Add Zairenkai Thermal & Performance Control Plane with kernel thermal guard integration.
+- Use runtime thermal trip points and headroom instead of treating fixed temperatures as universal limits.
+- Add conservative unknown-telemetry behavior and continuous thermal boost scaling.
+- Harden network congestion selection with a runtime allowlist fallback and fail-closed validation.
+- Harden Android property reads with a small diagnostic allowlist and keep arbitrary vendor properties read-only.
+- Add storage-aware I/O safety and retain memory/ZRAM safety envelopes.
+
 ## Unreleased
 - Harden zperfd path writes with component-by-component `openat()` resolution and `O_NOFOLLOW`.
 - Remove pseudo-locking of sysfs permissions; serialize writes through the durable transaction lock instead.

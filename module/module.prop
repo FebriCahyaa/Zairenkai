@@ -1,7 +1,7 @@
 id=zairenkai
 name=Zairenkai ZKFC
-version=v1.0.0
-versionCode=10000
+version=v1.1.0
+versionCode=10100
 author=FebriCahyaa
 description=Zairenkai Kernel Framework Core: loads zkfc.ko (GKI) and installs the zkfctl engine used by the Zairenkai app. Performance features require a ZKFC API Token.
 updateJson=https://raw.githubusercontent.com/FebriCahyaa/Zairenkai/main/module/update.json

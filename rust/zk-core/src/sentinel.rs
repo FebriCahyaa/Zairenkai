@@ -10,6 +10,7 @@ use crate::intelligence::EvidenceLevel;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SafetyClass {
     Observe,
+    FrameworkConfig,
     SafeTune,
     GuardedTune,
     Critical,
@@ -36,6 +37,7 @@ pub enum StorageHealth {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SentinelReason {
     ObservationOnly,
+    ConfigurationOnly,
     KernelIncompatible,
     PersistentStateInvalid,
     RuntimeDrift,
@@ -74,9 +76,11 @@ pub struct SentinelDecision {
 
 pub fn classify(operation: Operation) -> SafetyClass {
     match operation {
-        Operation::Probe | Operation::ReadStatus | Operation::ReadLogs |
+        Operation::Probe | Operation::ReadStatus | Operation::ReadPerformance |
+        Operation::ReadThermal | Operation::ReadLogs |
         Operation::ReadInventory | Operation::ReadStorage | Operation::ReadNetwork |
         Operation::ReadMemory | Operation::ReadSecurity => SafetyClass::Observe,
+        Operation::SetProperty => SafetyClass::FrameworkConfig,
         Operation::ApplyProfile | Operation::SetCpuTweak | Operation::SetGpuTweak |
         Operation::SetMemoryTweak | Operation::SetIoTweak | Operation::TuneStorage |
         Operation::TuneNetwork | Operation::TuneZram => SafetyClass::SafeTune,
@@ -91,6 +95,9 @@ pub fn evaluate(input: &SentinelInput) -> SentinelDecision {
     let class = classify(input.operation);
     if matches!(class, SafetyClass::Observe) {
         return SentinelDecision { allowed: true, class, reasons: vec![SentinelReason::ObservationOnly] };
+    }
+    if matches!(class, SafetyClass::FrameworkConfig) {
+        return SentinelDecision { allowed: true, class, reasons: vec![SentinelReason::ConfigurationOnly] };
     }
     let mut reasons = Vec::new();
     if !input.kernel_api_compatible && input.operation != Operation::ResetRuntime {

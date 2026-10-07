@@ -27,6 +27,7 @@ permissions = [
   "tune.storage",
   "tune.network",
   "tune.zram",
+  "tune.properties",
   "manage.device_registry",
   "manage.data_sources",
   "manage.evidence",

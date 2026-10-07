@@ -32,6 +32,7 @@ pub struct Snapshot {
     pub cpu: Vec<CpuRuntime>,
     pub gpu_current: Option<u64>,
     pub hottest_mdeg: Option<i64>,
+    pub control_temp_mdeg: Option<i64>,
     pub thermal_zone_count: usize,
     pub cpu_psi: PsiSnapshot,
     pub memory_psi: PsiSnapshot,
@@ -54,6 +55,11 @@ pub fn collect(s: &Sysroot, t: &Topology) -> Snapshot {
         });
     }
     let hottest_mdeg = t.thermal_zones.iter().filter_map(|z| z.temp_mdeg).max();
+    let control_temp_mdeg = t.thermal_zones.iter()
+        .filter(|z| matches!(z.role, crate::platform::ThermalRole::Cpu | crate::platform::ThermalRole::Gpu | crate::platform::ThermalRole::SoC))
+        .filter_map(|z| z.temp_mdeg)
+        .max()
+        .or(hottest_mdeg);
     Snapshot {
         battery_pct: s.read_u64("/sys/class/power_supply/battery/capacity").map(|v| v.min(100) as u32),
         charging: crate::scene::charging(s),
@@ -62,6 +68,7 @@ pub fn collect(s: &Sysroot, t: &Topology) -> Snapshot {
         cpu,
         gpu_current: t.gpu.as_ref().and_then(|g| s.read_u64(&g.rel("cur_freq"))),
         hottest_mdeg,
+        control_temp_mdeg,
         thermal_zone_count: t.thermal_zones.len(),
         cpu_psi: read_psi(s, "/proc/pressure/cpu"),
         memory_psi: read_psi(s, "/proc/pressure/memory"),
@@ -96,8 +103,8 @@ pub fn json(s: &Sysroot, t: &Topology) -> String {
         escape(&c.policy), opt_u64(c.current_khz), opt_u64(c.min_khz), opt_u64(c.max_khz)
     )).collect::<Vec<_>>().join(",");
     format!(
-        "{{\"battery_pct\":{},\"charging\":{},\"load1\":{},\"mem_available_kb\":{},\"hottest_mdeg\":{},\"thermal_zone_count\":{},\"gpu_current_khz\":{},\"cpu\":[{}],\"psi\":{{\"cpu_some_avg10\":{},\"cpu_full_avg10\":{},\"memory_some_avg10\":{},\"memory_full_avg10\":{},\"io_some_avg10\":{},\"io_full_avg10\":{}}}}}",
-        opt_u32(x.battery_pct), x.charging, opt_f32(x.load1), opt_u64(x.mem_available_kb), opt_i64(x.hottest_mdeg),
+        "{{\"battery_pct\":{},\"charging\":{},\"load1\":{},\"mem_available_kb\":{},\"hottest_mdeg\":{},\"control_temp_mdeg\":{},\"thermal_zone_count\":{},\"gpu_current_khz\":{},\"cpu\":[{}],\"psi\":{{\"cpu_some_avg10\":{},\"cpu_full_avg10\":{},\"memory_some_avg10\":{},\"memory_full_avg10\":{},\"io_some_avg10\":{},\"io_full_avg10\":{}}}}}",
+        opt_u32(x.battery_pct), x.charging, opt_f32(x.load1), opt_u64(x.mem_available_kb), opt_i64(x.hottest_mdeg), opt_i64(x.control_temp_mdeg),
         x.thermal_zone_count, opt_u64(x.gpu_current), cpu,
         opt_f32(x.cpu_psi.some_avg10), opt_f32(x.cpu_psi.full_avg10),
         opt_f32(x.memory_psi.some_avg10), opt_f32(x.memory_psi.full_avg10),

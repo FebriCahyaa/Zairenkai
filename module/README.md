@@ -7,7 +7,7 @@ Flashable module that:
 2. installs/starts the resident `zperfd` policy engine;
 3. on GKI devices, loads the matching prebuilt `zkfc.ko` at boot
    (`service.sh`, selected by KMI branch + ABI in `customize.sh`);
-3. restores the persistent ZKFC token and starts the resident `zperfd` policy engine; performance state is recovered transactionally and SAFE MODE prevents profile re-application after repeated failed boots.
+3. restores the persistent ZKFC token and starts the resident `zperfd` policy engine; performance state is recovered transactionally; **Zairenkai ThermoGuard** provides the kernel-side thermal boost safety envelope, and SAFE MODE prevents profile re-application after repeated failed boots.
 
 On kernels where ZKFC is built in (`CONFIG_ZKFC=y`, typical for non-GKI),
 `/dev/zkfc` already exists and no `.ko` is loaded.

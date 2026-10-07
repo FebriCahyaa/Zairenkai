@@ -232,12 +232,51 @@ pub fn normalize_identifier(s: &str) -> String {
     out.trim_matches('-').to_string()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThermalTripType {
+    Active,
+    Passive,
+    Hot,
+    Critical,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ThermalTrip {
+    pub temp_mdeg: i64,
+    pub kind: ThermalTripType,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThermalRole {
+    Cpu,
+    Gpu,
+    SoC,
+    Battery,
+    Skin,
+    Memory,
+    Generic,
+}
+
 #[derive(Debug, Clone)]
 pub struct ThermalZoneInfo {
     pub name: String,
     pub ty: String,
     pub temp_mdeg: Option<i64>,
     pub provider: ThermalProvider,
+    pub role: ThermalRole,
+    pub trips: Vec<ThermalTrip>,
+}
+
+pub fn classify_thermal_role(name: &str, ty: &str) -> ThermalRole {
+    let low = format!("{} {}", name, ty).to_ascii_lowercase();
+    if contains_any(&low, &["battery", "batt", "charger", "pmic-batt"]) { return ThermalRole::Battery; }
+    if contains_any(&low, &["skin", "surface", "backglass", "shell"]) { return ThermalRole::Skin; }
+    if contains_any(&low, &["gpu", "kgsl", "adreno", "mali", "xclipse", "g3d"]) { return ThermalRole::Gpu; }
+    if contains_any(&low, &["cpu", "cluster", "a7", "a53", "a55", "a7x", "a78", "x1", "x2", "x3", "x4", "cortex"]) { return ThermalRole::Cpu; }
+    if contains_any(&low, &["soc", "package", "tsens", "mtktscpu", "lvts", "exynos", "tensor"]) { return ThermalRole::SoC; }
+    if contains_any(&low, &["ddr", "dram", "memory", "memctl"]) { return ThermalRole::Memory; }
+    ThermalRole::Generic
 }
 
 pub fn classify_thermal(vendor: SocVendor, ty: &str) -> ThermalProvider {
@@ -252,6 +291,29 @@ pub fn classify_thermal(vendor: SocVendor, ty: &str) -> ThermalProvider {
     }
 }
 
+fn parse_trip_type(raw: &str) -> ThermalTripType {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "active" => ThermalTripType::Active,
+        "passive" => ThermalTripType::Passive,
+        "hot" => ThermalTripType::Hot,
+        "critical" => ThermalTripType::Critical,
+        _ => ThermalTripType::Unknown,
+    }
+}
+
+fn scan_trips(s: &Sysroot, base: &str) -> Vec<ThermalTrip> {
+    let mut trips = Vec::new();
+    for entry in s.list_dir(base) {
+        let Some(index) = entry.strip_prefix("trip_point_").and_then(|x| x.strip_suffix("_temp")) else { continue; };
+        if index.is_empty() || !index.bytes().all(|b| b.is_ascii_digit()) { continue; }
+        let Some(temp) = s.read(&format!("{base}/{entry}")).and_then(|v| v.parse::<i64>().ok()) else { continue; };
+        let kind = s.read(&format!("{base}/trip_point_{index}_type")).map(|v| parse_trip_type(&v)).unwrap_or(ThermalTripType::Unknown);
+        trips.push(ThermalTrip { temp_mdeg: temp, kind });
+    }
+    trips.sort_by_key(|t| t.temp_mdeg);
+    trips
+}
+
 pub fn scan_thermal(s: &Sysroot, vendor: SocVendor) -> Vec<ThermalZoneInfo> {
     let mut zones = Vec::new();
     for name in s.list_dir("/sys/class/thermal") {
@@ -264,6 +326,8 @@ pub fn scan_thermal(s: &Sysroot, vendor: SocVendor) -> Vec<ThermalZoneInfo> {
         zones.push(ThermalZoneInfo {
             name,
             provider: classify_thermal(vendor, &ty),
+            role: classify_thermal_role(&name, &ty),
+            trips: scan_trips(s, &base),
             ty,
             temp_mdeg,
         });

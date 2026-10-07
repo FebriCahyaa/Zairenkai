@@ -144,3 +144,10 @@ via the *ZKFC API Token request* issue template; details in
 Mixed, per component — see [`COPYRIGHT`](COPYRIGHT). The kernel is GPL-2.0; the
 app, engine, module and tooling are under the Zairenkai Proprietary License
 (redistribution, forks, and API tokens require the owner's written permission).
+
+
+### Thermal & system property safety
+
+**Zairenkai ThermoGuard** is the kernel-backed thermal safety subsystem. It derives its guard envelope from runtime thermal trip points when available, scales Zairenkai-owned boost requests continuously as thermal headroom changes, and disables boosts when required telemetry is unavailable.
+
+Zairenkai treats thermal control as a safety envelope, not a performance override. Runtime boost budgets can only be reduced by thermal state. Android system properties are read-only by default; mutation is restricted to an explicit, registered `persist.zairenkai.*` allowlist. Vendor properties are never writable through the generic broker.

@@ -33,6 +33,7 @@ static bool zkfc_ib_suspended;
 static bool zkfc_ib_active;
 static unsigned long zkfc_ib_last;
 static u64 zkfc_ib_count;
+static u32 zkfc_ib_thermal_scale = 1000;
 static bool zkfc_ib_registered;
 
 static void zkfc_ib_on_fn(struct work_struct *w);
@@ -43,10 +44,11 @@ static DECLARE_DELAYED_WORK(zkfc_ib_off_work, zkfc_ib_off_fn);
 static void zkfc_ib_on_fn(struct work_struct *w)
 {
 	struct zkfc_input_boost cfg;
-	u32 i;
+	u32 i, scale;
 
 	mutex_lock(&zkfc_ib_mutex);
 	cfg = zkfc_ib_cfg;
+	scale = zkfc_ib_thermal_scale;
 	mutex_unlock(&zkfc_ib_mutex);
 
 	spin_lock_irq(&zkfc_ib_lock);
@@ -58,7 +60,8 @@ static void zkfc_ib_on_fn(struct work_struct *w)
 
 	for (i = 0; i < cfg.cluster_count && i < ZKFC_MAX_CLUSTERS; i++)
 		if (cfg.min_khz[i])
-			zkfc_cpufreq_set_boost_floor(cfg.cluster_cpu[i], cfg.min_khz[i]);
+			zkfc_cpufreq_set_boost_floor(cfg.cluster_cpu[i],
+					(cfg.min_khz[i] * scale) / 1000U);
 
 	mod_delayed_work(system_wq, &zkfc_ib_off_work,
 			 msecs_to_jiffies(cfg.duration_ms));
@@ -72,6 +75,34 @@ static void zkfc_ib_off_fn(struct work_struct *w)
 	spin_unlock_irq(&zkfc_ib_lock);
 }
 
+static bool zkfc_ib_event_allowed(const struct input_handle *handle,
+				  unsigned int type, unsigned int code, int value)
+{
+	const struct input_dev *dev = handle->dev;
+
+	if (!dev || value == 0)
+		return false;
+	if (type == EV_ABS) {
+		bool touch = test_bit(BTN_TOUCH, dev->keybit) ||
+			(test_bit(ABS_MT_POSITION_X, dev->absbit) &&
+			 test_bit(ABS_MT_POSITION_Y, dev->absbit));
+		if (!touch)
+			return false;
+		return code == ABS_X || code == ABS_Y ||
+			code == ABS_MT_POSITION_X || code == ABS_MT_POSITION_Y ||
+			(code == ABS_MT_TRACKING_ID && value >= 0);
+	}
+	if (type == EV_KEY) {
+		if (code == BTN_TOUCH)
+			return true;
+		/* Gamepad events are allowed only from devices which advertise the
+		 * gamepad class bit; this avoids treating volume/media keys as input
+		 * boost triggers. */
+		return test_bit(BTN_GAMEPAD, dev->keybit);
+	}
+	return false;
+}
+
 static void zkfc_ib_event(struct input_handle *handle, unsigned int type,
 			  unsigned int code, int value)
 {
@@ -81,7 +112,7 @@ static void zkfc_ib_event(struct input_handle *handle, unsigned int type,
 	(void)value;
 	bool kick = false;
 
-	if (type != EV_ABS && type != EV_KEY)
+	if (!zkfc_ib_event_allowed(handle, type, code, value))
 		return;
 
 	spin_lock_irqsave(&zkfc_ib_lock, flags);
@@ -203,6 +234,39 @@ int zkfc_input_boost_config(const struct zkfc_input_boost *cfg)
 	       cfg->cluster_count);
 	return 0;
 #endif /* CONFIG_INPUT */
+}
+
+void zkfc_input_boost_thermal_scale(u32 permille)
+{
+	struct zkfc_input_boost cfg;
+	u32 i;
+
+#ifdef CONFIG_INPUT
+	if (permille > 1000)
+		permille = 1000;
+	mutex_lock(&zkfc_ib_mutex);
+	zkfc_ib_thermal_scale = permille;
+	cfg = zkfc_ib_cfg;
+	mutex_unlock(&zkfc_ib_mutex);
+
+	spin_lock_irq(&zkfc_ib_lock);
+	if (!zkfc_ib_enabled || zkfc_ib_suspended || !zkfc_ib_active) {
+		spin_unlock_irq(&zkfc_ib_lock);
+		return;
+	}
+	spin_unlock_irq(&zkfc_ib_lock);
+
+	if (!permille) {
+		zkfc_cpufreq_clear_boost_floors();
+		return;
+	}
+	for (i = 0; i < cfg.cluster_count && i < ZKFC_MAX_CLUSTERS; i++)
+		if (cfg.min_khz[i])
+			zkfc_cpufreq_set_boost_floor(cfg.cluster_cpu[i],
+					(cfg.min_khz[i] * permille) / 1000U);
+#else
+	(void)permille;
+#endif
 }
 
 void zkfc_input_boost_suspend(bool suspend)
