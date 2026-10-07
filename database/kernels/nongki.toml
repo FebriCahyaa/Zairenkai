@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Generic non-GKI kernel capability generations.
+# Vendor trees may backport APIs; runtime capability detection always wins.
+
+schema_version = 1
+
+generations = ["4.14", "4.19", "5.4", "5.10", "5.15", "6.1", "6.6", "6.12", "6.18"]
+
+[api_hints]
+# Lower-bound hints only. These do not override runtime detection.
+uclamp_min = "5.3"
+freq_qos_min = "5.4"

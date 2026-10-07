@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "tensor"
+
+[provider_order]
+cpu = ["cpufreq"]
+gpu = ["devfreq", "mali", "powervr"]
+thermal = ["linux-thermal", "tensor-thermal"]
+boost = ["uclamp", "schedtune"]
+
+[discovery]
+platform_tokens = ["tensor", "gs101", "gs201", "gs301"]
+compatible_tokens = ["google,gs"]
+thermal_type_patterns = ["tensor", "gs", "cpu", "gpu"]
+
+[notes]
+policy = "runtime-capability-first"
+comment = "Tensor profiles never hardcode a GPU IP; the live devfreq surface is authoritative."

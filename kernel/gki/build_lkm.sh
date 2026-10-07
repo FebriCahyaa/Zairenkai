@@ -35,6 +35,19 @@ JOBS="$(nproc)"
 info() { printf '\033[1;36m[zkfc-lkm]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[zkfc-lkm]\033[0m %s\n' "$*" >&2; exit 1; }
 
+kernel_clang_version() {
+	local kdir="$1" file line
+	for file in "$kdir/bazel/constants.scl" "$kdir/build.config.constants"; do
+		[ -f "$file" ] || continue
+		line="$(grep -E '(^|[[:space:]])CLANG_VERSION[[:space:]]*=' "$file" | head -n1 || true)"
+		if [[ "$line" =~ r[0-9]+[a-z]* ]]; then
+			printf '%s\n' "${BASH_REMATCH[0]}"
+			return 0
+		fi
+	done
+	return 1
+}
+
 llvm_dir_for() {
 	local root="$1" clang="$2" candidate
 	if [ -n "$LLVM_DIR" ]; then
@@ -101,8 +114,12 @@ build_one() {
 		"$kver"*) ;;
 		*) die "kernel tree version '$actual_kver' does not match matrix branch $kmi (expected $kver.x)" ;;
 	esac
+	if [ "$clang" = "auto" ] || [ "$clang" = "AUTO" ]; then
+		clang="$(kernel_clang_version "$kdir" || true)"
+	fi
+	[ -n "$clang" ] || die "kernel tree does not expose CLANG_VERSION; pass --llvm-dir DIR or update matrix fallback"
 	llvm_dir="$(llvm_dir_for "$repo_root" "$clang")" || \
-		die "matching LLVM toolchain not found; pass --llvm-dir DIR or provide AOSP prebuilts/clang/.../$clang/bin"
+		die "matching LLVM toolchain '$clang' not found; pass --llvm-dir DIR or provide AOSP prebuilts/clang/.../$clang/bin"
 	[ -x "$llvm_dir/clang" ] || die "clang not executable in $llvm_dir"
 	[ -x "$llvm_dir/llvm-strip" ] || die "llvm-strip not executable in $llvm_dir"
 	mkdir -p "$OUT/$kmi-$ARCH"

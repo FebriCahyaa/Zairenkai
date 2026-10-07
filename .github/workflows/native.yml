@@ -4,9 +4,9 @@ name: Native (crypto + userspace + module compile)
 on:
   push:
     branches: [main]
-    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", ".github/workflows/native.yml"]
+    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "database/**", "module/zperf/database/**", "tools/**", ".github/workflows/native.yml"]
   pull_request:
-    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**"]
+    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "database/**", "module/zperf/database/**", "tools/**"]
   workflow_dispatch:
 
 # Keep only the newest run per ref; lighten the hosted-runner load.
@@ -21,7 +21,7 @@ jobs:
   crypto:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Install deps
         run: python3 -m pip install --quiet cryptography
       - name: Generate vectors
@@ -33,11 +33,36 @@ jobs:
             kernel/crypto/zk_sha512.c kernel/crypto/zk_ed25519.c -o /tmp/crypto_test
           /tmp/crypto_test /tmp/vectors.txt
 
-  module-compile:
+  data-plane:
     needs: crypto
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
+      - name: Validate device and kernel data
+        run: python3 tools/profile_validate.py database
+      - name: Verify packaged module database matches source database
+        run: diff -qr database module/zperf/database
+      - name: Validate measurement analyzer
+        run: |
+          python3 tools/zperf_analyze.py summary tests/analysis/baseline.jsonl >/tmp/zperf-summary.json
+          python3 tools/zperf_analyze.py compare tests/analysis/baseline.jsonl tests/analysis/candidate.jsonl >/tmp/zperf-compare.json
+          grep -q 'candidate_improves_measured_performance' /tmp/zperf-compare.json
+
+  uapi-abi:
+    needs: crypto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Compile and run stable UAPI ABI checks
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -I. tests/abi/zkfc_uapi_test.c -o /tmp/zkfc_uapi_test
+          /tmp/zkfc_uapi_test
+
+  module-compile:
+    needs: [crypto, data-plane, uapi-abi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
       - name: Install kernel build deps + headers
         run: |
           sudo apt-get update -q
@@ -52,15 +77,19 @@ jobs:
     needs: module-compile
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Android NDK
-        uses: nttld/setup-ndk@v1
-        id: ndk
+      - uses: actions/checkout@v7.0.1
+      - name: Set up Android SDK + NDK
+        uses: android-actions/setup-android@v4.0.4
         with:
-          ndk-version: r27
+          packages: platform-tools
+      - name: Install Android NDK r30 LTS
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "ndk;30.0.16248370"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
       - name: Build zkfctl (arm64 + x86_64)
         run: |
-          TC="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          TC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
           for triple in aarch64-linux-android x86_64-linux-android; do
             "$TC/${triple}31-clang" -std=c11 -Wall -Wextra -Werror -O2 \
               -fstack-protector-strong -fPIE -pie \
@@ -68,7 +97,7 @@ jobs:
               userspace/lib/*.c userspace/zkfctl/main.c -o "zkfctl-$triple"
             file "zkfctl-$triple"
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: zkfctl
           path: zkfctl-*
@@ -78,11 +107,12 @@ jobs:
     needs: userspace
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Set up Rust
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup component add rustfmt clippy --toolchain stable
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup component add rustfmt clippy --toolchain 1.99.0
+          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
       - name: Format + test Rust workspace
         working-directory: rust
         run: |

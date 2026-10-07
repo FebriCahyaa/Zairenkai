@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "mediatek"
+
+[provider_order]
+cpu = ["cpufreq", "vendor-performance"]
+gpu = ["devfreq", "mali", "powervr"]
+thermal = ["linux-thermal", "mediatek-thermal"]
+boost = ["uclamp", "schedtune"]
+
+[discovery]
+platform_tokens = ["mediatek", "mt6", "mt7", "mt8", "mt9", "dimensity", "helio"]
+compatible_tokens = ["mediatek,"]
+thermal_type_patterns = ["mtk", "lvts", "cpu-thermal", "gpu-thermal"]
+
+[notes]
+policy = "runtime-capability-first"
+vendor_nodes = "optional and discovered at runtime"

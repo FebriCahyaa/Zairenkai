@@ -60,3 +60,19 @@ update after power loss. Newly appearing managed nodes are adopted into the
 current boot baseline without replacing the baseline of already-seen nodes. `auto` uses
 battery percentage, charging state and thermal data with conservative handling
 of missing telemetry and hysteresis around transition boundaries.
+
+## Platform and evidence data plane
+
+`platform.rs` records identity evidence from Android properties and the device tree. `topo.rs` inventories the live cpufreq, GPU devfreq, cgroup and thermal
+surfaces. `family.rs` loads the vendor-family provider ordering from the
+versioned database. `backends.rs` uses that ordering only as a preference;
+absent runtime surfaces are never synthesized.
+
+Supported family seeds currently cover Qualcomm, MediaTek, Samsung Exynos and
+Google Tensor. A family seed is not a performance certification. A device
+becomes scientifically comparable only after a measurement artifact has
+captured the device identity, exact kernel release/flavor, workload and profile.
+
+`tools/zperf_analyze.py` is intentionally descriptive. It reports coverage,
+median, p95, MAD, thermal slope and relative changes without claiming causality
+or statistical significance from short time-series samples.

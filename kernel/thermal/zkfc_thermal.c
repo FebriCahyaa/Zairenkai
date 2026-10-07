@@ -83,12 +83,32 @@ static void zkfc_tg_fn(struct work_struct *w)
 		return;
 	}
 
-	for (i = 0; i < cfg.zone_count; i++)
-		if (!zkfc_zone_temp(cfg.zones[i], &temp) && temp > hottest)
-			hottest = temp;
-	zkfc_tg_last = hottest;
+	bool telemetry_ok = true;
+	int first_error = 0;
 
-	if (hottest != INT_MIN) {
+	for (i = 0; i < cfg.zone_count; i++) {
+		int ret = zkfc_zone_temp(cfg.zones[i], &temp);
+
+		if (ret) {
+			telemetry_ok = false;
+			if (!first_error)
+				first_error = ret;
+			continue;
+		}
+		if (temp > hottest)
+			hottest = temp;
+	}
+
+	zkfc_tg_last = hottest;
+	if (!telemetry_ok) {
+		/* Missing telemetry is unsafe: never leave a performance boost armed
+		 * while the safety sensor set is incomplete. */
+		if (!zkfc_tg_tripped) {
+			zkfc_w("thermal telemetry unavailable (%d): suspending boosts",
+			       first_error);
+		}
+		zkfc_tg_set_tripped(true, hottest);
+	} else if (hottest != INT_MIN) {
 		if (!zkfc_tg_tripped && hottest >= cfg.limit_mdeg)
 			zkfc_tg_set_tripped(true, hottest);
 		else if (zkfc_tg_tripped && hottest <= cfg.release_mdeg)

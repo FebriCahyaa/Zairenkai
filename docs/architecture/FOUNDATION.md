@@ -101,3 +101,44 @@ native userspace `-Werror` build, crypto ASan/UBSan vectors, Rust fmt/build/test
 clippy, GKI LKM build matrix, APK signer verification, module packaging and
 checksum generation. Local environments without the corresponding toolchain
 must report the gate as unavailable rather than converting it into a false pass.
+
+## Multi-SoC data plane
+
+The device database is deliberately split into three layers:
+
+```text
+SoC family hints
+      |
+      v
+device identity/profile -----> catalog selection
+      |
+      v
+runtime topology/capability discovery
+      |
+      v
+backend plan
+      |
+      v
+measured telemetry / analysis artifacts
+```
+
+Qualcomm, MediaTek, Samsung Exynos and Google Tensor have separate family
+files under `database/soc/`. These files define provider ordering and discovery
+hints; they do not authorize writes and they do not contain fabricated
+benchmark scores, thermal ceilings or assumed sysfs paths. The live kernel and
+sysfs topology remains authoritative.
+
+Static profiles use `runtime_discovery_required = true`. Performance claims
+belong in versioned JSONL measurement artifacts. `tools/zperf_analyze.py`
+produces descriptive medians, p95 values, MAD, coverage, thermal slope and
+relative changes. It intentionally does not report statistical significance or
+invent cross-device scores.
+
+## Kernel generation model
+
+Zairenkai treats kernel compatibility as a matrix, not a single version check.
+GKI support is keyed by Android KMI branch and matching toolchain metadata;
+non-GKI support is adapter-based and must be compiled against the concrete
+vendor tree. A modern vendor tree can backport interfaces, so `LINUX_VERSION_CODE`
+is used only as a lower-bound compatibility hint where necessary; runtime
+capabilities and actual compilation remain authoritative.

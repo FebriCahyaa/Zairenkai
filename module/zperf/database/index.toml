@@ -1,0 +1,103 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Runtime device-profile registry. `catalog` is the tuning policy file; the
+# device metadata itself lives separately under database/devices/.
+
+schema_version = 1
+
+[[device]]
+id = "qualcomm.sdm660"
+vendor = "qualcomm"
+soc = "sdm660"
+metadata = "devices/qualcomm/sdm660.toml"
+catalog = "lavender.toml"
+
+[[device]]
+id = "qualcomm.sm7150"
+vendor = "qualcomm"
+soc = "sm7150"
+metadata = "devices/qualcomm/sm7150.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "qualcomm.sm8250"
+vendor = "qualcomm"
+soc = "sm8250"
+metadata = "devices/qualcomm/sm8250.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "qualcomm.sm8550"
+vendor = "qualcomm"
+soc = "sm8550"
+metadata = "devices/qualcomm/sm8550.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "mediatek.mt6768"
+vendor = "mediatek"
+soc = "mt6768"
+metadata = "devices/mediatek/mt6768.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "mediatek.mt6893"
+vendor = "mediatek"
+soc = "mt6893"
+metadata = "devices/mediatek/mt6893.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "mediatek.mt6983"
+vendor = "mediatek"
+soc = "mt6983"
+metadata = "devices/mediatek/mt6983.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "exynos.exynos9820"
+vendor = "exynos"
+soc = "exynos9820"
+metadata = "devices/exynos/exynos9820.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "exynos.exynos2100"
+vendor = "exynos"
+soc = "exynos2100"
+metadata = "devices/exynos/exynos2100.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "exynos.exynos2200"
+vendor = "exynos"
+soc = "exynos2200"
+metadata = "devices/exynos/exynos2200.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "exynos.exynos2400"
+vendor = "exynos"
+soc = "exynos2400"
+metadata = "devices/exynos/exynos2400.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "tensor.gs101"
+vendor = "tensor"
+soc = "gs101"
+metadata = "devices/tensor/gs101.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "tensor.gs201"
+vendor = "tensor"
+soc = "gs201"
+metadata = "devices/tensor/gs201.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "tensor.gs301"
+vendor = "tensor"
+soc = "gs301"
+metadata = "devices/tensor/gs301.toml"
+catalog = "generic.toml"

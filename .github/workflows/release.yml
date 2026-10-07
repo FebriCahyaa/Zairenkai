@@ -14,6 +14,7 @@ jobs:
     name: GKI LKM / ${{ matrix.kmi }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         kmi:
           - android12-5.10
@@ -26,7 +27,7 @@ jobs:
           - android17-6.18
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: Install GKI build dependencies
         run: |
@@ -46,7 +47,7 @@ jobs:
           sha256sum "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko" | tee "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko.sha256"
 
       - name: Upload LKM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: zairenkai-lkm-${{ matrix.kmi }}
           path: module/lkm/${{ matrix.kmi }}-arm64/
@@ -59,20 +60,20 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
           java-version: "21"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4.0.4
         with:
           packages: platform-tools
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Build and verify signed APK
         env:
@@ -97,10 +98,10 @@ jobs:
           test "$ACTUAL" = "$EXPECTED"
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          targets: aarch64-linux-android,x86_64-linux-android
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup component add rustfmt clippy --toolchain 1.99.0
+          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
       - name: Build zperfd and validate workspace
         working-directory: rust
         env:
@@ -145,7 +146,7 @@ jobs:
           (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
 
       - name: Download GKI LKM artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.0
         with:
           pattern: zairenkai-lkm-*
           merge-multiple: true
@@ -161,7 +162,7 @@ jobs:
           sha256sum Zairenkai-module.zip
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3.0.2
         with:
           files: |
             Zairenkai-module.zip

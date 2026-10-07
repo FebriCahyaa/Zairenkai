@@ -5,6 +5,7 @@
 
 use crate::nodes::Sysroot;
 use std::io::Read;
+use std::collections::BTreeMap;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -72,6 +73,24 @@ fn valid_package(s: &str) -> bool {
     parts.len() >= 2 && parts.iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_'))
 }
 
+pub fn getprops() -> Option<BTreeMap<String, String>> {
+    let out = bounded_output(Command::new("getprop"), DUMPSYS_TIMEOUT)?;
+    let text = String::from_utf8_lossy(&out);
+    let mut props = BTreeMap::new();
+    for line in text.lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix('[') else { continue; };
+        let Some((key, value)) = rest.split_once("]:") else { continue; };
+        let key = key.trim();
+        let value = value.trim().trim_start_matches('[').trim_end_matches(']').trim();
+        if key.is_empty() || !key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-') {
+            continue;
+        }
+        props.insert(key.to_string(), value.to_string());
+    }
+    Some(props)
+}
+
 pub fn getprop(key: &str) -> Option<String> {
     if key.is_empty() || !key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-') { return None; }
     let out = bounded_output(Command::new("getprop").arg(key), DUMPSYS_TIMEOUT)?;
@@ -86,10 +105,27 @@ pub fn battery_percent(s: &Sysroot) -> Option<u32> {
 }
 
 pub fn charging(s: &Sysroot) -> bool {
-    match s.read("/sys/class/power_supply/battery/status").map(|v| v.to_ascii_lowercase()) {
-        Some(v) => matches!(v.as_str(), "charging" | "full"),
-        None => false,
+    if matches!(s.read("/sys/class/power_supply/battery/status").map(|v| v.to_ascii_lowercase()).as_deref(), Some("charging")) {
+        return true;
     }
+
+    // "Full" means the battery is full, not necessarily that external power
+    // is currently available. Inspect every non-battery input supply instead
+    // of assuming vendor-specific directory names such as USB or AC.
+    for supply in s.list_dir("/sys/class/power_supply") {
+        if supply.eq_ignore_ascii_case("battery") {
+            continue;
+        }
+        let base = format!("/sys/class/power_supply/{supply}");
+        let kind = s.read(&format!("{base}/type")).map(|v| v.to_ascii_lowercase());
+        let online = s.read_u64(&format!("{base}/online"));
+        let recognized = matches!(kind.as_deref(),
+            Some("mains") | Some("usb") | Some("usb_c") | Some("usb_pd") | Some("wireless"));
+        if recognized && online.is_some_and(|v| v > 0) {
+            return true;
+        }
+    }
+    false
 }
 
 pub fn hottest_c(s: &Sysroot) -> Option<f32> {
@@ -154,7 +190,51 @@ pub fn resolve_auto_with_previous(s: &Sysroot, previous: Option<&str>) -> &'stat
 
 #[cfg(test)]
 mod tests {
-    use super::decide_auto;
+    use super::{charging, decide_auto};
+    use crate::nodes::Sysroot;
+    use std::fs;
+    use std::path::PathBuf;
+
+    fn root() -> PathBuf {
+        let p = std::env::temp_dir().join(format!("zairenkai-scene-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&p);
+        fs::create_dir_all(&p).unwrap();
+        p
+    }
+
+    fn write(r: &PathBuf, path: &str, value: &str) {
+        let p = r.join(path.trim_start_matches('/'));
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(p, value).unwrap();
+    }
+
+
+    #[test]
+    fn full_battery_without_external_power_is_not_charging() {
+        let r = root();
+        write(&r, "/sys/class/power_supply/battery/status", "Full");
+        assert!(!charging(&Sysroot::new(&r)));
+        let _ = fs::remove_dir_all(r);
+    }
+
+    #[test]
+    fn full_battery_with_lowercase_usb_input_is_external_power() {
+        let r = root();
+        write(&r, "/sys/class/power_supply/battery/status", "Full");
+        write(&r, "/sys/class/power_supply/usb/type", "USB");
+        write(&r, "/sys/class/power_supply/usb/online", "1");
+        assert!(charging(&Sysroot::new(&r)));
+        let _ = fs::remove_dir_all(r);
+    }
+
+    #[test]
+    fn full_battery_with_online_usb_is_external_power() {
+        let r = root();
+        write(&r, "/sys/class/power_supply/battery/status", "Full");
+        write(&r, "/sys/class/power_supply/USB/online", "1");
+        assert!(charging(&Sysroot::new(&r)));
+        let _ = fs::remove_dir_all(r);
+    }
 
     #[test]
     fn unknown_thermal_data_never_selects_performance() {

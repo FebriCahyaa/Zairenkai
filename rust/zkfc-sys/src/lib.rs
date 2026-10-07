@@ -13,7 +13,7 @@ use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
 
 pub const ZKFC_DEVICE_PATH: &str = "/dev/zkfc";
-pub const ZKFC_API_VERSION: u32 = (1u32 << 16);
+pub const ZKFC_API_VERSION: u32 = (1u32 << 16) | (1u32 << 8);
 pub const ZKFC_API_MIN_SUPPORTED: u32 = (1u32 << 16);
 const ZKFC_IOC_MAGIC: u32 = b'Z' as u32;
 
@@ -163,6 +163,37 @@ fn cstr_lossy(buf: &[u8]) -> String {
 const IOC_GET_VERSION: u64 = ior(0x00, std::mem::size_of::<VersionInfo>() as u32);
 const IOC_GET_LICENSE: u64 = ior(0x01, std::mem::size_of::<LicenseStatus>() as u32);
 
+/// `struct zkfc_capability_info`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct CapabilityInfo {
+    pub kernel_caps: u64,
+    pub runtime_caps: u64,
+    pub kernel_major: u32,
+    pub kernel_minor: u32,
+    pub kernel_patch: u32,
+    pub cpu_count: u32,
+    pub page_size: u32,
+    pub kernel_type: u32,
+    pub hook_mode: u32,
+    pub reserved: u32,
+    pub kernel_release: [u8; 72],
+    pub build_id: [u8; 48],
+}
+
+impl Default for CapabilityInfo {
+    fn default() -> Self { unsafe { std::mem::zeroed() } }
+}
+
+impl CapabilityInfo {
+    pub fn kernel_caps(&self) -> u64 { u64::from_le(self.kernel_caps) }
+    pub fn runtime_caps(&self) -> u64 { u64::from_le(self.runtime_caps) }
+    pub fn kernel_release(&self) -> String { cstr_lossy(&self.kernel_release) }
+    pub fn build_id(&self) -> String { cstr_lossy(&self.build_id) }
+}
+
+const IOC_GET_CAPABILITIES: u64 = ior(0x05, std::mem::size_of::<CapabilityInfo>() as u32);
+
 /// An open handle to `/dev/zkfc`.
 pub struct Zkfc {
     fd: RawFd,
@@ -193,8 +224,16 @@ impl Zkfc {
         Ok(v)
     }
 
-    /// Read the complete kernel license status. The wire structure is fixed
-    /// at 288 bytes so the ioctl number remains ABI-compatible with C.
+    /// `ZKFC_IOC_GET_CAPABILITIES`.
+    pub fn capabilities(&self) -> io::Result<CapabilityInfo> {
+        let mut c = CapabilityInfo::default();
+        let rc = unsafe {
+            libc::ioctl(self.fd, IOC_GET_CAPABILITIES as libc::c_ulong, &mut c as *mut CapabilityInfo)
+        };
+        if rc < 0 { return Err(io::Error::last_os_error()); }
+        Ok(c)
+    }
+
     pub fn license_status(&self) -> io::Result<LicenseStatus> {
         let mut status: LicenseStatus = unsafe { std::mem::zeroed() };
         let rc = unsafe {
@@ -261,6 +300,13 @@ mod tests {
         assert_eq!(std::mem::size_of::<LicensePayload>(), 136);
         assert_eq!(std::mem::size_of::<LicenseToken>(), 200);
         assert_eq!(std::mem::size_of::<LicenseStatus>(), 288);
+        assert_eq!(std::mem::size_of::<CapabilityInfo>(), 168);
+    }
+
+    #[test]
+    fn capability_ioctl_number_matches_uapi() {
+        let expected: u64 = (2u64 << 30) | (168u64 << 16) | ((b'Z' as u64) << 8) | 5;
+        assert_eq!(IOC_GET_CAPABILITIES, expected);
     }
 
     #[test]

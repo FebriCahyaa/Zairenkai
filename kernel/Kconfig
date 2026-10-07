@@ -6,7 +6,7 @@
 
 menuconfig ZKFC
 	tristate "Zairenkai Kernel Framework Core (ZKFC)"
-	depends on CPU_FREQ && INPUT
+	depends on CPU_FREQ
 	depends on ARM64 || X86_64 || (RISCV && 64BIT)
 	default n
 	help

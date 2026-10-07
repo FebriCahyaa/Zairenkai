@@ -2,7 +2,12 @@
 /*
  * ZKFC task boost: per-process utilization clamping (uclamp) with optional
  * inheritance to threads created later (game engines spawn worker threads
- * long after start-up). Falls back to nice values on kernels without uclamp.
+ * long after start-up).
+ *
+ * Task identity is tracked by struct pid references rather than numeric PIDs,
+ * so PID reuse cannot transfer an old boost policy to a new process. Older
+ * kernels without uclamp fail closed instead of corrupting the caller's nice
+ * value as a fake uclamp substitute.
  *
  * Boosts are suspended while the thermal guard is tripped and re-applied
  * when the device cools down.
@@ -27,12 +32,12 @@
 
 #define ZKFC_TB_MAX_GROUPS	16
 #define ZKFC_TB_MAX_THREADS	512
-#define ZKFC_TB_FALLBACK_NICE	(-8)
 
 struct zkfc_tb_group {
 	struct list_head node;
 	pid_t pid;
-	pid_t tgid;
+	struct pid *target_pid;
+	struct pid *tgid_pid;
 	u32 umin;
 	u32 umax;
 	u32 flags;
@@ -40,12 +45,12 @@ struct zkfc_tb_group {
 };
 
 static LIST_HEAD(zkfc_tb_groups);
-static DEFINE_SPINLOCK(zkfc_tb_lock);	/* protects the list (atomic readers) */
-static DEFINE_MUTEX(zkfc_tb_mutex);	/* serialises writers */
+static DEFINE_SPINLOCK(zkfc_tb_lock);
+static DEFINE_MUTEX(zkfc_tb_mutex);
 static bool zkfc_tb_suspended;
 
 static DEFINE_SPINLOCK(zkfc_tb_fifo_lock);
-static DECLARE_KFIFO(zkfc_tb_fifo, pid_t, 128);
+static DECLARE_KFIFO(zkfc_tb_fifo, struct pid *, 128);
 static void zkfc_tb_work_fn(struct work_struct *w);
 static DECLARE_WORK(zkfc_tb_work, zkfc_tb_work_fn);
 
@@ -71,19 +76,27 @@ static int zkfc_tb_apply_one(struct task_struct *p, u32 umin, u32 umax, bool res
 
 	return sched_setattr_nocheck(p, &attr);
 #else
-	set_user_nice(p, reset ? 0 : ZKFC_TB_FALLBACK_NICE);
-	return 0;
+	/* Never emulate uclamp with nice: the original priority is not reliably
+	 * recoverable once multiple tasks have been modified. */
+	(void)p;
+	(void)umin;
+	(void)umax;
+	(void)reset;
+	return -EOPNOTSUPP;
 #endif
 }
 
 /*
- * Apply to @pid (and its thread group if @threads). Tasks are pinned first
- * because sched_setattr may sleep and cannot run under rcu_read_lock().
+ * Apply to @target_pid (and its thread group if @threads). The caller owns a
+ * reference to @target_pid. Every task is pinned before sched_setattr runs,
+ * because sched_setattr may sleep and cannot run under RCU.
  */
-static int zkfc_tb_apply_pid(pid_t pid, bool threads, u32 umin, u32 umax,
-			     bool reset, u32 *applied, pid_t *tgid_out)
+static int zkfc_tb_apply_pid(struct pid *target_pid, bool threads, u32 umin,
+			     u32 umax, bool reset, u32 *applied,
+			     struct pid **tgid_pid_out)
 {
 	struct task_struct **list, *task, *t;
+	struct pid *tgid_pid = NULL;
 	u32 n = 0, i, ok = 0;
 	int ret = 0;
 
@@ -92,14 +105,16 @@ static int zkfc_tb_apply_pid(pid_t pid, bool threads, u32 umin, u32 umax,
 		return -ENOMEM;
 
 	rcu_read_lock();
-	task = pid_task(find_vpid(pid), PIDTYPE_PID);
+	task = pid_task(target_pid, PIDTYPE_PID);
 	if (!task) {
 		rcu_read_unlock();
 		kfree(list);
 		return -ESRCH;
 	}
-	if (tgid_out)
-		*tgid_out = task_tgid_nr(task);
+	tgid_pid = task_tgid(task);
+	get_pid(tgid_pid);
+	get_task_struct(task);
+	list[n++] = task;
 	if (threads) {
 		for_each_thread(task, t) {
 			if (n >= ZKFC_TB_MAX_THREADS)
@@ -107,9 +122,6 @@ static int zkfc_tb_apply_pid(pid_t pid, bool threads, u32 umin, u32 umax,
 			get_task_struct(t);
 			list[n++] = t;
 		}
-	} else {
-		get_task_struct(task);
-		list[n++] = task;
 	}
 	rcu_read_unlock();
 
@@ -126,15 +138,19 @@ static int zkfc_tb_apply_pid(pid_t pid, bool threads, u32 umin, u32 umax,
 
 	if (applied)
 		*applied = ok;
+	if (tgid_pid_out)
+		*tgid_pid_out = tgid_pid;
+	else
+		put_pid(tgid_pid);
 	return ok ? 0 : ret;
 }
 
-static struct zkfc_tb_group *zkfc_tb_find(pid_t pid)
+static struct zkfc_tb_group *zkfc_tb_find(struct pid *target_pid)
 {
 	struct zkfc_tb_group *g;
 
 	list_for_each_entry(g, &zkfc_tb_groups, node)
-		if (g->pid == pid)
+		if (g->target_pid == target_pid)
 			return g;
 	return NULL;
 }
@@ -149,18 +165,48 @@ static u32 zkfc_tb_group_count(void)
 	return n;
 }
 
+static void zkfc_tb_free_group(struct zkfc_tb_group *g)
+{
+	put_pid(g->target_pid);
+	put_pid(g->tgid_pid);
+	kfree(g);
+}
+
+/* Remove entries whose target process no longer exists. */
+static void zkfc_tb_prune_dead(void)
+{
+	struct zkfc_tb_group *g, *tmp;
+	LIST_HEAD(dead);
+
+	rcu_read_lock();
+	spin_lock_irq(&zkfc_tb_lock);
+	list_for_each_entry_safe(g, tmp, &zkfc_tb_groups, node) {
+		if (!pid_task(g->target_pid, PIDTYPE_PID))
+			list_move_tail(&g->node, &dead);
+	}
+	spin_unlock_irq(&zkfc_tb_lock);
+	rcu_read_unlock();
+
+	list_for_each_entry_safe(g, tmp, &dead, node) {
+		list_del(&g->node);
+		zkfc_tb_free_group(g);
+	}
+}
+
 int zkfc_task_boost(struct zkfc_task_boost *tb)
 {
 	bool reset = tb->flags & ZKFC_TB_RESET;
 	bool threads = tb->flags & (ZKFC_TB_THREADS | ZKFC_TB_INHERIT);
 	struct zkfc_tb_group *g, *spare = NULL, *dead = NULL;
+	struct pid *target_pid = NULL, *tgid_pid = NULL;
 	u32 applied = 0;
-	pid_t tgid = 0;
 	int ret;
 
 	if (tb->pid <= 0 ||
 	    tb->flags & ~(ZKFC_TB_THREADS | ZKFC_TB_INHERIT | ZKFC_TB_RESET))
 		return -EINVAL;
+	if (!reset && !zkfc_uclamp_available())
+		return -EOPNOTSUPP;
 	if (!reset && (tb->uclamp_min > ZKFC_UCLAMP_SCALE ||
 		       tb->uclamp_max > ZKFC_UCLAMP_SCALE ||
 		       tb->uclamp_min > tb->uclamp_max))
@@ -171,54 +217,77 @@ int zkfc_task_boost(struct zkfc_task_boost *tb)
 			return -ENOMEM;
 	}
 
-	mutex_lock(&zkfc_tb_mutex);
-	if (!reset && zkfc_tb_suspended) {
-		ret = -EBUSY;	/* thermal guard tripped */
-		goto unlock;
+	target_pid = find_get_pid(tb->pid);
+	if (!target_pid) {
+		kfree(spare);
+		return reset ? 0 : -ESRCH;
 	}
-	ret = zkfc_tb_apply_pid(tb->pid, threads, tb->uclamp_min, tb->uclamp_max,
-				reset, &applied, &tgid);
+
+	mutex_lock(&zkfc_tb_mutex);
+	zkfc_tb_prune_dead();
+	g = zkfc_tb_find(target_pid);
+
+	if (reset) {
+		/* Never reset an unrelated task that happens to reuse the numeric PID. */
+		if (!g) {
+			ret = 0;
+			goto unlock;
+		}
+	} else {
+		if (zkfc_tb_suspended) {
+			ret = -EBUSY;
+			goto unlock;
+		}
+		if (!g && zkfc_tb_group_count() >= ZKFC_TB_MAX_GROUPS) {
+			ret = -ENOSPC;
+			goto unlock;
+		}
+	}
+
+	ret = zkfc_tb_apply_pid(target_pid, threads, tb->uclamp_min,
+				tb->uclamp_max, reset, &applied, &tgid_pid);
 
 	spin_lock_irq(&zkfc_tb_lock);
-	g = zkfc_tb_find(tb->pid);
+	g = zkfc_tb_find(target_pid);
 	if (reset) {
 		if (g) {
 			list_del(&g->node);
 			dead = g;
 		}
-		/* A vanished process is not an error when resetting. */
 		if (ret == -ESRCH)
 			ret = 0;
 	} else if (!ret) {
 		if (!g) {
-			if (zkfc_tb_group_count() >= ZKFC_TB_MAX_GROUPS) {
-				ret = -ENOSPC;
-			} else {
-				g = spare;
-				spare = NULL;
-				g->pid = tb->pid;
-				list_add_tail(&g->node, &zkfc_tb_groups);
-			}
+			g = spare;
+			spare = NULL;
+			g->pid = tb->pid;
+			g->target_pid = get_pid(target_pid);
+			g->tgid_pid = tgid_pid;
+			tgid_pid = NULL;
+			list_add_tail(&g->node, &zkfc_tb_groups);
 		}
-		if (g) {
-			g->tgid = tgid;
-			g->umin = tb->uclamp_min;
-			g->umax = tb->uclamp_max;
-			g->flags = tb->flags;
-			g->threads = applied;
-		}
+		g->pid = tb->pid;
+		g->umin = tb->uclamp_min;
+		g->umax = tb->uclamp_max;
+		g->flags = tb->flags;
+		g->threads = applied;
 	}
 	spin_unlock_irq(&zkfc_tb_lock);
+
 unlock:
 	mutex_unlock(&zkfc_tb_mutex);
-
+	put_pid(target_pid);
+	if (tgid_pid)
+		put_pid(tgid_pid);
 	kfree(spare);
-	kfree(dead);
+	if (dead)
+		zkfc_tb_free_group(dead);
+
 	tb->applied = applied;
 	if (ret)
 		zkfc_w("task boost pid %d failed: %d", tb->pid, ret);
 	else
-		zkfc_d("task boost pid %d min %u max %u flags %#x (%u threads)",
+		zkfc_d("task boost pid %d min %u max %u flags %#x (%u tasks)",
 		       tb->pid, tb->uclamp_min, tb->uclamp_max, tb->flags, applied);
 	return ret;
 }
@@ -226,25 +295,40 @@ unlock:
 /* Re-apply (resume) or neutralise (suspend) every group; groups are kept. */
 static void zkfc_tb_reapply_all(bool reset)
 {
-	struct zkfc_tb_group snap[ZKFC_TB_MAX_GROUPS];
+	struct {
+		struct pid *target_pid;
+		bool threads;
+		u32 umin;
+		u32 umax;
+	} snap[ZKFC_TB_MAX_GROUPS];
 	struct zkfc_tb_group *g;
 	u32 n = 0, i;
 
+	rcu_read_lock();
 	spin_lock_irq(&zkfc_tb_lock);
-	list_for_each_entry(g, &zkfc_tb_groups, node)
-		if (n < ZKFC_TB_MAX_GROUPS)
-			snap[n++] = *g;
+	list_for_each_entry(g, &zkfc_tb_groups, node) {
+		if (n >= ZKFC_TB_MAX_GROUPS)
+			break;
+		snap[n].target_pid = get_pid(g->target_pid);
+		snap[n].threads = !!(g->flags & (ZKFC_TB_THREADS | ZKFC_TB_INHERIT));
+		snap[n].umin = g->umin;
+		snap[n].umax = g->umax;
+		n++;
+	}
 	spin_unlock_irq(&zkfc_tb_lock);
+	rcu_read_unlock();
 
-	for (i = 0; i < n; i++)
-		zkfc_tb_apply_pid(snap[i].pid,
-				  snap[i].flags & (ZKFC_TB_THREADS | ZKFC_TB_INHERIT),
+	for (i = 0; i < n; i++) {
+		zkfc_tb_apply_pid(snap[i].target_pid, snap[i].threads,
 				  snap[i].umin, snap[i].umax, reset, NULL, NULL);
+		put_pid(snap[i].target_pid);
+	}
 }
 
 void zkfc_task_boost_suspend(bool suspend)
 {
 	mutex_lock(&zkfc_tb_mutex);
+	zkfc_tb_prune_dead();
 	if (zkfc_tb_suspended != suspend) {
 		zkfc_tb_suspended = suspend;
 		zkfc_tb_reapply_all(suspend);
@@ -267,7 +351,7 @@ void zkfc_task_boost_reset_all(void)
 
 	list_for_each_entry_safe(g, tmp, &dead, node) {
 		list_del(&g->node);
-		kfree(g);
+		zkfc_tb_free_group(g);
 	}
 }
 
@@ -276,6 +360,8 @@ u32 zkfc_task_boost_count(u32 *inherit_groups)
 	struct zkfc_tb_group *g;
 	u32 threads = 0, inherit = 0;
 
+	mutex_lock(&zkfc_tb_mutex);
+	zkfc_tb_prune_dead();
 	spin_lock_irq(&zkfc_tb_lock);
 	list_for_each_entry(g, &zkfc_tb_groups, node) {
 		threads += g->threads;
@@ -283,6 +369,7 @@ u32 zkfc_task_boost_count(u32 *inherit_groups)
 			inherit++;
 	}
 	spin_unlock_irq(&zkfc_tb_lock);
+	mutex_unlock(&zkfc_tb_mutex);
 	if (inherit_groups)
 		*inherit_groups = inherit;
 	return threads;
@@ -290,68 +377,84 @@ u32 zkfc_task_boost_count(u32 *inherit_groups)
 
 /*
  * Hook context (kprobe pre-handler or patched fork path): may be atomic, so
- * only queue the new task's pid; the work item applies the boost.
+ * only queue a referenced struct pid for a work item; no numeric PID is used
+ * as process identity anywhere in the inheritance path.
  */
 void zkfc_task_boost_on_new_task(struct task_struct *p)
 {
 	struct zkfc_tb_group *g;
+	struct pid *tgid_pid;
+	struct pid *target_pid = NULL;
 	unsigned long flags;
 	bool match = false;
-	pid_t tgid = task_tgid_nr(p);
 
-	if (!zkfc_feature_licensed(ZKFC_FEAT_BOOST_INHERIT))
+	if (!zkfc_feature_licensed(ZKFC_FEAT_BOOST_INHERIT) || !p)
 		return;
 
+	rcu_read_lock();
+	tgid_pid = task_tgid(p);
 	spin_lock_irqsave(&zkfc_tb_lock, flags);
 	list_for_each_entry(g, &zkfc_tb_groups, node) {
-		if ((g->flags & ZKFC_TB_INHERIT) && g->tgid == tgid) {
+		if ((g->flags & ZKFC_TB_INHERIT) && g->tgid_pid == tgid_pid) {
 			match = !zkfc_tb_suspended;
 			break;
 		}
 	}
+	if (match) {
+		target_pid = get_task_pid(p, PIDTYPE_PID);
+		if (target_pid)
+			match = kfifo_in_spinlocked(&zkfc_tb_fifo, &target_pid, 1,
+						   &zkfc_tb_fifo_lock) == 1;
+	}
 	spin_unlock_irqrestore(&zkfc_tb_lock, flags);
-	if (!match)
-		return;
+	rcu_read_unlock();
 
-	if (kfifo_in_spinlocked(&zkfc_tb_fifo, &p->pid, 1, &zkfc_tb_fifo_lock))
+	if (match)
 		schedule_work(&zkfc_tb_work);
+	else if (target_pid)
+		put_pid(target_pid);
 }
 
 static void zkfc_tb_work_fn(struct work_struct *w)
 {
 	struct zkfc_tb_group *g;
-	pid_t pid, tgid;
+	struct pid *target_pid, *tgid_pid;
 	u32 umin = 0, umax = 0;
 	bool found;
 
-	while (kfifo_out_spinlocked(&zkfc_tb_fifo, &pid, 1, &zkfc_tb_fifo_lock)) {
+	while (kfifo_out_spinlocked(&zkfc_tb_fifo, &target_pid, 1,
+				    &zkfc_tb_fifo_lock)) {
 		struct task_struct *t;
 
 		rcu_read_lock();
-		t = pid_task(find_vpid(pid), PIDTYPE_PID);
+		t = pid_task(target_pid, PIDTYPE_PID);
 		if (t)
 			get_task_struct(t);
 		rcu_read_unlock();
-		if (!t)
+		if (!t) {
+			put_pid(target_pid);
 			continue;
+		}
 
-		tgid = task_tgid_nr(t);
+		rcu_read_lock();
+		tgid_pid = task_tgid(t);
 		found = false;
 		spin_lock_irq(&zkfc_tb_lock);
 		list_for_each_entry(g, &zkfc_tb_groups, node) {
-			if ((g->flags & ZKFC_TB_INHERIT) && g->tgid == tgid) {
+			if ((g->flags & ZKFC_TB_INHERIT) && g->tgid_pid == tgid_pid) {
 				umin = g->umin;
 				umax = g->umax;
-				g->threads++;
 				found = !zkfc_tb_suspended;
 				break;
 			}
 		}
 		spin_unlock_irq(&zkfc_tb_lock);
+		rcu_read_unlock();
 
 		if (found)
 			zkfc_tb_apply_one(t, umin, umax, false);
 		put_task_struct(t);
+		put_pid(target_pid);
 	}
 }
 
@@ -363,6 +466,11 @@ int zkfc_task_boost_init(void)
 
 void zkfc_task_boost_exit(void)
 {
+	struct pid *target_pid;
+
 	cancel_work_sync(&zkfc_tb_work);
 	zkfc_task_boost_reset_all();
+	while (kfifo_out_spinlocked(&zkfc_tb_fifo, &target_pid, 1,
+				    &zkfc_tb_fifo_lock))
+		put_pid(target_pid);
 }

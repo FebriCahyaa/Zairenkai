@@ -19,6 +19,7 @@
 
 #include "../zkfc.h"
 
+#ifdef CONFIG_INPUT
 #define ZKFC_IB_MIN_MS		10
 #define ZKFC_IB_MAX_MS		5000
 /* Ignore events closer than this to the previous boost trigger. */
@@ -48,6 +49,13 @@ static void zkfc_ib_on_fn(struct work_struct *w)
 	cfg = zkfc_ib_cfg;
 	mutex_unlock(&zkfc_ib_mutex);
 
+	spin_lock_irq(&zkfc_ib_lock);
+	if (!zkfc_ib_enabled || zkfc_ib_suspended) {
+		spin_unlock_irq(&zkfc_ib_lock);
+		return;
+	}
+	spin_unlock_irq(&zkfc_ib_lock);
+
 	for (i = 0; i < cfg.cluster_count && i < ZKFC_MAX_CLUSTERS; i++)
 		if (cfg.min_khz[i])
 			zkfc_cpufreq_set_boost_floor(cfg.cluster_cpu[i], cfg.min_khz[i]);
@@ -68,6 +76,9 @@ static void zkfc_ib_event(struct input_handle *handle, unsigned int type,
 			  unsigned int code, int value)
 {
 	unsigned long flags;
+	(void)handle;
+	(void)code;
+	(void)value;
 	bool kick = false;
 
 	if (type != EV_ABS && type != EV_KEY)
@@ -152,9 +163,17 @@ static struct input_handler zkfc_ib_handler = {
 	.id_table = zkfc_ib_ids,
 };
 
+#endif /* CONFIG_INPUT */
+
 int zkfc_input_boost_config(const struct zkfc_input_boost *cfg)
 {
 	u32 i;
+
+#ifndef CONFIG_INPUT
+	if (cfg->enabled)
+		return -EOPNOTSUPP;
+	return 0;
+#else
 
 	if (cfg->enabled) {
 		if (cfg->duration_ms < ZKFC_IB_MIN_MS || cfg->duration_ms > ZKFC_IB_MAX_MS)
@@ -183,28 +202,40 @@ int zkfc_input_boost_config(const struct zkfc_input_boost *cfg)
 	       cfg->enabled ? "enabled" : "disabled", cfg->duration_ms,
 	       cfg->cluster_count);
 	return 0;
+#endif /* CONFIG_INPUT */
 }
 
 void zkfc_input_boost_suspend(bool suspend)
 {
+#ifdef CONFIG_INPUT
 	spin_lock_irq(&zkfc_ib_lock);
 	zkfc_ib_suspended = suspend;
 	spin_unlock_irq(&zkfc_ib_lock);
 	if (suspend)
 		mod_delayed_work(system_wq, &zkfc_ib_off_work, 0);
+#else
+	(void)suspend;
+#endif
 }
 
 void zkfc_input_boost_status(struct zkfc_perf_status *st)
 {
+#ifdef CONFIG_INPUT
 	spin_lock_irq(&zkfc_ib_lock);
 	st->input_boost_enabled = zkfc_ib_enabled;
 	st->input_boost_active = zkfc_ib_active;
 	st->input_boost_count = zkfc_ib_count;
 	spin_unlock_irq(&zkfc_ib_lock);
+#else
+	st->input_boost_enabled = false;
+	st->input_boost_active = false;
+	st->input_boost_count = 0;
+#endif
 }
 
 int zkfc_input_boost_init(void)
 {
+#ifdef CONFIG_INPUT
 	int ret = input_register_handler(&zkfc_ib_handler);
 
 	if (ret) {
@@ -213,10 +244,14 @@ int zkfc_input_boost_init(void)
 	}
 	zkfc_ib_registered = true;
 	return 0;
+#else
+	return -EOPNOTSUPP;
+#endif
 }
 
 void zkfc_input_boost_exit(void)
 {
+#ifdef CONFIG_INPUT
 	spin_lock_irq(&zkfc_ib_lock);
 	zkfc_ib_enabled = false;
 	spin_unlock_irq(&zkfc_ib_lock);
@@ -225,4 +260,7 @@ void zkfc_input_boost_exit(void)
 	cancel_work_sync(&zkfc_ib_on_work);
 	cancel_delayed_work_sync(&zkfc_ib_off_work);
 	zkfc_cpufreq_clear_boost_floors();
+#else
+	return;
+#endif
 }

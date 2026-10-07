@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "qualcomm"
+
+[provider_order]
+cpu = ["cpufreq", "vendor-performance"]
+gpu = ["kgsl", "devfreq"]
+thermal = ["linux-thermal", "qualcomm-thermal"]
+boost = ["uclamp", "schedtune"]
+
+[discovery]
+platform_tokens = ["qcom", "sdm", "sm6", "sm7", "sm8", "sm9", "snapdragon"]
+compatible_tokens = ["qcom,"]
+thermal_type_patterns = ["qcom", "msm", "tsens", "cpu-thermal", "gpu-thermal"]
+
+[notes]
+policy = "runtime-capability-first"
+msm_performance = "optional-vendor-surface; never assumed"

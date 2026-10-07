@@ -176,6 +176,7 @@ static int zkfc_cq_update(struct zkfc_cq *c)
 int zkfc_cpufreq_qos(const struct zkfc_cpufreq_qos *q)
 {
 	struct zkfc_cq *c;
+	unsigned int old_min, old_max;
 	int ret;
 
 	if (q->cpu >= nr_cpu_ids || !cpu_possible(q->cpu) || q->flags & ~ZKFC_CQ_CLEAR)
@@ -189,6 +190,8 @@ int zkfc_cpufreq_qos(const struct zkfc_cpufreq_qos *q)
 		mutex_unlock(&zkfc_cq_mutex);
 		return -ENODEV;
 	}
+	old_min = c->user_min;
+	old_max = c->user_max;
 	if (q->flags & ZKFC_CQ_CLEAR) {
 		c->user_min = 0;
 		c->user_max = 0;
@@ -199,6 +202,14 @@ int zkfc_cpufreq_qos(const struct zkfc_cpufreq_qos *q)
 			c->user_max = q->max_khz;
 	}
 	ret = zkfc_cq_update(c);
+	if (ret) {
+		/* Keep the software state aligned with the kernel constraint set when
+		 * one of the QoS updates fails after the other one succeeded. */
+		c->user_min = old_min;
+		c->user_max = old_max;
+		if (zkfc_cq_update(c))
+			zkfc_w("cpufreq qos rollback failed for cpu%u", q->cpu);
+	}
 	mutex_unlock(&zkfc_cq_mutex);
 
 	zkfc_d("cpufreq qos cpu%u min %u max %u -> %d", q->cpu,

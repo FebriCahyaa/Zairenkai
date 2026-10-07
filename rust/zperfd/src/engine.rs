@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 //! The apply engine. Turns a device-agnostic [Mode] into concrete node writes
 //! for the detected device: per-policy cpufreq caps, governor, top-app boost
-//! (uclamp on GKI, schedtune on non-GKI), input boost, GPU devfreq, VM and I/O
+//! (backend selected by the runtime capability/family resolver), input boost,
+//! GPU devfreq, VM and I/O
 //! knobs. Every write is probe-gated; transaction locking is owned by StateStore.
 //!
 //! Copyright (C) 2026 FebriCahyaa
 
+use crate::backends::{BackendPlan, BoostBackend};
 use crate::config::{self, Cpu, Gpu, Io, Mem, Mode};
 use crate::nodes::Sysroot;
 use crate::topo::Topology;
@@ -86,11 +88,12 @@ fn choose_range_order(
 pub struct Engine<'a> {
     s: &'a Sysroot,
     t: &'a Topology,
+    plan: &'a BackendPlan,
 }
 
 impl<'a> Engine<'a> {
-    pub fn new(s: &'a Sysroot, t: &'a Topology) -> Self {
-        Engine { s, t }
+    pub fn new(s: &'a Sysroot, t: &'a Topology, plan: &'a BackendPlan) -> Self {
+        Engine { s, t, plan }
     }
 
     /// Enumerate nodes this engine may mutate. This is used by the persistent
@@ -282,33 +285,46 @@ impl<'a> Engine<'a> {
     }
 
     fn apply_boost(&self, c: &Cpu, r: &mut ApplyReport) {
-        // top-app perf hint: uclamp on GKI, schedtune on non-GKI.
-        if let Some(min) = c.uclamp_min_pct {
-            if let Some(dir) = &self.t.top_app_uclamp {
-                let node = format!("{dir}/cpu.uclamp.min");
-                let scaled = config::uclamp_from_pct(min);
-                match self.s.write(&node, &scaled.to_string()) {
-                    Ok(()) => r.ok(format!("uclamp.min={scaled} ({min}%)")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                    Err(e) => r.fail(format!("uclamp.min={min}: {e}")),
-                }
-            } else if let Some(dir) = &self.t.stune_top {
-                let node = format!("{dir}/schedtune.boost");
-                match self.s.write(&node, &min.to_string()) {
-                    Ok(()) => r.ok(format!("schedtune.boost={min}")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                    Err(e) => r.fail(format!("schedtune.boost={min}: {e}")),
+        match self.plan.boost {
+            BoostBackend::Uclamp => {
+                if let Some(dir) = &self.t.top_app_uclamp {
+                    if let Some(min) = c.uclamp_min_pct {
+                        let node = format!("{dir}/cpu.uclamp.min");
+                        let scaled = config::uclamp_from_pct(min);
+                        match self.s.write(&node, &scaled.to_string()) {
+                            Ok(()) => r.ok(format!("uclamp.min={scaled} ({min}%)")),
+                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                            Err(e) => r.fail(format!("uclamp.min={min}: {e}")),
+                        }
+                    }
+                    if let Some(max) = c.uclamp_max_pct {
+                        let node = format!("{dir}/cpu.uclamp.max");
+                        let scaled = config::uclamp_from_pct(max);
+                        match self.s.write(&node, &scaled.to_string()) {
+                            Ok(()) => r.ok(format!("uclamp.max={scaled} ({max}%)")),
+                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                            Err(e) => r.fail(format!("uclamp.max={max}: {e}")),
+                        }
+                    }
+                } else {
+                    r.skip("uclamp backend unavailable".into());
                 }
             }
-        }
-        if let Some(max) = c.uclamp_max_pct {
-            if let Some(dir) = &self.t.top_app_uclamp {
-                let node = format!("{dir}/cpu.uclamp.max");
-                let scaled = config::uclamp_from_pct(max);
-                match self.s.write(&node, &scaled.to_string()) {
-                    Ok(()) => r.ok(format!("uclamp.max={scaled} ({max}%)")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                    Err(e) => r.fail(format!("uclamp.max={max}: {e}")),
+            BoostBackend::SchedTune => {
+                if let (Some(dir), Some(min)) = (&self.t.stune_top, c.uclamp_min_pct) {
+                    let node = format!("{dir}/schedtune.boost");
+                    match self.s.write(&node, &min.to_string()) {
+                        Ok(()) => r.ok(format!("schedtune.boost={min}")),
+                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
+                        Err(e) => r.fail(format!("schedtune.boost={min}: {e}")),
+                    }
+                } else {
+                    r.skip("schedtune backend unavailable".into());
+                }
+            }
+            BoostBackend::None => {
+                if c.uclamp_min_pct.is_some() || c.uclamp_max_pct.is_some() {
+                    r.skip("no compatible boost backend".into());
                 }
             }
         }
@@ -583,7 +599,9 @@ mod tests {
             "#,
         )
         .unwrap();
-        let eng = Engine::new(&s, &t);
+        let family = crate::family::load(&std::path::PathBuf::from("/dev/null/zairenkai"), t.identity.vendor);
+        let plan = crate::backends::BackendPlan::resolve(&t.identity, &t, family.as_ref());
+        let eng = Engine::new(&s, &t, &plan);
         let rep = eng.apply_mode(prof.mode("performance").unwrap());
 
         assert_eq!(s.read(&format!("{base}/scaling_max_freq")).as_deref(), Some("1843200"));

@@ -25,13 +25,31 @@
 
 static u8 zkfc_cfg_digest[32];
 
+static bool zkfc_release_has_android_kmi(const char *release)
+{
+	const char *p = strstr(release, "-android");
+	unsigned int digits = 0;
+
+	if (!p)
+		return false;
+	p += sizeof("-android") - 1;
+	while (p[0] >= '0' && p[0] <= '9') {
+		digits++;
+		p++;
+	}
+	return digits >= 2 && p[0] == '-';
+}
+
 u32 zkfc_kernel_type(void)
 {
-	/* GKI kernels carry an "-androidNN-" release suffix and are >= 5.4. */
+	const char *release = utsname()->release;
+
+	/* Explicit override is intended for vendor GKI trees with custom release strings. */
 	if (IS_ENABLED(CONFIG_ZKFC_FORCE_GKI))
 		return ZKFC_KERNEL_GKI;
+	/* Conservative detection: a modern kernel alone is not evidence of GKI. */
 	if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) &&
-	    strstr(utsname()->release, "-android"))
+	    zkfc_release_has_android_kmi(release))
 		return ZKFC_KERNEL_GKI;
 	return ZKFC_KERNEL_NON_GKI;
 }

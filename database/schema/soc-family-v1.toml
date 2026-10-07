@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Zairenkai SoC-family capability hint schema v1.
+# Family data is advisory: runtime discovery always has final authority.
+
+schema_version = 1
+vendor = "qualcomm|mediatek|exynos|tensor"
+
+[provider_order]
+cpu = ["cpufreq"]
+gpu = ["devfreq"]
+thermal = ["linux-thermal"]
+boost = ["uclamp"]
+
+[discovery]
+platform_tokens = ["vendor-specific-runtime-token"]
+compatible_tokens = ["device-tree-compatible-token"]
+thermal_type_patterns = ["vendor-specific-pattern"]
+
+[notes]
+policy = "runtime-capability-first"

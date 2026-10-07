@@ -31,19 +31,26 @@ static bool zkfc_input_boost_ok;
 
 u32 zkfc_features_available(void)
 {
-	u32 f = ZKFC_FEAT_CPUFREQ_QOS | ZKFC_FEAT_TASK_BOOST |
-		ZKFC_FEAT_INTEGRITY | ZKFC_FEAT_POLICY | ZKFC_FEAT_SULOG;
+	u32 f = ZKFC_FEAT_INTEGRITY | ZKFC_FEAT_POLICY | ZKFC_FEAT_SULOG;
 
-	if (zkfc_input_boost_ok)
-		f |= ZKFC_FEAT_INPUT_BOOST;
+	if (zkfc_uclamp_available())
+		f |= ZKFC_FEAT_TASK_BOOST;
+
 	if (IS_ENABLED(CONFIG_THERMAL))
 		f |= ZKFC_FEAT_THERMAL_GUARD;
 	if (zkfc_uclamp_available())
 		f |= ZKFC_FEAT_UCLAMP;
-	if (zkfc_hooks_active())
+	if (zkfc_input_boost_ok)
+		f |= ZKFC_FEAT_INPUT_BOOST;
+	/* CPU QoS is a distinct capability; legacy kernels use the notifier path. */
+#ifdef ZKFC_HAVE_FREQ_QOS
+	f |= ZKFC_FEAT_CPUFREQ_QOS;
+#endif
+	if (zkfc_hooks_active() && zkfc_uclamp_available()) {
 		f |= ZKFC_FEAT_BOOST_INHERIT;
-	if (zkfc_hook_mode() == ZKFC_HOOK_HYBRID)
-		f |= ZKFC_FEAT_KPROBES;
+		if (zkfc_hook_mode() == ZKFC_HOOK_HYBRID)
+			f |= ZKFC_FEAT_KPROBES;
+	}
 	return f;
 }
 
@@ -78,6 +85,7 @@ static int zkfc_requirements(unsigned int cmd, u32 *cap, u32 *feat, bool *mutati
 	case ZKFC_IOC_GET_SYS_SECURITY:
 	case ZKFC_IOC_GET_USER_SECURITY:
 	case ZKFC_IOC_GET_DEV_SECURITY:
+	case ZKFC_IOC_GET_CAPABILITIES:
 	case ZKFC_IOC_POLICY_GET:
 	case ZKFC_IOC_PERF_STATUS:
 	case ZKFC_IOC_THERMAL_READ:
@@ -147,6 +155,9 @@ static long zkfc_dispatch(struct zkfc_session *s, unsigned int cmd, void *buf,
 		return 0;
 	case ZKFC_IOC_GET_DEV_SECURITY:
 		zkfc_integrity_dev(buf);
+		return 0;
+	case ZKFC_IOC_GET_CAPABILITIES:
+		zkfc_capabilities(buf);
 		return 0;
 	case ZKFC_IOC_INSTALL_LICENSE:
 		return zkfc_license_install(buf);
@@ -310,6 +321,7 @@ static void zkfc_abi_checks(void)
 	BUILD_BUG_ON(sizeof(struct zkfc_license_token) != 200);
 	BUILD_BUG_ON(sizeof(struct zkfc_crl) != 600);
 	BUILD_BUG_ON(sizeof(struct zkfc_version_info) != 160);
+	BUILD_BUG_ON(sizeof(struct zkfc_capability_info) != 168);
 	BUILD_BUG_ON(sizeof(struct zkfc_license_status) != 288);
 	BUILD_BUG_ON(sizeof(struct zkfc_sys_security) != 56);
 	BUILD_BUG_ON(sizeof(struct zkfc_user_security) != 48);

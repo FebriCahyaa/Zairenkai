@@ -85,6 +85,10 @@ int zkfc_dev_security(struct zkfc *z, struct zkfc_dev_security *s)
 {
 	return zk_ioctl(z, ZKFC_IOC_GET_DEV_SECURITY, s);
 }
+int zkfc_capabilities(struct zkfc *z, struct zkfc_capability_info *c)
+{
+	return zk_ioctl(z, ZKFC_IOC_GET_CAPABILITIES, c);
+}
 int zkfc_install_license(struct zkfc *z, const struct zkfc_license_token *t)
 {
 	return zk_ioctl(z, ZKFC_IOC_INSTALL_LICENSE, (void *)t);

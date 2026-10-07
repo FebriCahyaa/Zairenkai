@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "exynos"
+
+[provider_order]
+cpu = ["cpufreq", "vendor-performance"]
+gpu = ["devfreq", "mali"]
+thermal = ["linux-thermal", "exynos-thermal"]
+boost = ["uclamp", "schedtune"]
+
+[discovery]
+platform_tokens = ["exynos", "s5e", "samsung"]
+compatible_tokens = ["samsung,exynos", "samsung,s5e"]
+thermal_type_patterns = ["exynos", "soc", "cpu-thermal", "gpu-thermal"]
+
+[notes]
+policy = "runtime-capability-first"
+comment = "Newer Exynos parts may expose GPU providers other than Mali; runtime discovery decides."

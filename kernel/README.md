@@ -100,3 +100,22 @@ Performance features require a ZKFC API Token. Tokens are issued **only** by
 the project owner, individually, on request. If a kernel's embedded API major
 is older than the token's, the app reports *"API ZKFC usang - perbarui kernel"*
 (`ZKFC_LIC_API_OUTDATED`). See [`../docs/security/API_TOKENS.md`](../docs/security/API_TOKENS.md).
+
+## GKI and non-GKI compatibility contract
+
+GKI support is branch/KMI specific. The current AOSP Android 17 common-kernel
+branch is `common-android17-6.18`; its published branch metadata exposes the
+kernel/toolchain contract used by that branch. The Zairenkai matrix therefore
+uses automatic Clang discovery for `android17-6.18`, reading `CLANG_VERSION`
+from the checked-out AOSP tree instead of guessing a static version.
+
+For Android 16, the AOSP `android16-6.12` branch currently declares
+`CLANG_VERSION=r536225`. Zairenkai records that value as the matrix fallback,
+but the checked-out kernel tree remains authoritative. Official AOSP references
+for these contracts are linked from the project engineering notes.
+
+The non-GKI target range is an adapter target, not a claim that one source
+compiles unchanged on every 4.x, 5.x or 6.x vendor kernel. Each concrete tree
+must pass its own Kconfig and compiler checks. Vendor backports are expected;
+ZKFC must prefer feature/configuration detection over assumptions tied only to
+the nominal kernel release.

@@ -49,6 +49,7 @@ int zkfc_policy_init(void);
 void zkfc_policy_exit(void);
 u32 zkfc_policy_caps(struct zkfc_user_security *who);
 void zkfc_policy_get(struct zkfc_policy_table *tbl);
+void zkfc_capabilities(struct zkfc_capability_info *c);
 int zkfc_policy_set(const struct zkfc_policy_table *tbl);
 
 /* ---- security/zkfc_license.c ---- */

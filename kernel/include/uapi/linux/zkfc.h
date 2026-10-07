@@ -2,9 +2,8 @@
 /*
  * Zairenkai Kernel Framework Core (ZKFC) - userspace API.
  *
- * Every structure in this header has a fixed layout (no pointers, no
- * implicit padding) so the same ioctl numbers work for 64-bit and 32-bit
- * (compat) callers on arm64, x86_64 and riscv64. Multi-byte fields of the
+ * Every structure in this header has a fixed layout (no pointers). The supported
+ * Android targets are 64-bit arm64/x86_64/riscv64; multi-byte fields of the
  * license token are little endian on the wire.
  *
  * Copyright (C) 2026 FebriCahyaa
@@ -27,7 +26,7 @@
  * the kernel version is lower than the version it requires.
  * ------------------------------------------------------------------------ */
 #define ZKFC_API_MAJOR 1
-#define ZKFC_API_MINOR 0
+#define ZKFC_API_MINOR 1
 #define ZKFC_API_PATCH 0
 #define ZKFC_MKVER(ma, mi, pa) ((((ma) & 0xff) << 16) | (((mi) & 0xff) << 8) | ((pa) & 0xff))
 #define ZKFC_VER_MAJOR(v) (((v) >> 16) & 0xff)
@@ -36,6 +35,42 @@
 #define ZKFC_API_VERSION ZKFC_MKVER(ZKFC_API_MAJOR, ZKFC_API_MINOR, ZKFC_API_PATCH)
 /* Oldest manager API this kernel still serves. */
 #define ZKFC_API_MIN_SUPPORTED ZKFC_MKVER(1, 0, 0)
+
+/* Kernel capability graph. These describe mechanisms, not tuning policy. */
+#define ZKFC_KCAP_CPUFREQ             (1ULL << 0)
+#define ZKFC_KCAP_DEVFREQ             (1ULL << 1)
+#define ZKFC_KCAP_THERMAL             (1ULL << 2)
+#define ZKFC_KCAP_CPU_IDLE            (1ULL << 3)
+#define ZKFC_KCAP_AUTOGROUP           (1ULL << 4)
+#define ZKFC_KCAP_CGROUPS             (1ULL << 5)
+#define ZKFC_KCAP_PSI                 (1ULL << 6)
+#define ZKFC_KCAP_ENERGY_MODEL        (1ULL << 7)
+#define ZKFC_KCAP_FREQ_QOS             (1ULL << 8)
+#define ZKFC_KCAP_UCLAMP              (1ULL << 9)
+#define ZKFC_KCAP_SCHEDTUNE            (1ULL << 10)
+#define ZKFC_KCAP_WALT                 (1ULL << 11)
+#define ZKFC_KCAP_KPROBES              (1ULL << 12)
+#define ZKFC_KCAP_MODULES              (1ULL << 13)
+#define ZKFC_KCAP_DM_CRYPT             (1ULL << 14)
+#define ZKFC_KCAP_BPF                  (1ULL << 15)
+#define ZKFC_KCAP_HOOKS_ACTIVE         (1ULL << 16)
+#define ZKFC_KCAP_THERMAL_GUARD_TRIPPED (1ULL << 17)
+#define ZKFC_KCAP_LICENSE_VALID        (1ULL << 18)
+
+struct zkfc_capability_info {
+	__le64 kernel_caps;
+	__le64 runtime_caps;
+	__u32 kernel_major;
+	__u32 kernel_minor;
+	__u32 kernel_patch;
+	__u32 cpu_count;
+	__u32 page_size;
+	__u32 kernel_type;
+	__u32 hook_mode;
+	__u32 reserved;
+	char kernel_release[72];
+	char build_id[48];
+};
 
 enum zkfc_arch {
 	ZKFC_ARCH_UNKNOWN = 0,
@@ -395,6 +430,7 @@ struct zkfc_sulog_read {
 #define ZKFC_IOC_GET_SYS_SECURITY	_IOR(ZKFC_IOC_MAGIC, 0x02, struct zkfc_sys_security)
 #define ZKFC_IOC_GET_USER_SECURITY	_IOR(ZKFC_IOC_MAGIC, 0x03, struct zkfc_user_security)
 #define ZKFC_IOC_GET_DEV_SECURITY	_IOR(ZKFC_IOC_MAGIC, 0x04, struct zkfc_dev_security)
+#define ZKFC_IOC_GET_CAPABILITIES		_IOR(ZKFC_IOC_MAGIC, 0x05, struct zkfc_capability_info)
 
 /* License management (ZKFC_CAP_LICENSE) */
 #define ZKFC_IOC_INSTALL_LICENSE	_IOW(ZKFC_IOC_MAGIC, 0x08, struct zkfc_license_token)

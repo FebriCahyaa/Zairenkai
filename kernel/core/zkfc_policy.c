@@ -116,6 +116,9 @@ u32 zkfc_policy_caps(struct zkfc_user_security *who)
 	return allow;
 }
 
+/* Built-in root/system entries are immutable and implicit in POLICY_GET.
+ * The returned table contains only mutable custom entries so its result can
+ * be fed back into POLICY_SET without duplicating the built-ins. */
 void zkfc_policy_get(struct zkfc_policy_table *tbl)
 {
 	struct zkfc_policy *p;
@@ -124,8 +127,12 @@ void zkfc_policy_get(struct zkfc_policy_table *tbl)
 	rcu_read_lock();
 	p = rcu_dereference(zkfc_pol);
 	if (p) {
-		tbl->count = p->count;
-		memcpy(tbl->entries, p->e, sizeof(p->e[0]) * p->count);
+		const u32 builtin = ARRAY_SIZE(zkfc_builtin);
+
+		tbl->count = p->count > builtin ? p->count - builtin : 0;
+		if (tbl->count)
+			memcpy(tbl->entries, &p->e[builtin],
+			       sizeof(p->e[0]) * tbl->count);
 	}
 	rcu_read_unlock();
 }

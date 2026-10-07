@@ -6,14 +6,20 @@
 //!
 //! Copyright (C) 2026 FebriCahyaa
 
+mod backends;
+mod catalog;
 mod config;
 mod engine;
+mod family;
 mod nodes;
+mod platform;
 mod scene;
 mod state;
+mod telemetry;
 mod topo;
 mod tweak;
 
+use backends::BackendPlan;
 use config::Profile;
 use engine::Engine;
 use nodes::Sysroot;
@@ -97,13 +103,21 @@ fn print_help() {
 fn load_profile(
     explicit: Option<&str>,
     state: &Path,
-    soc: Option<&str>,
+    identity: &platform::PlatformIdentity,
 ) -> Result<Profile, String> {
     let text = if let Some(path) = explicit {
         fs::read_to_string(path).map_err(|e| format!("read {path}: {e}"))?
     } else if state.join("profile.toml").exists() {
         fs::read_to_string(state.join("profile.toml")).map_err(|e| e.to_string())?
-    } else if let Some(soc) = soc {
+    } else if let Some(resolved) = catalog::resolve(&state.join("database"), identity) {
+        let path = resolved.catalog_path(&state.join("catalog"));
+        if path.exists() {
+            fs::read_to_string(path).map_err(|e| e.to_string())?
+        } else {
+            GENERIC.into()
+        }
+    } else {
+        let soc = identity.soc_key();
         let catalog = state.join("catalog").join(format!("{soc}.toml"));
         if catalog.exists() {
             fs::read_to_string(catalog).map_err(|e| e.to_string())?
@@ -112,8 +126,6 @@ fn load_profile(
         } else {
             GENERIC.into()
         }
-    } else {
-        GENERIC.into()
     };
     let profile = Profile::parse(&text)?;
     profile.validate()?;
@@ -201,8 +213,10 @@ fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Resu
     Ok(mode.to_string())
 }
 
-fn cmd_probe(s: &Sysroot, json: bool) -> i32 {
+fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
     let topology = Topology::detect(s);
+    let family = family::load(&state.join("database"), topology.identity.vendor);
+    let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     if json {
         let policies = topology
             .policies
@@ -219,6 +233,11 @@ fn cmd_probe(s: &Sysroot, json: bool) -> i32 {
                 )
             })
             .collect::<Vec<_>>();
+        let thermal = topology.thermal_zones.iter().map(|z| format!(
+            "{{\"name\":\"{}\",\"type\":\"{}\",\"provider\":\"{}\",\"temp_mdeg\":{}}}",
+            json_escape(&z.name), json_escape(&z.ty), z.provider.as_str(),
+            z.temp_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into())
+        )).collect::<Vec<_>>().join(",");
         let boost = format!(
             "{{\"uclamp\":{},\"schedtune\":{},\"cpu_boost\":{}}}",
             topology.top_app_uclamp.is_some(),
@@ -226,36 +245,56 @@ fn cmd_probe(s: &Sysroot, json: bool) -> i32 {
             topology.cpu_boost_dir.is_some(),
         );
         let gpu = topology.gpu.as_ref().map(|g| {
-            let kind = match g.kind {
-                topo::GpuKind::Kgsl => "kgsl",
-                topo::GpuKind::Mali => "mali",
-            };
             format!(
-                "{{\"kind\":\"{}\",\"opps\":{},\"min\":{},\"max\":{}}}",
-                kind,
+                "{{\"provider\":\"{}\",\"opps\":{},\"min\":{},\"max\":{}}}",
+                g.provider.as_str(),
                 g.avail.len(),
                 g.avail.first().copied().unwrap_or(0),
                 g.avail.last().copied().unwrap_or(0),
             )
         }).unwrap_or_else(|| "null".into());
+        let kernel_caps = Zkfc::open().ok().and_then(|z| z.capabilities().ok()).map(|c| format!(
+            "{{\"kernel_caps\":{},\"runtime_caps\":{},\"kernel\":\"{}.{}.{}\",\"page_size\":{},\"cpu_count\":{}}}",
+            c.kernel_caps(), c.runtime_caps(), c.kernel_major, c.kernel_minor, c.kernel_patch, c.page_size, c.cpu_count
+        )).unwrap_or_else(|| "null".into());
+        let telemetry = telemetry::json(s, &topology);
+        let vendor_surfaces = plan.vendor_surfaces.iter().map(|x| format!("\"{}\"", x)).collect::<Vec<_>>().join(",");
         println!(
-            "{{\"ok\":true,\"flavor\":\"{}\",\"gki\":{},\"release\":\"{}\",\"cgroup_v2\":{},\"has_msm_perf\":{},\"boost\":{},\"policies\":[{}],\"gpu\":{}}}",
+            "{{\"ok\":true,\"vendor\":\"{}\",\"soc\":\"{}\",\"flavor\":\"{}\",\"kernel_generation\":\"{}\",\"release\":\"{}\",\"cgroup_v2\":{},\"has_msm_perf\":{},\"boost\":{},\"backend\":{{\"cpu\":{},\"boost\":\"{:?}\",\"gpu\":\"{:?}\",\"thermal_providers\":[{}],\"vendor_surfaces\":[{}],\"family_profile\":{}}},\"policies\":[{}],\"gpu\":{},\"thermal\":[{}],\"kernel_capabilities\":{},\"telemetry\":{}}}",
+            topology.identity.vendor.as_str(),
+            json_escape(&topology.identity.soc_key()),
             topology.flavor(),
-            topology.gki,
+            json_escape(&topology.kernel_generation),
             json_escape(&topology.release),
             topology.cgroup_v2,
             topology.has_msm_perf,
             boost,
+            plan.cpu.is_some(),
+            plan.boost,
+            plan.gpu,
+            plan.thermal.iter().map(|x| format!("\"{}\"", x.as_str())).collect::<Vec<_>>().join(","),
+            vendor_surfaces,
+            family.as_ref().map(|f| format!("\"{}\"", json_escape(&f.vendor))).unwrap_or_else(|| "null".into()),
             policies.join(","),
             gpu,
+            thermal,
+            kernel_caps,
+            telemetry
         );
     } else {
         println!(
-            "flavor      : {}\nrelease     : {}\ncgroup v2   : {}\nmsm_perf    : {}",
+            "vendor      : {}\nsoc         : {}\nflavor      : {}\nkernel gen  : {}\nrelease     : {}\ncgroup v2   : {}\nmsm_perf    : {}\ngpu         : {}\nthermal     : {} zones\nfam policy  : {}\nbackend     : boost={:?}",
+            topology.identity.vendor.as_str(),
+            topology.identity.soc_key(),
             topology.flavor(),
+            topology.kernel_generation,
             topology.release,
             topology.cgroup_v2,
-            topology.has_msm_perf
+            topology.has_msm_perf,
+            topology.gpu.as_ref().map(|g| g.provider.as_str()).unwrap_or("none"),
+            topology.thermal_zones.len(),
+            plan.family_profile.as_deref().unwrap_or("none"),
+            plan.boost
         );
         for p in &topology.policies {
             println!(
@@ -278,7 +317,9 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
 
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let engine = Engine::new(&s, &topology);
+    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
+    let engine = Engine::new(&s, &topology, &plan);
     let nodes = all_managed_nodes(&s, &topology, &engine);
     let mut state = StateStore::new(&args.state);
 
@@ -294,7 +335,7 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     let profile = match load_profile(
         args.profile.as_deref(),
         Path::new(&args.state),
-        scene::soc_platform().as_deref(),
+        &topology.identity,
     ) {
         Ok(p) => p,
         Err(e) => {
@@ -418,7 +459,9 @@ fn cmd_tweak(args: &Args) -> i32 {
                 return 2;
             }
 
-            let engine = Engine::new(&s, &topology);
+            let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+            let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
+            let engine = Engine::new(&s, &topology, &plan);
             let mut nodes = all_managed_nodes(&s, &topology, &engine);
             nodes.extend(tweak::managed_nodes(&s, &topology));
             nodes.sort();
@@ -463,7 +506,9 @@ fn cmd_tweak(args: &Args) -> i32 {
 fn cmd_reset(args: &Args) -> i32 {
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let engine = Engine::new(&s, &topology);
+    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
+    let engine = Engine::new(&s, &topology, &plan);
     let nodes = all_managed_nodes(&s, &topology, &engine);
     let mut state = StateStore::new(&args.state);
     if let Err(e) = state.ensure_boot(&s, &nodes) {
@@ -483,10 +528,11 @@ fn cmd_reset(args: &Args) -> i32 {
 }
 
 fn cmd_modes(args: &Args) -> i32 {
+    let topology = Topology::detect(&Sysroot::new(&args.root));
     match load_profile(
         args.profile.as_deref(),
         Path::new(&args.state),
-        scene::soc_platform().as_deref(),
+        &topology.identity,
     ) {
         Ok(profile) => {
             println!(
@@ -508,7 +554,9 @@ fn cmd_modes(args: &Args) -> i32 {
 fn cmd_status(args: &Args) -> i32 {
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let engine = Engine::new(&s, &topology);
+    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
+    let engine = Engine::new(&s, &topology, &plan);
     let nodes = all_managed_nodes(&s, &topology, &engine);
     let mut state = StateStore::new(&args.state);
     if let Err(e) = state.ensure_boot(&s, &nodes) {
@@ -574,7 +622,9 @@ fn cmd_daemon(args: &Args) -> i32 {
 
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let engine = Engine::new(&s, &topology);
+    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
+    let engine = Engine::new(&s, &topology, &plan);
     let mut nodes = all_managed_nodes(&s, &topology, &engine);
     let mut state = StateStore::new(&args.state);
     if let Err(e) = state.ensure_boot(&s, &nodes) {
@@ -589,7 +639,7 @@ fn cmd_daemon(args: &Args) -> i32 {
     let profile = match load_profile(
         args.profile.as_deref(),
         Path::new(&args.state),
-        scene::soc_platform().as_deref(),
+        &topology.identity,
     ) {
         Ok(p) => p,
         Err(e) => {
@@ -597,7 +647,7 @@ fn cmd_daemon(args: &Args) -> i32 {
             return 2;
         }
     };
-    eprintln!("zperfd: {} profile '{}'", topology.flavor(), profile.meta.name);
+    eprintln!("zperfd: {} profile '{}' family={}", topology.flavor(), profile.meta.name, family.as_ref().map(|f| f.vendor.as_str()).unwrap_or("none"));
 
     let mut last = String::new();
     let mut last_observed = None;
@@ -672,11 +722,11 @@ fn cmd_daemon(args: &Args) -> i32 {
                         eprintln!("zperfd: transaction begin failed: {e}");
                     } else {
                         let Some(mode) = profile.mode(&effective) else {
-        let _ = state.rollback(&s);
-        eprintln!("apply failed: validated profile is missing mode '{effective}'");
-        return 3;
-    };
-    let report = engine.apply_mode(mode);
+                            let _ = state.rollback(&s);
+                            eprintln!("apply failed: validated profile is missing mode '{effective}'");
+                            return 3;
+                        };
+                        let report = engine.apply_mode(mode);
                         if report.failed.is_empty() && !report.applied.is_empty() {
                             match state.commit(Some(&desired), Some(&effective)) {
                                 Ok(()) => {
@@ -722,7 +772,7 @@ fn cmd_daemon(args: &Args) -> i32 {
 fn main() {
     let args = parse_args();
     let code = match args.cmd.as_str() {
-        "probe" => cmd_probe(&Sysroot::new(&args.root), args.json),
+        "probe" => cmd_probe(&Sysroot::new(&args.root), Path::new(&args.state), args.json),
         "modes" => cmd_modes(&args),
         "tweak" => cmd_tweak(&args),
         "apply" | "set" => args

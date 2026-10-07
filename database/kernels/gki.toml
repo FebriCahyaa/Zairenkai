@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Android GKI branch registry. Branch identities are authoritative only when
+# matched to the corresponding Android KMI/toolchain contract.
+
+schema_version = 1
+
+[[branch]]
+id = "android12-5.10"
+android = 12
+kernel = "5.10"
+kmi = "5.10"
+
+[[branch]]
+id = "android13-5.10"
+android = 13
+kernel = "5.10"
+kmi = "5.10"
+
+[[branch]]
+id = "android13-5.15"
+android = 13
+kernel = "5.15"
+kmi = "5.15"
+
+[[branch]]
+id = "android14-5.15"
+android = 14
+kernel = "5.15"
+kmi = "5.15"
+
+[[branch]]
+id = "android14-6.1"
+android = 14
+kernel = "6.1"
+kmi = "6.1"
+
+[[branch]]
+id = "android15-6.6"
+android = 15
+kernel = "6.6"
+kmi = "6.6"
+
+[[branch]]
+id = "android16-6.12"
+android = 16
+kernel = "6.12"
+kmi = "6.12"
+
+[[branch]]
+id = "android17-6.18"
+android = 17
+kernel = "6.18"
+kmi = "6.18"

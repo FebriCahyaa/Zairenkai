@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+id = "exynos.exynos9820"
+vendor = "exynos"
+soc = "exynos9820"
+architecture = "arm64"
+runtime_discovery_required = true
+
+[match]
+platform_tokens = ["exynos9820"]
+compatible_tokens = []
+model_tokens = []
+
+[kernel]
+preferred_flavors = ["gki", "non-gki"]
+observed_generations = []
+
+[cpu]
+surfaces = ["cpufreq"]
+optional_surfaces = ["uclamp", "schedtune", "walt", "vendor-performance"]
+
+[gpu]
+providers = ["devfreq", "kgsl", "mali", "powervr"]
+runtime_path_discovery = true
+
+[thermal]
+providers = ["linux-thermal"]
+type_patterns = ["cpu-thermal", "gpu-thermal"]
+runtime_path_discovery = true
+
+[measurement]
+metrics = ["cpu_frequency_residency", "gpu_frequency_residency", "thermal_temperature", "thermal_slope", "psi_cpu", "psi_memory", "psi_io", "fps_p50", "fps_p95", "jank_percent", "frame_time_p95_ms", "package_power_mw"]
+interpretation = "measured-only"
+
+[status]
+# Empty by design: this profile is a matcher/capability seed, not a benchmark.
+validation = "runtime-probe-required"

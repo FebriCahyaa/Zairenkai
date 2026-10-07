@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Zairenkai Device Profile Schema v1
+#
+# This file is documentation-by-example. Device profiles contain observations,
+# provider candidates and matching evidence. They MUST NOT encode unverified
+# thermal ceilings, benchmark scores, or hardcoded sysfs paths as facts.
+
+schema_version = 1
+id = "vendor.soc"
+vendor = "qualcomm|mediatek|exynos|tensor|unknown"
+soc = "normalized-runtime-identifier"
+architecture = "arm64|x86_64|riscv64|unknown"
+runtime_discovery_required = true
+
+[match]
+platform_tokens = ["runtime identifier"]
+compatible_tokens = ["device-tree compatible token"]
+model_tokens = []
+
+[kernel]
+# Empty means no device-specific kernel claim. Runtime probing is authoritative.
+preferred_flavors = ["gki", "non-gki"]
+observed_generations = []
+
+[cpu]
+surfaces = ["cpufreq"]
+optional_surfaces = ["uclamp", "schedtune", "walt", "vendor-performance"]
+
+[gpu]
+providers = ["kgsl", "mali", "powervr", "devfreq"]
+runtime_path_discovery = true
+
+[thermal]
+providers = ["linux-thermal"]
+type_patterns = []
+runtime_path_discovery = true
+
+[measurement]
+# Actual values belong to device probe artifacts, not the static profile.
+metrics = [
+  "cpu_frequency_residency",
+  "gpu_frequency_residency",
+  "thermal_temperature",
+  "thermal_slope",
+  "psi_cpu",
+  "psi_memory",
+  "psi_io",
+  "fps_p50",
+  "fps_p95",
+  "jank_percent",
+  "frame_time_p95_ms",
+  "package_power_mw",
+]
+interpretation = "measured-only"

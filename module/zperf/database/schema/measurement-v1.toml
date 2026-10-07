@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Zairenkai measurement artifact contract v1.
+# Samples are append-only JSONL records; static device profiles never contain
+# benchmark numbers. A measurement is only comparable when device/workload and
+# relevant kernel/profile identity are preserved.
+
+schema_version = 1
+format = "jsonl"
+required_identity = ["device_id", "kernel_release", "kernel_flavor", "workload", "profile"]
+required_time = "t_ms"
+
+[metrics]
+optional = [
+  "fps_p50", "fps_p95", "jank_percent", "frame_time_p95_ms",
+  "package_power_mw", "hottest_mdeg", "cpu_psi_some_avg10",
+  "memory_psi_some_avg10", "io_psi_some_avg10"
+]
+
+[analysis]
+policy = "compare-measured-runs"
+absolute_hardware_claims = false

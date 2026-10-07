@@ -25,6 +25,7 @@ int zkfc_license(struct zkfc *z, struct zkfc_license_status *s);
 int zkfc_sys_security(struct zkfc *z, struct zkfc_sys_security *s);
 int zkfc_user_security(struct zkfc *z, struct zkfc_user_security *s);
 int zkfc_dev_security(struct zkfc *z, struct zkfc_dev_security *s);
+int zkfc_capabilities(struct zkfc *z, struct zkfc_capability_info *c);
 
 /* License management (root). */
 int zkfc_install_license(struct zkfc *z, const struct zkfc_license_token *t);

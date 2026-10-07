@@ -46,7 +46,7 @@ for abi in arm64-v8a arm64 x86_64; do
 done
 
 # ---- Install the zperfd performance engine + profile catalog ----
-mkdir -p /data/adb/zperf/catalog
+mkdir -p /data/adb/zperf/catalog /data/adb/zperf/database
 for abi in arm64-v8a arm64 x86_64; do
   if [ -f "$MODPATH/bin/$abi/zperfd" ]; then
     cp "$MODPATH/bin/$abi/zperfd" /data/adb/zperf/zperfd
@@ -56,6 +56,9 @@ for abi in arm64-v8a arm64 x86_64; do
 done
 if [ -d "$MODPATH/zperf/catalog" ]; then
   cp "$MODPATH"/zperf/catalog/*.toml /data/adb/zperf/catalog/ 2>/dev/null
+fi
+if [ -d "$MODPATH/zperf/database" ]; then
+  cp -R "$MODPATH/zperf/database/." /data/adb/zperf/database/
 fi
 # Scene / vtools external-scheduler contract.
 if [ -f "$MODPATH/zperf/powercfg.sh" ]; then

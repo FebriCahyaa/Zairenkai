@@ -74,6 +74,15 @@ performance controls.
 - **Kernel (GKI LKM):** `kernel/gki/build_lkm.sh <kmi-branch>`. See
   [`kernel/README.md`](kernel/README.md) for the KMI matrix and non-GKI paths.
 
+## Multi-SoC data plane
+
+The framework keeps vendor-specific knowledge out of the kernel core.
+Versioned family/device data under `database/` currently covers Qualcomm,
+MediaTek, Samsung Exynos and Google Tensor. The database supplies identity and
+provider hints; live kernel/sysfs capability discovery decides what is actually
+usable. Benchmark values are never fabricated into static profiles: measured
+runs are stored as JSONL artifacts and analyzed by `tools/zperf_analyze.py`.
+
 ## Supported kernels
 
 GKI: `android12-5.10`, `android13-5.10`, `android13-5.15`, `android14-5.15`,
