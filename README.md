@@ -84,6 +84,8 @@ durable transaction engine rather than introducing a second mutation path.
   inheritance, cpufreq QoS, and a thermal guard that backs boosts off when hot.
 - **System & security** — UID/GID/groups, kernel integrity, ZKFC license,
   access policy, and ZKFC API Token install.
+- **Zairenkai Runtime** — canonical product/subsystem identity plus tri-state runtime
+  capability evidence and thermal authority projection.
 - **Settings** — Lite mode, device mitigation, Material You, and a **live log**
   with selectable level; plus **sulog** auditing.
 

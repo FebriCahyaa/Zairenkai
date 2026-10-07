@@ -685,7 +685,7 @@ fn cmd_thermal(args: &Args) -> i32 {
     let env = thermal::envelope(&snap);
     if args.json {
         println!(
-            "{{\"band\":\"{:?}\",\"boost_permille\":{},\"max_perf_cap_pct\":{},\"hottest_mdeg\":{},\"control_temp_mdeg\":{},\"performance_trip_mdeg\":{},\"critical_trip_mdeg\":{},\"release_mdeg\":{},\"headroom_mdeg\":{},\"headroom_permille\":{},\"critical_reached\":{},\"telemetry_complete\":{},\"battery_pct\":{},\"external_power\":{},\"reason\":\"{}\"}}",
+            "{{\"band\":\"{:?}\",\"boost_permille\":{},\"max_perf_cap_pct\":{},\"hottest_mdeg\":{},\"control_temp_mdeg\":{},\"performance_trip_mdeg\":{},\"critical_trip_mdeg\":{},\"control_zone\":{},\"release_mdeg\":{},\"headroom_mdeg\":{},\"headroom_permille\":{},\"critical_reached\":{},\"telemetry_complete\":{},\"battery_pct\":{},\"external_power\":{},\"reason\":\"{}\"}}",
             env.band,
             env.boost_permille,
             env.max_perf_cap_pct.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),

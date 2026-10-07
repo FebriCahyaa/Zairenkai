@@ -57,5 +57,11 @@ test -x kernel/nongki/build.sh
 test -x kernel/setup.sh
 test -x module/service.sh
 
+# The thermal CLI JSON must expose control_zone separately; this guards the app/runtime contract.
+if ! grep -Fq '\"control_zone\":{}' "$ROOT/rust/zperfd/src/main.rs"; then
+  printf '%s\n' 'thermal CLI JSON missing control_zone field' >&2
+  exit 1
+fi
+
 diff -qr database module/zperf/database
 printf '%s\n' 'control-plane checks passed'

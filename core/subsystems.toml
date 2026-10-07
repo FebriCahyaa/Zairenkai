@@ -31,3 +31,11 @@ name = "Zairenkai Runtime Performance Engine"
 version = 1
 class = "runtime-orchestrator"
 authority = "core-sentinel-zkfc"
+
+[[subsystem]]
+id = "zairenkai.zkfc"
+name = "Zairenkai Kernel Framework Controller"
+version = 1
+class = "kernel-authority"
+authority = "kernel"
+properties = ["uapi-gated", "fail-closed", "runtime-capability-authoritative"]

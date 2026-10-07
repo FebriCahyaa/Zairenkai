@@ -34,7 +34,7 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SystemScreen(factory: VmFactory) {
+fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
     val vm: SystemViewModel = viewModel(factory = factory)
     val ui by vm.ui.collectAsState()
     val ctx = LocalContext.current
@@ -68,6 +68,16 @@ fun SystemScreen(factory: VmFactory) {
                 SignatureGuard.currentSha256(ctx)?.let {
                     LabeledRow("Sidik tanda tangan", it.take(16) + "…")
                 }
+            }
+
+            SectionCard("Arsitektur runtime") {
+                Text(
+                    "Identitas, capability runtime, thermal authority, dan subsystem registry diproyeksikan dari observation boundary Zairenkai.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(onClick = onOpenRuntime) { Text("Buka Zairenkai Runtime") }
             }
 
             val lic = ui.license

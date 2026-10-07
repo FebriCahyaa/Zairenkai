@@ -106,7 +106,8 @@ fun ZairenkaiRoot(container: AppContainer) {
             }
             composable(Dest.TWEAKS.route) { TweaksScreen(factory) }
             composable(Dest.PROFILES.route) { ProfilesScreen(factory) }
-            composable(Dest.SYSTEM.route) { SystemScreen(factory) }
+            composable(Dest.SYSTEM.route) { SystemScreen(factory, onOpenRuntime = { nav.navigate("runtime") }) }
+            composable("runtime") { RuntimeScreen(factory, onBack = { nav.popBackStack() }) }
             composable("settings") {
                 SettingsScreen(
                     factory,

@@ -7,7 +7,10 @@
 package com.zairenkai.app.data
 
 
-class ZkfcRepository(val client: ZkfctlClient = ZkfctlClient()) {
+class ZkfcRepository(
+    val client: ZkfctlClient = ZkfctlClient(),
+    private val zperf: ZperfClient = ZperfClient(),
+) {
 
     suspend fun rootAvailable() = RootShell.isRootAvailable()
     suspend fun core() = zperf.core()
@@ -37,7 +40,6 @@ class ZkfcRepository(val client: ZkfctlClient = ZkfctlClient()) {
         }
     }
 
-    private val zperf = ZperfClient()
 
     fun invalidate() {
         RootShell.invalidate()

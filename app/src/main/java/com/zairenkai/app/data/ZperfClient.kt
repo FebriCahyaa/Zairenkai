@@ -24,6 +24,15 @@ class ZperfClient(
         return RootShell.run("[ -x $quoted ]", 4000).ok
     }
 
+    suspend fun thermal(): ThermalStatus? {
+        val r = RootShell.run("${shellQuote(bin)} thermal --json", 5000)
+        if (!r.ok) return null
+        val line = r.stdout.trim().lineSequence()
+            .firstOrNull { it.trimStart().startsWith("{") }
+            ?: return null
+        return runCatching { json.decodeFromString<ThermalStatus>(line) }.getOrNull()
+    }
+
     suspend fun status(): ZperfStatus? {
         val r = RootShell.run("${shellQuote(bin)} status --json", 5000)
         val line = r.stdout.trim().lineSequence().firstOrNull { it.trimStart().startsWith("{") } ?: return null

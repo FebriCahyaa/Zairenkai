@@ -78,3 +78,26 @@ data class CorePermissionEntry(
     val risk: Int = 0,
     val decision: String = "",
 )
+
+@Serializable
+data class ThermalStatus(
+    val band: String = "Unknown",
+    @SerialName("boost_permille") val boostPermille: Int = 0,
+    @SerialName("max_perf_cap_pct") val maxPerfCapPct: Int? = null,
+    @SerialName("hottest_mdeg") val hottestMdeg: Int? = null,
+    @SerialName("control_temp_mdeg") val controlTempMdeg: Int? = null,
+    @SerialName("performance_trip_mdeg") val performanceTripMdeg: Int? = null,
+    @SerialName("critical_trip_mdeg") val criticalTripMdeg: Int? = null,
+    @SerialName("control_zone") val controlZone: String? = null,
+    @SerialName("release_mdeg") val releaseMdeg: Int? = null,
+    @SerialName("headroom_mdeg") val headroomMdeg: Int? = null,
+    @SerialName("headroom_permille") val headroomPermille: Int? = null,
+    @SerialName("critical_reached") val criticalReached: Boolean = false,
+    @SerialName("telemetry_complete") val telemetryComplete: Boolean = false,
+    @SerialName("battery_pct") val batteryPct: Int? = null,
+    @SerialName("external_power") val externalPower: Boolean = false,
+    val reason: String = "",
+) {
+    val temperatureCelsius: Float? get() = hottestMdeg?.div(1000f)
+    val headroomFraction: Float? get() = headroomPermille?.coerceIn(0, 1000)?.div(1000f)
+}

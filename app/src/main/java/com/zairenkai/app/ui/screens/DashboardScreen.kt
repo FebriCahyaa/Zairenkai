@@ -136,6 +136,23 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
             LabeledRow("Build", info?.buildId ?: "—")
         }
 
+        SectionCard("Thermal envelope") {
+            val t = s.thermal
+            LabeledRow("Envelope", t?.band ?: "Unknown", when (t?.band) {
+                "Nominal" -> ZkGood
+                "Critical" -> ZkBad
+                else -> ZkWarn
+            })
+            LabeledRow("Headroom", t?.headroomPermille?.let { "$it‰" } ?: "Unknown")
+            LabeledRow("Control zone", t?.controlZone ?: "Unknown")
+            LabeledRow("Critical trip", t?.criticalTripMdeg?.let { "${it / 1000f} °C" } ?: "Unknown")
+            Text(
+                t?.reason?.takeIf { it.isNotBlank() } ?: "Thermal authority belum memberikan evidence yang cukup.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         SectionCard("Performa aktif") {
             val b = s.boost
             LabeledRow("Input boost", if (b?.inputBoostActive == true) "Aktif" else "Idle",

@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.zairenkai.app.AppContainer
+import com.zairenkai.app.core.runtime.RuntimeSnapshot
 import com.zairenkai.app.data.*
 import com.zairenkai.app.domain.Profile
 import com.zairenkai.app.domain.ProfileId
@@ -28,6 +29,7 @@ data class OverviewState(
     val info: InfoResult? = null,
     val license: LicenseResult? = null,
     val boost: BoostStatus? = null,
+    val thermal: ThermalStatus? = null,
     val safeMode: Boolean = false,
     val message: String? = null,
 )
@@ -50,6 +52,7 @@ class OverviewViewModel(private val c: AppContainer) : ViewModel() {
             val info = runCatching { c.repository.info() }.getOrNull()
             val lic = runCatching { c.repository.license() }.getOrNull()
             val boost = runCatching { c.repository.boostStatus() }.getOrNull()
+            val thermal = runCatching { c.zperf.thermal() }.getOrNull()
             viewModelScope.launch {
                 kotlinx.coroutines.delay(15_000)
                 val engineHealthy = runCatching { c.zperf.status()?.ok == true }.getOrDefault(false)
@@ -62,7 +65,7 @@ class OverviewViewModel(private val c: AppContainer) : ViewModel() {
             }
             _state.value = OverviewState(
                 loading = false, rootAvailable = true, info = info, license = lic,
-                boost = boost, safeMode = safe?.safeMode == true,
+                boost = boost, thermal = thermal, safeMode = safe?.safeMode == true,
             )
         }
     }
@@ -297,6 +300,27 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
     }
 }
 
+/* ---------------- runtime platform ---------------- */
+data class RuntimeUi(
+    val loading: Boolean = true,
+    val snapshot: RuntimeSnapshot? = null,
+    val error: String? = null,
+)
+
+class RuntimeViewModel(private val c: AppContainer) : ViewModel() {
+    private val _ui = MutableStateFlow(RuntimeUi())
+    val ui: StateFlow<RuntimeUi> = _ui.asStateFlow()
+
+    init { refresh() }
+
+    fun refresh() = viewModelScope.launch {
+        _ui.value = _ui.value.copy(loading = true, error = null)
+        runCatching { c.runtime.observe() }
+            .onSuccess { _ui.value = RuntimeUi(false, it, null) }
+            .onFailure { _ui.value = RuntimeUi(false, null, it.message ?: "runtime observation failed") }
+    }
+}
+
 /* ---------------- settings + live log ---------------- */
 class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     val settings = c.settings.settings
@@ -349,6 +373,7 @@ class VmFactory(private val c: AppContainer) : ViewModelProvider.Factory {
         modelClass.isAssignableFrom(TweaksViewModel::class.java) -> TweaksViewModel(c)
         modelClass.isAssignableFrom(ProfilesViewModel::class.java) -> ProfilesViewModel(c)
         modelClass.isAssignableFrom(SystemViewModel::class.java) -> SystemViewModel(c)
+        modelClass.isAssignableFrom(RuntimeViewModel::class.java) -> RuntimeViewModel(c)
         modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(c)
         else -> throw IllegalArgumentException("unknown VM $modelClass")
     } as T

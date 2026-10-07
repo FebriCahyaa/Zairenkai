@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.zairenkai.app.BuildConfig
+import com.zairenkai.app.core.identity.ZairenkaiIdentity
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -63,8 +64,10 @@ fun AboutScreen(onBack: () -> Unit) {
                 Column(Modifier.padding(18.dp)) {
                     AboutRow("Versi", BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")")
                     AboutRow("Paket", BuildConfig.APPLICATION_ID)
+                    AboutRow("Product ID", ZairenkaiIdentity.PRODUCT_ID)
+                    AboutRow("Core ID", ZairenkaiIdentity.CORE_ID)
                     AboutRow("Pembuat", "FEBRIAN RAHMAD CAHYA")
-                    AboutRow("Kernel API", "ZKFC 1.0.0")
+                    AboutRow("ZKFC API", ZairenkaiIdentity.CORE_API.toString())
                 }
             }
 
