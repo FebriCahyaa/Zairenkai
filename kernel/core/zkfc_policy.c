@@ -110,6 +110,14 @@ u32 zkfc_policy_caps(struct zkfc_user_security *who)
 	rcu_read_unlock();
 
 	allow &= ~deny;
+	/* Expand legacy semantic groups into granular capabilities without
+	 * invalidating policies written for API 1.0. */
+	if (allow & ZKFC_CAP_READ_INFO)
+		allow |= ZKFC_CAP_READ_DEVICE | ZKFC_CAP_READ_KERNEL |
+			  ZKFC_CAP_READ_THERMAL | ZKFC_CAP_READ_PERF;
+	if (allow & ZKFC_CAP_TUNE_PERF)
+		allow |= ZKFC_CAP_TUNE_CPU | ZKFC_CAP_TUNE_GPU |
+			  ZKFC_CAP_TUNE_MEMORY | ZKFC_CAP_TUNE_IO;
 	if (!who->cap_sys_admin)
 		allow &= ZKFC_CAP_READ_INFO;
 	who->caps = allow;

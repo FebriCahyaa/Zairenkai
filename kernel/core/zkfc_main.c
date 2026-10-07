@@ -89,6 +89,8 @@ static int zkfc_requirements(unsigned int cmd, u32 *cap, u32 *feat, bool *mutati
 	case ZKFC_IOC_POLICY_GET:
 	case ZKFC_IOC_PERF_STATUS:
 	case ZKFC_IOC_THERMAL_READ:
+		/* Keep API 1.0 read access compatible; the kernel still exposes the
+		 * granular capability vocabulary for policy authors. */
 		*cap = ZKFC_CAP_READ_INFO;
 		return 0;
 	case ZKFC_IOC_INSTALL_LICENSE:
@@ -97,18 +99,12 @@ static int zkfc_requirements(unsigned int cmd, u32 *cap, u32 *feat, bool *mutati
 		*mutating = true;
 		return 0;
 	case ZKFC_IOC_TASK_BOOST:
-		*cap = ZKFC_CAP_TUNE_PERF;
-		*feat = ZKFC_FEAT_TASK_BOOST;
-		*mutating = true;
-		return 0;
 	case ZKFC_IOC_CPUFREQ_QOS:
-		*cap = ZKFC_CAP_TUNE_PERF;
-		*feat = ZKFC_FEAT_CPUFREQ_QOS;
-		*mutating = true;
-		return 0;
 	case ZKFC_IOC_INPUT_BOOST:
-		*cap = ZKFC_CAP_TUNE_PERF;
-		*feat = ZKFC_FEAT_INPUT_BOOST;
+		*cap = ZKFC_CAP_TUNE_CPU;
+		*feat = cmd == ZKFC_IOC_TASK_BOOST ? ZKFC_FEAT_TASK_BOOST :
+			cmd == ZKFC_IOC_CPUFREQ_QOS ? ZKFC_FEAT_CPUFREQ_QOS :
+			ZKFC_FEAT_INPUT_BOOST;
 		*mutating = true;
 		return 0;
 	case ZKFC_IOC_THERMAL_GUARD:

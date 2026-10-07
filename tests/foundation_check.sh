@@ -51,3 +51,19 @@ grep -q 'common-android17-6.18.*auto' kernel/gki/kmi_matrix.txt
 grep -q 'mod family;' rust/zperfd/src/main.rs
 grep -q 'FamilyProfile' rust/zperfd/src/family.rs
 grep -q 'managed node .*exceeds' rust/zperfd/src/state.rs
+
+grep -q "ZKFC_CAP_TUNE_CPU" kernel/include/uapi/linux/zkfc.h
+grep -q "zairenkai.core" core/manifest.toml
+grep -q 'default = "deny"' database/schema/authority-v1.toml
+
+grep -q 'zairenkai-core' rust/zperfd/Cargo.toml
+test -f rust/zk-core/src/lib.rs
+test -f database/registry/core.toml
+test -f database/registry/authority.toml
+test -f database/kernels/capabilities.toml
+test -f docs/architecture/CORE_INVARIANTS.md
+grep -q 'default = "deny"' database/schema/authority-v1.toml
+grep -q 'ZKFC_CAP_TUNE_CPU' kernel/include/uapi/linux/zkfc.h
+
+test -f database/schema/measurement-v2.toml
+test -f tools/measurement_validate.py

@@ -150,34 +150,13 @@ pub fn decide_auto(
     charge: bool,
     previous: Option<&str>,
 ) -> &'static str {
-    let low_battery = battery.map(|v| v <= 20).unwrap_or(false);
-    let hot_limit = hot.map(|v| v >= 46.0).unwrap_or(false);
-    if low_battery || hot_limit {
-        return "powersave";
-    }
-
-    // Hysteresis prevents rapid performance <-> balance and powersave <- based
-    // oscillation when telemetry sits on a boundary.
-    match previous {
-        Some("powersave")
-            if battery.map(|v| v <= 25).unwrap_or(true)
-                || hot.map(|v| v >= 43.0).unwrap_or(true) =>
-        {
-            return "powersave";
-        }
-        Some("performance")
-            if charge && hot.map(|v| v < 44.0).unwrap_or(false) =>
-        {
-            return "performance";
-        }
-        _ => {}
-    }
-
-    if charge && hot.map(|v| v < 42.0).unwrap_or(false) {
-        "performance"
-    } else {
-        "balance"
-    }
+    let decision = zairenkai_core::policy::evaluate(zairenkai_core::policy::PolicyInput {
+        battery_pct: battery.map(|v| v.min(100) as u8),
+        hottest_mdeg: hot.map(|v| (v * 1000.0).round() as i32),
+        external_power: charge,
+        previous_mode: previous,
+    });
+    decision.intent.mode()
 }
 
 pub fn resolve_auto(s: &Sysroot) -> &'static str {

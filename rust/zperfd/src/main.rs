@@ -30,10 +30,15 @@ use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use topo::Topology;
-use zkfc_sys::{Zkfc, ZKFC_API_VERSION};
+use zkfc_sys::Zkfc;
+use zairenkai_core::authority::authorize;
+use zairenkai_core::capability::CapabilitySet;
+use zairenkai_core::manifest::CoreManifest;
+use zairenkai_core::operation::Operation;
 
 const GENERIC: &str = include_str!("../profiles/generic.toml");
 const LAVENDER: &str = include_str!("../profiles/lavender.toml");
+const CORE_MANIFEST: &str = include_str!("../../core/manifest.toml");
 const SAFE_MODE: &str = "/data/adb/zkfc/safe_mode";
 
 static STOP: AtomicBool = AtomicBool::new(false);
@@ -96,6 +101,7 @@ fn print_help() {
   set <mode|auto>\n\
   reset\n\
   status [--json]\n\
+  core [--json]\n\
   daemon"
     );
 }
@@ -146,6 +152,19 @@ fn json_escape(s: &str) -> String {
         }
     }
     out
+}
+
+
+fn core_authorize(operation: Operation) -> Result<(), String> {
+    let auth = authorize(&CapabilitySet::full_runtime(), operation);
+    match auth.decision {
+        zairenkai_core::authority::Decision::Allow => Ok(()),
+        _ => Err(format!("core authority denied {:?}: {}", operation, auth.reason)),
+    }
+}
+
+fn core_manifest() -> Result<CoreManifest, String> {
+    CoreManifest::parse(CORE_MANIFEST)
 }
 
 fn kernel_license_ok() -> Result<(), String> {
@@ -213,7 +232,63 @@ fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Resu
     Ok(mode.to_string())
 }
 
+
+fn cmd_core_permissions(json: bool) -> i32 {
+    const OPS: &[(Operation, &str)] = &[
+        (Operation::Probe, "probe"),
+        (Operation::ReadStatus, "read.status"),
+        (Operation::ReadLogs, "read.logs"),
+        (Operation::ApplyProfile, "apply.profile"),
+        (Operation::SetCpuTweak, "tune.cpu"),
+        (Operation::SetGpuTweak, "tune.gpu"),
+        (Operation::SetMemoryTweak, "tune.memory"),
+        (Operation::SetIoTweak, "tune.io"),
+        (Operation::SetPowerTweak, "tune.power"),
+        (Operation::SetThermalPolicy, "tune.thermal"),
+        (Operation::ResetRuntime, "control.reset"),
+        (Operation::InstallLicense, "security.license"),
+        (Operation::ModifyPolicy, "security.policy"),
+        (Operation::ManageHooks, "control.hooks"),
+    ];
+    if json {
+        let entries = OPS.iter().map(|(op, name)| {
+            let auth = authorize(&CapabilitySet::full_runtime(), *op);
+            format!("{{\"operation\":\"{}\",\"capability\":\"{:?}\",\"risk\":{},\"decision\":\"{:?}\"}}",
+                name, auth.required, auth.risk_weight, auth.decision)
+        }).collect::<Vec<_>>().join(",");
+        println!("{{\"core_id\":\"{}\",\"permissions\":[{}]}}", zairenkai_core::CORE_ID, entries);
+        return 0;
+    }
+    println!("{} permissions:", zairenkai_core::CORE_NAME);
+    for (op, name) in OPS {
+        println!("  {:<18} -> {:?} (risk={})", name, op.required_capability(), op.risk_weight());
+    }
+    println!("  runtime principal capabilities: {}", CapabilitySet::full_runtime().iter().count());
+    0
+}
+
+fn cmd_core(json: bool) -> i32 {
+    match core_manifest() {
+        Ok(m) if json => {
+            println!("{{\"id\":\"{}\",\"product\":\"{}\",\"core_api\":{},\"architectures":[{}],\"kernel_models":[{}],\"kernel_generations":[{}]}}",
+                json_escape(&m.id), json_escape(&m.product), m.core_api,
+                m.supported_architectures.iter().map(|v| format!("\"{}\"", json_escape(v))).collect::<Vec<_>>().join(","),
+                m.supported_kernel_models.iter().map(|v| format!("\"{}\"", json_escape(v))).collect::<Vec<_>>().join(","),
+                m.supported_kernel_generations.iter().map(|v| format!("\"{}\"", json_escape(v))).collect::<Vec<_>>().join(","));
+            0
+        }
+        Ok(m) => {
+            println!("{} {} api={} arch={} kernel-models={} generations={}",
+                m.product, m.id, m.core_api, m.supported_architectures.len(),
+                m.supported_kernel_models.len(), m.supported_kernel_generations.len());
+            0
+        }
+        Err(e) => { eprintln!("core: {e}"); 1 }
+    }
+}
+
 fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
+    if let Err(e) = core_authorize(Operation::Probe) { eprintln!("{e}"); return 1; }
     let topology = Topology::detect(s);
     let family = family::load(&state.join("database"), topology.identity.vendor);
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
@@ -310,6 +385,7 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
 }
 
 fn apply_transaction(args: &Args, requested: &str) -> i32 {
+    if let Err(e) = core_authorize(Operation::ApplyProfile) { eprintln!("{e}"); return 1; }
     if let Err(e) = kernel_license_ok() {
         eprintln!("apply blocked: {e}");
         return 4;
@@ -446,6 +522,7 @@ fn cmd_tweak(args: &Args) -> i32 {
                 eprintln!("usage: tweak set <id> <value>");
                 return 2;
             };
+            if let Err(e) = core_authorize(tweak_operation(id)) { eprintln!("{e}"); return 1; }
             if let Err(e) = kernel_license_ok() {
                 eprintln!("tweak blocked: {e}");
                 return 4;
@@ -504,6 +581,7 @@ fn cmd_tweak(args: &Args) -> i32 {
 }
 
 fn cmd_reset(args: &Args) -> i32 {
+    if let Err(e) = core_authorize(Operation::ResetRuntime) { eprintln!("{e}"); return 1; }
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
     let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
@@ -782,6 +860,7 @@ fn main() {
             .unwrap_or(2),
         "reset" => cmd_reset(&args),
         "status" => cmd_status(&args),
+        "core" => if args.positional.first().map(|x| x.as_str()) == Some("permissions") { cmd_core_permissions(args.json) } else { cmd_core(args.json) },
         "daemon" => cmd_daemon(&args),
         "" => {
             print_help();

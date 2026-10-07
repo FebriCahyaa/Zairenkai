@@ -1,0 +1,2 @@
+{"metric":"cpu.frequency","value":0,"unit":"kHz","sample_index":0,"provenance":{"run_id":"fixture-0001","device_id":"fixture.device","kernel_release":"fixture-kernel","profile_id":"fixture.profile","workload":"validation-fixture","tool_version":"fixture","collected_at_unix_s":0}}
+{"metric":"thermal.max","value":0,"unit":"mdegC","sample_index":0,"provenance":{"run_id":"fixture-0001","device_id":"fixture.device","kernel_release":"fixture-kernel","profile_id":"fixture.profile","workload":"validation-fixture","tool_version":"fixture","collected_at_unix_s":0}}

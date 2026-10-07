@@ -54,3 +54,27 @@ data class ZperfStatus(
     @SerialName("pending_transaction") val pendingTransaction: Boolean = false,
     @SerialName("safe_mode") val safeMode: Boolean = false,
 )
+
+@Serializable
+data class CoreManifest(
+    val id: String = "",
+    val product: String = "",
+    @SerialName("core_api") val coreApi: Int = 0,
+    val architectures: List<String> = emptyList(),
+    @SerialName("kernel_models") val kernelModels: List<String> = emptyList(),
+    @SerialName("kernel_generations") val kernelGenerations: List<String> = emptyList(),
+)
+
+@Serializable
+data class CorePermissionsResult(
+    @SerialName("core_id") val coreId: String = "",
+    val permissions: List<CorePermissionEntry> = emptyList(),
+)
+
+@Serializable
+data class CorePermissionEntry(
+    val operation: String = "",
+    val capability: String = "",
+    val risk: Int = 0,
+    val decision: String = "",
+)

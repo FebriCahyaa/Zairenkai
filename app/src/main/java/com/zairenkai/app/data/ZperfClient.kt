@@ -62,6 +62,22 @@ class ZperfClient(
     suspend fun reset(): Boolean =
         RootShell.run("${shellQuote(bin)} reset", 12_000).ok
 
+    suspend fun core(): CoreManifest? {
+        val r = RootShell.run("${shellQuote(bin)} core --json", 5000)
+        if (!r.ok) return null
+        val line = r.stdout.trim().lineSequence()
+            .firstOrNull { it.trimStart().startsWith("{") } ?: return null
+        return runCatching { json.decodeFromString<CoreManifest>(line) }.getOrNull()
+    }
+
+    suspend fun corePermissions(): CorePermissionsResult? {
+        val r = RootShell.run("${shellQuote(bin)} core permissions --json", 5000)
+        if (!r.ok) return null
+        val line = r.stdout.trim().lineSequence()
+            .firstOrNull { it.trimStart().startsWith("{") } ?: return null
+        return runCatching { json.decodeFromString<CorePermissionsResult>(line) }.getOrNull()
+    }
+
     private fun shellQuote(value: String): String =
         "'" + value.replace("'", "'\\''") + "'"
 

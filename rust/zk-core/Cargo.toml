@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+[package]
+name = "zairenkai-core"
+version = "0.2.0"
+edition = "2021"
+description = "Zairenkai platform contracts for identity, capability, policy and audit"
+license = "LicenseRef-Zairenkai-Proprietary"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"

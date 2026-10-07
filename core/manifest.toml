@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+id = "zairenkai.core"
+product = "Zairenkai Core Platform"
+core_api = 1
+supported_architectures = ["arm64", "x86_64", "riscv64"]
+supported_kernel_models = ["gki", "non-gki", "unknown"]
+supported_kernel_generations = ["4.14", "4.19", "5.4", "5.10", "5.15", "6.1", "6.6", "6.12", "6.18"]

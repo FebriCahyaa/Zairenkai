@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+core_id = "zairenkai.core"
+default_decision = "deny"
+
+[principals.runtime]
+kind = "resident-daemon"
+capabilities = [
+  "read.device", "read.kernel", "read.thermal", "read.performance", "read.logs",
+  "tune.cpu", "tune.gpu", "tune.memory", "tune.io", "tune.power", "tune.thermal",
+  "security.license", "security.policy", "control.hooks", "control.reset",
+]
+
+[principals.android]
+kind = "client"
+capabilities = ["read.device", "read.kernel", "read.thermal", "read.performance"]
+mutation = "delegate-to-runtime"
+
+[security]
+unknown_capability = "deny"
+missing_backend = "deny"
+invalid_state = "safe-mode"
+unsupported_operation = "deny"

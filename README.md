@@ -27,8 +27,27 @@ so the API can't be used carelessly.
 | Boot module (Magisk/KernelSU/APatch) | [`module/`](module) | shell | proprietary |
 | Owner token tool | [`tools/zkfc-license/`](tools/zkfc-license) | Python | proprietary |
 
+See [`docs/architecture/CORE_INVARIANTS.md`](docs/architecture/CORE_INVARIANTS.md) for non-negotiable runtime invariants.
+
 See [`COPYRIGHT`](COPYRIGHT) for the full licensing map and [`NOTICE`](NOTICE)
 for third-party attributions.
+
+## Zairenkai Core Platform
+
+Zairenkai is organized around a stable **Zairenkai Core Platform** identity.
+ZKFC is the kernel authority, zperfd is the runtime orchestrator, the Device
+Registry describes hardware/kernel evidence, and the Core Authority maps
+semantic operations to least-privilege capabilities.
+
+The system follows:
+
+```text
+identity -> capability -> authority -> policy -> transaction -> observation -> reconciliation -> audit
+```
+
+No static SoC profile is treated as proof that a kernel interface exists.
+Qualcomm, MediaTek, Samsung Exynos and Google Tensor data are provider hints;
+the live kernel/device surface remains authoritative.
 
 ## Features
 
@@ -57,7 +76,7 @@ Android app ──su──▶ zperfd ──libzkfc/ioctl──▶ /dev/zkfc (ZKF
        └───────────────▶ zkfctl (diagnostic / compatibility CLI)
 ```
 
-`zperfd` is the authoritative root-side performance engine. It owns profiles,
+`zperfd` is the authoritative root-side performance engine. Its public core introspection surface is `zperfd core --json` and `zperfd core permissions --json`. It owns profiles,
 Auto mode, durable transactions, baseline snapshots, rollback and device-aware
 capability discovery. The Android app is a client and never mutates managed
 sysfs state directly. `zkfctl` remains the low-level diagnostic and license

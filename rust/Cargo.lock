@@ -161,6 +161,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "zairenkai-core"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "zkfc-sys"
 version = "1.0.0"
 dependencies = [
@@ -174,5 +182,6 @@ dependencies = [
  "libc",
  "serde",
  "toml",
+ "zairenkai-core",
  "zkfc-sys",
 ]

@@ -20,3 +20,10 @@ cargo build --release --target aarch64-linux-android
 
 `zkfc-sys` is the foundation for optional Rust components; the C `zkfctl`
 remains the engine the app ships with.
+
+## Core Platform
+
+`zk-core` contains the semantic contracts shared by the runtime: identity,
+capabilities, authority, operation risk, health and audit records. It is kept
+separate from device-specific probing so the policy model remains reusable
+across GKI and NonGKI kernels.

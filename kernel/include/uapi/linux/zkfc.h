@@ -185,7 +185,20 @@ enum zkfc_license_state {
 #define ZKFC_CAP_TUNE_THERMAL	(1U << 3)	/* thermal guard */
 #define ZKFC_CAP_LICENSE	(1U << 4)	/* install tokens / CRL */
 #define ZKFC_CAP_ADMIN		(1U << 5)	/* policy, log level, reset */
-#define ZKFC_CAP_ALL		0x3fU
+#define ZKFC_CAP_ALL		0x0000ffffU
+/* Granular capabilities added without reusing legacy bit positions. */
+#define ZKFC_CAP_READ_DEVICE	(1U << 6)
+#define ZKFC_CAP_READ_KERNEL	(1U << 7)
+#define ZKFC_CAP_READ_THERMAL	(1U << 8)
+#define ZKFC_CAP_READ_PERF	(1U << 9)
+#define ZKFC_CAP_TUNE_CPU	(1U << 10)
+#define ZKFC_CAP_TUNE_GPU	(1U << 11)
+#define ZKFC_CAP_TUNE_MEMORY	(1U << 12)
+#define ZKFC_CAP_TUNE_IO	(1U << 13)
+#define ZKFC_CAP_TUNE_POWER	(1U << 14)
+#define ZKFC_CAP_SECURITY_AUDIT	(1U << 15)
+/* Legacy policy bits remain ABI-compatible; TUNE_PERF/READ_INFO are expanded
+ * by the kernel policy normalizer for old policies. */
 
 enum zkfc_policy_type {
 	ZKFC_POLICY_UID = 1,		/* matches the caller's real/effective uid */

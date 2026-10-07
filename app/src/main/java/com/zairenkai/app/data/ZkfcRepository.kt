@@ -10,6 +10,8 @@ package com.zairenkai.app.data
 class ZkfcRepository(val client: ZkfctlClient = ZkfctlClient()) {
 
     suspend fun rootAvailable() = RootShell.isRootAvailable()
+    suspend fun core() = zperf.core()
+    suspend fun corePermissions() = zperf.corePermissions()
 
     suspend fun info() = client.info()
     suspend fun license() = client.license()

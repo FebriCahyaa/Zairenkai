@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 2
+name = "zairenkai-measurement"
+
+[provenance]
+required = ["run_id", "device_id", "kernel_release", "profile_id", "workload", "tool_version", "collected_at_unix_s"]
+
+[metric]
+required = ["name", "value", "unit", "sample_index"]
+
+[quality]
+static_hardware_values = "forbidden"
+source_required = true
+measurement_required_for_performance_claim = true
