@@ -85,8 +85,8 @@ fn valid_value_for(key: &str, value: &str) -> bool {
 
 pub fn get(key: &str) -> Result<String, String> {
     if !valid_read_key(key) { return Err("invalid Android property key".into()); }
-    if !key.starts_with("persist.zairenkai.") && !READ_ONLY_KEYS.contains(&key) {
-        return Err("property is outside the Zairenkai diagnostic allowlist".into());
+    if spec(key).is_none() && !READ_ONLY_KEYS.contains(&key) {
+        return Err("property is outside the Zairenkai property allowlist".into());
     }
     run_bounded(Command::new("getprop").arg(key))
 }
@@ -126,5 +126,6 @@ mod tests {
         assert!(READ_ONLY_KEYS.contains(&"ro.product.model"));
         assert!(!READ_ONLY_KEYS.contains(&"ro.secret"));
         assert!("persist.zairenkai.mode".starts_with("persist.zairenkai."));
+        assert!(!spec("persist.zairenkai.unknown").is_some());
     }
 }

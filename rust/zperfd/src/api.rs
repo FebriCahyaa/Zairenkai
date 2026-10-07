@@ -110,7 +110,7 @@ fn dispatch(args: &Args, request: &Request) -> Response {
         "safety.evaluate" => None,
         "runtime.status" => Some(zairenkai_core::operation::Operation::ReadStatus),
         "thermal.status" => Some(zairenkai_core::operation::Operation::ReadThermal),
-        "property.list" | "property.get" => Some(zairenkai_core::operation::Operation::ReadStatus),
+        "property.list" | "property.get" => Some(zairenkai_core::operation::Operation::ReadProperties),
         _ => None,
     };
     if let Some(operation) = required {
@@ -182,7 +182,7 @@ fn thermal_status(args: &Args, request: &Request) -> Response {
     let s = super::Sysroot::new(&args.root);
     let topology = super::topo::Topology::detect(&s);
     let snap = super::thermal::snapshot(&s, &topology);
-    let env = super::thermal::envelope(snap);
+    let env = super::thermal::envelope(&snap);
     let mut p = BTreeMap::new();
     p.insert("band".into(), format!("{:?}", env.band));
     p.insert("boost_permille".into(), env.boost_permille.to_string());
@@ -190,6 +190,12 @@ fn thermal_status(args: &Args, request: &Request) -> Response {
     p.insert("control_temp_mdeg".into(), snap.control_temp_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
     p.insert("performance_trip_mdeg".into(), snap.performance_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
     p.insert("critical_trip_mdeg".into(), snap.critical_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("control_zone".into(), snap.control_zone.clone().unwrap_or_else(|| "unknown".into()));
+    p.insert("release_mdeg".into(), snap.release_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("headroom_mdeg".into(), snap.headroom_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("headroom_permille".into(), snap.headroom_permille.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert("critical_reached".into(), snap.critical_reached.to_string());
+    p.insert("telemetry_complete".into(), snap.telemetry_complete.to_string());
     p.insert("external_power".into(), snap.external_power.to_string());
     p.insert("reason".into(), env.reason.into());
     Response::ok(request, "thermal status", p)

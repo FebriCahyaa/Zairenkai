@@ -71,10 +71,24 @@ grep -q 'ZKFC_IOC_THERMAL_GUARD' kernel/include/uapi/linux/zkfc.h
 grep -q 'ZKFC_CAP_TUNE_THERMAL' kernel/include/uapi/linux/zkfc.h
 grep -q 'performance_trip_mdeg' rust/zperfd/src/thermal.rs
 grep -q 'control_temp_mdeg' rust/zperfd/src/main.rs
+grep -q 'runtime-thermal-trip-topology' database/registry/thermal.toml
+! grep -q 'performance_escalation_max_mdeg' database/registry/thermal.toml
+! grep -q 'hard_block_mdeg' database/registry/thermal.toml
+! grep -q 'hysteresis_mdeg' database/registry/thermal.toml
 grep -q 'device did not expose a runtime allowlist' rust/zperfd/src/tweak.rs
-grep -q 'property is outside the Zairenkai diagnostic allowlist' rust/zperfd/src/properties.rs
+grep -q 'property is outside the Zairenkai property allowlist' rust/zperfd/src/properties.rs
 grep -q 'v1.1.0' module/module.prop
 python3 -c 'from pathlib import Path; import tomllib; allowed=set(tomllib.loads(Path("database/schema/authority-v1.toml").read_text())["permissions"]); a=tomllib.loads(Path("database/registry/authority.toml").read_text()); bad=[c for p in a.get("principals",{}).values() for c in p.get("capabilities",[]) if c not in allowed]; assert not bad, bad; print("authority permissions aligned")'
 test -f core/subsystems.toml
 grep -q 'zairenkai.thermoguard' core/subsystems.toml
 grep -q 'subsystem_registry = "subsystems.toml"' core/manifest.toml
+python3 - <<'PY'
+from pathlib import Path
+import tomllib
+registry = tomllib.loads(Path("database/registry/authority.toml").read_text())
+android = registry["principals"]["android"]["capabilities"]
+assert "read.properties" not in android, android
+runtime = registry["principals"]["runtime"]["capabilities"]
+assert "read.properties" in runtime, runtime
+print("property authority boundary aligned")
+PY

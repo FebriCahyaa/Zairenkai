@@ -26,6 +26,7 @@ pub enum Operation {
     ReadNetwork,
     ReadMemory,
     ReadSecurity,
+    ReadProperties,
     TuneStorage,
     TuneNetwork,
     TuneZram,
@@ -61,6 +62,7 @@ impl Operation {
             Self::ReadNetwork => ReadNetwork,
             Self::ReadMemory => ReadMemory,
             Self::ReadSecurity => ReadSecurity,
+            Self::ReadProperties => ReadProperties,
             Self::TuneStorage => TuneStorage,
             Self::TuneNetwork => TuneNetwork,
             Self::TuneZram => TuneZram,
@@ -84,7 +86,7 @@ impl Operation {
             Self::SetProperty => 2,
             Self::TuneStorage | Self::TuneNetwork | Self::TuneZram => 3,
             Self::ReadInventory | Self::ReadStorage | Self::ReadNetwork |
-            Self::ReadMemory | Self::ReadSecurity => 1,
+            Self::ReadMemory | Self::ReadSecurity | Self::ReadProperties => 1,
         }
     }
 }

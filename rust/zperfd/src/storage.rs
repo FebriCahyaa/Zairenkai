@@ -27,6 +27,7 @@ pub fn health(s: &StorageInfo) -> Health {
     match s.health.as_str() {
         "critical" => Health::Critical,
         "warning" => Health::Warning,
+        "good" => Health::Good,
         "reported" => Health::Unknown,
         _ => Health::Unknown,
     }
@@ -68,7 +69,7 @@ mod tests {
     use super::*;
 
     fn storage(kind: &str, health: &str) -> StorageInfo {
-        StorageInfo { name: "sda".into(), kind: kind.into(), model: None, size_bytes: None, scheduler: None, read_ahead_kb: None, health: health.into() }
+        StorageInfo { name: "sda".into(), kind: kind.into(), kind_evidence: "test".into(), model: None, size_bytes: None, scheduler: None, read_ahead_kb: None, health: health.into(), health_evidence: "test".into() }
     }
 
     #[test]

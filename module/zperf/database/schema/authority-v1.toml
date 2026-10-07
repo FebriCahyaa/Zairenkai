@@ -24,6 +24,7 @@ permissions = [
   "read.network",
   "read.memory",
   "read.security",
+  "read.properties",
   "tune.storage",
   "tune.network",
   "tune.zram",

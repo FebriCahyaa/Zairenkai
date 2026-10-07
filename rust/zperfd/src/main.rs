@@ -242,7 +242,7 @@ fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Resu
 pub(crate) fn permission_names() -> String {
     const NAMES: &[&str] = &[
         "read.device", "read.kernel", "read.thermal", "read.performance", "read.logs", "read.inventory", "read.storage",
-        "read.network", "read.memory", "read.security", "apply.profile", "tune.cpu",
+        "read.network", "read.memory", "read.security", "read.properties", "apply.profile", "tune.cpu",
         "tune.gpu", "tune.memory", "tune.io", "tune.power", "tune.thermal",
         "tune.storage", "tune.network", "tune.zram", "control.reset", "security.license",
         "security.policy", "control.hooks", "manage.device_registry", "manage.data_sources",
@@ -263,6 +263,7 @@ fn cmd_core_permissions(json: bool) -> i32 {
         (Operation::ReadNetwork, "read.network"),
         (Operation::ReadMemory, "read.memory"),
         (Operation::ReadSecurity, "read.security"),
+        (Operation::ReadProperties, "read.properties"),
         (Operation::ApplyProfile, "apply.profile"),
         (Operation::SetCpuTweak, "tune.cpu"),
         (Operation::SetGpuTweak, "tune.gpu"),
@@ -421,8 +422,8 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
     0
 }
 
-fn configure_kernel_thermal_guard(args: &Args, topology: &Topology, snapshot: thermal::Snapshot) -> Result<(), String> {
-    let zones = thermal::guard_zones(topology);
+fn configure_kernel_thermal_guard(args: &Args, snapshot: &thermal::Snapshot) -> Result<(), String> {
+    let zones = thermal::guard_zones(snapshot);
     if zones.is_empty() {
         return Err("no thermal control zones available; refusing performance mutation".into());
     }
@@ -432,8 +433,8 @@ fn configure_kernel_thermal_guard(args: &Args, topology: &Topology, snapshot: th
         return Err("kernel does not advertise ZKFC thermal capability".into());
     }
     let interval_ms = args.interval_ms.clamp(250, 5000) as u32;
-    let limit = thermal::kernel_guard_limit(snapshot);
-    let release = thermal::kernel_guard_release(limit);
+    let limit = thermal::kernel_guard_limit(snapshot).ok_or_else(|| "runtime thermal trip point is unavailable; kernel guard cannot be armed".to_string())?;
+    let release = thermal::kernel_guard_release(snapshot).ok_or_else(|| "runtime thermal release point is unavailable; kernel guard cannot be armed".to_string())?;
     z.thermal_guard_config(interval_ms, limit, release, &zones)
         .map_err(|e| format!("ZKFC thermal guard configuration failed: {e}"))
 }
@@ -448,10 +449,6 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
     let thermal_snapshot = thermal::snapshot(&s, &topology);
-    if let Err(e) = configure_kernel_thermal_guard(args, &topology, thermal_snapshot) {
-        eprintln!("apply blocked: {e}");
-        return 4;
-    }
     let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     let engine = Engine::new(&s, &topology, &plan);
@@ -495,12 +492,21 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
         eprintln!("transaction begin failed: {e}");
         return 3;
     }
+    if thermal_snapshot.telemetry_complete {
+        if let Err(e) = configure_kernel_thermal_guard(args, &thermal_snapshot) {
+            let _ = state.rollback(&s);
+            eprintln!("apply blocked: {e}");
+            return 4;
+        }
+    } else {
+        eprintln!("thermal guard: runtime trip topology incomplete; keeping performance envelope limited and refusing new guard configuration");
+    }
     let Some(mode) = profile.mode(&effective) else {
         let _ = state.rollback(&s);
         eprintln!("apply failed: validated profile is missing mode '{effective}'");
         return 3;
     };
-    let therm = thermal::envelope(thermal_snapshot);
+    let therm = thermal::envelope(&thermal_snapshot);
     let constrained = thermal::constrain_mode(mode, therm);
     eprintln!("thermal envelope: band={:?} boost={}‰ cap={:?} reason={}", therm.band, therm.boost_permille, therm.max_perf_cap_pct, therm.reason);
     let report = engine.apply_mode(&constrained);
@@ -676,10 +682,10 @@ fn cmd_thermal(args: &Args) -> i32 {
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
     let snap = thermal::snapshot(&s, &topology);
-    let env = thermal::envelope(snap);
+    let env = thermal::envelope(&snap);
     if args.json {
         println!(
-            "{{\"band\":\"{:?}\",\"boost_permille\":{},\"max_perf_cap_pct\":{},\"hottest_mdeg\":{},\"control_temp_mdeg\":{},\"performance_trip_mdeg\":{},\"critical_trip_mdeg\":{},\"battery_pct\":{},\"external_power\":{},\"reason\":\"{}\"}}",
+            "{{\"band\":\"{:?}\",\"boost_permille\":{},\"max_perf_cap_pct\":{},\"hottest_mdeg\":{},\"control_temp_mdeg\":{},\"performance_trip_mdeg\":{},\"critical_trip_mdeg\":{},\"release_mdeg\":{},\"headroom_mdeg\":{},\"headroom_permille\":{},\"critical_reached\":{},\"telemetry_complete\":{},\"battery_pct\":{},\"external_power\":{},\"reason\":\"{}\"}}",
             env.band,
             env.boost_permille,
             env.max_perf_cap_pct.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
@@ -687,16 +693,23 @@ fn cmd_thermal(args: &Args) -> i32 {
             snap.control_temp_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
             snap.performance_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
             snap.critical_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.control_zone.as_deref().map(|v| format!("\"{}\"", json_escape(v))).unwrap_or_else(|| "null".into()),
+            snap.release_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.headroom_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.headroom_permille.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            snap.critical_reached,
+            snap.telemetry_complete,
             snap.battery_pct.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
             snap.external_power,
             json_escape(env.reason),
         );
     } else {
-        println!("band          : {:?}\nboost budget  : {}‰\nmax perf cap  : {}\nhottest       : {:?} mC\ncontrol temp  : {:?} mC\nperformance tp: {:?} mC\ncritical tp   : {:?} mC\nbattery       : {:?}%\nexternal power: {}\nreason        : {}",
+        println!("band            : {:?}\nboost budget    : {}‰\nmax perf cap    : {}\nhottest         : {:?} mC\ncontrol temp    : {:?} mC\nperformance tp  : {:?} mC\ncritical tp     : {:?} mC\ncontrol zone    : {:?}\nrelease trip    : {:?} mC\nheadroom        : {:?} mC\nheadroom        : {:?}‰\ncritical reached: {}\ntelemetry complete: {}\nbattery         : {:?}%\nexternal power  : {}\nreason          : {}",
             env.band, env.boost_permille,
             env.max_perf_cap_pct.map(|v| format!("{v}%")).unwrap_or_else(|| "none".into()),
             snap.hottest_mdeg, snap.control_temp_mdeg, snap.performance_trip_mdeg,
-            snap.critical_trip_mdeg, snap.battery_pct, snap.external_power, env.reason);
+            snap.critical_trip_mdeg, snap.control_zone, snap.release_mdeg, snap.headroom_mdeg, snap.headroom_permille,
+            snap.critical_reached, snap.telemetry_complete, snap.battery_pct, snap.external_power, env.reason);
     }
     0
 }
@@ -704,12 +717,12 @@ fn cmd_thermal(args: &Args) -> i32 {
 fn cmd_prop(args: &Args) -> i32 {
     match args.positional.first().map(String::as_str).unwrap_or("list") {
         "list" => {
-            if let Err(e) = core_authorize(Operation::ReadStatus) { eprintln!("{e}"); return 1; }
+            if let Err(e) = core_authorize(Operation::ReadProperties) { eprintln!("{e}"); return 1; }
             for spec in properties::list() { println!("{}\t{:?}\t{}", spec.key, spec.scope, spec.description); }
             0
         }
         "get" => {
-            if let Err(e) = core_authorize(Operation::ReadStatus) { eprintln!("{e}"); return 1; }
+            if let Err(e) = core_authorize(Operation::ReadProperties) { eprintln!("{e}"); return 1; }
             let Some(key) = args.positional.get(1) else { eprintln!("usage: prop get <key>"); return 2; };
             match properties::get(key) {
                 Ok(v) => { println!("{v}"); 0 }
@@ -796,15 +809,19 @@ fn sentinel_evaluate(args: &Args, operation: Operation) -> zairenkai_core::senti
         _ => zairenkai_core::intelligence::EvidenceLevel::Observed,
     };
     let battery_pct = s.read_u64("/sys/class/power_supply/battery/capacity").map(|v| v.min(100) as u8);
+    let topology = Topology::detect(&s);
+    let thermal_snapshot = thermal::snapshot(&s, &topology);
     zairenkai_core::sentinel::evaluate(&zairenkai_core::sentinel::SentinelInput {
         operation,
         kernel_api_compatible: compatible,
         persistent_state_valid: persistent_valid,
         safe_mode_active,
         runtime_reconciled: persistent_valid,
-        hottest_mdeg: inventory::hottest_mdeg(&s, &identity),
+        thermal_telemetry_complete: thermal_snapshot.telemetry_complete,
+        thermal_headroom_permille: thermal_snapshot.headroom_permille,
+        thermal_critical_reached: thermal_snapshot.critical_reached,
         battery_pct,
-        external_power: scene::charging(&s),
+        external_power: thermal_snapshot.external_power,
         storage_health: inventory::storage_health(&s),
         boot_integrity: boot_integrity(&inv),
         device_known,
@@ -1064,13 +1081,17 @@ fn cmd_daemon(args: &Args) -> i32 {
                             return 3;
                         };
                         let thermal_snapshot = thermal::snapshot(&s, &topology);
-                        if let Err(e) = configure_kernel_thermal_guard(args, &topology, thermal_snapshot) {
-                            eprintln!("zperfd: thermal guard configuration failed: {e}");
-                            let _ = state.rollback(&s);
-                            std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
-                            continue;
+                        if thermal_snapshot.telemetry_complete {
+                            if let Err(e) = configure_kernel_thermal_guard(args, &thermal_snapshot) {
+                                eprintln!("zperfd: thermal guard configuration failed: {e}");
+                                let _ = state.rollback(&s);
+                                std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
+                                continue;
+                            }
+                        } else {
+                            eprintln!("zperfd: thermal trip topology incomplete; limited envelope active; no new kernel guard configured");
                         }
-                        let therm = thermal::envelope(thermal_snapshot);
+                        let therm = thermal::envelope(&thermal_snapshot);
                         let constrained = thermal::constrain_mode(mode, therm);
                         eprintln!("zperfd: thermal envelope band={:?} boost={}‰ cap={:?}", therm.band, therm.boost_permille, therm.max_perf_cap_pct);
                         let report = engine.apply_mode(&constrained);

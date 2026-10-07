@@ -4,6 +4,7 @@ schema_version = 1
 [observation]
 interfaces = "/proc/net/dev"
 tcp_current = "/proc/sys/net/ipv4/tcp_congestion_control"
+tcp_allowed = "/proc/sys/net/ipv4/tcp_allowed_congestion_control"
 tcp_available = "/proc/sys/net/ipv4/tcp_available_congestion_control"
 
 [controls]

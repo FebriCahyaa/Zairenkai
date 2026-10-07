@@ -336,9 +336,10 @@ struct zkfc_input_boost {
 
 #define ZKFC_THERMAL_ZONES	4
 #define ZKFC_THERMAL_NAME	32
-/* Hard safety limits that userspace can never exceed. */
-#define ZKFC_THERMAL_LIMIT_MAX_MDEG	95000
-#define ZKFC_THERMAL_LIMIT_MIN_MDEG	35000
+/* Guard sanity bounds. These are not device policy thresholds; the manager
+ * must derive limit_mdeg/release_mdeg from live thermal trip topology. */
+#define ZKFC_THERMAL_GUARD_MIN_MDEG	1
+#define ZKFC_THERMAL_GUARD_MAX_MDEG	2147483647
 
 struct zkfc_thermal_guard {
 	__u32 enabled;

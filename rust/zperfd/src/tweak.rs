@@ -137,6 +137,15 @@ fn parse_range(value: &str, min: i64, max: i64) -> Result<String, String> {
     Ok(n.to_string())
 }
 
+fn effective_congestion_allowlist(allowed: &str, available: &str) -> String {
+    let available_tokens: Vec<&str> = available.split_whitespace().filter(|v| !v.is_empty()).collect();
+    if available_tokens.is_empty() { return String::new(); }
+    let allowed_tokens: std::collections::BTreeSet<&str> = allowed.split_whitespace().filter(|v| !v.is_empty()).collect();
+    if allowed_tokens.is_empty() { return available_tokens.join(" "); }
+    let intersection = available_tokens.iter().copied().filter(|v| allowed_tokens.contains(v)).collect::<Vec<_>>();
+    if intersection.is_empty() { available_tokens.join(" ") } else { intersection.join(" ") }
+}
+
 fn parse_choice(value: &str, available: &str) -> Result<String, String> {
     let value = value.trim();
     if value.is_empty() || value.bytes().any(|b| b.is_ascii_whitespace() || b == b'/' || b == b'\\') {
@@ -369,12 +378,9 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         "tcp_congestion_control" => {
             let node = "/proc/sys/net/ipv4/tcp_congestion_control";
             let allowed = s.read("/proc/sys/net/ipv4/tcp_allowed_congestion_control").unwrap_or_default();
-            let avail = if allowed.split_whitespace().next().is_some() {
-                allowed
-            } else {
-                s.read("/proc/sys/net/ipv4/tcp_available_congestion_control").unwrap_or_default()
-            };
-            let choice = parse_choice(value, &avail)?;
+            let available = s.read("/proc/sys/net/ipv4/tcp_available_congestion_control").unwrap_or_default();
+            let effective = effective_congestion_allowlist(&allowed, &available);
+            let choice = parse_choice(value, &effective)?;
             write_checked(s, node, &choice)?;
             Ok(choice)
         }
@@ -416,6 +422,7 @@ fn write_sys_first(s: &Sysroot, paths: &[&str], value: &str, min: i64, max: i64)
 /// Paths potentially modified by the individual tweak interface.
 #[cfg(test)]
 mod tests {
+    use super::effective_congestion_allowlist;
     use super::parse_choice;
 
     #[test]

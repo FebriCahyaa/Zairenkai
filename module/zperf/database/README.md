@@ -28,3 +28,8 @@ UFS and eMMC are different storage classes. Health fields are treated as optiona
 runtime evidence; the core never assumes endurance semantics merely from a model
 string. Likewise, low-RAM policy is derived from observed memory and pressure data,
 not from a hardcoded device generation.
+
+
+## Storage and thermal evidence
+
+UFS/eMMC health fields are treated as evidence, not an optimization command. A descriptor being present does not imply healthy media; health classification only escalates on recognized status values and otherwise remains unknown.

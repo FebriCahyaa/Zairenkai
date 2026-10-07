@@ -3,14 +3,15 @@
  * ZKFC thermal guard (device mitigation).
  *
  * Polls up to four thermal zones chosen by the manager. When any of them
- * reaches the configured limit, every ZKFC boost is suspended: input boost
- * floors are dropped and task uclamp boosts are neutralised. Boosts resume
- * once all zones are below the release temperature (hysteresis).
+ * reaches the configured runtime-derived trip, every ZKFC boost is suspended:
+ * input boost floors are dropped and task uclamp boosts are neutralised. Boosts
+ * resume once all zones are below the runtime-derived release point.
  *
- * ZKFC never edits critical trip points and never disables thermal zones;
- * it only removes its own performance requests. The limit is clamped to
- * ZKFC_THERMAL_LIMIT_{MIN,MAX}_MDEG so a manager bug cannot configure an
- * unsafe value.
+ * ZKFC never edits critical trip points and never disables thermal zones; it only
+ * removes its own performance requests. limit_mdeg/release_mdeg are accepted as
+ * a manager-supplied snapshot of live thermal trip topology and are validated only
+ * for structural sanity here; device-specific thermal thresholds are not invented
+ * by ZKFC.
  *
  * Copyright (C) 2026 FebriCahyaa
  */
@@ -60,7 +61,7 @@ int zkfc_thermal_read(struct zkfc_thermal_read *rd)
 static u32 zkfc_tg_scale_for_temp(const struct zkfc_thermal_guard *cfg,
 					 int temp, bool telemetry_ok)
 {
-	u32 span, remaining;
+	u64 span, remaining;
 
 	if (!telemetry_ok)
 		return 0;
@@ -69,8 +70,8 @@ static u32 zkfc_tg_scale_for_temp(const struct zkfc_thermal_guard *cfg,
 	if (temp >= cfg->limit_mdeg)
 		return 0;
 	span = (u32)(cfg->limit_mdeg - cfg->release_mdeg);
-	remaining = (u32)(cfg->limit_mdeg - temp);
-	return (remaining * 1000U) / span;
+	remaining = (u64)(cfg->limit_mdeg - temp);
+	return (u32)((remaining * 1000ULL) / span);
 }
 
 static void zkfc_tg_set_scale(u32 permille)
@@ -107,7 +108,9 @@ static void zkfc_tg_fn(struct work_struct *w)
 {
 	struct zkfc_thermal_guard cfg;
 	int hottest = INT_MIN, temp;
+	int first_error = 0;
 	u32 i;
+	bool telemetry_ok = true;
 
 	mutex_lock(&zkfc_tg_mutex);
 	cfg = zkfc_tg_cfg;
@@ -116,9 +119,6 @@ static void zkfc_tg_fn(struct work_struct *w)
 		mutex_unlock(&zkfc_tg_mutex);
 		return;
 	}
-
-	bool telemetry_ok = true;
-	int first_error = 0;
 
 	for (i = 0; i < cfg.zone_count; i++) {
 		int ret = zkfc_zone_temp(cfg.zones[i], &temp);
@@ -164,11 +164,10 @@ int zkfc_thermal_guard_config(const struct zkfc_thermal_guard *in)
 			return -EINVAL;
 		if (cfg.interval_ms < 100 || cfg.interval_ms > 10000)
 			return -EINVAL;
-		if (cfg.limit_mdeg < ZKFC_THERMAL_LIMIT_MIN_MDEG ||
-		    cfg.limit_mdeg > ZKFC_THERMAL_LIMIT_MAX_MDEG)
+		if (cfg.limit_mdeg < ZKFC_THERMAL_GUARD_MIN_MDEG ||
+		    cfg.limit_mdeg > ZKFC_THERMAL_GUARD_MAX_MDEG)
 			return -ERANGE;
-		/* Hysteresis of at least 2 C avoids flapping. */
-		if (cfg.release_mdeg > cfg.limit_mdeg - 2000)
+		if (cfg.release_mdeg < 0 || cfg.release_mdeg >= cfg.limit_mdeg)
 			return -ERANGE;
 		for (i = 0; i < cfg.zone_count; i++)
 			cfg.zones[i][ZKFC_THERMAL_NAME - 1] = '\0';

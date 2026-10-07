@@ -151,3 +151,10 @@ app, engine, module and tooling are under the Zairenkai Proprietary License
 **Zairenkai ThermoGuard** is the kernel-backed thermal safety subsystem. It derives its guard envelope from runtime thermal trip points when available, scales Zairenkai-owned boost requests continuously as thermal headroom changes, and disables boosts when required telemetry is unavailable.
 
 Zairenkai treats thermal control as a safety envelope, not a performance override. Runtime boost budgets can only be reduced by thermal state. Android system properties are read-only by default; mutation is restricted to an explicit, registered `persist.zairenkai.*` allowlist. Vendor properties are never writable through the generic broker.
+
+
+## Thermal & Performance Control Plane
+
+Zairenkai ThermoGuard derives thermal decisions from live Linux thermal-zone temperatures and trip-point topology. Static Atlas thermal records are provider/evidence hints only; they never become universal Celsius thresholds. The runtime exposes normalized thermal headroom, a zone-local control trip, critical-trip state, and an explicit incomplete-telemetry state. Incomplete telemetry enters a limited performance envelope rather than selecting optimistic performance.
+
+CPU/GPU governor choices and TCP congestion-control choices are validated against runtime allowlists. GKI/NonGKI scheduler backends are selected from live capability surfaces, while unsupported controls fail closed instead of being emulated through unrelated knobs. Storage classification and health are also based on runtime topology/evidence, with critical storage excluded from queue tuning.

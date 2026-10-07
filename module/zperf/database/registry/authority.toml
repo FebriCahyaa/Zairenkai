@@ -9,9 +9,9 @@ capabilities = [
   "read.device", "read.kernel", "read.thermal", "read.performance", "read.logs",
   "tune.cpu", "tune.gpu", "tune.memory", "tune.io", "tune.power", "tune.thermal",
   "security.license", "security.policy", "control.hooks", "control.reset",
-  "read.storage", "read.network", "read.memory", "read.security",
+  "read.storage", "read.network", "read.memory", "read.security", "read.properties",
   "tune.storage", "tune.network", "tune.zram",
-  "manage.device_registry", "manage.data_sources", "manage.evidence", "manage.recovery",
+  "manage.device_registry", "manage.data_sources", "manage.evidence", "manage.recovery", "tune.properties",
 ]
 
 [principals.android]

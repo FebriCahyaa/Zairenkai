@@ -42,6 +42,7 @@ pub enum SentinelReason {
     PersistentStateInvalid,
     RuntimeDrift,
     ThermalLimit,
+    ThermalTelemetryUnavailable,
     BatteryCritical,
     StorageCritical,
     WeakBootIntegrity,
@@ -57,7 +58,9 @@ pub struct SentinelInput {
     pub persistent_state_valid: bool,
     pub safe_mode_active: bool,
     pub runtime_reconciled: bool,
-    pub hottest_mdeg: Option<i32>,
+    pub thermal_telemetry_complete: bool,
+    pub thermal_headroom_permille: Option<u16>,
+    pub thermal_critical_reached: bool,
     pub battery_pct: Option<u8>,
     pub external_power: bool,
     pub storage_health: StorageHealth,
@@ -79,7 +82,7 @@ pub fn classify(operation: Operation) -> SafetyClass {
         Operation::Probe | Operation::ReadStatus | Operation::ReadPerformance |
         Operation::ReadThermal | Operation::ReadLogs |
         Operation::ReadInventory | Operation::ReadStorage | Operation::ReadNetwork |
-        Operation::ReadMemory | Operation::ReadSecurity => SafetyClass::Observe,
+        Operation::ReadMemory | Operation::ReadSecurity | Operation::ReadProperties => SafetyClass::Observe,
         Operation::SetProperty => SafetyClass::FrameworkConfig,
         Operation::ApplyProfile | Operation::SetCpuTweak | Operation::SetGpuTweak |
         Operation::SetMemoryTweak | Operation::SetIoTweak | Operation::TuneStorage |
@@ -108,7 +111,22 @@ pub fn evaluate(input: &SentinelInput) -> SentinelDecision {
         reasons.push(SentinelReason::OperationForbidden);
     }
     if !input.runtime_reconciled { reasons.push(SentinelReason::RuntimeDrift); }
-    if input.hottest_mdeg.is_some_and(|v| v >= 48_000) { reasons.push(SentinelReason::ThermalLimit); }
+    let thermal_sensitive = matches!(
+        input.operation,
+        Operation::ApplyProfile
+            | Operation::SetCpuTweak
+            | Operation::SetGpuTweak
+            | Operation::SetPowerTweak
+            | Operation::SetThermalPolicy
+    );
+    if input.thermal_critical_reached && thermal_sensitive {
+        reasons.push(SentinelReason::ThermalLimit);
+    } else if thermal_sensitive
+        && !input.thermal_telemetry_complete
+        && !matches!(input.operation, Operation::ApplyProfile)
+    {
+        reasons.push(SentinelReason::ThermalTelemetryUnavailable);
+    }
     if input.battery_pct.is_some_and(|v| v <= 5) && !input.external_power { reasons.push(SentinelReason::BatteryCritical); }
     if input.storage_health == StorageHealth::Critical { reasons.push(SentinelReason::StorageCritical); }
     if !input.device_known && !matches!(class, SafetyClass::Critical) { reasons.push(SentinelReason::UnknownDevice); }

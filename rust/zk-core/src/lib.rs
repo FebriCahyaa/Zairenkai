@@ -40,11 +40,22 @@ mod tests {
     }
 
     #[test]
+    fn property_read_requires_its_own_capability() {
+        let caps = CapabilitySet::from_iter([Capability::ReadDevice]);
+        let a = authority::authorize(&caps, Operation::ReadProperties);
+        assert_eq!(a.decision, Decision::Deny);
+
+        let caps = CapabilitySet::from_iter([Capability::ReadProperties]);
+        let a = authority::authorize(&caps, Operation::ReadProperties);
+        assert_eq!(a.decision, Decision::Allow);
+    }
+
+    #[test]
     fn full_runtime_authority_covers_every_operation() {
         let caps = CapabilitySet::full_runtime();
         let ops = [
             Operation::Probe, Operation::ReadStatus, Operation::ReadPerformance, Operation::ReadThermal, Operation::ReadLogs, Operation::ReadInventory,
-            Operation::ReadStorage, Operation::ReadNetwork, Operation::ReadMemory, Operation::ReadSecurity,
+            Operation::ReadStorage, Operation::ReadNetwork, Operation::ReadMemory, Operation::ReadSecurity, Operation::ReadProperties,
             Operation::ApplyProfile, Operation::SetCpuTweak,
             Operation::SetGpuTweak, Operation::SetMemoryTweak,
             Operation::SetIoTweak, Operation::SetPowerTweak,
@@ -63,14 +74,17 @@ mod tests {
     fn policy_evaluator_is_conservative_without_thermal_data() {
         let decision = policy::evaluate(policy::PolicyInput {
             battery_pct: Some(80),
-            hottest_mdeg: None,
+            thermal: policy::ThermalSignal {
+                telemetry_complete: false,
+                headroom_permille: None,
+                critical_reached: false,
+            },
             external_power: true,
             previous_mode: None,
         });
         assert_eq!(decision.intent, policy::PolicyIntent::Balanced);
         assert_eq!(decision.confidence, policy::Confidence::Medium);
     }
-
 
     #[test]
     fn measured_evidence_is_not_heuristic() {
@@ -87,7 +101,9 @@ mod tests {
             persistent_state_valid: true,
             safe_mode_active: false,
             runtime_reconciled: true,
-            hottest_mdeg: Some(49_000),
+            thermal_telemetry_complete: true,
+            thermal_headroom_permille: Some(50),
+            thermal_critical_reached: true,
             battery_pct: Some(50),
             external_power: true,
             storage_health: sentinel::StorageHealth::Good,
@@ -108,7 +124,9 @@ mod tests {
             persistent_state_valid: false,
             safe_mode_active: true,
             runtime_reconciled: false,
-            hottest_mdeg: Some(55_000),
+            thermal_telemetry_complete: true,
+            thermal_headroom_permille: Some(0),
+            thermal_critical_reached: true,
             battery_pct: Some(1),
             external_power: false,
             storage_health: sentinel::StorageHealth::Critical,
@@ -130,7 +148,9 @@ mod tests {
             persistent_state_valid: false,
             safe_mode_active: true,
             runtime_reconciled: false,
-            hottest_mdeg: None,
+            thermal_telemetry_complete: false,
+            thermal_headroom_permille: None,
+            thermal_critical_reached: false,
             battery_pct: None,
             external_power: false,
             storage_health: sentinel::StorageHealth::Unknown,
@@ -150,7 +170,9 @@ mod tests {
             persistent_state_valid: true,
             safe_mode_active: true,
             runtime_reconciled: false,
-            hottest_mdeg: None,
+            thermal_telemetry_complete: false,
+            thermal_headroom_permille: None,
+            thermal_critical_reached: false,
             battery_pct: Some(50),
             external_power: true,
             storage_health: sentinel::StorageHealth::Good,

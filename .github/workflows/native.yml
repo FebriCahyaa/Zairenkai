@@ -49,6 +49,8 @@ jobs:
           python3 tools/zperf_analyze.py summary tests/analysis/baseline.jsonl >/tmp/zperf-summary.json
           python3 tools/zperf_analyze.py compare tests/analysis/baseline.jsonl tests/analysis/candidate.jsonl >/tmp/zperf-compare.json
           grep -q 'candidate_improves_measured_performance' /tmp/zperf-compare.json
+      - name: Validate thermal and performance control-plane invariants
+        run: bash tests/control_plane_check.sh
 
   uapi-abi:
     needs: crypto

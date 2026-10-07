@@ -128,31 +128,18 @@ pub fn charging(s: &Sysroot) -> bool {
     false
 }
 
-pub fn hottest_c(s: &Sysroot) -> Option<f32> {
-    let mut hottest = None;
-    for zone in s.list_dir("/sys/class/thermal") {
-        if !zone.starts_with("thermal_zone") { continue; }
-        if let Some(mdeg) = s.read_u64(&format!("/sys/class/thermal/{zone}/temp")) {
-            if (20000..150000).contains(&mdeg) {
-                let c = mdeg as f32 / 1000.0;
-                hottest = Some(hottest.map_or(c, |h: f32| h.max(c)));
-            }
-        }
-    }
-    hottest
-}
 
 /// Decide Auto mode from current telemetry. Missing telemetry is treated as
 /// unsafe for performance selection instead of optimistic defaults.
 pub fn decide_auto(
     battery: Option<u32>,
-    hot: Option<f32>,
+    thermal: zairenkai_core::policy::ThermalSignal,
     charge: bool,
     previous: Option<&str>,
 ) -> &'static str {
     let decision = zairenkai_core::policy::evaluate(zairenkai_core::policy::PolicyInput {
         battery_pct: battery.map(|v| v.min(100) as u8),
-        hottest_mdeg: hot.map(|v| (v * 1000.0).round() as i32),
+        thermal,
         external_power: charge,
         previous_mode: previous,
     });
@@ -160,11 +147,25 @@ pub fn decide_auto(
 }
 
 pub fn resolve_auto(s: &Sysroot) -> &'static str {
-    decide_auto(battery_percent(s), hottest_c(s), charging(s), None)
+    let topology = crate::topo::Topology::detect(s);
+    let snapshot = crate::thermal::snapshot(s, &topology);
+    let thermal = zairenkai_core::policy::ThermalSignal {
+        telemetry_complete: snapshot.telemetry_complete,
+        headroom_permille: snapshot.headroom_permille,
+        critical_reached: snapshot.critical_reached,
+    };
+    decide_auto(snapshot.battery_pct, thermal, snapshot.external_power, None)
 }
 
 pub fn resolve_auto_with_previous(s: &Sysroot, previous: Option<&str>) -> &'static str {
-    decide_auto(battery_percent(s), hottest_c(s), charging(s), previous)
+    let topology = crate::topo::Topology::detect(s);
+    let snapshot = crate::thermal::snapshot(s, &topology);
+    let thermal = zairenkai_core::policy::ThermalSignal {
+        telemetry_complete: snapshot.telemetry_complete,
+        headroom_permille: snapshot.headroom_permille,
+        critical_reached: snapshot.critical_reached,
+    };
+    decide_auto(snapshot.battery_pct, thermal, snapshot.external_power, previous)
 }
 
 #[cfg(test)]
@@ -217,18 +218,31 @@ mod tests {
 
     #[test]
     fn unknown_thermal_data_never_selects_performance() {
-        assert_eq!(decide_auto(Some(80), None, true, None), "balance");
+        assert_eq!(decide_auto(Some(80), zairenkai_core::policy::ThermalSignal { telemetry_complete: false, headroom_permille: None, critical_reached: false }, true, None), "balance");
     }
 
     #[test]
     fn performance_has_thermal_hysteresis() {
-        assert_eq!(decide_auto(Some(80), Some(43.0), true, Some("performance")), "performance");
-        assert_eq!(decide_auto(Some(80), Some(44.0), true, Some("performance")), "balance");
+        let release = zairenkai_core::policy::ThermalSignal {
+            telemetry_complete: true, headroom_permille: Some(650), critical_reached: false,
+        };
+        let hold = zairenkai_core::policy::ThermalSignal {
+            telemetry_complete: true, headroom_permille: Some(400), critical_reached: false,
+        };
+        assert_eq!(decide_auto(Some(80), release, true, Some("performance")), "performance");
+        assert_eq!(decide_auto(Some(80), hold, true, Some("performance")), "performance");
+        let insufficient = zairenkai_core::policy::ThermalSignal {
+            telemetry_complete: true, headroom_permille: Some(200), critical_reached: false,
+        };
+        assert_eq!(decide_auto(Some(80), insufficient, true, Some("performance")), "balance");
     }
 
     #[test]
     fn powersave_has_recovery_hysteresis() {
-        assert_eq!(decide_auto(Some(23), Some(40.0), false, Some("powersave")), "powersave");
-        assert_eq!(decide_auto(Some(26), Some(40.0), false, Some("powersave")), "balance");
+        let thermal = zairenkai_core::policy::ThermalSignal {
+            telemetry_complete: true, headroom_permille: Some(1000), critical_reached: false,
+        };
+        assert_eq!(decide_auto(Some(23), thermal, false, Some("powersave")), "powersave");
+        assert_eq!(decide_auto(Some(26), thermal, false, Some("powersave")), "balance");
     }
 }

@@ -267,7 +267,7 @@ impl<'a> Engine<'a> {
         let avail = self.s.read(&p.rel("scaling_available_governors")).unwrap_or_default();
         let have: Vec<&str> = avail.split_whitespace().collect();
         for g in pref {
-            if have.is_empty() || have.contains(&g.as_str()) {
+            if !have.is_empty() && have.contains(&g.as_str()) {
                 let node = p.rel("scaling_governor");
                 match self.s.write(&node, g) {
                     Ok(()) => {
@@ -410,7 +410,7 @@ impl<'a> Engine<'a> {
         for gov in &g.governor {
             let avail = self.s.read(&node.rel("available_governors")).unwrap_or_default();
             let have: Vec<&str> = avail.split_whitespace().collect();
-            if have.is_empty() || have.contains(&gov.as_str()) {
+            if !have.is_empty() && have.contains(&gov.as_str()) {
                 let path = node.rel("governor");
                 match self.s.write(&path, gov) {
                     Ok(()) => {
