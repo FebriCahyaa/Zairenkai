@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[[class]]
+id = "legacy-low"
+max_ram_kib = 2097151
+policy = "minimize-reclaim-interference"
+
+[[class]]
+id = "mainstream"
+max_ram_kib = 8388607
+policy = "balanced-memory-pressure"
+
+[[class]]
+id = "high-memory"
+max_ram_kib = 17179869183
+policy = "avoid-unnecessary-swapping"
+
+[controls]
+read = ["MemTotal", "MemAvailable", "SwapTotal", "SwapFree", "psi.memory"]
+write = ["vm.swappiness", "vm.dirty_ratio", "vm.dirty_background_ratio", "vm.vfs_cache_pressure", "vm.min_free_kbytes"]
+zram = ["disksize", "comp_algorithm", "max_comp_streams"]

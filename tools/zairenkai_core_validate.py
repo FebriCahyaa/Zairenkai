@@ -22,6 +22,12 @@ def main():
     assert authority['principles']['unknown_capability'] == 'deny'
     permissions = authority['permissions']
     assert len(permissions) == len(set(permissions))
+    required_permissions = {
+        'read.storage', 'read.network', 'read.memory', 'read.security',
+        'tune.storage', 'tune.network', 'tune.zram',
+        'manage.device_registry', 'manage.data_sources', 'manage.evidence', 'manage.recovery',
+    }
+    assert required_permissions <= set(permissions)
     for vendor in ('qualcomm', 'mediatek', 'exynos', 'tensor'):
         family = load(ROOT / f'database/soc/{vendor}/family.toml')
         assert family['vendor'] == vendor
@@ -30,9 +36,9 @@ def main():
     assert len(device_files) >= 14
     for path in device_files:
         profile = load(path)
-        assert profile['schema_version'] == 1
+        assert profile['schema_version'] in (1, 3)
         assert profile['runtime_discovery_required'] is True
-        assert profile['measurement']['interpretation'] == 'measured-only'
+        assert profile.get('measurement', {}).get('interpretation') == 'measured-only'
     print(f'PASS core registry: {len(device_files)} device profiles')
 
 if __name__ == '__main__':

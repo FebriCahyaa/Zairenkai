@@ -6,12 +6,14 @@
 //!
 //! Copyright (C) 2026 FebriCahyaa
 
+mod api;
 mod backends;
 mod catalog;
 mod config;
 mod engine;
 mod family;
 mod nodes;
+mod optimize;
 mod platform;
 mod scene;
 mod state;
@@ -233,11 +235,28 @@ fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Resu
 }
 
 
+pub(crate) fn permission_names() -> String {
+    const NAMES: &[&str] = &[
+        "read.device", "read.status", "read.logs", "read.inventory", "read.storage",
+        "read.network", "read.memory", "read.security", "apply.profile", "tune.cpu",
+        "tune.gpu", "tune.memory", "tune.io", "tune.power", "tune.thermal",
+        "tune.storage", "tune.network", "tune.zram", "control.reset", "security.license",
+        "security.policy", "control.hooks", "manage.device_registry", "manage.data_sources",
+        "manage.evidence", "manage.recovery",
+    ];
+    NAMES.join(",")
+}
+
 fn cmd_core_permissions(json: bool) -> i32 {
     const OPS: &[(Operation, &str)] = &[
         (Operation::Probe, "probe"),
         (Operation::ReadStatus, "read.status"),
         (Operation::ReadLogs, "read.logs"),
+        (Operation::ReadInventory, "read.inventory"),
+        (Operation::ReadStorage, "read.storage"),
+        (Operation::ReadNetwork, "read.network"),
+        (Operation::ReadMemory, "read.memory"),
+        (Operation::ReadSecurity, "read.security"),
         (Operation::ApplyProfile, "apply.profile"),
         (Operation::SetCpuTweak, "tune.cpu"),
         (Operation::SetGpuTweak, "tune.gpu"),
@@ -245,10 +264,17 @@ fn cmd_core_permissions(json: bool) -> i32 {
         (Operation::SetIoTweak, "tune.io"),
         (Operation::SetPowerTweak, "tune.power"),
         (Operation::SetThermalPolicy, "tune.thermal"),
+        (Operation::TuneStorage, "tune.storage"),
+        (Operation::TuneNetwork, "tune.network"),
+        (Operation::TuneZram, "tune.zram"),
         (Operation::ResetRuntime, "control.reset"),
         (Operation::InstallLicense, "security.license"),
         (Operation::ModifyPolicy, "security.policy"),
         (Operation::ManageHooks, "control.hooks"),
+        (Operation::ManageDeviceRegistry, "manage.device_registry"),
+        (Operation::ManageDataSources, "manage.data_sources"),
+        (Operation::ManageEvidence, "manage.evidence"),
+        (Operation::ManageRecovery, "manage.recovery"),
     ];
     if json {
         let entries = OPS.iter().map(|(op, name)| {
@@ -291,6 +317,7 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
     if let Err(e) = core_authorize(Operation::Probe) { eprintln!("{e}"); return 1; }
     let topology = Topology::detect(s);
     let family = family::load(&state.join("database"), topology.identity.vendor);
+    let atlas = catalog::resolve(&state.join("database"), &topology.identity);
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     if json {
         let policies = topology
@@ -335,7 +362,7 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
         let telemetry = telemetry::json(s, &topology);
         let vendor_surfaces = plan.vendor_surfaces.iter().map(|x| format!("\"{}\"", x)).collect::<Vec<_>>().join(",");
         println!(
-            "{{\"ok\":true,\"vendor\":\"{}\",\"soc\":\"{}\",\"flavor\":\"{}\",\"kernel_generation\":\"{}\",\"release\":\"{}\",\"cgroup_v2\":{},\"has_msm_perf\":{},\"boost\":{},\"backend\":{{\"cpu\":{},\"boost\":\"{:?}\",\"gpu\":\"{:?}\",\"thermal_providers\":[{}],\"vendor_surfaces\":[{}],\"family_profile\":{}}},\"policies\":[{}],\"gpu\":{},\"thermal\":[{}],\"kernel_capabilities\":{},\"telemetry\":{}}}",
+            "{{\"ok\":true,\"vendor\":\"{}\",\"soc\":\"{}\",\"flavor\":\"{}\",\"kernel_generation\":\"{}\",\"release\":\"{}\",\"cgroup_v2\":{},\"has_msm_perf\":{},\"boost\":{},\"atlas\":{{\"known\":{},\"device_id\":{}}},\"backend\":{{\"cpu\":{},\"boost\":\"{:?}\",\"gpu\":\"{:?}\",\"thermal_providers\":[{}],\"vendor_surfaces\":[{}],\"family_profile\":{}}},\"policies\":[{}],\"gpu\":{},\"thermal\":[{}],\"kernel_capabilities\":{},\"telemetry\":{}}}",
             topology.identity.vendor.as_str(),
             json_escape(&topology.identity.soc_key()),
             topology.flavor(),
@@ -344,6 +371,8 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
             topology.cgroup_v2,
             topology.has_msm_perf,
             boost,
+            atlas.is_some(),
+            atlas.as_ref().map(|r| format!("\"{}\"", json_escape(&r.entry.id))).unwrap_or_else(|| "null".into()),
             plan.cpu.is_some(),
             plan.boost,
             plan.gpu,
@@ -358,7 +387,7 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
         );
     } else {
         println!(
-            "vendor      : {}\nsoc         : {}\nflavor      : {}\nkernel gen  : {}\nrelease     : {}\ncgroup v2   : {}\nmsm_perf    : {}\ngpu         : {}\nthermal     : {} zones\nfam policy  : {}\nbackend     : boost={:?}",
+            "vendor      : {}\nsoc         : {}\nflavor      : {}\nkernel gen  : {}\nrelease     : {}\ncgroup v2   : {}\nmsm_perf    : {}\ngpu         : {}\nthermal     : {} zones\nAtlas       : {}\nfam policy  : {}\nbackend     : boost={:?}",
             topology.identity.vendor.as_str(),
             topology.identity.soc_key(),
             topology.flavor(),
@@ -368,6 +397,7 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
             topology.has_msm_perf,
             topology.gpu.as_ref().map(|g| g.provider.as_str()).unwrap_or("none"),
             topology.thermal_zones.len(),
+            atlas.as_ref().map(|r| r.entry.id.as_str()).unwrap_or("unknown"),
             plan.family_profile.as_deref().unwrap_or("none"),
             plan.boost
         );
@@ -406,6 +436,11 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     if let Err(e) = state.recover(&s) {
         eprintln!("state recovery failed: {e}");
         return 3;
+    }
+    let sentinel = sentinel_evaluate(args, Operation::ApplyProfile);
+    if !sentinel.allowed {
+        eprintln!("apply blocked by Sentinel: {:?}", sentinel.reasons);
+        return 4;
     }
 
     let profile = match load_profile(
@@ -522,7 +557,7 @@ fn cmd_tweak(args: &Args) -> i32 {
                 eprintln!("usage: tweak set <id> <value>");
                 return 2;
             };
-            if let Err(e) = core_authorize(tweak_operation(id)) { eprintln!("{e}"); return 1; }
+            if let Err(e) = core_authorize(tweak::operation_for(id)) { eprintln!("{e}"); return 1; }
             if let Err(e) = kernel_license_ok() {
                 eprintln!("tweak blocked: {e}");
                 return 4;
@@ -547,6 +582,11 @@ fn cmd_tweak(args: &Args) -> i32 {
             if let Err(e) = state.ensure_boot(&s, &nodes).and_then(|_| state.recover(&s)) {
                 eprintln!("state recovery failed: {e}");
                 return 3;
+            }
+            let sentinel = sentinel_evaluate(args, tweak::operation_for(id));
+            if !sentinel.allowed {
+                eprintln!("tweak blocked by Sentinel: {:?}", sentinel.reasons);
+                return 4;
             }
             if let Err(e) = state.begin(&s, &nodes) {
                 eprintln!("transaction begin failed: {e}");
@@ -580,6 +620,121 @@ fn cmd_tweak(args: &Args) -> i32 {
     }
 }
 
+fn cmd_inventory(args: &Args) -> i32 {
+    if let Err(e) = core_authorize(Operation::ReadInventory) { eprintln!("{e}"); return 1; }
+    let s = Sysroot::new(&args.root);
+    let identity = platform::PlatformIdentity::detect(&s);
+    let inv = inventory::collect(&s, identity.clone());
+    if args.json { println!("{}", inventory::json(&inv)); }
+    else {
+        println!("device      : {} {}", identity.vendor.as_str(), identity.platform);
+        println!("memory      : {:?} KiB available={:?}", inv.memory.total_kb, inv.memory.available_kb);
+        println!("zram        : {} device(s)", inv.memory.zram.len());
+        println!("storage     : {} device(s)", inv.storage.len());
+        println!("network     : {} interface(s)", inv.network.interface_count);
+        println!("SELinux     : {:?}", inv.security.selinux_enforcing);
+        println!("verifiedboot: {:?}", inv.security.verified_boot);
+    }
+    0
+}
+
+fn cmd_optimize(args: &Args) -> i32 {
+    if let Err(e) = core_authorize(Operation::ReadPerformance) { eprintln!("{e}"); return 1; }
+    let s = Sysroot::new(&args.root);
+    let identity = platform::PlatformIdentity::detect(&s);
+    let inv = inventory::collect(&s, identity.clone());
+    let plan = optimize::plan(&s, &identity, &inv);
+    if args.json { println!("{}", optimize::json(&plan)); }
+    else {
+        println!("RAM class            : {}", plan.ram_class);
+        println!("storage class        : {}", plan.storage_class);
+        println!("thermal safe         : {}", plan.thermal_safe);
+        println!("network control      : {}", plan.network_control_available);
+        println!("safe controls        : {}", plan.safe_controls.join(", "));
+        println!("blocked controls     : {}", plan.blocked_controls.join(", "));
+        for note in plan.notes { println!("note                 : {note}"); }
+    }
+    0
+}
+
+fn parse_operation_name(name: &str) -> Option<Operation> {
+    Some(match name {
+        "apply.profile" => Operation::ApplyProfile,
+        "tune.cpu" => Operation::SetCpuTweak,
+        "tune.gpu" => Operation::SetGpuTweak,
+        "tune.memory" => Operation::SetMemoryTweak,
+        "tune.io" => Operation::SetIoTweak,
+        "tune.power" => Operation::SetPowerTweak,
+        "tune.thermal" => Operation::SetThermalPolicy,
+        "tune.storage" => Operation::TuneStorage,
+        "tune.network" => Operation::TuneNetwork,
+        "tune.zram" => Operation::TuneZram,
+        "control.reset" => Operation::ResetRuntime,
+        "security.license" => Operation::InstallLicense,
+        "security.policy" => Operation::ModifyPolicy,
+        "control.hooks" => Operation::ManageHooks,
+        _ => return None,
+    })
+}
+
+fn boot_integrity(inv: &inventory::Inventory) -> zairenkai_core::sentinel::BootIntegrity {
+    match inv.security.verified_boot.as_deref().map(|v| v.trim().to_ascii_lowercase()) {
+        Some(v) if v == "green" => zairenkai_core::sentinel::BootIntegrity::Green,
+        Some(v) if v == "yellow" => zairenkai_core::sentinel::BootIntegrity::Yellow,
+        Some(v) if v == "orange" => zairenkai_core::sentinel::BootIntegrity::Orange,
+        Some(v) if v == "red" => zairenkai_core::sentinel::BootIntegrity::Red,
+        _ => zairenkai_core::sentinel::BootIntegrity::Unknown,
+    }
+}
+
+fn sentinel_evaluate(args: &Args, operation: Operation) -> zairenkai_core::sentinel::SentinelDecision {
+    let s = Sysroot::new(&args.root);
+    let identity = platform::PlatformIdentity::detect(&s);
+    let inv = inventory::collect(&s, identity.clone());
+    let compatible = Zkfc::open().ok().and_then(|z| z.version().ok()).is_some_and(|v| v.api_compatible());
+    let state_dir = Path::new(&args.state);
+    let safe_mode_active = Path::new(SAFE_MODE).exists() || state_dir.join("safe_mode").exists();
+    let persistent_valid = !state_dir.join("transaction.pending").exists();
+    let device_known = identity.vendor != platform::SocVendor::Unknown
+        && (!identity.platform.is_empty() || !identity.compatible.is_empty());
+    let evidence_level = match identity.evidence.len() {
+        0 => zairenkai_core::intelligence::EvidenceLevel::Unknown,
+        1 => zairenkai_core::intelligence::EvidenceLevel::Heuristic,
+        _ => zairenkai_core::intelligence::EvidenceLevel::Observed,
+    };
+    let battery_pct = s.read_u64("/sys/class/power_supply/battery/capacity").map(|v| v.min(100) as u8);
+    zairenkai_core::sentinel::evaluate(&zairenkai_core::sentinel::SentinelInput {
+        operation,
+        kernel_api_compatible: compatible,
+        persistent_state_valid: persistent_valid,
+        safe_mode_active,
+        runtime_reconciled: persistent_valid,
+        hottest_mdeg: inventory::hottest_mdeg(&s, &identity),
+        battery_pct,
+        external_power: scene::charging(&s),
+        storage_health: inventory::storage_health(&s),
+        boot_integrity: boot_integrity(&inv),
+        device_known,
+        evidence_level,
+        lite_mode: args.lite,
+    })
+}
+
+fn cmd_sentinel(args: &Args) -> i32 {
+    let Some(name) = args.positional.first() else { eprintln!("usage: sentinel <operation>"); return 2; };
+    let Some(operation) = parse_operation_name(name) else { eprintln!("unknown operation '{name}'"); return 2; };
+    if let Err(e) = core_authorize(operation) { eprintln!("{e}"); return 1; }
+    let decision = sentinel_evaluate(args, operation);
+    if args.json {
+        println!("{{\"allowed\":{},\"class\":\"{:?}\",\"reasons\":[{}]}}", decision.allowed, decision.class,
+            decision.reasons.iter().map(|r| format!("\"{:?}\"", r)).collect::<Vec<_>>().join(","));
+    } else {
+        println!("allowed: {}\nclass  : {:?}", decision.allowed, decision.class);
+        for reason in decision.reasons { println!("reason : {:?}", reason); }
+    }
+    if decision.allowed { 0 } else { 4 }
+}
+
 fn cmd_reset(args: &Args) -> i32 {
     if let Err(e) = core_authorize(Operation::ResetRuntime) { eprintln!("{e}"); return 1; }
     let s = Sysroot::new(&args.root);
@@ -592,6 +747,11 @@ fn cmd_reset(args: &Args) -> i32 {
     if let Err(e) = state.ensure_boot(&s, &nodes) {
         eprintln!("state init failed: {e}");
         return 3;
+    }
+    let sentinel = sentinel_evaluate(args, Operation::ResetRuntime);
+    if !sentinel.allowed {
+        eprintln!("reset blocked by Sentinel: {:?}", sentinel.reasons);
+        return 4;
     }
     match state.restore_baseline(&s, &nodes) {
         Ok(count) => {
@@ -796,6 +956,12 @@ fn cmd_daemon(args: &Args) -> i32 {
             next_reconcile = now + reconcile_every;
             match kernel_license_ok() {
                 Ok(()) => {
+                    let sentinel = sentinel_evaluate(args, Operation::ApplyProfile);
+                    if !sentinel.allowed {
+                        eprintln!("zperfd: Sentinel blocked mutation: {:?}", sentinel.reasons);
+                        std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
+                        continue;
+                    }
                     if let Err(e) = state.begin(&s, &nodes) {
                         eprintln!("zperfd: transaction begin failed: {e}");
                     } else {
@@ -860,7 +1026,11 @@ fn main() {
             .unwrap_or(2),
         "reset" => cmd_reset(&args),
         "status" => cmd_status(&args),
+        "inventory" => cmd_inventory(&args),
+        "optimize" => cmd_optimize(&args),
+        "sentinel" => cmd_sentinel(&args),
         "core" => if args.positional.first().map(|x| x.as_str()) == Some("permissions") { cmd_core_permissions(args.json) } else { cmd_core(args.json) },
+        "api" => api::run(&args),
         "daemon" => cmd_daemon(&args),
         "" => {
             print_help();

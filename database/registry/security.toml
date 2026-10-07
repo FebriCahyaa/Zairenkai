@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[selinux]
+source = "/sys/fs/selinux/enforce"
+policy = "never-weaken"
+
+[verified_boot]
+state_property = "ro.boot.verifiedbootstate"
+verity_property = "ro.boot.veritymode"
+allowed_for_critical = ["green", "yellow"]
+
+[module_signing]
+enforcement = "/sys/module/module/parameters/sig_enforce"
+policy = "read-only-observation"
+
+[filesystem]
+required_flags = ["O_NOFOLLOW", "O_CLOEXEC"]
+parent_resolution = "component-by-component-openat"
+
+[api]
+transport = "unix-domain-socket"
+remote_listener = false
+peer_policy = "uid-0-only"

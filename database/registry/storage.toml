@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[[class]]
+id = "ufs"
+protocol = "ufs"
+health_evidence = ["life_time_a", "life_time_b", "pre_eol_info"]
+queue_surfaces = ["scheduler", "read_ahead_kb", "nr_requests"]
+write_policy = "runtime-evidence-required"
+
+[[class]]
+id = "emmc"
+protocol = "mmc"
+health_evidence = ["life_time", "pre_eol_info"]
+queue_surfaces = ["scheduler", "read_ahead_kb", "nr_requests"]
+write_policy = "runtime-evidence-required"
+
+[[class]]
+id = "sd"
+protocol = "mmc"
+health_evidence = []
+queue_surfaces = ["scheduler", "read_ahead_kb", "nr_requests"]
+write_policy = "conservative"
+
+[[class]]
+id = "generic-block"
+protocol = "unknown"
+health_evidence = []
+queue_surfaces = ["scheduler", "read_ahead_kb", "nr_requests"]
+write_policy = "runtime-capability-required"

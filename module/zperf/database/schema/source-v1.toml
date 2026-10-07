@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+name = "zairenkai-source"
+required = ["id", "name", "trust", "class", "url", "host"]
+trust_values = ["community", "upstream", "official", "runtime"]
+classes = ["community", "upstream", "supplier", "runtime"]
+url_policy = "https-or-local"

@@ -1,0 +1,110 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[[source]]
+id = "aosp.kernel"
+name = "Android Open Source Project kernel documentation"
+trust = "official"
+class = "upstream"
+url = "https://source.android.com/docs/core/architecture/kernel"
+host = "source.android.com"
+provides = ["kernel", "gki", "kmi"]
+
+[[source]]
+id = "aosp.gki"
+name = "Android Generic Kernel Image"
+trust = "official"
+class = "upstream"
+url = "https://source.android.com/docs/core/architecture/kernel/gki-project"
+host = "source.android.com"
+provides = ["gki", "kmi", "modules"]
+
+[[source]]
+id = "aosp.vendor-hooks"
+name = "Android GKI vendor hooks"
+trust = "official"
+class = "upstream"
+url = "https://source.android.com/docs/core/architecture/kernel/gki-technical-overview"
+host = "source.android.com"
+provides = ["hooks", "gki"]
+
+[[source]]
+id = "aosp.health"
+name = "Android Health AIDL"
+trust = "official"
+class = "upstream"
+url = "https://source.android.com/docs/core/architecture/hidl/aidl-hals"
+host = "source.android.com"
+provides = ["health", "storage"]
+
+[[source]]
+id = "aosp.security"
+name = "Android security architecture"
+trust = "official"
+class = "upstream"
+url = "https://source.android.com/docs/security"
+host = "source.android.com"
+provides = ["selinux", "avb", "verified_boot"]
+
+[[source]]
+id = "linux.docs"
+name = "Linux kernel documentation"
+trust = "upstream"
+class = "upstream"
+url = "https://docs.kernel.org/"
+host = "docs.kernel.org"
+provides = ["kernel", "thermal", "storage", "network", "memory"]
+
+[[source]]
+id = "qualcomm.catalog"
+name = "Qualcomm Snapdragon product catalog"
+trust = "official"
+class = "supplier"
+url = "https://www.qualcomm.com/products/mobile/snapdragon"
+host = "qualcomm.com"
+provides = ["soc", "gpu", "modem"]
+
+[[source]]
+id = "mediatek.catalog"
+name = "MediaTek Dimensity product catalog"
+trust = "official"
+class = "supplier"
+url = "https://www.mediatek.com/products/smartphones"
+host = "mediatek.com"
+provides = ["soc", "gpu", "modem"]
+
+[[source]]
+id = "samsung.exynos"
+name = "Samsung Exynos product information"
+trust = "official"
+class = "supplier"
+url = "https://semiconductor.samsung.com/processor/mobile-processor/"
+host = "semiconductor.samsung.com"
+provides = ["soc", "gpu", "modem"]
+
+[[source]]
+id = "google.tensor"
+name = "Google Tensor platform information"
+trust = "official"
+class = "supplier"
+url = "https://blog.google/products/pixel/google-tensor-g5/"
+host = "blog.google"
+provides = ["soc", "device"]
+
+[[source]]
+id = "lineage.devices"
+name = "LineageOS community device metadata"
+trust = "community"
+class = "community"
+url = "https://github.com/LineageOS/android_device_qcom_common"
+host = "github.com"
+provides = ["device", "board", "kernel"]
+
+[[source]]
+id = "runtime.device-tree"
+name = "Live device-tree and kernel observation"
+trust = "runtime"
+class = "runtime"
+url = "local://device-tree"
+host = "local"
+provides = ["identity", "topology", "thermal", "cpu", "gpu"]

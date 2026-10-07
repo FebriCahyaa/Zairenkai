@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "mediatek"
+source_id = "mediatek.catalog"
+products = ["mediatek.dimensity-9400", "mediatek.dimensity-9500"]

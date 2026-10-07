@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 3
+name = "zairenkai-device-profile"
+identity_required = ["id", "oem", "soc", "architecture"]
+evidence_required = true
+runtime_discovery_required = true
+
+[security]
+unknown_capability = "deny"
+static_profile_cannot_override_runtime = true
+
+[performance]
+benchmarks = "external-measurement-artifacts-only"
+thermal_limits = "runtime-policy-registry"

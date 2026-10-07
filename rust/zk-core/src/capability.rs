@@ -20,6 +20,17 @@ pub enum Capability {
     ManagePolicy,
     ManageHooks,
     ResetRuntime,
+    ReadStorage,
+    ReadNetwork,
+    ReadMemory,
+    ReadSecurity,
+    TuneStorage,
+    TuneNetwork,
+    TuneZram,
+    ManageDeviceRegistry,
+    ManageDataSources,
+    ManageEvidence,
+    ManageRecovery,
     Experimental,
 }
 
@@ -38,6 +49,10 @@ impl CapabilitySet {
             ReadDevice, ReadKernel, ReadThermal, ReadPerformance, ReadLogs,
             TuneCpu, TuneGpu, TuneMemory, TuneIo, TunePower, TuneThermal,
             ManageLicense, ManagePolicy, ManageHooks, ResetRuntime,
+            ReadStorage, ReadNetwork, ReadMemory, ReadSecurity,
+            TuneStorage, TuneNetwork, TuneZram,
+            ManageDeviceRegistry, ManageDataSources, ManageEvidence,
+            ManageRecovery,
         ])
     }
 

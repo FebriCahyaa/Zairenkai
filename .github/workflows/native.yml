@@ -40,6 +40,8 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - name: Validate device and kernel data
         run: python3 tools/profile_validate.py database
+      - name: Validate Atlas source and provider registry
+        run: python3 tools/atlas_validate.py
       - name: Verify packaged module database matches source database
         run: diff -qr database module/zperf/database
       - name: Validate measurement analyzer

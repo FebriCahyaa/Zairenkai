@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[observation]
+interfaces = "/proc/net/dev"
+tcp_current = "/proc/sys/net/ipv4/tcp_congestion_control"
+tcp_available = "/proc/sys/net/ipv4/tcp_available_congestion_control"
+
+[controls]
+congestion = "allowlisted-runtime-values-only"
+tcp_fastopen_range = [0, 3]
+tcp_low_latency_range = [0, 1]
+
+[policy]
+unknown_interface = "read-only"
+network_mutation_requires = ["runtime-capability", "allowlisted-value", "sentinel"]

@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[generic]
+color_surfaces = ["kcal"]
+write_policy = "only-if-live-node-is-present"
+readback_required = true
+
+[notes]
+policy = "display-driver-specific"

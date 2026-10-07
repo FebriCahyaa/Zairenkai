@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+api: zairenkai.local
+version: 1
+transport:
+  type: unix-domain-socket
+  default_socket: /data/adb/zperf/api.sock
+  framing: ZLP1
+  payload: toml
+  max_request_bytes: 32768
+  max_response_bytes: 131072
+  remote_listener: false
+  peer_authentication: SO_PEERCRED
+  allowed_uid: 0
+security:
+  filesystem_mode: '0600'
+  parent_directory_mode: '0700'
+  mutation_policy: 'not-exposed-in-v1'
+methods:
+  core.info:
+    class: observe
+    permission: read.device
+  core.permissions:
+    class: observe
+    permission: read.device
+  device.identity:
+    class: observe
+    permission: read.device
+  device.inventory:
+    class: observe
+    permission: read.inventory
+  device.optimize:
+    class: observe
+    permission: read.performance
+  safety.evaluate:
+    class: observe
+    permission: read.security
+  runtime.status:
+    class: observe
+    permission: read.status
+invariants:
+  - 'API is local-only'
+  - 'API v1 cannot mutate kernel state'
+  - 'all future mutation methods must reuse Core Authority + Sentinel + transaction engine'
+  - 'unknown capabilities fail closed'

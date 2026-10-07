@@ -39,6 +39,8 @@ const SPECS: &[Spec] = &[
     Spec { id: "zram_disksize", category: "zram", title: "zram size (bytes)", lite: true },
     Spec { id: "zram_max_comp_streams", category: "zram", title: "zram comp streams", lite: true },
     Spec { id: "io_scheduler", category: "io", title: "I/O scheduler", lite: false },
+    Spec { id: "io_read_ahead_kb", category: "io", title: "I/O read-ahead (KiB)", lite: false },
+    Spec { id: "io_nr_requests", category: "io", title: "I/O queue depth", lite: false },
     Spec { id: "fsync", category: "io", title: "fsync enabled", lite: true },
     Spec { id: "tcp_congestion_control", category: "network", title: "TCP congestion control", lite: false },
     Spec { id: "tcp_fastopen", category: "network", title: "TCP fast open", lite: false },
@@ -54,6 +56,20 @@ pub fn find(id: &str) -> Option<&'static Spec> {
 
 pub fn specs() -> impl Iterator<Item = &'static Spec> {
     SPECS.iter()
+}
+
+pub fn operation_for(id: &str) -> crate::operation::Operation {
+    match find(id).map(|s| s.category) {
+        Some("cpu") => crate::operation::Operation::SetCpuTweak,
+        Some("gpu") => crate::operation::Operation::SetGpuTweak,
+        Some("memory") => crate::operation::Operation::SetMemoryTweak,
+        Some("zram") => crate::operation::Operation::TuneZram,
+        Some("io") => crate::operation::Operation::SetIoTweak,
+        Some("network") => crate::operation::Operation::TuneNetwork,
+        Some("battery") => crate::operation::Operation::SetPowerTweak,
+        Some("display") => crate::operation::Operation::SetPowerTweak,
+        _ => crate::operation::Operation::SetPowerTweak,
+    }
 }
 
 pub fn is_lite(id: &str) -> Option<bool> {
@@ -83,16 +99,15 @@ pub fn read(id: &str, s: &Sysroot, t: &Topology) -> Option<String> {
         "zram_disksize" => s.read("/sys/block/zram0/disksize"),
         "zram_max_comp_streams" => s.read("/sys/block/zram0/max_comp_streams"),
         "io_scheduler" => s.list_dir("/sys/block").into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/scheduler"))),
+        "io_read_ahead_kb" => s.list_dir("/sys/block").into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/read_ahead_kb"))),
+        "io_nr_requests" => s.list_dir("/sys/block").into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nr_requests"))),
         "fsync" => s.read("/sys/module/sync/parameters/fsync_enabled"),
         "tcp_congestion_control" => s.read("/proc/sys/net/ipv4/tcp_congestion_control"),
         "tcp_fastopen" => s.read("/proc/sys/net/ipv4/tcp_fastopen"),
         "tcp_low_latency" => s.read("/proc/sys/net/ipv4/tcp_low_latency"),
         "kcal" => s.read("/sys/devices/platform/kcal_ctrl.0/kcal"),
         "kcal_sat" => s.read("/sys/devices/platform/kcal_ctrl.0/kcal_sat"),
-        "charge_limit" => first_existing(s, &[
-            "/sys/class/power_supply/battery/charge_control_limit",
-            "/sys/class/power_supply/battery/batt_slate_mode",
-        ]).and_then(|p| s.read(&p)),
+        "charge_limit" => s.read("/sys/class/power_supply/battery/charge_control_limit"),
         _ => None,
     }
 }
@@ -267,6 +282,30 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             }
             if count == 0 { return Err("no block I/O scheduler nodes found".into()); }
             Ok(format!("{count} block devices -> {value}"))
+        }
+        "io_read_ahead_kb" => {
+            let v = parse_range(value, 0, 2048)?;
+            let mut count = 0usize;
+            for dev in s.list_dir("/sys/block") {
+                let node = format!("/sys/block/{dev}/queue/read_ahead_kb");
+                if !s.exists(&node) { continue; }
+                write_checked(s, &node, &v)?;
+                count += 1;
+            }
+            if count == 0 { return Err("no block read-ahead nodes found".into()); }
+            Ok(format!("{count} block devices -> {v} KiB"))
+        }
+        "io_nr_requests" => {
+            let v = parse_range(value, 4, 1024)?;
+            let mut count = 0usize;
+            for dev in s.list_dir("/sys/block") {
+                let node = format!("/sys/block/{dev}/queue/nr_requests");
+                if !s.exists(&node) { continue; }
+                write_checked(s, &node, &v)?;
+                count += 1;
+            }
+            if count == 0 { return Err("no block queue-depth nodes found".into()); }
+            Ok(format!("{count} block devices -> {v}"))
         }
         "fsync" => write_sys_first(s, &["/sys/module/sync/parameters/fsync_enabled"], value, 0, 1),
         "tcp_congestion_control" => {

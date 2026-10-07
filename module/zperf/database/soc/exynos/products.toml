@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "samsung_semiconductor"
+source_id = "samsung.exynos"
+products = ["samsung.exynos-2400", "samsung.exynos-2500"]

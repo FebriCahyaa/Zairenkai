@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+name = "zairenkai-kernel-capability-hints"
+
+# These entries are hints only. runtime discovery is authoritative.
+[[kernel]]
+model = "legacy-vendor"
+generations = ["4.14", "4.19", "5.4"]
+probe_required = true
+
+[[kernel]]
+model = "modern-vendor"
+generations = ["5.10", "5.15", "6.1", "6.6", "6.12"]
+probe_required = true
+
+[[kernel]]
+model = "android-gki"
+generations = ["5.10", "5.15", "6.1", "6.6", "6.12", "6.18"]
+probe_required = true
+
+[policy]
+unknown_version = "probe"
+unknown_surface = "deny"
+version_is_not_capability_proof = true

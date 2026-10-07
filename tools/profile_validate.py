@@ -29,19 +29,28 @@ def load(path: Path) -> dict:
 def validate_device(path: Path) -> list[str]:
     d = load(path)
     errors: list[str] = []
-    for key in ("schema_version", "id", "vendor", "soc", "architecture", "runtime_discovery_required"):
+    version = d.get("schema_version")
+    required = ("schema_version", "id", "vendor", "soc", "architecture", "runtime_discovery_required")
+    for key in required:
         if key not in d:
             errors.append(f"{path}: missing {key}")
-    if d.get("schema_version") != 1:
-        errors.append(f"{path}: unsupported schema_version={d.get('schema_version')!r}")
+    if version not in {1, 3}:
+        errors.append(f"{path}: unsupported schema_version={version!r}")
     if d.get("vendor") not in VENDORS:
         errors.append(f"{path}: invalid vendor")
     if d.get("runtime_discovery_required") is not True:
         errors.append(f"{path}: runtime_discovery_required must be true")
     if d.get("architecture") not in {"arm64", "x86_64", "riscv64", "unknown"}:
         errors.append(f"{path}: invalid architecture")
-    if path.stem != d.get("soc"):
+    if version == 1 and path.stem != d.get("soc"):
         errors.append(f"{path}: filename must match soc={d.get('soc')!r}")
+    if version == 3:
+        if not d.get("oem"):
+            errors.append(f"{path}: v3 profile requires oem")
+        if not d.get("source_id"):
+            errors.append(f"{path}: v3 profile requires source_id")
+        if path.stem not in {d.get("soc"), str(d.get("id", "")).split(".")[-1]}:
+            errors.append(f"{path}: v3 filename must identify the device")
     kernel = d.get("kernel", {})
     flavors = kernel.get("preferred_flavors", [])
     if not flavors or any(v not in {"gki", "non-gki"} for v in flavors):
@@ -64,9 +73,10 @@ def validate_device(path: Path) -> list[str]:
     metrics = d.get("measurement", {}).get("metrics", [])
     if not metrics or d.get("measurement", {}).get("interpretation") != "measured-only":
         errors.append(f"{path}: measurements must be explicit and measured-only")
-    status = d.get("status", {})
-    if status.get("validation") != "runtime-probe-required":
-        errors.append(f"{path}: device profiles must require runtime probing")
+    if version == 1:
+        status = d.get("status", {})
+        if status.get("validation") != "runtime-probe-required":
+            errors.append(f"{path}: device profiles must require runtime probing")
     return errors
 
 
@@ -94,13 +104,22 @@ def validate_index(path: Path) -> list[str]:
         seen.add(entry.get("id"))
         if entry.get("vendor") not in VENDORS:
             errors.append(f"{path}: invalid vendor for {entry.get('id')}")
-        if entry.get("id") and entry.get("id") != f"{entry.get('vendor')}.{entry.get('soc')}":
-            errors.append(f"{path}: id must equal vendor.soc for {entry.get('id')}")
         meta_raw = entry.get("metadata", "")
         catalog_raw = entry.get("catalog", "")
         meta = path.parent / meta_raw
         if not meta.is_file():
             errors.append(f"{path}: missing metadata file {meta_raw}")
+        else:
+            try:
+                metadata = load(meta)
+                if metadata.get("id") != entry.get("id"):
+                    errors.append(f"{path}: metadata id mismatch for {entry.get('id')}")
+                if metadata.get("vendor") != entry.get("vendor") or metadata.get("soc") != entry.get("soc"):
+                    errors.append(f"{path}: metadata identity mismatch for {entry.get('id')}")
+                if metadata.get("schema_version") == 1 and entry.get("id") != f"{entry.get('vendor')}.{entry.get('soc')}":
+                    errors.append(f"{path}: legacy profile id must equal vendor.soc for {entry.get('id')}")
+            except Exception as exc:
+                errors.append(f"{path}: invalid metadata {meta_raw}: {exc}")
         if safe_relative_path(meta_raw) is None or safe_relative_path(catalog_raw) is None:
             errors.append(f"{path}: unsafe relative path for {entry.get('id')}")
     return errors

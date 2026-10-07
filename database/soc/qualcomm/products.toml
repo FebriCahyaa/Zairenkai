@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "qualcomm"
+source_id = "qualcomm.catalog"
+products = ["qualcomm.sm8550", "qualcomm.sm8650", "qualcomm.sm8750", "qualcomm.sm8850-5-ac"]

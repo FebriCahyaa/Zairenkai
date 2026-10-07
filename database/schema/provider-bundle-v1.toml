@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+name = "zairenkai-provider-bundle"
+required = ["schema_version", "source_id", "revision", "snapshot_sha256", "records"]
+maximum_records = 10000
+snapshot_sha256 = "sha256-of-canonical-source-snapshot"
+provenance_required = true
+signature = "optional-detached-signature"
+expiry = "required-for-remote-supplier-bundles"

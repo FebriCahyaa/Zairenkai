@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+core_id = "zairenkai.core"
+core_api = 1
+
+[principles]
+capability_first = true
+least_privilege = true
+fail_closed = true
+runtime_observation_authoritative = true
+measured_performance_only = true
+
+[components]
+kernel = "ZKFC"
+runtime = "zperfd"
+android = "Zairenkai Android Client"
+data = "Zairenkai Device Registry"

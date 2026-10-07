@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 2
+name = "zairenkai-device-profile"
+
+[identity]
+required = ["id", "vendor", "soc", "architecture"]
+
+[kernel]
+required = ["preferred_flavors", "observed_generations"]
+
+[capability]
+required = ["runtime_discovery_required"]
+
+[measurement]
+rule = "measured-only"
+required_dimensions = ["cpu", "gpu", "thermal", "memory", "power"]

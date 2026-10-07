@@ -101,3 +101,17 @@ vendor = "tensor"
 soc = "gs301"
 metadata = "devices/tensor/gs301.toml"
 catalog = "generic.toml"
+
+[[device]]
+id = "google.pixel10"
+vendor = "tensor"
+soc = "tensor-g5"
+metadata = "devices/google/pixel10.toml"
+catalog = "generic.toml"
+
+[[device]]
+id = "samsung.galaxy-s26-ultra"
+vendor = "qualcomm"
+soc = "sm8850-5-ac"
+metadata = "devices/samsung/galaxy-s26-ultra.toml"
+catalog = "generic.toml"

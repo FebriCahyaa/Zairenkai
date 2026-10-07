@@ -35,19 +35,39 @@ for third-party attributions.
 ## Zairenkai Core Platform
 
 Zairenkai is organized around a stable **Zairenkai Core Platform** identity.
-ZKFC is the kernel authority, zperfd is the runtime orchestrator, the Device
-Registry describes hardware/kernel evidence, and the Core Authority maps
-semantic operations to least-privilege capabilities.
+ZKFC is the kernel authority, zperfd is the runtime orchestrator, **Atlas** is
+the device/system knowledge plane, and **Sentinel** is the runtime safety plane.
+The Core Authority maps semantic operations to least-privilege capabilities.
 
 The system follows:
 
 ```text
-identity -> capability -> authority -> policy -> transaction -> observation -> reconciliation -> audit
+identity -> capability -> authority -> Atlas evidence -> policy -> Sentinel
+-> transaction -> observation -> reconciliation -> audit
 ```
 
 No static SoC profile is treated as proof that a kernel interface exists.
 Qualcomm, MediaTek, Samsung Exynos and Google Tensor data are provider hints;
-the live kernel/device surface remains authoritative.
+the live kernel/device surface remains authoritative. Atlas stores provenance and
+evidence classes, while Sentinel can fail closed before a risky mutation.
+
+### Atlas + Sentinel
+
+**Zairenkai Atlas** maintains versioned device, OEM, SoC, kernel, thermal, storage,
+memory, networking, graphics, security and measurement metadata. Supplier and
+upstream data enters through a trust registry and immutable snapshot contract;
+static knowledge can never override runtime capability discovery.
+
+**Zairenkai Sentinel** constrains authorized operations using kernel compatibility,
+persistent state, SAFE MODE, thermal/power state, storage health, boot integrity
+and evidence strength. Root access is not treated as blanket application authority.
+
+### Local API
+
+Zairenkai exposes **ZLP v1 (Zairenkai Local Control Protocol)** over a root-only
+Unix domain socket for structured introspection. API v1 is observation-only; future
+mutation endpoints must reuse Core Authority, Sentinel, ZKFC validation and the
+durable transaction engine rather than introducing a second mutation path.
 
 ## Features
 
@@ -97,10 +117,13 @@ performance controls.
 
 The framework keeps vendor-specific knowledge out of the kernel core.
 Versioned family/device data under `database/` currently covers Qualcomm,
-MediaTek, Samsung Exynos and Google Tensor. The database supplies identity and
-provider hints; live kernel/sysfs capability discovery decides what is actually
-usable. Benchmark values are never fabricated into static profiles: measured
-runs are stored as JSONL artifacts and analyzed by `tools/zperf_analyze.py`.
+MediaTek, Samsung Exynos and Google Tensor, with 16 indexed device profiles and
+10 supplier SoC product records in the current seed registry. The database is an
+ingestion foundation rather than a claim of exhaustive market coverage: Atlas can
+accept new OEM/device records without changing the runtime engine. Live
+kernel/sysfs capability discovery decides what is actually usable. Benchmark
+values are never fabricated into static profiles: measured runs are stored as
+artifacts and analyzed separately.
 
 ## Supported kernels
 

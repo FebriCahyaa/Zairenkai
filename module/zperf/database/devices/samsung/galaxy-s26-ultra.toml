@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 3
+id = "samsung.galaxy-s26-ultra"
+oem = "samsung"
+vendor = "qualcomm"
+soc = "sm8850-5-ac"
+architecture = "arm64"
+runtime_discovery_required = true
+source_id = "qualcomm.catalog"
+
+[match]
+platform_tokens = ["sm8850-5-ac", "sm8850"]
+compatible_tokens = ["qcom"]
+model_tokens = ["Galaxy S26 Ultra"]
+
+[kernel]
+preferred_flavors = ["gki"]
+observed_generations = []
+
+[cpu]
+surfaces = ["cpufreq"]
+optional_surfaces = ["uclamp", "schedtune"]
+
+[gpu]
+providers = ["kgsl", "devfreq"]
+runtime_path_discovery = true
+
+[thermal]
+providers = ["linux-thermal", "qualcomm-thermal"]
+type_patterns = ["qcom", "tsens", "cpu", "gpu"]
+runtime_path_discovery = true
+
+[storage]
+classes = ["ufs", "generic-block"]
+health_evidence = ["life_time_a", "life_time_b", "pre_eol_info"]
+
+[memory]
+controls = ["vm.swappiness", "vm.dirty_ratio", "vm.dirty_background_ratio", "zram"]
+
+[network]
+controls = ["tcp_congestion_control", "tcp_fastopen"]
+
+[security]
+observations = ["selinux", "verified_boot", "verity", "module_signature"]
+
+[measurement]
+metrics = ["cpu_frequency_residency", "gpu_frequency_residency", "thermal_temperature", "thermal_slope", "psi_cpu", "psi_memory", "psi_io", "fps_p50", "fps_p95", "jank_percent", "frame_time_p95_ms", "package_power_mw", "storage_latency_p50_us", "storage_latency_p95_us"]
+interpretation = "measured-only"

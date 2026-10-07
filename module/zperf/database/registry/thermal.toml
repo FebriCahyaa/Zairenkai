@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[[provider]]
+id = "linux-thermal"
+class = "generic"
+observation = ["/sys/class/thermal/thermal_zone*/type", "/sys/class/thermal/thermal_zone*/temp"]
+
+[[provider]]
+id = "qualcomm-thermal"
+class = "vendor"
+patterns = ["qcom", "msm", "tsens", "pmic"]
+
+[[provider]]
+id = "mediatek-thermal"
+class = "vendor"
+patterns = ["mtk", "mt6", "mt7", "mt8", "mt9", "lvts"]
+
+[[provider]]
+id = "exynos-thermal"
+class = "vendor"
+patterns = ["exynos", "s5e"]
+
+[[provider]]
+id = "tensor-thermal"
+class = "vendor"
+patterns = ["tensor", "gs", "g3", "g4", "g5"]
+
+[policy]
+performance_escalation_max_mdeg = 47000
+hard_block_mdeg = 48000
+missing_telemetry = "conservative-no-escalation"
+hysteresis_mdeg = 1500

@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Supplier-facing SoC catalog. Product facts come only from declared suppliers;
+# runtime kernel capabilities are never inferred from this table.
+schema_version = 1
+
+[[product]]
+id = "qualcomm.sm8550"
+vendor = "qualcomm"
+name = "Snapdragon 8 Gen 2"
+platform_id = "sm8550"
+source_id = "qualcomm.catalog"
+status = "verified-supplier"
+
+[[product]]
+id = "qualcomm.sm8650"
+vendor = "qualcomm"
+name = "Snapdragon 8 Gen 3"
+platform_id = "sm8650"
+source_id = "qualcomm.catalog"
+status = "verified-supplier"
+
+[[product]]
+id = "qualcomm.sm8750"
+vendor = "qualcomm"
+name = "Snapdragon 8 Elite"
+platform_id = "sm8750"
+source_id = "qualcomm.catalog"
+status = "verified-supplier"
+
+[[product]]
+id = "qualcomm.sm8850-5-ac"
+vendor = "qualcomm"
+name = "Snapdragon 8 Elite Gen 5"
+platform_id = "SM8850-5-AC"
+source_id = "qualcomm.catalog"
+status = "verified-supplier"
+
+[[product]]
+id = "mediatek.dimensity-9400"
+vendor = "mediatek"
+name = "Dimensity 9400"
+platform_id = "dimensity-9400"
+source_id = "mediatek.catalog"
+status = "verified-supplier"
+
+[[product]]
+id = "mediatek.dimensity-9500"
+vendor = "mediatek"
+name = "Dimensity 9500"
+platform_id = "dimensity-9500"
+source_id = "mediatek.catalog"
+status = "verified-supplier"
+
+[[product]]
+id = "samsung.exynos-2400"
+vendor = "samsung_semiconductor"
+name = "Exynos 2400"
+platform_id = "exynos2400"
+source_id = "samsung.exynos"
+status = "verified-supplier"
+
+[[product]]
+id = "samsung.exynos-2500"
+vendor = "samsung_semiconductor"
+name = "Exynos 2500"
+platform_id = "exynos2500"
+source_id = "samsung.exynos"
+status = "verified-supplier"
+
+[[product]]
+id = "google.tensor-g4"
+vendor = "google_tensor"
+name = "Google Tensor G4"
+platform_id = "tensor-g4"
+source_id = "google.tensor"
+status = "verified-supplier"
+
+[[product]]
+id = "google.tensor-g5"
+vendor = "google_tensor"
+name = "Google Tensor G5"
+platform_id = "tensor-g5"
+source_id = "google.tensor"
+status = "verified-supplier"

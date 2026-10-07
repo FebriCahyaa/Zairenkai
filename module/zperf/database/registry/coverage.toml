@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+status = "expanding-registry"
+strategy = "source-driven-ingestion-plus-runtime-discovery"
+
+[dimensions]
+vendors = "oem-and-soc-supplier"
+soc = "supplier-products"
+kernel = "gki-and-nongki-generations"
+thermal = "generic-plus-vendor-providers"
+storage = "ufs-emmc-sd-generic"
+memory = "runtime-capacity-and-pressure"
+network = "runtime-interface-and-tcp-policy"
+security = "selinux-avb-verity-module-signing"
+performance = "measurement-only"
+
+[rule]
+static_data_is_authority = false
+runtime_discovery_is_authority = true
+unknown_device_mutation = "conservative"

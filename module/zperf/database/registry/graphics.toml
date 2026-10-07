@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[[provider]]
+id = "kgsl"
+family = "qualcomm"
+frequency_surface = "devfreq-or-kgsl"
+
+[[provider]]
+id = "mali"
+family = "mediatek|exynos|tensor"
+frequency_surface = "devfreq"
+
+[[provider]]
+id = "powervr"
+family = "mediatek|tensor"
+frequency_surface = "devfreq"
+
+[[provider]]
+id = "devfreq"
+family = "generic"
+frequency_surface = "runtime-discovered"
+
+[policy]
+static_ip_claims = "advisory-only"
+frequency_validation = "runtime-opp-table-required"

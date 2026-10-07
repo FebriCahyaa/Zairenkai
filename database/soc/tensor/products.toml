@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+vendor = "google_tensor"
+source_id = "google.tensor"
+products = ["google.tensor-g4", "google.tensor-g5"]

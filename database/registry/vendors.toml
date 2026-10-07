@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+schema_version = 1
+
+[[vendor]]
+id = "google"
+class = "oem"
+display_name = "Google"
+domains = ["store.google.com", "blog.google", "developers.google.com"]
+source_ids = ["google.tensor", "aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "samsung"
+class = "oem"
+display_name = "Samsung"
+domains = ["samsung.com", "semiconductor.samsung.com"]
+source_ids = ["samsung.exynos", "aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "xiaomi"
+class = "oem"
+display_name = "Xiaomi"
+domains = ["mi.com"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "oneplus"
+class = "oem"
+display_name = "OnePlus"
+domains = ["oneplus.com"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "oppo"
+class = "oem"
+display_name = "OPPO"
+domains = ["oppo.com"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "vivo"
+class = "oem"
+display_name = "vivo"
+domains = ["vivo.com"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "motorola"
+class = "oem"
+display_name = "Motorola"
+domains = ["motorola.com"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "sony"
+class = "oem"
+display_name = "Sony"
+domains = ["sony.com"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "asus"
+class = "oem"
+display_name = "ASUS"
+domains = ["asus.com"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "nothing"
+class = "oem"
+display_name = "Nothing"
+domains = ["nothing.tech"]
+source_ids = ["aosp.kernel", "aosp.security"]
+
+[[vendor]]
+id = "qualcomm"
+class = "soc_supplier"
+display_name = "Qualcomm"
+domains = ["qualcomm.com"]
+source_ids = ["qualcomm.catalog", "aosp.kernel"]
+
+[[vendor]]
+id = "mediatek"
+class = "soc_supplier"
+display_name = "MediaTek"
+domains = ["mediatek.com"]
+source_ids = ["mediatek.catalog", "aosp.kernel"]
+
+[[vendor]]
+id = "samsung_semiconductor"
+class = "soc_supplier"
+display_name = "Samsung Semiconductor"
+domains = ["semiconductor.samsung.com"]
+source_ids = ["samsung.exynos", "aosp.kernel"]
+
+[[vendor]]
+id = "google_tensor"
+class = "soc_supplier"
+display_name = "Google Tensor"
+domains = ["blog.google", "developers.google.com"]
+source_ids = ["google.tensor", "aosp.kernel"]
