@@ -130,6 +130,7 @@ mod tests {
                 avail: vec![300000, 1800000],
                 min_hw: 300000,
                 max_hw: 1800000,
+                cpus: vec![0, 1, 2, 3],
             }],
             gpu: None,
             thermal_zones: vec![],

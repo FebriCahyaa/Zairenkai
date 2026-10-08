@@ -12,7 +12,12 @@ mod catalog;
 mod config;
 mod engine;
 mod family;
+mod frame;
+mod fas;
 mod nodes;
+mod scene_engine;
+mod task_controller;
+mod workload;
 mod optimize;
 mod platform;
 mod scene;
@@ -71,7 +76,7 @@ fn parse_args() -> Args {
         root: "/".into(),
         profile: None,
         state: "/data/adb/zperf".into(),
-        interval_ms: 1500,
+        interval_ms: 500,
         lite: false,
         json: false,
     };
@@ -108,6 +113,7 @@ fn print_help() {
   reset\n\
   status [--json]\n\
   core [--json]\n\
+  adaptive [--json]\n\
   daemon"
     );
 }
@@ -845,6 +851,110 @@ fn cmd_sentinel(args: &Args) -> i32 {
     if decision.allowed { 0 } else { 4 }
 }
 
+fn cmd_adaptive(args: &Args) -> i32 {
+    let s = Sysroot::new(&args.root);
+    let topology = Topology::detect(&s);
+    let profile = match load_profile(args.profile.as_deref(), Path::new(&args.state), &topology.identity) {
+        Ok(profile) => profile,
+        Err(e) => {
+            eprintln!("adaptive profile error: {e}");
+            return 2;
+        }
+    };
+    let mut scene_engine = scene_engine::SceneEngine::new();
+    let scene = scene_engine.observe(&s, &profile);
+    let desired = {
+        let state = StateStore::new(&args.state);
+        state.mode().unwrap_or_else(|| profile.meta.default_mode.clone())
+    };
+    let mut effective = if desired == "auto" {
+        scene::resolve_auto_with_previous(&s, None).to_string()
+    } else {
+        desired.clone()
+    };
+    if let Some(package) = scene.package.as_ref() {
+        if let Some(mode) = profile.perapp.get(package) {
+            effective = mode.clone();
+        }
+    }
+
+    let observe = profile.adaptive.enabled
+        && effective != "powersave"
+        && scene.kind.performance_candidate();
+    let mut workload_analyzer = workload::WorkloadAnalyzer::new();
+    let workload = if observe {
+        workload_analyzer.sample_with_gpu(&s, scene.package.as_deref(), topology.gpu.as_ref().map(|g| g.devfreq.as_str()))
+    } else {
+        None
+    };
+    let mut frame_analyzer = frame::FrameAnalyzer::new();
+    let frame = if observe && workload.as_ref().is_some_and(|w| w.active) {
+        let refresh_hz = frame_analyzer.current_refresh_hz();
+        frame_analyzer.sample(
+            scene.package.as_deref().unwrap_or_default(),
+            refresh_hz,
+            profile.adaptive.frame_budget_ms,
+        )
+    } else {
+        frame::FrameMetrics::default()
+    };
+    let thermal_snapshot = thermal::snapshot(&s, &topology);
+    let base_uclamp = profile
+        .mode(&effective)
+        .and_then(|m| m.cpu.uclamp_min_pct)
+        .unwrap_or(0);
+    let decision = fas::FasController::new().update(
+        &scene,
+        workload.as_ref(),
+        &frame,
+        &thermal_snapshot,
+        base_uclamp,
+        &profile.adaptive,
+    );
+
+    let zkfc_caps = Zkfc::open().ok().and_then(|z| z.capabilities().ok()).map(|c| c.kernel_caps());
+    if args.json {
+        println!(
+            "{{\"scene\":\"{}\",\"kind\":\"{:?}\",\"event\":\"{:?}\",\"effective\":\"{}\",\"observe\":{},\"workload\":{},\"gpu_util_pct\":{},\"run_queue_delay_ms\":{},\"frame_available\":{},\"frame_fresh\":{},\"fps\":{:.3},\"p95_ms\":{:.3},\"jank_pct\":{:.3},\"thermal_headroom_permille\":{},\"decision_active\":{},\"extra_boost_pct\":{},\"uclamp_min_pct\":{},\"cpu_floor_pct\":{},\"confidence\":{},\"reason\":\"{}\",\"zkfc_perf_capable\":{}}}",
+            json_escape(scene.package.as_deref().unwrap_or("none")),
+            scene.kind,
+            scene.event,
+            json_escape(&effective),
+            observe,
+            workload.is_some(),
+            workload.as_ref().and_then(|w| w.gpu_util_pct.map(|v| format!("{v:.3}"))).unwrap_or_else(|| "null".into()),
+            workload.as_ref().and_then(|w| w.run_queue_delay_ms.map(|v| format!("{v:.3}"))).unwrap_or_else(|| "null".into()),
+            frame.available,
+            frame.fresh,
+            frame.fps,
+            frame.p95_ms,
+            frame.jank_ratio * 100.0,
+            thermal_snapshot.headroom_permille.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            decision.active,
+            decision.extra_boost_pct,
+            decision.target_uclamp_min_pct,
+            decision.cpu_floor_pct,
+            decision.confidence,
+            decision.reason,
+            zkfc_caps.is_some_and(|caps| caps & zkfc_sys::ZKFC_CAP_TUNE_PERF != 0),
+        );
+    } else {
+        println!("scene       : {} ({:?}, {:?})", scene.package.as_deref().unwrap_or("none"), scene.kind, scene.event);
+        println!("effective   : {effective}");
+        println!("observe     : {observe}");
+        if let Some(w) = workload {
+            println!("workload    : pid={} cpu={:.1}% top={:.1}% render={:.1}% gpu={:?}% rq={:?}ms active={} confidence={}", w.pid, w.cpu_util_pct, w.top_thread_util_pct(), w.render_util_pct(), w.gpu_util_pct, w.run_queue_delay_ms, w.active, w.confidence);
+        } else {
+            println!("workload    : unavailable");
+        }
+        println!("frame       : available={} fresh={} new={} fps={:.1} p95={:.2}ms jank={:.1}% budget={:.2}ms", frame.available, frame.fresh, frame.new_frames, frame.fps, frame.p95_ms, frame.jank_ratio * 100.0, frame.budget_ms);
+        println!("thermal     : headroom={:?} critical={} complete={}", thermal_snapshot.headroom_permille, thermal_snapshot.critical_reached, thermal_snapshot.telemetry_complete);
+        println!("decision    : active={} boost=+{}% uclamp={}%% cpu_floor={}%% confidence={} reason={}", decision.active, decision.extra_boost_pct, decision.target_uclamp_min_pct, decision.cpu_floor_pct, decision.confidence, decision.reason);
+        println!("zkfc perf   : {}", zkfc_caps.is_some_and(|caps| caps & zkfc_sys::ZKFC_CAP_TUNE_PERF != 0));
+    }
+    0
+}
+
 fn cmd_reset(args: &Args) -> i32 {
     if let Err(e) = core_authorize(Operation::ResetRuntime) { eprintln!("{e}"); return 1; }
     let s = Sysroot::new(&args.root);
@@ -997,6 +1107,21 @@ fn cmd_daemon(args: &Args) -> i32 {
     };
     eprintln!("zperfd: {} profile '{}' family={}", topology.flavor(), profile.meta.name, family.as_ref().map(|f| f.vendor.as_str()).unwrap_or("none"));
 
+    // Adaptive control is a separate runtime layer above the durable profile.
+    // Base-mode changes remain transactional; transient task boosts/affinity
+    // are owned by ZKFC + ThreadTaskController and are always reset when the
+    // scene changes, safe mode activates, or the daemon stops.
+    let mut scene_engine = scene_engine::SceneEngine::new();
+    let mut workload_analyzer = workload::WorkloadAnalyzer::new();
+    let mut frame_analyzer = frame::FrameAnalyzer::new();
+    let mut last_frame_probe: Option<Instant> = None;
+    let mut fas_controller = fas::FasController::new();
+    let mut last_adaptive_report: Option<(i32, u32)> = None;
+    let mut was_adaptive_observing = false;
+    let mut task_controller = task_controller::ThreadTaskController::new();
+    let performance_cpus = topology.performance_cpus();
+    let performance_policy = topology.performance_policy();
+
     let mut last = String::new();
     let mut last_observed = None;
     let mut next_reconcile = Instant::now();
@@ -1013,6 +1138,13 @@ fn cmd_daemon(args: &Args) -> i32 {
                 }
             }
             was_safe = true;
+            task_controller.reset();
+            fas_controller.reset();
+            last_adaptive_report = None;
+            workload_analyzer.reset();
+            frame_analyzer.reset();
+            last_frame_probe = None;
+            scene_engine.reset();
             last.clear();
             last_observed = None;
             next_reconcile = Instant::now() + reconcile_every;
@@ -1026,6 +1158,15 @@ fn cmd_daemon(args: &Args) -> i32 {
             was_safe = false;
         }
 
+        let scene_snapshot = scene_engine.observe(&s, &profile);
+        if matches!(scene_snapshot.event, scene_engine::SceneEvent::Switch | scene_engine::SceneEvent::Exit) {
+            task_controller.reset();
+            fas_controller.reset();
+            last_adaptive_report = None;
+            workload_analyzer.reset();
+            frame_analyzer.reset();
+            last_frame_probe = None;
+        }
         let desired_raw = state.mode().unwrap_or_else(|| profile.meta.default_mode.clone());
         let desired = if desired_raw == "auto" || profile.mode.contains_key(&desired_raw) {
             desired_raw
@@ -1038,11 +1179,62 @@ fn cmd_daemon(args: &Args) -> i32 {
         } else {
             desired.clone()
         };
-        if let Some(package) = scene::foreground_pkg() {
-            if let Some(mode) = profile.perapp.get(&package) {
+        if let Some(package) = scene_snapshot.package.as_ref() {
+            if let Some(mode) = profile.perapp.get(package) {
                 effective = mode.clone();
             }
         }
+
+        let adaptive_observation = profile.adaptive.enabled
+            && effective != "powersave"
+            && scene_snapshot.kind.performance_candidate();
+        if adaptive_observation != was_adaptive_observing {
+            workload_analyzer.reset();
+            frame_analyzer.reset();
+            last_frame_probe = None;
+            was_adaptive_observing = adaptive_observation;
+        }
+        let workload = if adaptive_observation {
+            workload_analyzer.sample_with_gpu(
+                &s,
+                scene_snapshot.package.as_deref(),
+                topology.gpu.as_ref().map(|gpu| gpu.devfreq.as_str()),
+            )
+        } else {
+            None
+        };
+        let frame_metrics = if adaptive_observation
+            && workload.as_ref().is_some_and(|w| {
+                w.active
+                    && (matches!(
+                        scene_snapshot.kind,
+                        scene_engine::SceneKind::Game
+                            | scene_engine::SceneKind::Benchmark
+                            | scene_engine::SceneKind::Camera
+                            | scene_engine::SceneKind::Video
+                    )
+                        || w.cpu_util_pct >= 20.0
+                        || w.top_thread_util_pct() >= 20.0
+                        || w.render_util_pct() >= 15.0
+                        || w.gpu_util_pct.is_some_and(|v| v >= 70.0))
+            }) {
+            if let Some(pkg) = scene_snapshot.package.as_deref() {
+                let probe_due = last_frame_probe
+                    .map(|t| Instant::now().saturating_duration_since(t) >= Duration::from_millis(profile.adaptive.frame_probe_ms as u64))
+                    .unwrap_or(true);
+                if probe_due {
+                    last_frame_probe = Some(Instant::now());
+                    let refresh_hz = frame_analyzer.current_refresh_hz();
+                    frame_analyzer.sample(pkg, refresh_hz, profile.adaptive.frame_budget_ms)
+                } else {
+                    frame_analyzer.cached()
+                }
+            } else {
+                frame::FrameMetrics::default()
+            }
+        } else {
+            frame::FrameMetrics::default()
+        };
 
         let now = Instant::now();
         let check_drift = now >= next_reconcile;
@@ -1131,8 +1323,81 @@ fn cmd_daemon(args: &Args) -> i32 {
             next_reconcile = now + reconcile_every;
         }
 
+        // FAS runs inside the already-selected scene. It layers a bounded
+        // transient boost over the durable profile instead of rewriting the
+        // complete profile every sampling tick.
+        if adaptive_observation {
+            if let Some(ref workload) = workload {
+                let thermal_snapshot = thermal::snapshot(&s, &topology);
+                let base_uclamp = profile
+                    .mode(&effective)
+                    .and_then(|m| m.cpu.uclamp_min_pct)
+                    .unwrap_or(0);
+                let decision = fas_controller.update(
+                    &scene_snapshot,
+                    Some(workload),
+                    &frame_metrics,
+                    &thermal_snapshot,
+                    base_uclamp,
+                    &profile.adaptive,
+                );
+                if decision.active {
+                    if let Err(e) = kernel_license_ok() {
+                        eprintln!("zperfd: adaptive mutation locked: {e}");
+                    } else {
+                        let sentinel = sentinel_evaluate(args, Operation::SetCpuTweak);
+                        if !sentinel.allowed {
+                            eprintln!("zperfd: adaptive blocked: {:?}", sentinel.reasons);
+                        } else if let Err(e) = task_controller.apply(&decision, workload, &performance_cpus, performance_policy) {
+                            eprintln!("zperfd: adaptive actuator failed: {e}");
+                        } else {
+                            let key = (workload.pid, decision.extra_boost_pct);
+                            if last_adaptive_report != Some(key) {
+                                eprintln!(
+                                    "zperfd: adaptive scene={} age_ms={} reason={} pid={} cpu={:.1}% rss_kb={:?} io_r={}B/s io_w={}B/s gpu={:?}% rq={:?}ms frame_src={} fresh={} fps={:.1} avg={:.2}ms p95={:.2}ms jank={:.1}% boost=+{}% uclamp={} cpu_floor={} confidence={}",
+                                    scene_snapshot.package.as_deref().unwrap_or("none"),
+                                    scene_snapshot.age.as_millis(),
+                                    scene_snapshot.reason,
+                                    workload.pid,
+                                    workload.cpu_util_pct,
+                                    workload.rss_kb,
+                                    workload.io_read_bps.unwrap_or(0),
+                                    workload.io_write_bps.unwrap_or(0),
+                                    frame_metrics.source,
+                                    frame_metrics.fresh,
+                                    frame_metrics.fps,
+                                    frame_metrics.avg_ms,
+                                    frame_metrics.p95_ms,
+                                    frame_metrics.jank_ratio * 100.0,
+                                    workload.gpu_util_pct,
+                                    workload.run_queue_delay_ms,
+                                    decision.extra_boost_pct,
+                                    decision.target_uclamp_min_pct,
+                                    decision.cpu_floor_pct,
+                                    decision.confidence,
+                                );
+                                last_adaptive_report = Some(key);
+                            }
+                        }
+                    }
+                } else {
+                    let was_active = last_adaptive_report.take().is_some();
+                    task_controller.reset();
+                    if was_active {
+                        eprintln!("zperfd: adaptive release scene={} reason={}", scene_snapshot.package.as_deref().unwrap_or("none"), decision.reason);
+                    }
+                }
+            }
+        } else {
+            task_controller.reset();
+            fas_controller.reset();
+        }
+
         std::thread::sleep(Duration::from_millis(args.interval_ms.max(250)));
     }
+    task_controller.reset();
+    fas_controller.reset();
+    last_adaptive_report = None;
     eprintln!("zperfd: stopping");
     0
 }
@@ -1153,6 +1418,7 @@ fn main() {
         "inventory" => cmd_inventory(&args),
         "optimize" => cmd_optimize(&args),
         "thermal" => cmd_thermal(&args),
+        "adaptive" => cmd_adaptive(&args),
         "prop" => cmd_prop(&args),
         "sentinel" => cmd_sentinel(&args),
         "core" => if args.positional.first().map(|x| x.as_str()) == Some("permissions") { cmd_core_permissions(args.json) } else { cmd_core(args.json) },

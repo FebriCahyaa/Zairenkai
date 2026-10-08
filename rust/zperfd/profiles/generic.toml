@@ -12,6 +12,16 @@ soc = "generic"
 default_mode = "balance"
 
 # ---------------- powersave ----------------
+[adaptive]
+enabled = true
+frame_budget_ms = 16.666667
+max_extra_boost_pct = 35
+jank_threshold_pct = 8
+engage_windows = 2
+release_windows = 3
+frame_probe_ms = 900
+affinity_hint = true
+
 [mode.powersave.cpu]
 max_perf_pct = 55
 min_freq = "min"

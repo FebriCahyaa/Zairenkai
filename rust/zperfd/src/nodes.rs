@@ -30,6 +30,8 @@ impl Sysroot {
             && p.components().all(|c| matches!(c, Component::Normal(_)))
     }
 
+    pub fn root(&self) -> &Path { &self.root }
+
     pub fn path(&self, rel: &str) -> PathBuf {
         self.root.join(rel.trim_start_matches('/'))
     }

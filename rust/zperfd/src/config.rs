@@ -18,6 +18,10 @@ pub struct Profile {
     /// Per-package mode override: package name -> mode key.
     #[serde(default)]
     pub perapp: BTreeMap<String, String>,
+    /// Runtime feedback-loop parameters. Defaults are conservative and can be
+    /// overridden per device profile without changing the controller binary.
+    #[serde(default)]
+    pub adaptive: AdaptiveConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -38,6 +42,49 @@ impl Default for Meta {
 
 fn default_name() -> String { "generic".into() }
 fn default_mode() -> String { "balance".into() }
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdaptiveConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_frame_budget_ms")]
+    pub frame_budget_ms: f64,
+    #[serde(default = "default_max_extra_boost")]
+    pub max_extra_boost_pct: u32,
+    #[serde(default = "default_jank_threshold")]
+    pub jank_threshold_pct: u32,
+    #[serde(default = "default_engage_windows")]
+    pub engage_windows: u8,
+    #[serde(default = "default_release_windows")]
+    pub release_windows: u8,
+    #[serde(default = "default_frame_probe_ms")]
+    pub frame_probe_ms: u32,
+    #[serde(default = "default_true")]
+    pub affinity_hint: bool,
+}
+
+impl Default for AdaptiveConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            frame_budget_ms: 16.666_667,
+            max_extra_boost_pct: 35,
+            jank_threshold_pct: 8,
+            engage_windows: 2,
+            release_windows: 3,
+            frame_probe_ms: 900,
+            affinity_hint: true,
+        }
+    }
+}
+
+fn default_true() -> bool { true }
+fn default_frame_budget_ms() -> f64 { 16.666_667 }
+fn default_max_extra_boost() -> u32 { 35 }
+fn default_jank_threshold() -> u32 { 8 }
+fn default_engage_windows() -> u8 { 2 }
+fn default_release_windows() -> u8 { 3 }
+fn default_frame_probe_ms() -> u32 { 900 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Mode {
@@ -126,6 +173,21 @@ impl Profile {
                 return Err(format!("invalid mode name '{name}'"));
             }
             mode.validate()?;
+        }
+        if !self.adaptive.frame_budget_ms.is_finite() || !(4.0..=100.0).contains(&self.adaptive.frame_budget_ms) {
+            return Err("adaptive.frame_budget_ms must be finite and 4..100ms".into());
+        }
+        if self.adaptive.max_extra_boost_pct > 60 {
+            return Err("adaptive.max_extra_boost_pct must be 0..60".into());
+        }
+        if self.adaptive.jank_threshold_pct > 100 {
+            return Err("adaptive.jank_threshold_pct must be 0..100".into());
+        }
+        if self.adaptive.engage_windows == 0 || self.adaptive.engage_windows > 8 || self.adaptive.release_windows == 0 || self.adaptive.release_windows > 16 {
+            return Err("adaptive window counts are out of range".into());
+        }
+        if !(250..=5_000).contains(&self.adaptive.frame_probe_ms) {
+            return Err("adaptive.frame_probe_ms must be 250..5000ms".into());
         }
         for (pkg, mode) in &self.perapp {
             let valid = pkg.split('.').count() >= 2 && pkg.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_');
@@ -271,6 +333,21 @@ mod tests {
     fn raw_khz_floor() {
         // floor snap: lowest >= 1000000 is 1200000
         assert_eq!(resolve_freq(&FreqSpec::Khz(1_000_000), AVAIL, true), Some(1200000));
+    }
+
+    #[test]
+    fn adaptive_defaults_are_conservative() {
+        let p = Profile::parse(r#"
+            [meta]
+            name = "test"
+            default_mode = "balance"
+            [mode.balance]
+        "#).unwrap();
+        assert!(p.adaptive.enabled);
+        assert_eq!(p.adaptive.engage_windows, 2);
+        assert_eq!(p.adaptive.release_windows, 3);
+        assert_eq!(p.adaptive.frame_probe_ms, 900);
+        assert!((p.adaptive.frame_budget_ms - 16.666_667).abs() < 0.0001);
     }
 
     #[test]

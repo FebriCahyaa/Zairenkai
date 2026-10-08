@@ -43,6 +43,35 @@ const fn iow(nr: u32, size: u32) -> u64 {
 
 pub const ZKFC_CAP_TUNE_THERMAL: u64 = 1u64 << 3;
 
+/// ZKFC task boost flags.
+pub const ZKFC_TB_THREADS: u32 = 1 << 0;
+pub const ZKFC_TB_INHERIT: u32 = 1 << 1;
+pub const ZKFC_TB_RESET: u32 = 1 << 2;
+pub const ZKFC_CAP_TUNE_PERF: u64 = 1u64 << 2;
+pub const ZKFC_CQ_CLEAR: u32 = 1 << 0;
+
+/// `struct zkfc_task_boost`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct TaskBoost {
+    pub pid: i32,
+    pub uclamp_min: u32,
+    pub uclamp_max: u32,
+    pub flags: u32,
+    pub applied: u32,
+    pub reserved: u32,
+}
+
+/// `struct zkfc_cpufreq_qos`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct CpufreqQos {
+    pub cpu: u32,
+    pub min_khz: u32,
+    pub max_khz: u32,
+    pub flags: u32,
+}
+
 /// `struct zkfc_version_info` (160 bytes, fixed layout).
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -168,6 +197,8 @@ fn cstr_lossy(buf: &[u8]) -> String {
 
 const IOC_GET_VERSION: u64 = ior(0x00, std::mem::size_of::<VersionInfo>() as u32);
 const IOC_GET_LICENSE: u64 = ior(0x01, std::mem::size_of::<LicenseStatus>() as u32);
+const IOC_TASK_BOOST: u64 = ioc(DIR_READ | DIR_WRITE, ZKFC_IOC_MAGIC, 0x10, std::mem::size_of::<TaskBoost>() as u32);
+const IOC_CPUFREQ_QOS: u64 = iow(0x11, std::mem::size_of::<CpufreqQos>() as u32);
 
 /// `struct zkfc_capability_info`.
 #[repr(C)]
@@ -279,6 +310,42 @@ impl Zkfc {
         Ok(self.license_status()?.state)
     }
 
+    /// Apply a licensed per-task uclamp boost through ZKFC.
+    ///
+    /// The kernel owns task identity, inheritance and thermal suspension, so
+    /// the daemon does not need to mutate per-thread scheduler attributes via
+    /// ad-hoc sysfs writes.
+    pub fn task_boost(&self, pid: i32, uclamp_min: u32, uclamp_max: u32, flags: u32) -> io::Result<u32> {
+        if pid <= 0 || uclamp_min > 1024 || uclamp_max > 1024 || uclamp_min > uclamp_max
+            || flags & !(ZKFC_TB_THREADS | ZKFC_TB_INHERIT | ZKFC_TB_RESET) != 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid ZKFC task boost request"));
+        }
+        let mut req = TaskBoost {
+            pid,
+            uclamp_min,
+            uclamp_max,
+            flags,
+            applied: 0,
+            reserved: 0,
+        };
+        let rc = unsafe { libc::ioctl(self.fd, IOC_TASK_BOOST as libc::c_ulong, &mut req as *mut TaskBoost) };
+        if rc < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(req.applied)
+    }
+
+    /// Apply a transient cpufreq QoS constraint to one policy.
+    pub fn cpufreq_qos(&self, cpu: u32, min_khz: u32, max_khz: u32, flags: u32) -> io::Result<()> {
+        if min_khz != 0 && max_khz != 0 && min_khz > max_khz {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid cpufreq qos range"));
+        }
+        let req = CpufreqQos { cpu, min_khz, max_khz, flags };
+        let rc = unsafe { libc::ioctl(self.fd, IOC_CPUFREQ_QOS as libc::c_ulong, &req as *const CpufreqQos) };
+        if rc < 0 { return Err(io::Error::last_os_error()); }
+        Ok(())
+    }
+
     pub fn thermal_guard_config(&self, interval_ms: u32, limit_mdeg: i32, release_mdeg: i32, zones: &[String]) -> io::Result<()> {
         let mut cfg = ThermalGuard::default();
         cfg.enabled = 1;
@@ -363,8 +430,28 @@ mod tests {
     }
 
     #[test]
+    fn performance_ioctl_numbers_match_uapi() {
+        let task_expected: u64 = (3u64 << 30) | (24u64 << 16) | ((b'Z' as u64) << 8) | 0x10;
+        let qos_expected: u64 = (1u64 << 30) | (16u64 << 16) | ((b'Z' as u64) << 8) | 0x11;
+        assert_eq!(IOC_TASK_BOOST, task_expected);
+        assert_eq!(IOC_CPUFREQ_QOS, qos_expected);
+    }
+
+    #[test]
     fn license_ioctl_number_matches_uapi() {
         let expected: u64 = (2u64 << 30) | (288u64 << 16) | ((b'Z' as u64) << 8) | 1;
         assert_eq!(IOC_GET_LICENSE, expected);
+    }
+}
+
+#[cfg(test)]
+mod abi_tests {
+    use super::{CpufreqQos, TaskBoost};
+    use std::mem::size_of;
+
+    #[test]
+    fn performance_uapi_structs_match_kernel_layout() {
+        assert_eq!(size_of::<TaskBoost>(), 24);
+        assert_eq!(size_of::<CpufreqQos>(), 16);
     }
 }

@@ -16,6 +16,8 @@ pub struct Policy {
     pub avail: Vec<u64>,
     pub min_hw: u64,
     pub max_hw: u64,
+    /// CPUs governed by this policy, from cpufreq related/affected_cpus.
+    pub cpus: Vec<usize>,
 }
 
 impl Policy {
@@ -104,6 +106,25 @@ impl Topology {
         }
     }
 
+    /// Highest-performance policy CPUs, discovered from the runtime cpufreq
+    /// topology. No hard-coded CPU ids are used.
+    pub fn performance_cpus(&self) -> Vec<usize> {
+        self.policies
+            .iter()
+            .max_by_key(|p| p.max_hw)
+            .map(|p| p.cpus.clone())
+            .unwrap_or_default()
+    }
+
+    /// Return one CPU plus the hardware frequency envelope for the
+    /// highest-performance policy. ZKFC cpufreq QoS accepts any CPU in the
+    /// policy, so only the first discovered CPU is required.
+    pub fn performance_policy(&self) -> Option<(usize, u64, u64)> {
+        self.policies.iter().filter(|p| p.max_hw > 0 && !p.cpus.is_empty()).max_by_key(|p| p.max_hw).map(|p| {
+            (p.cpus[0], p.min_hw, p.max_hw)
+        })
+    }
+
     pub fn flavor_kind(&self) -> KernelFlavor {
         self.kernel_flavor
     }
@@ -156,7 +177,11 @@ impl Topology {
             if max_hw > 0 && min_hw > max_hw {
                 continue;
             }
-            out.push(Policy { name, avail, min_hw, max_hw });
+            let mut cpus = s.read(&format!("{base}/related_cpus")).map(|v| crate::workload::parse_cpu_list(&v)).unwrap_or_default();
+            if cpus.is_empty() {
+                cpus = s.read(&format!("{base}/affected_cpus")).map(|v| crate::workload::parse_cpu_list(&v)).unwrap_or_default();
+            }
+            out.push(Policy { name, avail, min_hw, max_hw, cpus });
         }
         out
     }
@@ -273,6 +298,10 @@ mod tests {
         w(&r, "/dev/props/ro.board.platform", "mt6893");
         w(&r, "/sys/class/devfreq/1-gpu/max_freq", "1000000");
         w(&r, "/sys/class/devfreq/1-gpu/available_frequencies", "500000 1000000");
+        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_min_freq", "500000");
+        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq", "1800000");
+        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/scaling_available_frequencies", "500000 1800000");
+        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/related_cpus", "0-3");
         w(&r, "/sys/class/thermal/thermal_zone0/type", "mtktscpu");
         w(&r, "/sys/class/thermal/thermal_zone0/temp", "42000");
         let t = Topology::detect(&Sysroot::new(&r));
@@ -280,6 +309,7 @@ mod tests {
         assert_eq!(t.gpu.as_ref().unwrap().provider, GpuProvider::GenericDevfreq);
         assert_eq!(t.thermal_zones.len(), 1);
         assert_eq!(t.thermal_zones[0].provider, crate::platform::ThermalProvider::MediaTek);
+        assert_eq!(t.performance_cpus(), vec![0, 1, 2, 3]);
         let _ = fs::remove_dir_all(r);
     }
 }

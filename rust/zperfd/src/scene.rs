@@ -52,6 +52,36 @@ fn bounded_output(command: &mut Command, timeout: Duration) -> Option<Vec<u8>> {
     status.success().then_some(output)
 }
 
+pub fn interactive_power_state() -> bool {
+    let Some(out) = bounded_output(
+        Command::new("dumpsys").args(["power"]),
+        DUMPSYS_TIMEOUT,
+    ) else {
+        return true;
+    };
+    let text = String::from_utf8_lossy(&out);
+    for line in text.lines() {
+        let low = line.to_ascii_lowercase();
+        if let Some(idx) = low.find("minteractive=") {
+            let value = low[idx + "minteractive=".len()..]
+                .split_whitespace()
+                .next()
+                .unwrap_or("");
+            return value.starts_with("true");
+        }
+        if let Some(idx) = low.find("mwakelocksuspended=") {
+            let value = low[idx + "mwakelocksuspended=".len()..]
+                .split_whitespace()
+                .next()
+                .unwrap_or("");
+            if value.starts_with("true") {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 pub fn foreground_pkg() -> Option<String> {
     let out = bounded_output(
         Command::new("dumpsys").args(["activity", "activities"]),
