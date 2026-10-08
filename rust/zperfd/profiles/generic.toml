@@ -20,6 +20,12 @@ jank_threshold_pct = 8
 engage_windows = 2
 release_windows = 3
 frame_probe_ms = 900
+frame_source = "surfaceflinger"
+input_enabled = true
+interaction_boost_pct = 15
+interaction_boost_ms = 120
+interaction_hold_ms = 180
+input_scan_ms = 20
 affinity_hint = true
 
 [mode.powersave.cpu]

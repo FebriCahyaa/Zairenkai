@@ -72,6 +72,18 @@ pub struct CpufreqQos {
     pub flags: u32,
 }
 
+/// `struct zkfc_input_boost`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct InputBoost {
+    pub enabled: u32,
+    pub duration_ms: u32,
+    pub cluster_count: u32,
+    pub reserved: u32,
+    pub cluster_cpu: [u32; 8],
+    pub min_khz: [u32; 8],
+}
+
 /// `struct zkfc_version_info` (160 bytes, fixed layout).
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -199,6 +211,7 @@ const IOC_GET_VERSION: u64 = ior(0x00, std::mem::size_of::<VersionInfo>() as u32
 const IOC_GET_LICENSE: u64 = ior(0x01, std::mem::size_of::<LicenseStatus>() as u32);
 const IOC_TASK_BOOST: u64 = ioc(DIR_READ | DIR_WRITE, ZKFC_IOC_MAGIC, 0x10, std::mem::size_of::<TaskBoost>() as u32);
 const IOC_CPUFREQ_QOS: u64 = iow(0x11, std::mem::size_of::<CpufreqQos>() as u32);
+const IOC_INPUT_BOOST: u64 = iow(0x12, std::mem::size_of::<InputBoost>() as u32);
 
 /// `struct zkfc_capability_info`.
 #[repr(C)]
@@ -346,6 +359,26 @@ impl Zkfc {
         Ok(())
     }
 
+    /// Configure the kernel input/touch boost fast path. Once configured,
+    /// the kernel's input handler applies the per-cluster floors without a
+    /// userspace poll loop on every touch event.
+    pub fn input_boost(&self, duration_ms: u32, clusters: &[(u32, u32)]) -> io::Result<()> {
+        if duration_ms < 10 || duration_ms > 5000 || clusters.len() > 8 {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid ZKFC input boost request"));
+        }
+        let mut req = InputBoost::default();
+        req.enabled = u32::from(!clusters.is_empty());
+        req.duration_ms = duration_ms;
+        req.cluster_count = clusters.len() as u32;
+        for (i, &(cpu, min_khz)) in clusters.iter().take(8).enumerate() {
+            req.cluster_cpu[i] = cpu;
+            req.min_khz[i] = min_khz;
+        }
+        let rc = unsafe { libc::ioctl(self.fd, IOC_INPUT_BOOST as libc::c_ulong, &req as *const InputBoost) };
+        if rc < 0 { return Err(io::Error::last_os_error()); }
+        Ok(())
+    }
+
     pub fn thermal_guard_config(&self, interval_ms: u32, limit_mdeg: i32, release_mdeg: i32, zones: &[String]) -> io::Result<()> {
         let mut cfg = ThermalGuard::default();
         cfg.enabled = 1;
@@ -415,6 +448,7 @@ mod tests {
         assert_eq!(std::mem::size_of::<LicenseStatus>(), 288);
         assert_eq!(std::mem::size_of::<CapabilityInfo>(), 168);
         assert_eq!(std::mem::size_of::<ThermalGuard>(), 152);
+        assert_eq!(std::mem::size_of::<InputBoost>(), 80);
     }
 
     #[test]
@@ -433,8 +467,10 @@ mod tests {
     fn performance_ioctl_numbers_match_uapi() {
         let task_expected: u64 = (3u64 << 30) | (24u64 << 16) | ((b'Z' as u64) << 8) | 0x10;
         let qos_expected: u64 = (1u64 << 30) | (16u64 << 16) | ((b'Z' as u64) << 8) | 0x11;
+        let input_expected: u64 = (1u64 << 30) | (80u64 << 16) | ((b'Z' as u64) << 8) | 0x12;
         assert_eq!(IOC_TASK_BOOST, task_expected);
         assert_eq!(IOC_CPUFREQ_QOS, qos_expected);
+        assert_eq!(IOC_INPUT_BOOST, input_expected);
     }
 
     #[test]
@@ -446,12 +482,13 @@ mod tests {
 
 #[cfg(test)]
 mod abi_tests {
-    use super::{CpufreqQos, TaskBoost};
+    use super::{CpufreqQos, InputBoost, TaskBoost};
     use std::mem::size_of;
 
     #[test]
     fn performance_uapi_structs_match_kernel_layout() {
         assert_eq!(size_of::<TaskBoost>(), 24);
         assert_eq!(size_of::<CpufreqQos>(), 16);
+        assert_eq!(size_of::<InputBoost>(), 80);
     }
 }

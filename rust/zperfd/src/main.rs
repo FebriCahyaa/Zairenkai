@@ -10,9 +10,11 @@ mod api;
 mod backends;
 mod catalog;
 mod config;
+mod cgroup;
 mod engine;
 mod family;
 mod frame;
+mod interaction;
 mod fas;
 mod nodes;
 mod scene_engine;
@@ -445,6 +447,46 @@ fn configure_kernel_thermal_guard(args: &Args, snapshot: &thermal::Snapshot) -> 
         .map_err(|e| format!("ZKFC thermal guard configuration failed: {e}"))
 }
 
+
+fn configure_kernel_input_boost(topology: &Topology, mode: Option<&config::Mode>) -> Result<(), String> {
+    let Some(z) = Zkfc::open().ok() else {
+        return Ok(());
+    };
+    // The legacy cpu_boost sysfs path already owns the vendor input boost. Do
+    // not double-boost it, but explicitly disable any previous ZKFC fast path.
+    if topology.cpu_boost_dir.is_some() {
+        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+    }
+    let Some(mode) = mode else {
+        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+    };
+    let Some(pct) = mode.cpu.input_boost_pct.filter(|v| *v > 0) else {
+        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+    };
+    let duration = mode.cpu.input_boost_ms.unwrap_or(0);
+    if duration == 0 {
+        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+    }
+    let mut clusters = Vec::with_capacity(topology.policies.len().min(8));
+    for policy in topology.policies.iter().filter(|p| !p.cpus.is_empty()).take(8) {
+        if policy.max_hw == 0 || policy.max_hw < policy.min_hw {
+            continue;
+        }
+        let span = policy.max_hw.saturating_sub(policy.min_hw);
+        let floor = policy
+            .min_hw
+            .saturating_add(span.saturating_mul(pct.min(100) as u64) / 100)
+            .min(policy.max_hw)
+            .min(u32::MAX as u64) as u32;
+        clusters.push((policy.cpus[0] as u32, floor));
+    }
+    if clusters.is_empty() {
+        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+    }
+    z.input_boost(duration.clamp(10, 5000), &clusters)
+        .map_err(|e| format!("configure ZKFC input boost: {e}"))
+}
+
 fn apply_transaction(args: &Args, requested: &str) -> i32 {
     if let Err(e) = core_authorize(Operation::ApplyProfile) { eprintln!("{e}"); return 1; }
     if let Err(e) = kernel_license_ok() {
@@ -531,6 +573,10 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
             eprintln!("  ! {failure}");
         }
         return 3;
+    }
+
+    if let Err(e) = configure_kernel_input_boost(&topology, Some(mode)) {
+        eprintln!("warning: {e}");
     }
 
     if let Err(e) = state.commit(Some(requested), Some(&effective)) {
@@ -887,13 +933,23 @@ fn cmd_adaptive(args: &Args) -> i32 {
     } else {
         None
     };
+    let mut interaction_engine = interaction::InteractionEngine::new();
+    let interaction = if observe && profile.adaptive.input_enabled && scene.interactive {
+        let _ = interaction_engine.observe(&s, profile.adaptive.input_scan_ms, profile.adaptive.interaction_hold_ms);
+        std::thread::sleep(Duration::from_millis(u64::from(profile.adaptive.input_scan_ms.clamp(5, 50))));
+        interaction_engine.observe(&s, profile.adaptive.input_scan_ms, profile.adaptive.interaction_hold_ms)
+    } else {
+        interaction::InteractionSnapshot::default()
+    };
     let mut frame_analyzer = frame::FrameAnalyzer::new();
     let frame = if observe && workload.as_ref().is_some_and(|w| w.active) {
         let refresh_hz = frame_analyzer.current_refresh_hz();
         frame_analyzer.sample(
             scene.package.as_deref().unwrap_or_default(),
+            workload.as_ref().map(|w| w.pid).unwrap_or_default(),
             refresh_hz,
             profile.adaptive.frame_budget_ms,
+            &profile.adaptive.frame_source,
         )
     } else {
         frame::FrameMetrics::default()
@@ -908,6 +964,7 @@ fn cmd_adaptive(args: &Args) -> i32 {
         workload.as_ref(),
         &frame,
         &thermal_snapshot,
+        &interaction,
         base_uclamp,
         &profile.adaptive,
     );
@@ -915,7 +972,7 @@ fn cmd_adaptive(args: &Args) -> i32 {
     let zkfc_caps = Zkfc::open().ok().and_then(|z| z.capabilities().ok()).map(|c| c.kernel_caps());
     if args.json {
         println!(
-            "{{\"scene\":\"{}\",\"kind\":\"{:?}\",\"event\":\"{:?}\",\"effective\":\"{}\",\"observe\":{},\"workload\":{},\"gpu_util_pct\":{},\"run_queue_delay_ms\":{},\"frame_available\":{},\"frame_fresh\":{},\"fps\":{:.3},\"p95_ms\":{:.3},\"jank_pct\":{:.3},\"thermal_headroom_permille\":{},\"decision_active\":{},\"extra_boost_pct\":{},\"uclamp_min_pct\":{},\"cpu_floor_pct\":{},\"confidence\":{},\"reason\":\"{}\",\"zkfc_perf_capable\":{}}}",
+            "{{\"scene\":\"{}\",\"kind\":\"{:?}\",\"event\":\"{:?}\",\"effective\":\"{}\",\"observe\":{},\"workload\":{},\"gpu_util_pct\":{},\"run_queue_delay_ms\":{},\"frame_available\":{},\"frame_fresh\":{},\"fps\":{:.3},\"p95_ms\":{:.3},\"jank_pct\":{:.3},\"thermal_headroom_permille\":{},\"decision_active\":{},\"extra_boost_pct\":{},\"uclamp_min_pct\":{},\"cpu_floor_pct\":{},\"confidence\":{},\"reason\":\"{}\",\"input_recent\":{},\"input_age_ms\":{},\"input_sources\":{},\"frame_source\":\"{}\",\"zkfc_perf_capable\":{}}}",
             json_escape(scene.package.as_deref().unwrap_or("none")),
             scene.kind,
             scene.event,
@@ -936,6 +993,10 @@ fn cmd_adaptive(args: &Args) -> i32 {
             decision.cpu_floor_pct,
             decision.confidence,
             decision.reason,
+            interaction.recent,
+            interaction.age_ms.map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+            interaction.source_count,
+            json_escape(&frame.source),
             zkfc_caps.is_some_and(|caps| caps & zkfc_sys::ZKFC_CAP_TUNE_PERF != 0),
         );
     } else {
@@ -947,7 +1008,8 @@ fn cmd_adaptive(args: &Args) -> i32 {
         } else {
             println!("workload    : unavailable");
         }
-        println!("frame       : available={} fresh={} new={} fps={:.1} p95={:.2}ms jank={:.1}% budget={:.2}ms", frame.available, frame.fresh, frame.new_frames, frame.fps, frame.p95_ms, frame.jank_ratio * 100.0, frame.budget_ms);
+        println!("frame       : source={} available={} fresh={} new={} fps={:.1} p95={:.2}ms jank={:.1}% budget={:.2}ms", frame.source, frame.available, frame.fresh, frame.new_frames, frame.fps, frame.p95_ms, frame.jank_ratio * 100.0, frame.budget_ms);
+        println!("interaction : recent={} active={} touch={} age={:?}ms burst={} sources={} confidence={}", interaction.recent, interaction.active, interaction.touch_active, interaction.age_ms, interaction.burst_count, interaction.source_count, interaction.confidence);
         println!("thermal     : headroom={:?} critical={} complete={}", thermal_snapshot.headroom_permille, thermal_snapshot.critical_reached, thermal_snapshot.telemetry_complete);
         println!("decision    : active={} boost=+{}% uclamp={}%% cpu_floor={}%% confidence={} reason={}", decision.active, decision.extra_boost_pct, decision.target_uclamp_min_pct, decision.cpu_floor_pct, decision.confidence, decision.reason);
         println!("zkfc perf   : {}", zkfc_caps.is_some_and(|caps| caps & zkfc_sys::ZKFC_CAP_TUNE_PERF != 0));
@@ -1105,7 +1167,7 @@ fn cmd_daemon(args: &Args) -> i32 {
             return 2;
         }
     };
-    eprintln!("zperfd: {} profile '{}' family={}", topology.flavor(), profile.meta.name, family.as_ref().map(|f| f.vendor.as_str()).unwrap_or("none"));
+    eprintln!("zperfd: {} backend={} oem={} profile '{}' family={}", topology.flavor(), plan.backend.as_str(), plan.oem.as_str(), profile.meta.name, family.as_ref().map(|f| f.vendor.as_str()).unwrap_or("none"));
 
     // Adaptive control is a separate runtime layer above the durable profile.
     // Base-mode changes remain transactional; transient task boosts/affinity
@@ -1114,6 +1176,7 @@ fn cmd_daemon(args: &Args) -> i32 {
     let mut scene_engine = scene_engine::SceneEngine::new();
     let mut workload_analyzer = workload::WorkloadAnalyzer::new();
     let mut frame_analyzer = frame::FrameAnalyzer::new();
+    let mut interaction_engine = interaction::InteractionEngine::new();
     let mut last_frame_probe: Option<Instant> = None;
     let mut fas_controller = fas::FasController::new();
     let mut last_adaptive_report: Option<(i32, u32)> = None;
@@ -1139,10 +1202,12 @@ fn cmd_daemon(args: &Args) -> i32 {
             }
             was_safe = true;
             task_controller.reset();
+            let _ = configure_kernel_input_boost(&topology, None);
             fas_controller.reset();
             last_adaptive_report = None;
             workload_analyzer.reset();
             frame_analyzer.reset();
+            interaction_engine.reset();
             last_frame_probe = None;
             scene_engine.reset();
             last.clear();
@@ -1165,6 +1230,7 @@ fn cmd_daemon(args: &Args) -> i32 {
             last_adaptive_report = None;
             workload_analyzer.reset();
             frame_analyzer.reset();
+            interaction_engine.reset();
             last_frame_probe = None;
         }
         let desired_raw = state.mode().unwrap_or_else(|| profile.meta.default_mode.clone());
@@ -1191,9 +1257,16 @@ fn cmd_daemon(args: &Args) -> i32 {
         if adaptive_observation != was_adaptive_observing {
             workload_analyzer.reset();
             frame_analyzer.reset();
+            interaction_engine.reset();
             last_frame_probe = None;
             was_adaptive_observing = adaptive_observation;
         }
+        let interaction = if adaptive_observation && profile.adaptive.input_enabled && scene_snapshot.interactive {
+            interaction_engine.observe(&s, profile.adaptive.input_scan_ms, profile.adaptive.interaction_hold_ms)
+        } else {
+            interaction_engine.disable();
+            interaction::InteractionSnapshot::default()
+        };
         let workload = if adaptive_observation {
             workload_analyzer.sample_with_gpu(
                 &s,
@@ -1225,7 +1298,7 @@ fn cmd_daemon(args: &Args) -> i32 {
                 if probe_due {
                     last_frame_probe = Some(Instant::now());
                     let refresh_hz = frame_analyzer.current_refresh_hz();
-                    frame_analyzer.sample(pkg, refresh_hz, profile.adaptive.frame_budget_ms)
+                    frame_analyzer.sample(pkg, workload.as_ref().map(|w| w.pid).unwrap_or_default(), refresh_hz, profile.adaptive.frame_budget_ms, &profile.adaptive.frame_source)
                 } else {
                     frame_analyzer.cached()
                 }
@@ -1288,6 +1361,9 @@ fn cmd_daemon(args: &Args) -> i32 {
                         eprintln!("zperfd: thermal envelope band={:?} boost={}‰ cap={:?}", therm.band, therm.boost_permille, therm.max_perf_cap_pct);
                         let report = engine.apply_mode(&constrained);
                         if report.failed.is_empty() && !report.applied.is_empty() {
+                            if let Err(e) = configure_kernel_input_boost(&topology, Some(mode)) {
+                                eprintln!("zperfd: input boost fast path unavailable: {e}");
+                            }
                             match state.commit(Some(&desired), Some(&effective)) {
                                 Ok(()) => {
                                     last = effective.clone();
@@ -1300,7 +1376,8 @@ fn cmd_daemon(args: &Args) -> i32 {
                                         report.skipped.len()
                                     );
                                 }
-                                Err(e) => {
+                                                Err(e) => {
+                                    let _ = configure_kernel_input_boost(&topology, None);
                                     let _ = state.recover(&s);
                                     eprintln!("zperfd: commit failed: {e}");
                                 }
@@ -1338,6 +1415,7 @@ fn cmd_daemon(args: &Args) -> i32 {
                     Some(workload),
                     &frame_metrics,
                     &thermal_snapshot,
+                    &interaction,
                     base_uclamp,
                     &profile.adaptive,
                 );
@@ -1348,13 +1426,13 @@ fn cmd_daemon(args: &Args) -> i32 {
                         let sentinel = sentinel_evaluate(args, Operation::SetCpuTweak);
                         if !sentinel.allowed {
                             eprintln!("zperfd: adaptive blocked: {:?}", sentinel.reasons);
-                        } else if let Err(e) = task_controller.apply(&decision, workload, &performance_cpus, performance_policy) {
+                        } else if let Err(e) = task_controller.apply(&s, &plan, &interaction, &decision, workload, &performance_cpus, performance_policy) {
                             eprintln!("zperfd: adaptive actuator failed: {e}");
                         } else {
                             let key = (workload.pid, decision.extra_boost_pct);
                             if last_adaptive_report != Some(key) {
                                 eprintln!(
-                                    "zperfd: adaptive scene={} age_ms={} reason={} pid={} cpu={:.1}% rss_kb={:?} io_r={}B/s io_w={}B/s gpu={:?}% rq={:?}ms frame_src={} fresh={} fps={:.1} avg={:.2}ms p95={:.2}ms jank={:.1}% boost=+{}% uclamp={} cpu_floor={} confidence={}",
+                                    "zperfd: adaptive scene={} age_ms={} reason={} pid={} cpu={:.1}% rss_kb={:?} io_r={}B/s io_w={}B/s gpu={:?}% rq={:?}ms input_age={}ms backend={} frame_src={} fresh={} fps={:.1} avg={:.2}ms p95={:.2}ms jank={:.1}% boost=+{}% uclamp={} cpu_floor={} confidence={}",
                                     scene_snapshot.package.as_deref().unwrap_or("none"),
                                     scene_snapshot.age.as_millis(),
                                     scene_snapshot.reason,
@@ -1363,14 +1441,16 @@ fn cmd_daemon(args: &Args) -> i32 {
                                     workload.rss_kb,
                                     workload.io_read_bps.unwrap_or(0),
                                     workload.io_write_bps.unwrap_or(0),
+                                    workload.gpu_util_pct,
+                                    workload.run_queue_delay_ms,
+                                    interaction.age_ms.unwrap_or(0),
+                                    plan.backend.as_str(),
                                     frame_metrics.source,
                                     frame_metrics.fresh,
                                     frame_metrics.fps,
                                     frame_metrics.avg_ms,
                                     frame_metrics.p95_ms,
                                     frame_metrics.jank_ratio * 100.0,
-                                    workload.gpu_util_pct,
-                                    workload.run_queue_delay_ms,
                                     decision.extra_boost_pct,
                                     decision.target_uclamp_min_pct,
                                     decision.cpu_floor_pct,
@@ -1397,6 +1477,8 @@ fn cmd_daemon(args: &Args) -> i32 {
     }
     task_controller.reset();
     fas_controller.reset();
+    interaction_engine.reset();
+    let _ = configure_kernel_input_boost(&topology, None);
     last_adaptive_report = None;
     eprintln!("zperfd: stopping");
     0

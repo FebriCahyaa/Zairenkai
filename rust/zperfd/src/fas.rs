@@ -10,6 +10,7 @@
 
 use crate::config::AdaptiveConfig;
 use crate::frame::FrameMetrics;
+use crate::interaction::InteractionSnapshot;
 use crate::scene_engine::{SceneKind, SceneSnapshot};
 use crate::thermal::Snapshot as ThermalSnapshot;
 use crate::workload::WorkloadSnapshot;
@@ -74,6 +75,7 @@ impl FasController {
         workload: Option<&WorkloadSnapshot>,
         frame: &FrameMetrics,
         thermal: &ThermalSnapshot,
+        interaction: &InteractionSnapshot,
         base_uclamp_min_pct: u32,
         config: &AdaptiveConfig,
     ) -> FasDecision {
@@ -151,6 +153,14 @@ impl FasController {
         }
 
         let mut extra = (raw_error * 18.0 + self.integral * 1.2 + derivative.max(0.0) * 2.0).round() as i32;
+        if interaction.recent {
+            let boost_window = config.interaction_boost_ms.max(20) as f64;
+            let hold_window = config.interaction_hold_ms.max(20) as f64;
+            let age = interaction.age_ms.unwrap_or(config.interaction_hold_ms as u64) as f64;
+            let decay_window = boost_window.max(hold_window);
+            let pressure = (1.0 - age / (decay_window * 2.0)).clamp(0.0, 1.0);
+            extra += (config.interaction_boost_pct as f64 * pressure).round() as i32;
+        }
         if scene.kind == SceneKind::Benchmark { extra += 4; }
         if scene.kind == SceneKind::Game { extra += 2; }
         extra = extra.clamp(0, config.max_extra_boost_pct as i32);
@@ -189,7 +199,9 @@ impl FasController {
             cpu_floor_pct,
             affinity_hint: config.affinity_hint && active && matches!(scene.kind, SceneKind::Game | SceneKind::Benchmark),
             reason: if frame.available && frame.fresh {
-                if jank_error > 0.08 {
+                if interaction.recent && raw_error < 0.20 {
+                    "input interaction"
+                } else if jank_error > 0.08 {
                     "frame jank"
                 } else if p95_error > 0.03 {
                     "frame deadline pressure"
@@ -245,9 +257,9 @@ mod tests {
         let scene = SceneSnapshot { package: Some("com.game".into()), kind: SceneKind::Game, event: SceneEvent::Enter, interactive: true, age: Default::default(), reason: "game" };
         let frame = FrameMetrics { available: true, source: "test".into(), frames: 10, new_frames: 2, fps: 55.0, avg_ms: 18.0, p95_ms: 22.0, jank_ratio: 0.4, budget_ms: 16.67, confidence: 90, fresh: true };
         let mut c = FasController::new();
-        let a = c.update(&scene, Some(&workload()), &frame, &thermal(), 20);
+        let a = c.update(&scene, Some(&workload()), &frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
         assert!(!a.active);
-        let b = c.update(&scene, Some(&workload()), &frame, &thermal(), 20);
+        let b = c.update(&scene, Some(&workload()), &frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
         assert!(b.active);
         assert!(b.target_uclamp_min_pct > 20);
     }
@@ -280,12 +292,12 @@ mod tests {
             ..bad_frame
         };
         let mut c = FasController::new();
-        let _ = c.update(&scene, Some(&workload()), &bad_frame, &thermal(), 20, &AdaptiveConfig::default());
-        let engaged = c.update(&scene, Some(&workload()), &bad_frame, &thermal(), 20, &AdaptiveConfig::default());
+        let _ = c.update(&scene, Some(&workload()), &bad_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
+        let engaged = c.update(&scene, Some(&workload()), &bad_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
         assert!(engaged.active);
-        let _ = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), 20, &AdaptiveConfig::default());
-        let _ = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), 20, &AdaptiveConfig::default());
-        let released = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), 20, &AdaptiveConfig::default());
+        let _ = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
+        let _ = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
+        let released = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
         assert!(released.extra_boost_pct < engaged.extra_boost_pct);
     }
 

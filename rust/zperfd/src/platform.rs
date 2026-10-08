@@ -10,6 +10,27 @@
 use crate::nodes::Sysroot;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OemVendor {
+    Google,
+    Xiaomi,
+    Samsung,
+    Other,
+    Unknown,
+}
+
+impl OemVendor {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Google => "google",
+            Self::Xiaomi => "xiaomi",
+            Self::Samsung => "samsung",
+            Self::Other => "other",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SocVendor {
     Qualcomm,
     MediaTek,
@@ -98,6 +119,7 @@ pub struct Evidence {
 #[derive(Debug, Clone)]
 pub struct PlatformIdentity {
     pub vendor: SocVendor,
+    pub oem: OemVendor,
     pub platform: String,
     pub model: String,
     pub compatible: String,
@@ -116,6 +138,9 @@ impl PlatformIdentity {
             "ro.soc.manufacturer",
             "ro.hardware",
             "ro.product.board",
+            "ro.product.manufacturer",
+            "ro.product.brand",
+            "ro.product.name",
         ]
         .iter()
         .any(|key| s.exists(&format!("/dev/props/{key}")));
@@ -132,6 +157,9 @@ impl PlatformIdentity {
         let soc_vendor = prop("ro.soc.manufacturer");
         let hardware = prop("ro.hardware");
         let board = prop("ro.product.board");
+        let manufacturer = prop("ro.product.manufacturer");
+        let brand = prop("ro.product.brand");
+        let product = prop("ro.product.name");
         let model = s.read("/proc/device-tree/model").unwrap_or_default();
         let compatible = s.read("/proc/device-tree/compatible").unwrap_or_default();
 
@@ -141,6 +169,9 @@ impl PlatformIdentity {
             ("ro.soc.manufacturer", soc_vendor.clone()),
             ("ro.hardware", hardware.clone()),
             ("ro.product.board", board.clone()),
+            ("ro.product.manufacturer", manufacturer.clone()),
+            ("ro.product.brand", brand.clone()),
+            ("ro.product.name", product.clone()),
             ("/proc/device-tree/model", model.clone()),
             ("/proc/device-tree/compatible", compatible.clone()),
         ] {
@@ -156,8 +187,10 @@ impl PlatformIdentity {
             .join(" ");
 
         let vendor = classify_vendor(&corpus);
+        let oem = classify_oem(&format!("{} {} {}", manufacturer, brand, product));
         Self {
             vendor,
+            oem,
             platform: platform.to_ascii_lowercase(),
             model,
             compatible,
@@ -211,6 +244,21 @@ fn classify_vendor(corpus: &str) -> SocVendor {
         return SocVendor::Qualcomm;
     }
     SocVendor::Unknown
+}
+
+fn classify_oem(corpus: &str) -> OemVendor {
+    let c = corpus.to_ascii_lowercase();
+    if contains_any(&c, &["xiaomi", "redmi", "poco"]) {
+        OemVendor::Xiaomi
+    } else if contains_any(&c, &["google", "pixel"]) {
+        OemVendor::Google
+    } else if contains_any(&c, &["samsung", "galaxy"]) {
+        OemVendor::Samsung
+    } else if c.trim().is_empty() {
+        OemVendor::Unknown
+    } else {
+        OemVendor::Other
+    }
 }
 
 fn contains_any(haystack: &str, needles: &[&str]) -> bool {

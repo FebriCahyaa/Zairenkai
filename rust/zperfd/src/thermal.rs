@@ -358,6 +358,6 @@ mod tests {
         Topology { release: "test".into(), gki: false, kernel_flavor: crate::platform::KernelFlavor::NonGki,
             kernel_generation: "6.6".into(), cgroup_v2: false, has_msm_perf: false, policies: vec![], gpu: None,
             thermal_zones: vec![], top_app_uclamp: None, stune_top: None, cpu_boost_dir: None,
-            identity: crate::platform::PlatformIdentity { vendor: crate::platform::SocVendor::Unknown, platform: "".into(), model: "".into(), compatible: "".into(), evidence: vec![] } }
+            identity: crate::platform::PlatformIdentity { oem: crate::platform::OemVendor::Unknown, vendor: crate::platform::SocVendor::Unknown, platform: "".into(), model: "".into(), compatible: "".into(), evidence: vec![] } }
     }
 }

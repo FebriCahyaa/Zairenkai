@@ -74,7 +74,7 @@ mod tests {
 
     fn inv(avail: Option<u64>) -> Inventory {
         Inventory {
-            identity: PlatformIdentity { vendor: SocVendor::Unknown, platform: "x".into(), model: "m".into(), compatible: "".into(), evidence: vec![] },
+            identity: PlatformIdentity { oem: crate::platform::OemVendor::Unknown, vendor: SocVendor::Unknown, platform: "x".into(), model: "m".into(), compatible: "".into(), evidence: vec![] },
             memory: MemoryInfo { total_kb: Some(4_000_000), available_kb: avail, swap_total_kb: Some(1), swap_free_kb: Some(1), zram: vec![ZramInfo { name: "zram0".into(), size_bytes: Some(1), algorithm: Some("lz4".into()) }] },
             storage: Vec::<StorageInfo>::new(),
             network: NetworkInfo { interface_count: 0, interfaces: vec![], tcp_congestion: None, tcp_available: None },

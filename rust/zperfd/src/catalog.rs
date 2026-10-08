@@ -129,6 +129,7 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
         fs::write(root.join("index.toml"), "schema_version = 1\n[[device]]\nid=\"qualcomm.bad\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\nmetadata=\"../escape.toml\"\ncatalog=\"../escape.toml\"\n").unwrap();
         let identity = PlatformIdentity {
+            oem: crate::platform::OemVendor::Unknown,
             vendor: crate::platform::SocVendor::Qualcomm,
             platform: "sm8550".into(),
             model: String::new(),
@@ -147,6 +148,7 @@ mod tests {
         fs::write(root.join("index.toml"), "schema_version=1\n[[device]]\nid=\"google.pixel10\"\nvendor=\"tensor\"\nsoc=\"tensor-g5\"\nmetadata=\"devices/google/pixel10.toml\"\ncatalog=\"generic.toml\"\n").unwrap();
         fs::write(root.join("devices/google/pixel10.toml"), "id=\"google.pixel10\"\nvendor=\"tensor\"\nsoc=\"tensor-g5\"\n[match]\nmodel_tokens=[\"Pixel 10\"]\ncompatible_tokens=[\"google\"]\nplatform_tokens=[]\n").unwrap();
         let identity = PlatformIdentity {
+            oem: crate::platform::OemVendor::Unknown,
             vendor: crate::platform::SocVendor::GoogleTensor,
             platform: String::new(),
             model: "Pixel 10".into(),
@@ -166,6 +168,7 @@ mod tests {
         let mut f = fs::File::create(root.join("index.toml")).unwrap();
         writeln!(f, "schema_version = 1\n[[device]]\nid=\"qualcomm.sm8550\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\nmetadata=\"devices/qualcomm/sm8550.toml\"\ncatalog=\"generic.toml\"").unwrap();
         let identity = PlatformIdentity {
+            oem: crate::platform::OemVendor::Unknown,
             vendor: crate::platform::SocVendor::Qualcomm,
             platform: "SM8550".into(),
             model: String::new(),

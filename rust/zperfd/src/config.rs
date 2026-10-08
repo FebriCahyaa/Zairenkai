@@ -59,6 +59,20 @@ pub struct AdaptiveConfig {
     pub release_windows: u8,
     #[serde(default = "default_frame_probe_ms")]
     pub frame_probe_ms: u32,
+    /// Preferred frame source. SurfaceFlinger FrameTimeline is the default;
+    /// gfxinfo remains an explicit compatibility fallback.
+    #[serde(default = "default_frame_source")]
+    pub frame_source: String,
+    #[serde(default = "default_true")]
+    pub input_enabled: bool,
+    #[serde(default = "default_interaction_boost_pct")]
+    pub interaction_boost_pct: u32,
+    #[serde(default = "default_interaction_boost_ms")]
+    pub interaction_boost_ms: u32,
+    #[serde(default = "default_interaction_hold_ms")]
+    pub interaction_hold_ms: u32,
+    #[serde(default = "default_input_scan_ms")]
+    pub input_scan_ms: u32,
     #[serde(default = "default_true")]
     pub affinity_hint: bool,
 }
@@ -73,6 +87,12 @@ impl Default for AdaptiveConfig {
             engage_windows: 2,
             release_windows: 3,
             frame_probe_ms: 900,
+            frame_source: "surfaceflinger".into(),
+            input_enabled: true,
+            interaction_boost_pct: 15,
+            interaction_boost_ms: 120,
+            interaction_hold_ms: 180,
+            input_scan_ms: 20,
             affinity_hint: true,
         }
     }
@@ -85,6 +105,11 @@ fn default_jank_threshold() -> u32 { 8 }
 fn default_engage_windows() -> u8 { 2 }
 fn default_release_windows() -> u8 { 3 }
 fn default_frame_probe_ms() -> u32 { 900 }
+fn default_frame_source() -> String { "surfaceflinger".into() }
+fn default_interaction_boost_pct() -> u32 { 15 }
+fn default_interaction_boost_ms() -> u32 { 120 }
+fn default_interaction_hold_ms() -> u32 { 180 }
+fn default_input_scan_ms() -> u32 { 20 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Mode {
@@ -188,6 +213,21 @@ impl Profile {
         }
         if !(250..=5_000).contains(&self.adaptive.frame_probe_ms) {
             return Err("adaptive.frame_probe_ms must be 250..5000ms".into());
+        }
+        if !matches!(self.adaptive.frame_source.as_str(), "auto" | "surfaceflinger" | "gfxinfo") {
+            return Err("adaptive.frame_source must be auto, surfaceflinger, or gfxinfo".into());
+        }
+        if self.adaptive.interaction_boost_pct > 35 {
+            return Err("adaptive.interaction_boost_pct must be 0..35".into());
+        }
+        if !(10..=5000).contains(&self.adaptive.interaction_boost_ms) {
+            return Err("adaptive.interaction_boost_ms must be 10..5000ms".into());
+        }
+        if !(20..=5000).contains(&self.adaptive.interaction_hold_ms) {
+            return Err("adaptive.interaction_hold_ms must be 20..5000ms".into());
+        }
+        if !(5..=250).contains(&self.adaptive.input_scan_ms) {
+            return Err("adaptive.input_scan_ms must be 5..250ms".into());
         }
         for (pkg, mode) in &self.perapp {
             let valid = pkg.split('.').count() >= 2 && pkg.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_');
@@ -347,6 +387,10 @@ mod tests {
         assert_eq!(p.adaptive.engage_windows, 2);
         assert_eq!(p.adaptive.release_windows, 3);
         assert_eq!(p.adaptive.frame_probe_ms, 900);
+        assert_eq!(p.adaptive.frame_source, "surfaceflinger");
+        assert!(p.adaptive.input_enabled);
+        assert_eq!(p.adaptive.interaction_boost_ms, 120);
+        assert_eq!(p.adaptive.interaction_hold_ms, 180);
         assert!((p.adaptive.frame_budget_ms - 16.666_667).abs() < 0.0001);
     }
 
