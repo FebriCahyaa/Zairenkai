@@ -2,15 +2,15 @@
 /*
  * Zairenkai theme (Material 3, expressive typeface + motion + optional Glass
  * UI). Theme mode, accent and dynamic color are user-selectable in Settings →
- * Tema. (MaterialExpressiveTheme is still internal in this Compose release, so
- * the expressive feel comes from Roboto Flex, spring motion and Glass.)
+ * Tema. Material 3 Expressive supplies component tokens and expressive motion.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -56,11 +56,11 @@ fun ZairenkaiTheme(
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         else -> schemeFor(accentById(accentId), dark)
     }
-    CompositionLocalProvider(LocalGlass provides glass) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = ZkTypography,
-            content = content,
-        )
+    MaterialExpressiveTheme(
+        colorScheme = colorScheme,
+        typography = ZkTypography,
+        motionScheme = MotionScheme.expressive(),
+    ) {
+        CompositionLocalProvider(LocalGlass provides glass, content = content)
     }
 }

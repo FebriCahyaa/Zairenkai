@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -32,7 +33,7 @@ enum class Dest(val route: String, val label: String, val icon: ImageVector) {
     DASHBOARD("dashboard", "Beranda", Icons.Rounded.Dashboard),
     MONITOR("monitor", "Monitor", Icons.Rounded.Timeline),
     TWEAKS("tweaks", "Tweaks", Icons.Rounded.Tune),
-    PROFILES("profiles", "Profil", Icons.Rounded.Tune),
+    PROFILES("profiles", "Profil", Icons.Rounded.ViewCarousel),
     SYSTEM("system", "Sistem", Icons.Rounded.Security),
 }
 
@@ -53,6 +54,8 @@ fun ZairenkaiRoot(container: AppContainer) {
                 containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
                     MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass,
                 ),
+                tonalElevation = 0.dp,
+                windowInsets = NavigationBarDefaults.windowInsets,
             ) {
                 bottomDests.forEach { dest ->
                     val selected = current?.hierarchy?.any { it.route == dest.route } == true
@@ -67,6 +70,13 @@ fun ZairenkaiRoot(container: AppContainer) {
                         },
                         icon = { Icon(dest.icon, contentDescription = dest.label) },
                         label = { Text(dest.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }

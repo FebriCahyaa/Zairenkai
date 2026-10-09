@@ -97,19 +97,29 @@ class MonitorViewModel(private val c: AppContainer) : ViewModel() {
 
     fun start() {
         if (_ui.value.running) return
-        _ui.value = _ui.value.copy(running = true)
+        // Keep the rolling graphs, but force the headline status to wait for a
+        // fresh result instead of presenting a stale sample as live telemetry.
+        _ui.value = _ui.value.copy(running = true, latest = null)
         viewModelScope.launch {
             while (isActive && _ui.value.running) {
                 val m = runCatching { c.repository.monitor(500) }.getOrNull()
                 if (m != null && m.ok) {
-                    val onCpus = m.cpu.filter { it.online && it.loadPct >= 0 }
-                    val avg = if (onCpus.isEmpty()) 0 else onCpus.sumOf { it.loadPct } / onCpus.size
-                    val hottest = m.thermal.maxOfOrNull { it.celsius } ?: 0f
-                    _ui.value = _ui.value.copy(
+                    // Only append measured values. Encoding an unavailable sensor as 0
+                    // produces convincing but false flatlines in the monitor charts.
+                    val onCpus = m.cpu.filter { it.online && it.loadPct in 0..100 }
+                    val validThermal = m.thermal.map { it.celsius }.filter { it in 1f..150f }
+                    val current = _ui.value
+                    _ui.value = current.copy(
                         latest = m,
-                        cpuHistory = (_ui.value.cpuHistory + avg).takeLast(cap),
-                        gpuHistory = (_ui.value.gpuHistory + m.gpu.busyPct.coerceAtLeast(0)).takeLast(cap),
-                        tempHistory = (_ui.value.tempHistory + hottest).takeLast(cap),
+                        cpuHistory = if (onCpus.isNotEmpty()) {
+                            (current.cpuHistory + onCpus.sumOf { it.loadPct } / onCpus.size).takeLast(cap)
+                        } else current.cpuHistory,
+                        gpuHistory = if (m.gpu.busyPct in 0..100) {
+                            (current.gpuHistory + m.gpu.busyPct).takeLast(cap)
+                        } else current.gpuHistory,
+                        tempHistory = validThermal.maxOrNull()?.let {
+                            (current.tempHistory + it).takeLast(cap)
+                        } ?: current.tempHistory,
                     )
                 }
             }
