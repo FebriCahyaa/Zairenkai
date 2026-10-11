@@ -289,7 +289,7 @@ mod tests {
         let good_frame = FrameMetrics {
             p95_ms: 15.5,
             jank_ratio: 0.0,
-            ..bad_frame
+            ..bad_frame.clone()
         };
         let mut c = FasController::new();
         let _ = c.update(&scene, Some(&workload()), &bad_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());

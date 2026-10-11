@@ -15,6 +15,7 @@ mod engine;
 mod family;
 mod frame;
 mod interaction;
+mod inventory;
 mod fas;
 mod nodes;
 mod scene_engine;
@@ -31,6 +32,8 @@ mod properties;
 mod storage;
 mod topo;
 mod tweak;
+#[cfg(test)]
+mod test_support;
 
 use backends::BackendPlan;
 use config::Profile;
@@ -51,7 +54,7 @@ use zairenkai_core::operation::Operation;
 
 const GENERIC: &str = include_str!("../profiles/generic.toml");
 const LAVENDER: &str = include_str!("../profiles/lavender.toml");
-const CORE_MANIFEST: &str = include_str!("../../core/manifest.toml");
+const CORE_MANIFEST: &str = include_str!("../../../core/manifest.toml");
 const SAFE_MODE: &str = "/data/adb/zkfc/safe_mode";
 
 static STOP: AtomicBool = AtomicBool::new(false);
@@ -312,7 +315,7 @@ fn cmd_core_permissions(json: bool) -> i32 {
 fn cmd_core(json: bool) -> i32 {
     match core_manifest() {
         Ok(m) if json => {
-            println!("{{\"id\":\"{}\",\"product\":\"{}\",\"core_api\":{},\"architectures":[{}],\"kernel_models":[{}],\"kernel_generations":[{}]}}",
+            println!("{{\"id\":\"{}\",\"product\":\"{}\",\"core_api\":{},\"architectures\":[{}],\"kernel_models\":[{}],\"kernel_generations\":[{}]}}",
                 json_escape(&m.id), json_escape(&m.product), m.core_api,
                 m.supported_architectures.iter().map(|v| format!("\"{}\"", json_escape(v))).collect::<Vec<_>>().join(","),
                 m.supported_kernel_models.iter().map(|v| format!("\"{}\"", json_escape(v))).collect::<Vec<_>>().join(","),

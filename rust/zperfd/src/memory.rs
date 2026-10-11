@@ -77,7 +77,7 @@ mod tests {
             identity: PlatformIdentity { oem: crate::platform::OemVendor::Unknown, vendor: SocVendor::Unknown, platform: "x".into(), model: "m".into(), compatible: "".into(), evidence: vec![] },
             memory: MemoryInfo { total_kb: Some(4_000_000), available_kb: avail, swap_total_kb: Some(1), swap_free_kb: Some(1), zram: vec![ZramInfo { name: "zram0".into(), size_bytes: Some(1), algorithm: Some("lz4".into()) }] },
             storage: Vec::<StorageInfo>::new(),
-            network: NetworkInfo { interface_count: 0, interfaces: vec![], tcp_congestion: None, tcp_available: None },
+            network: NetworkInfo { interface_count: 0, interfaces: vec![], tcp_congestion: None, tcp_allowed: None, tcp_available: None },
             security: SecurityInfo { selinux_enforcing: None, verified_boot: None, verity_mode: None, device_mapper_devices: vec![], module_sig_enforce: None },
         }
     }

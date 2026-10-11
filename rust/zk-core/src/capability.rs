@@ -66,7 +66,7 @@ impl CapabilitySet {
     pub fn contains(&self, cap: Capability) -> bool { self.values.contains(&cap) }
     pub fn insert(&mut self, cap: Capability) { self.values.insert(cap); }
     pub fn remove(&mut self, cap: Capability) { self.values.remove(&cap); }
-    pub fn iter(&self) -> impl Iterator<Item = Capability> { self.values.iter().copied() }
+    pub fn iter(&self) -> impl Iterator<Item = Capability> + '_ { self.values.iter().copied() }
     pub fn is_empty(&self) -> bool { self.values.is_empty() }
 }
 

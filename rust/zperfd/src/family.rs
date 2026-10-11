@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn load_rejects_vendor_mismatch() {
-        let root = std::env::temp_dir().join(format!("zairenkai-family-{}", std::process::id()));
+        let root = crate::test_support::unique_temp_dir("family");
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("soc/qualcomm")).unwrap();
         fs::write(

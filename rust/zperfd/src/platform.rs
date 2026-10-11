@@ -68,7 +68,7 @@ impl KernelFlavor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GpuProvider {
     Kgsl,
     Mali,
@@ -110,13 +110,13 @@ impl ThermalProvider {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Evidence {
     pub source: &'static str,
     pub value: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlatformIdentity {
     pub vendor: SocVendor,
     pub oem: OemVendor,
@@ -371,10 +371,11 @@ pub fn scan_thermal(s: &Sysroot, vendor: SocVendor) -> Vec<ThermalZoneInfo> {
         let base = format!("/sys/class/thermal/{name}");
         let ty = s.read(&format!("{base}/type")).unwrap_or_default();
         let temp_mdeg = s.read(&format!("{base}/temp")).and_then(|v| v.parse::<i64>().ok());
+        let role = classify_thermal_role(&name, &ty);
         zones.push(ThermalZoneInfo {
             name,
             provider: classify_thermal(vendor, &ty),
-            role: classify_thermal_role(&name, &ty),
+            role,
             trips: scan_trips(s, &base),
             ty,
             temp_mdeg,
@@ -391,7 +392,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn root() -> PathBuf {
-        let p = std::env::temp_dir().join(format!("zairenkai-platform-{}", std::process::id()));
+        let p = crate::test_support::unique_temp_dir("platform");
         let _ = fs::remove_dir_all(&p);
         fs::create_dir_all(&p).unwrap();
         p

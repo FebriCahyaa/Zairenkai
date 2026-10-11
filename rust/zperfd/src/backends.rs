@@ -86,7 +86,7 @@ impl BackendPlan {
         } else if topology.stune_top.is_some() { BoostBackend::SchedTune
         } else { BoostBackend::None };
         let gpu = match topology.gpu.as_ref() {
-            Some(g) => match g.provider { GpuProvider::Kgsl => GpuBackend::Kgsl, ref p => GpuBackend::Devfreq(p.clone()) },
+            Some(g) => match g.provider { GpuProvider::Kgsl => GpuBackend::Kgsl, p => GpuBackend::Devfreq(p) },
             None => GpuBackend::None,
         };
         let mut thermal = topology.thermal_zones.iter().map(|z| z.provider.clone()).filter(|p| *p != ThermalProvider::Unknown).collect::<Vec<_>>();
@@ -110,9 +110,9 @@ impl BackendPlan {
                 if topology.has_msm_perf { vendor_surfaces.push("msm_performance"); }
                 if matches!(gpu, GpuBackend::Kgsl) { vendor_surfaces.push("kgsl"); }
             }
-            VendorBackendKind::MediaTek => vendor_surfaces.push("mediatek-runtime");
-            VendorBackendKind::Google => vendor_surfaces.push("aosp-runtime");
-            VendorBackendKind::Xiaomi => vendor_surfaces.push("miui-runtime");
+            VendorBackendKind::MediaTek => vendor_surfaces.push("mediatek-runtime"),
+            VendorBackendKind::Google => vendor_surfaces.push("aosp-runtime"),
+            VendorBackendKind::Xiaomi => vendor_surfaces.push("miui-runtime"),
             VendorBackendKind::Generic => {}
         }
         let capabilities = BackendCapabilities {

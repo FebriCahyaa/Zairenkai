@@ -54,7 +54,7 @@ impl ThreadTaskController{
         }
         self.boosted_pid=Some(workload.pid);
         if let Some((cpu,min_hw,max_hw))=performance_policy{
-            if decision.cpu_floor_pct>0&&max_hw>min_hw{let span=max_hw.saturating_sub(min_hw);let floor=min_hw.saturating_add(span.saturating_mul(decision.cpu_floor_pct as u64)/100).min(u32::MAX as u64);if self.qos_cpu!=Some(cpu)||self.last_cpu_floor_pct!=Some(decision.cpu_floor_pct){if let Err(e)=z.cpufreq_qos(cpu as u32,floor.min(max_hw) as u32,0,0){if !matches!(e.raw_os_error(),Some(libc::EOPNOTSUPP)|Some(libc::ENODEV)){return Err(format!("ZKFC cpufreq QoS: {e}"));}}else{self.qos_cpu=Some(cpu as u32);self.last_cpu_floor_pct=Some(decision.cpu_floor_pct);}}}
+            if decision.cpu_floor_pct>0&&max_hw>min_hw{let span=max_hw.saturating_sub(min_hw);let floor=min_hw.saturating_add(span.saturating_mul(decision.cpu_floor_pct as u64)/100).min(u32::MAX as u64);if self.qos_cpu!=Some(cpu as u32)||self.last_cpu_floor_pct!=Some(decision.cpu_floor_pct){if let Err(e)=z.cpufreq_qos(cpu as u32,floor.min(max_hw) as u32,0,0){if !matches!(e.raw_os_error(),Some(libc::EOPNOTSUPP)|Some(libc::ENODEV)){return Err(format!("ZKFC cpufreq QoS: {e}"));}}else{self.qos_cpu=Some(cpu as u32);self.last_cpu_floor_pct=Some(decision.cpu_floor_pct);}}}
             else if let Some(qos_cpu)=self.qos_cpu{let _=z.cpufreq_qos(qos_cpu,0,0,ZKFC_CQ_CLEAR);self.qos_cpu=None;self.last_cpu_floor_pct=None;}
         }
         if decision.affinity_hint&&!performance_cpus.is_empty(){

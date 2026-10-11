@@ -6,7 +6,7 @@
 //!
 //! Copyright (C) 2026 FebriCahyaa
 
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::os::fd::{AsRawFd, FromRawFd};
 use std::os::unix::ffi::OsStrExt;
@@ -48,7 +48,7 @@ impl Sysroot {
     pub fn read_u64(&self, rel: &str) -> Option<u64> { self.read(rel).and_then(|s| s.parse().ok()) }
 
     pub fn read_u64_list(&self, rel: &str) -> Vec<u64> {
-        let mut v = self.read(rel)
+        let mut v: Vec<u64> = self.read(rel)
             .map(|s| s.split_whitespace().filter_map(|t| t.parse().ok()).collect())
             .unwrap_or_default();
         v.sort_unstable();
@@ -114,7 +114,7 @@ impl Sysroot {
             libc::openat(
                 dir.as_raw_fd(),
                 c_name.as_ptr(),
-                libc::O_WRONLY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+                libc::O_WRONLY | libc::O_TRUNC | libc::O_NOFOLLOW | libc::O_CLOEXEC,
             )
         };
         if fd < 0 {
@@ -130,6 +130,9 @@ impl Sysroot {
     /// sysfs/procfs modes around a write is race-prone and cannot prevent a
     /// separate privileged writer from changing the same node. Path resolution
     /// is descriptor-based so intermediate and final symlinks are rejected.
+    /// O_TRUNC matches shell `echo >` semantics: kernel attributes ignore it,
+    /// while regular files (offline dumps, test sysroots) never keep a stale
+    /// tail when a shorter value replaces a longer one.
     pub fn write(&self, rel: &str, val: &str) -> io::Result<()> {
         let mut file = self.open_write_beneath(rel)?;
         file.write_all(format!("{val}\n").as_bytes())
@@ -154,7 +157,7 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
 
     fn tmp() -> PathBuf {
-        let d = std::env::temp_dir().join(format!("zperfd-nodes-{}", std::process::id()));
+        let d = crate::test_support::unique_temp_dir("nodes");
         let _ = fs::remove_dir_all(&d);
         d
     }

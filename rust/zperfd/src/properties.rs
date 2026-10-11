@@ -83,6 +83,56 @@ fn valid_value_for(key: &str, value: &str) -> bool {
     }
 }
 
+/// Run a property tool with a hard deadline and bounded stdout capture.
+/// A non-zero exit, timeout or spawn failure is reported as an error; it is
+/// never treated as an empty (successful) property value.
+fn run_bounded(command: &mut Command) -> Result<String, String> {
+    use std::io::Read;
+    use std::thread;
+    use std::time::Instant;
+
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("property tool unavailable: {e}"))?;
+    let Some(mut stdout) = child.stdout.take() else {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err("property tool stdout unavailable".into());
+    };
+    let reader = thread::spawn(move || {
+        let mut out = Vec::with_capacity(MAX_OUTPUT_BYTES);
+        let mut chunk = [0u8; 1024];
+        loop {
+            let n = stdout.read(&mut chunk).ok()?;
+            if n == 0 { break; }
+            let keep = n.min(MAX_OUTPUT_BYTES.saturating_sub(out.len()));
+            if keep > 0 { out.extend_from_slice(&chunk[..keep]); }
+        }
+        Some(out)
+    });
+    let deadline = Instant::now() + TIMEOUT;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(5)),
+            Ok(None) | Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = reader.join();
+                return Err("property tool timed out".into());
+            }
+        }
+    };
+    let out = reader.join().ok().flatten().ok_or("property tool output unreadable")?;
+    if !status.success() {
+        return Err(format!("property tool failed: {status}"));
+    }
+    Ok(String::from_utf8_lossy(&out).trim().to_string())
+}
+
 pub fn get(key: &str) -> Result<String, String> {
     if !valid_read_key(key) { return Err("invalid Android property key".into()); }
     if spec(key).is_none() && !READ_ONLY_KEYS.contains(&key) {

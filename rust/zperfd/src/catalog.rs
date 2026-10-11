@@ -93,7 +93,6 @@ pub fn resolve(database_root: &Path, identity: &PlatformIdentity) -> Option<Reso
     let platform = normalize_identifier(&identity.platform);
     let model = normalize_identifier(&identity.model);
     let compatible = normalize_identifier(&identity.compatible);
-    let corpus = format!("{platform} {model} {compatible}");
 
     let mut ranked = index.device.into_iter().filter_map(|entry| {
         let metadata = safe_relative_path(&entry.metadata)
@@ -124,7 +123,7 @@ mod tests {
 
     #[test]
     fn rejects_path_traversal_in_index() {
-        let root = std::env::temp_dir().join(format!("zairenkai-catalog-traversal-{}", std::process::id()));
+        let root = crate::test_support::unique_temp_dir("catalog-traversal");
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         fs::write(root.join("index.toml"), "schema_version = 1\n[[device]]\nid=\"qualcomm.bad\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\nmetadata=\"../escape.toml\"\ncatalog=\"../escape.toml\"\n").unwrap();
@@ -142,7 +141,7 @@ mod tests {
 
     #[test]
     fn resolves_by_model_and_compatible_tokens() {
-        let root = std::env::temp_dir().join(format!("zairenkai-catalog-model-{}", std::process::id()));
+        let root = crate::test_support::unique_temp_dir("catalog-model");
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("devices/google")).unwrap();
         fs::write(root.join("index.toml"), "schema_version=1\n[[device]]\nid=\"google.pixel10\"\nvendor=\"tensor\"\nsoc=\"tensor-g5\"\nmetadata=\"devices/google/pixel10.toml\"\ncatalog=\"generic.toml\"\n").unwrap();
@@ -162,11 +161,14 @@ mod tests {
 
     #[test]
     fn resolves_by_normalized_platform() {
-        let root = std::env::temp_dir().join(format!("zairenkai-catalog-{}", std::process::id()));
+        let root = crate::test_support::unique_temp_dir("catalog");
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         let mut f = fs::File::create(root.join("index.toml")).unwrap();
         writeln!(f, "schema_version = 1\n[[device]]\nid=\"qualcomm.sm8550\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\nmetadata=\"devices/qualcomm/sm8550.toml\"\ncatalog=\"generic.toml\"").unwrap();
+        // Index entries are only trusted when their metadata record agrees.
+        fs::create_dir_all(root.join("devices/qualcomm")).unwrap();
+        fs::write(root.join("devices/qualcomm/sm8550.toml"), "id=\"qualcomm.sm8550\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\n").unwrap();
         let identity = PlatformIdentity {
             oem: crate::platform::OemVendor::Unknown,
             vendor: crate::platform::SocVendor::Qualcomm,

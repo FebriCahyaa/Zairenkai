@@ -281,7 +281,8 @@ fn parse_timeline_row(line: &str) -> Option<i64> {
 
 fn parse_timeline_row3(line: &str) -> Option<(i64,i64,i64)> {
     let v=parse_timeline_values(line);
-    (v.len()>=3).then(|| (timeline_ns(v[0])?, timeline_ns(v[1])?, timeline_ns(v[2])?))
+    if v.len() < 3 { return None; }
+    Some((timeline_ns(v[0])?, timeline_ns(v[1])?, timeline_ns(v[2])?))
 }
 
 fn parse_refresh_rate(text: &str) -> Option<f64> {

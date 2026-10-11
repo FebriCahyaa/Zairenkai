@@ -41,10 +41,10 @@ pub struct Snapshot {
 
 pub fn collect(s: &Sysroot, t: &Topology) -> Snapshot {
     let load1 = s.read("/proc/loadavg").and_then(|v| v.split_whitespace().next()?.parse().ok());
-    let mem_available_kb = s
-        .read("/proc/meminfo")
-        .and_then(|text| text.lines().find(|l| l.starts_with("MemAvailable:")))
-        .and_then(|l| l.split_whitespace().nth(1)?.parse().ok());
+    let mem_available_kb = s.read("/proc/meminfo").and_then(|text| {
+        let line = text.lines().find(|l| l.starts_with("MemAvailable:"))?;
+        line.split_whitespace().nth(1)?.parse().ok()
+    });
     let mut cpu = Vec::new();
     for p in &t.policies {
         cpu.push(CpuRuntime {
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn parses_psi() {
-        let root = std::env::temp_dir().join(format!("zairenkai-psi-{}", std::process::id()));
+        let root = crate::test_support::unique_temp_dir("psi");
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("proc/pressure")).unwrap();
         fs::write(root.join("proc/pressure/cpu"), "some avg10=1.23 avg60=0.4 avg300=0.1 total=1\nfull avg10=0.00 avg60=0.0 avg300=0.0 total=0\n").unwrap();

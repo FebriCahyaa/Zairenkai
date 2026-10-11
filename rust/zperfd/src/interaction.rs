@@ -407,15 +407,27 @@ fn looks_interactive(name: &str, abs: Option<&str>, key: Option<&str>) -> bool {
     key.is_some_and(|v| bitmap_has(v, BTN_GAMEPAD))
 }
 
+/// Test a bit in an input capability bitmap from `/proc/bus/input/devices`.
+///
+/// The kernel prints one unpadded hex word per `unsigned long`, most
+/// significant word first, and switches to 32-bit words for compat (32-bit)
+/// readers. The word width therefore equals the reader's `c_ulong` width.
 fn bitmap_has(hex: &str, bit: u16) -> bool {
+    bitmap_has_words(hex, bit, libc::c_ulong::BITS)
+}
+
+fn bitmap_has_words(hex: &str, bit: u16, word_bits: u32) -> bool {
+    if word_bits == 0 || word_bits > 64 {
+        return false;
+    }
     let words = hex.split_whitespace().rev().collect::<Vec<_>>();
-    let word = (bit / 32) as usize;
-    let off = (bit % 32) as u32;
+    let word = (u32::from(bit) / word_bits) as usize;
+    let off = u32::from(bit) % word_bits;
     let Some(raw) = words.get(word) else {
         return false;
     };
-    u32::from_str_radix(raw, 16)
-        .map(|v| v & (1u32 << off) != 0)
+    u64::from_str_radix(raw, 16)
+        .map(|v| v & (1u64 << off) != 0)
         .unwrap_or(false)
 }
 
@@ -425,7 +437,18 @@ mod tests {
 
     #[test]
     fn bitmap_detects_mt_capability() {
-        assert!(bitmap_has("00000000 00000000 00200000", 53));
+        // 32-bit (compat) layout: ABS_MT_POSITION_X (53) is bit 21 of word 1.
+        assert!(bitmap_has_words("200000 0", 53, 32));
+        assert!(!bitmap_has_words("00000000 00000000 00200000", 53, 32));
+        // Native 64-bit layout as printed by an arm64 kernel for a touchscreen.
+        assert!(bitmap_has_words("660800000000003", 53, 64));
+        assert!(bitmap_has_words("660800000000003", 54, 64));
+        assert!(!bitmap_has_words("3", 53, 64));
+        // BTN_GAMEPAD (0x130) lives in word 4 of a 64-bit KEY bitmap.
+        assert!(bitmap_has_words("1000000000000 0 0 0 0", 0x130, 64));
+        // Malformed or oversized words never claim a capability.
+        assert!(!bitmap_has_words("zz", 0, 64));
+        assert!(!bitmap_has_words("1", 0, 0));
     }
 
     #[test]

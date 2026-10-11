@@ -104,7 +104,7 @@ fn valid_package(s: &str) -> bool {
 }
 
 pub fn getprops() -> Option<BTreeMap<String, String>> {
-    let out = bounded_output(Command::new("getprop"), DUMPSYS_TIMEOUT)?;
+    let out = bounded_output(&mut Command::new("getprop"), DUMPSYS_TIMEOUT)?;
     let text = String::from_utf8_lossy(&out);
     let mut props = BTreeMap::new();
     for line in text.lines() {
@@ -206,7 +206,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn root() -> PathBuf {
-        let p = std::env::temp_dir().join(format!("zairenkai-scene-{}", std::process::id()));
+        let p = crate::test_support::unique_temp_dir("scene");
         let _ = fs::remove_dir_all(&p);
         fs::create_dir_all(&p).unwrap();
         p
@@ -241,6 +241,9 @@ mod tests {
     fn full_battery_with_online_usb_is_external_power() {
         let r = root();
         write(&r, "/sys/class/power_supply/battery/status", "Full");
+        // Supply directory names are vendor-defined; the mandatory `type`
+        // attribute, not the directory name, identifies an external input.
+        write(&r, "/sys/class/power_supply/USB/type", "USB");
         write(&r, "/sys/class/power_supply/USB/online", "1");
         assert!(charging(&Sysroot::new(&r)));
         let _ = fs::remove_dir_all(r);

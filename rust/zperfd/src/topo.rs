@@ -266,7 +266,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn root() -> PathBuf {
-        let p = std::env::temp_dir().join(format!("zairenkai-topo-{}", std::process::id()));
+        let p = crate::test_support::unique_temp_dir("topo");
         let _ = fs::remove_dir_all(&p);
         fs::create_dir_all(&p).unwrap();
         p

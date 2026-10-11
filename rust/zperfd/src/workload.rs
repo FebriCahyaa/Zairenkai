@@ -401,6 +401,12 @@ fn read_gpu_util(s: &Sysroot, devfreq_path: &str) -> Option<f64> {
 
 fn classify_thread(name: &str) -> ThreadClass {
     let n = name.to_ascii_lowercase();
+    // Engine game-logic threads (e.g. Unity's "UnityMain") must be matched
+    // before the generic "*main" rule, otherwise they are classified as UI
+    // main threads and excluded from game-thread placement.
+    if n.contains("unitymain") || n.contains("gamethread") {
+        return ThreadClass::Game;
+    }
     if n == "main" || n.ends_with("main") || n.contains("choreographer") {
         return ThreadClass::Main;
     }
@@ -442,11 +448,11 @@ mod tests {
 
     #[test]
     fn gpu_util_percent_prefers_ratio_when_available() {
-        let r = std::env::temp_dir().join(format!("zairenkai-gpu-util-{}", std::process::id()));
+        let r = crate::test_support::unique_temp_dir("gpu-util");
         let _ = std::fs::remove_dir_all(&r);
         std::fs::create_dir_all(r.join("sys/gpu")).unwrap();
         std::fs::write(r.join("sys/gpu/load"), "70 100").unwrap();
-        assert_eq!(super::read_gpu_util(&Sysroot::new(&r), "/sys/gpu"), Some(70.0));
+        assert_eq!(super::read_gpu_util(&crate::nodes::Sysroot::new(&r), "/sys/gpu"), Some(70.0));
         let _ = std::fs::remove_dir_all(r);
     }
 }

@@ -583,7 +583,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn root(label: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("zperfd-state-{label}-{}", std::process::id()));
+        let d = crate::test_support::unique_temp_dir(&format!("state-{label}"));
         let _ = fs::remove_dir_all(&d);
         d
     }

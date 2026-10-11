@@ -64,17 +64,17 @@ pub fn specs() -> impl Iterator<Item = &'static Spec> {
     SPECS.iter()
 }
 
-pub fn operation_for(id: &str) -> crate::operation::Operation {
+pub fn operation_for(id: &str) -> zairenkai_core::operation::Operation {
     match find(id).map(|s| s.category) {
-        Some("cpu") => crate::operation::Operation::SetCpuTweak,
-        Some("gpu") => crate::operation::Operation::SetGpuTweak,
-        Some("memory") => crate::operation::Operation::SetMemoryTweak,
-        Some("zram") => crate::operation::Operation::TuneZram,
-        Some("io") => crate::operation::Operation::SetIoTweak,
-        Some("network") => crate::operation::Operation::TuneNetwork,
-        Some("battery") => crate::operation::Operation::SetPowerTweak,
-        Some("display") => crate::operation::Operation::SetPowerTweak,
-        _ => crate::operation::Operation::SetPowerTweak,
+        Some("cpu") => zairenkai_core::operation::Operation::SetCpuTweak,
+        Some("gpu") => zairenkai_core::operation::Operation::SetGpuTweak,
+        Some("memory") => zairenkai_core::operation::Operation::SetMemoryTweak,
+        Some("zram") => zairenkai_core::operation::Operation::TuneZram,
+        Some("io") => zairenkai_core::operation::Operation::SetIoTweak,
+        Some("network") => zairenkai_core::operation::Operation::TuneNetwork,
+        Some("battery") => zairenkai_core::operation::Operation::SetPowerTweak,
+        Some("display") => zairenkai_core::operation::Operation::SetPowerTweak,
+        _ => zairenkai_core::operation::Operation::SetPowerTweak,
     }
 }
 
@@ -195,11 +195,10 @@ fn validate_kcal(value: &str) -> Result<String, String> {
 }
 
 fn zram_size_limit(s: &Sysroot) -> Option<u64> {
-    let mem_kb = s
-        .read("/proc/meminfo")
-        .and_then(|text| text.lines().find(|line| line.starts_with("MemTotal:")))
-        .and_then(|line| line.split_whitespace().nth(1))
-        .and_then(|v| v.parse::<u64>().ok())?;
+    let mem_kb = s.read("/proc/meminfo").and_then(|text| {
+        let line = text.lines().find(|line| line.starts_with("MemTotal:"))?;
+        line.split_whitespace().nth(1)?.parse::<u64>().ok()
+    })?;
     // Permit up to 2x physical RAM, but never more than 16 GiB.
     Some((mem_kb.saturating_mul(1024).saturating_mul(2)).min(16 * 1024 * 1024 * 1024))
 }

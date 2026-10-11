@@ -110,7 +110,13 @@ pub fn evaluate(input: &SentinelInput) -> SentinelDecision {
     if input.safe_mode_active && input.operation != Operation::ResetRuntime {
         reasons.push(SentinelReason::OperationForbidden);
     }
-    if !input.runtime_reconciled { reasons.push(SentinelReason::RuntimeDrift); }
+    // Runtime drift is exactly the condition a baseline reset repairs. Blocking
+    // ResetRuntime on drift would remove the rollback path the recovery
+    // invariant depends on; an invalid persistent state still blocks it above
+    // because the stored baseline itself can no longer be trusted.
+    if !input.runtime_reconciled && input.operation != Operation::ResetRuntime {
+        reasons.push(SentinelReason::RuntimeDrift);
+    }
     let thermal_sensitive = matches!(
         input.operation,
         Operation::ApplyProfile

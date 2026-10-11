@@ -116,12 +116,22 @@ fn assess_zone(zone: &crate::platform::ThermalZoneInfo) -> Option<ZoneSnapshot> 
     let next_trip = next_trip?;
     let previous_trip = trips.iter().copied().filter(|trip| *trip < next_trip).max();
     let headroom = next_trip.saturating_sub(temp).max(0);
-    let headroom_permille = match previous_trip {
-        Some(previous) if next_trip > previous => {
+    // Normalize against an interval taken from this zone's own trip topology.
+    // Below the lowest trip there is no lower bound, so the distance between
+    // the first two trips is used as the scale. Only a zone with a single trip
+    // falls back to the absolute trip value, which is deliberately pessimistic
+    // (it reports reduced headroom early) rather than inventing a threshold.
+    let following_trip = trips.iter().copied().find(|trip| *trip > next_trip);
+    let headroom_permille = match (previous_trip, following_trip) {
+        (Some(previous), _) if next_trip > previous => {
             let span = (next_trip - previous) as i64;
             ((headroom as i64 * 1000) / span).clamp(0, 1000) as u16
         }
-        None if next_trip > 0 => {
+        (None, Some(following)) => {
+            let span = (following - next_trip) as i64;
+            ((headroom as i64 * 1000) / span).clamp(0, 1000) as u16
+        }
+        (None, None) if next_trip > 0 => {
             ((headroom as i64 * 1000) / next_trip as i64).clamp(0, 1000) as u16
         }
         _ => 0,
@@ -149,7 +159,7 @@ fn select_control_zone(topology: &Topology) -> Option<ZoneSnapshot> {
 pub fn snapshot(s: &Sysroot, topology: &Topology) -> Snapshot {
     let hottest_mdeg = topology.thermal_zones.iter().filter_map(|z| z.temp_mdeg).max().map(|v| v as i32);
     let control = select_control_zone(topology);
-    let control_temp_mdeg = control.map(|z| z.temp_mdeg).or_else(|| hottest_mdeg);
+    let control_temp_mdeg = control.as_ref().map(|z| z.temp_mdeg).or(hottest_mdeg);
 
     let controlled = topology.thermal_zones.iter().filter(|z| controlled_role(z.role)).collect::<Vec<_>>();
     let telemetry_complete = !controlled.is_empty() && controlled.iter().all(|z| assess_zone(z).is_some());
@@ -313,12 +323,15 @@ mod tests {
 
     #[test]
     fn per_zone_selection_prevents_cross_zone_temperature_mix() {
-        let mut a = zone(70_000, &[(72_000, ThermalTripType::Hot), (95_000, ThermalTripType::Critical)]);
+        // The GPU zone has the least normalized headroom, so every reported
+        // trip must come from that zone; no trip may leak in from the CPU zone.
+        let mut a = zone(60_000, &[(72_000, ThermalTripType::Hot), (95_000, ThermalTripType::Critical)]);
         a.name = "cpu".into();
-        let mut b = zone(55_000, &[(60_000, ThermalTripType::Hot), (65_000, ThermalTripType::Critical)]);
+        let mut b = zone(59_000, &[(60_000, ThermalTripType::Hot), (65_000, ThermalTripType::Critical)]);
         b.name = "gpu".into(); b.role = ThermalRole::Gpu;
         let topology = Topology { thermal_zones: vec![a, b], ..test_topology() };
         let s = snapshot(&Sysroot::new(std::env::temp_dir().join("zairenkai-thermal-test-nonexistent")), &topology);
+        assert_eq!(s.control_zone.as_deref(), Some("gpu"));
         assert_eq!(s.performance_trip_mdeg, Some(60_000));
         assert_eq!(s.critical_trip_mdeg, Some(65_000));
     }
@@ -337,9 +350,23 @@ mod tests {
     }
 
     #[test]
+    fn headroom_below_first_trip_uses_trip_topology_not_zero_celsius() {
+        // 22 C below the first trip, with 23 C between the first two trips, is
+        // nominal headroom. Normalizing against 0 C would report Warm here.
+        let cool = Topology { thermal_zones: vec![zone(50_000, &[(72_000, ThermalTripType::Passive), (95_000, ThermalTripType::Critical)])], ..test_topology() };
+        let s = snapshot(&Sysroot::new(std::env::temp_dir().join("zairenkai-thermal-test-nonexistent")), &cool);
+        assert_eq!(envelope(&s).band, Band::Nominal);
+        // A single-trip zone keeps the pessimistic absolute fallback.
+        let single = Topology { thermal_zones: vec![zone(50_000, &[(95_000, ThermalTripType::Critical)])], ..test_topology() };
+        let s = snapshot(&Sysroot::new(std::env::temp_dir().join("zairenkai-thermal-test-nonexistent")), &single);
+        assert_eq!(s.headroom_permille, Some(473));
+        assert_eq!(envelope(&s).band, Band::Warm);
+    }
+
+    #[test]
     fn critical_trip_is_zone_local() {
         let topology = Topology { thermal_zones: vec![zone(90_000, &[(95_000, ThermalTripType::Hot), (100_000, ThermalTripType::Critical)]), {
-            let mut z = zone(96_000, &[(97_000, ThermalTripType::Hot), (97_000, ThermalTripType::Critical)]); z.name = "gpu".into(); z.role = ThermalRole::Gpu; z
+            let mut z = zone(98_000, &[(97_000, ThermalTripType::Hot), (97_000, ThermalTripType::Critical)]); z.name = "gpu".into(); z.role = ThermalRole::Gpu; z
         }], ..test_topology() };
         let s = snapshot(&Sysroot::new(std::env::temp_dir().join("zairenkai-thermal-test-nonexistent")), &topology);
         assert!(s.critical_reached);
