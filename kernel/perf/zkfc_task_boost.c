@@ -105,14 +105,15 @@ static void zkfc_tb_snapshot_uclamp(struct task_struct *p,
 	 * Scheduler uclamp requests are protected by scheduler task/rq locking.
 	 * Current Android common kernels assert p->pi_lock while updating the
 	 * requested clamp. Hold the same lock for this small snapshot and never
-	 * call into the scheduler while it is held.
+	 * call into the scheduler while it is held. task_struct::pi_lock is a
+	 * raw_spinlock_t on every supported kernel, so the raw_* API is required.
 	 */
-	spin_lock_irqsave(&p->pi_lock, irq_flags);
+	raw_spin_lock_irqsave(&p->pi_lock, irq_flags);
 	saved->umin = p->uclamp_req[UCLAMP_MIN].value;
 	saved->umax = p->uclamp_req[UCLAMP_MAX].value;
 	saved->umin_user_defined = p->uclamp_req[UCLAMP_MIN].user_defined;
 	saved->umax_user_defined = p->uclamp_req[UCLAMP_MAX].user_defined;
-	spin_unlock_irqrestore(&p->pi_lock, irq_flags);
+	raw_spin_unlock_irqrestore(&p->pi_lock, irq_flags);
 #else
 	(void)p;
 	saved->umin = 0;
