@@ -3,7 +3,9 @@ name: Native (crypto + userspace + module compile)
 
 on:
   push:
-    branches: [main]
+    # The active development branch diverges from main and is pushed to
+    # directly, so it must run the same native gates as main.
+    branches: [main, ccr-076d8b15-osiupp]
     paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "database/**", "module/zperf/database/**", "tools/**", ".github/workflows/native.yml"]
   pull_request:
     paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "database/**", "module/zperf/database/**", "tools/**"]
