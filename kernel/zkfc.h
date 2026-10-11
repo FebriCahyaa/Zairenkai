@@ -87,6 +87,7 @@ u32 zkfc_cpufreq_request_count(void);
 /* Floor/ceiling used by input boost; 0 removes it. */
 int zkfc_cpufreq_set_boost_floor(unsigned int cpu, unsigned int min_khz);
 void zkfc_cpufreq_clear_boost_floors(void);
+void zkfc_cpufreq_thermal_suspend(bool suspend);
 
 int zkfc_input_boost_init(void);
 void zkfc_input_boost_exit(void);

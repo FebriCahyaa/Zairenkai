@@ -4,8 +4,9 @@
  *
  * Polls up to four thermal zones chosen by the manager. When any of them
  * reaches the configured runtime-derived trip, every ZKFC boost is suspended:
- * input boost floors are dropped and task uclamp boosts are neutralised. Boosts
- * resume once all zones are below the runtime-derived release point.
+ * input boost floors are dropped, task uclamp boosts are neutralised and
+ * cpufreq QoS minimum floors are withdrawn (ceilings stay). Boosts resume once
+ * all zones are below the runtime-derived release point.
  *
  * ZKFC never edits critical trip points and never disables thermal zones; it only
  * removes its own performance requests. limit_mdeg/release_mdeg are accepted as
@@ -101,6 +102,7 @@ static void zkfc_tg_set_tripped(bool tripped, int temp)
 	}
 	zkfc_input_boost_suspend(tripped);
 	zkfc_task_boost_suspend(tripped);
+	zkfc_cpufreq_thermal_suspend(tripped);
 	zkfc_tg_set_scale(tripped ? 0 : 1000);
 }
 

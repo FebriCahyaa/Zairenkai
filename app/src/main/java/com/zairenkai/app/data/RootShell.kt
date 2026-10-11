@@ -4,8 +4,8 @@
  * the device's su implementation (Magisk / KernelSU / APatch).
  *
  * The executor drains stdout/stderr concurrently, caps captured output, and
- * forcibly terminates timed-out children so a failed command cannot continue
- * mutating the device after the UI has returned an error.
+ * forcibly terminates timed-out or cancelled children so a failed command
+ * cannot continue mutating the device after the UI has returned an error.
  *
  * Copyright (C) 2026 FebriCahyaa
  */
@@ -15,6 +15,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
@@ -48,9 +49,13 @@ object RootShell {
     }
 
     suspend fun run(command: String, timeoutMs: Long = DEFAULT_TIMEOUT_MS): ShellResult =
+        runWith(listOf("su", "-c"), command, timeoutMs)
+
+    /** [run] with an injectable launcher; tests use `sh -c` instead of `su -c`. */
+    internal suspend fun runWith(launcher: List<String>, command: String, timeoutMs: Long): ShellResult =
         withContext(Dispatchers.IO) {
             val process = try {
-                ProcessBuilder("su", "-c", command)
+                ProcessBuilder(launcher + command)
                     .redirectErrorStream(false)
                     .start()
             } catch (e: Exception) {
@@ -62,7 +67,17 @@ object RootShell {
                     val out = async(Dispatchers.IO) { readCapped(process.inputStream) }
                     val err = async(Dispatchers.IO) { readCapped(process.errorStream) }
                     val timeout = timeoutMs.coerceIn(250, 120_000)
-                    val finished = process.waitFor(timeout, TimeUnit.MILLISECONDS)
+                    // waitFor() blocks the thread; runInterruptible turns
+                    // coroutine cancellation into an interrupt so a cancelled
+                    // caller stops waiting immediately. The child must then be
+                    // destroyed inside this scope: the readers are scope
+                    // children blocked on its pipes and only return at EOF.
+                    val finished = try {
+                        runInterruptible { process.waitFor(timeout, TimeUnit.MILLISECONDS) }
+                    } catch (e: CancellationException) {
+                        destroyProcess(process)
+                        throw e
+                    }
                     if (!finished) {
                         // Destroy the child before leaving this coroutine scope.
                         // Otherwise the stream readers remain children of the

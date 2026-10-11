@@ -20,6 +20,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,7 +90,7 @@ fun Onboarding(container: AppContainer, onDone: () -> Unit) {
                         Text(if (step < steps - 1) "Lanjut" else "Mulai", fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(6.dp))
                         Icon(
-                            if (step < steps - 1) Icons.Rounded.ArrowForward else Icons.Rounded.Check,
+                            if (step < steps - 1) Icons.AutoMirrored.Rounded.ArrowForward else Icons.Rounded.Check,
                             contentDescription = null,
                         )
                     }

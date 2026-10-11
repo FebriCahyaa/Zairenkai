@@ -10,6 +10,10 @@
  * thermal and vendor limits, so ZKFC can never push a CPU above what the
  * thermal framework allows. Older kernels use the policy notifier.
  *
+ * While the ZKFC thermal guard is tripped every floor (user and boost) is
+ * withdrawn; ceilings stay because they only lower performance. The
+ * requested floors are kept and re-applied when the guard releases.
+ *
  * Copyright (C) 2026 FebriCahyaa
  */
 #include <linux/cpu.h>
@@ -36,6 +40,18 @@ struct zkfc_cq {
 
 static struct zkfc_cq *zkfc_cq;		/* indexed by policy->cpu */
 static DEFINE_MUTEX(zkfc_cq_mutex);
+static bool zkfc_cq_thermal_suspended;	/* protected by zkfc_cq_mutex */
+
+/* Floors actually requested from cpufreq; zero while the guard is tripped. */
+static unsigned int zkfc_cq_user_floor(const struct zkfc_cq *c)
+{
+	return zkfc_cq_thermal_suspended ? 0 : c->user_min;
+}
+
+static unsigned int zkfc_cq_boost_floor(const struct zkfc_cq *c)
+{
+	return zkfc_cq_thermal_suspended ? 0 : c->boost_min;
+}
 
 #ifdef ZKFC_HAVE_FREQ_QOS
 
@@ -100,11 +116,11 @@ static int zkfc_cq_update(struct zkfc_cq *c)
 	int r1, r2, r3;
 
 	r1 = freq_qos_update_request(&c->req_min,
-				     c->user_min ?: FREQ_QOS_MIN_DEFAULT_VALUE);
+				     zkfc_cq_user_floor(c) ?: FREQ_QOS_MIN_DEFAULT_VALUE);
 	r2 = freq_qos_update_request(&c->req_max,
 				     c->user_max ?: FREQ_QOS_MAX_DEFAULT_VALUE);
 	r3 = freq_qos_update_request(&c->req_boost,
-				     c->boost_min ?: FREQ_QOS_MIN_DEFAULT_VALUE);
+				     zkfc_cq_boost_floor(c) ?: FREQ_QOS_MIN_DEFAULT_VALUE);
 	if (r1 < 0)
 		return r1;
 	if (r2 < 0)
@@ -127,7 +143,7 @@ static int zkfc_cq_notifier(struct notifier_block *nb, unsigned long val,
 	if (!c->active)
 		return NOTIFY_DONE;
 
-	min = max(c->user_min, c->boost_min);
+	min = max(zkfc_cq_user_floor(c), zkfc_cq_boost_floor(c));
 	max = c->user_max ?: policy->cpuinfo.max_freq;
 	if (min)
 		min = clamp(min, policy->cpuinfo.min_freq, policy->cpuinfo.max_freq);
@@ -253,6 +269,32 @@ void zkfc_cpufreq_clear_boost_floors(void)
 		if (c->active && c->boost_min) {
 			c->boost_min = 0;
 			zkfc_cq_update(c);
+		}
+	}
+	mutex_unlock(&zkfc_cq_mutex);
+}
+
+/*
+ * Thermal guard hook: withdraw (or restore) every ZKFC frequency floor.
+ * Called with zkfc_tg_mutex held; zkfc_cq_mutex never takes it, so the lock
+ * order thermal -> cpufreq is acyclic.
+ */
+void zkfc_cpufreq_thermal_suspend(bool suspend)
+{
+	unsigned int cpu;
+
+	if (!zkfc_cq)
+		return;
+	mutex_lock(&zkfc_cq_mutex);
+	if (zkfc_cq_thermal_suspended != suspend) {
+		zkfc_cq_thermal_suspended = suspend;
+		for_each_possible_cpu(cpu) {
+			struct zkfc_cq *c = &zkfc_cq[cpu];
+
+			if (c->active && (c->user_min || c->boost_min) &&
+			    zkfc_cq_update(c))
+				zkfc_w("cpufreq floor %s failed for cpu%u",
+				       suspend ? "suspend" : "restore", cpu);
 		}
 	}
 	mutex_unlock(&zkfc_cq_mutex);
