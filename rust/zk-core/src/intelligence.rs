@@ -49,5 +49,8 @@ pub struct Measurement {
 }
 
 pub fn can_authorize_from_evidence(level: EvidenceLevel) -> bool {
-    matches!(level, EvidenceLevel::Observed | EvidenceLevel::Verified | EvidenceLevel::Measured)
+    matches!(
+        level,
+        EvidenceLevel::Observed | EvidenceLevel::Verified | EvidenceLevel::Measured
+    )
 }

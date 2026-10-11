@@ -31,7 +31,6 @@ impl ApplyReport {
     }
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RangeOrder {
     MinThenMax,
@@ -45,13 +44,17 @@ fn choose_range_order(
     target_max: u64,
 ) -> Result<RangeOrder, String> {
     if target_min > target_max {
-        return Err(format!("target min {target_min} exceeds target max {target_max}"));
+        return Err(format!(
+            "target min {target_min} exceeds target max {target_max}"
+        ));
     }
 
     match (current_min, current_max) {
         (Some(cur_min), Some(cur_max)) => {
             if cur_min > cur_max {
-                return Err(format!("current min {cur_min} exceeds current max {cur_max}"));
+                return Err(format!(
+                    "current min {cur_min} exceeds current max {cur_max}"
+                ));
             }
             if target_max < cur_min {
                 Ok(RangeOrder::MinThenMax)
@@ -81,7 +84,10 @@ fn choose_range_order(
                 Err("current min is unreadable; refusing to lower max before proving the intermediate range is safe".into())
             }
         }
-        (None, None) => Err("current min/max are unreadable; refusing a potentially invalid intermediate range".into()),
+        (None, None) => Err(
+            "current min/max are unreadable; refusing a potentially invalid intermediate range"
+                .into(),
+        ),
     }
 }
 
@@ -109,7 +115,7 @@ impl<'a> Engine<'a> {
             "/proc/sys/kernel/sched_boost".into(),
         ];
         for p in &self.t.policies {
-            for leaf in ["scaling_min_freq","scaling_max_freq","scaling_governor"] {
+            for leaf in ["scaling_min_freq", "scaling_max_freq", "scaling_governor"] {
                 out.push(p.rel(leaf));
             }
         }
@@ -117,23 +123,31 @@ impl<'a> Engine<'a> {
             out.push("/sys/module/msm_performance/parameters/cpu_min_freq".into());
             out.push("/sys/module/msm_performance/parameters/cpu_max_freq".into());
         }
-        if let Some(dir)=&self.t.top_app_uclamp {
+        if let Some(dir) = &self.t.top_app_uclamp {
             out.push(format!("{dir}/cpu.uclamp.min"));
             out.push(format!("{dir}/cpu.uclamp.max"));
         }
-        if let Some(dir)=&self.t.stune_top { out.push(format!("{dir}/schedtune.boost")); }
-        if let Some(dir)=&self.t.cpu_boost_dir {
+        if let Some(dir) = &self.t.stune_top {
+            out.push(format!("{dir}/schedtune.boost"));
+        }
+        if let Some(dir) = &self.t.cpu_boost_dir {
             out.push(format!("{dir}/input_boost_ms"));
             out.push(format!("{dir}/input_boost_freq"));
         }
-        if let Some(g)=&self.t.gpu {
-            for leaf in ["min_freq","max_freq","governor"] { out.push(g.rel(leaf)); }
+        if let Some(g) = &self.t.gpu {
+            for leaf in ["min_freq", "max_freq", "governor"] {
+                out.push(g.rel(leaf));
+            }
         }
         for dev in crate::storage::safe_block_devices(self.s) {
-            let q=format!("/sys/block/{dev}/queue");
-            for leaf in ["scheduler","read_ahead_kb","nr_requests"] { out.push(format!("{q}/{leaf}")); }
+            let q = format!("/sys/block/{dev}/queue");
+            for leaf in ["scheduler", "read_ahead_kb", "nr_requests"] {
+                out.push(format!("{q}/{leaf}"));
+            }
         }
-        out.sort(); out.dedup(); out
+        out.sort();
+        out.dedup();
+        out
     }
 
     pub fn apply_mode(&self, m: &Mode) -> ApplyReport {
@@ -151,12 +165,18 @@ impl<'a> Engine<'a> {
                 .max_freq
                 .as_ref()
                 .and_then(|f| config::resolve_freq(f, &p.avail, false))
-                .or_else(|| c.max_perf_pct.and_then(|pct| config::resolve_pct(pct, &p.avail, false)));
+                .or_else(|| {
+                    c.max_perf_pct
+                        .and_then(|pct| config::resolve_pct(pct, &p.avail, false))
+                });
             let minf = c
                 .min_freq
                 .as_ref()
                 .and_then(|f| config::resolve_freq(f, &p.avail, true))
-                .or_else(|| c.min_perf_pct.and_then(|pct| config::resolve_pct(pct, &p.avail, true)));
+                .or_else(|| {
+                    c.min_perf_pct
+                        .and_then(|pct| config::resolve_pct(pct, &p.avail, true))
+                });
 
             // A contradictory resolved range is a profile error, not a value
             // to silently rewrite. Failing here lets the outer transaction
@@ -185,19 +205,25 @@ impl<'a> Engine<'a> {
             };
 
             match (minf, maxf) {
-                (Some(mi), Some(ma)) => match choose_range_order(current_min, current_max, mi, ma) {
-                    Ok(RangeOrder::MinThenMax) => {
-                        write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name));
-                        write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name));
+                (Some(mi), Some(ma)) => {
+                    match choose_range_order(current_min, current_max, mi, ma) {
+                        Ok(RangeOrder::MinThenMax) => {
+                            write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name));
+                            write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name));
+                        }
+                        Ok(RangeOrder::MaxThenMin) => {
+                            write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name));
+                            write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name));
+                        }
+                        Err(reason) => r.fail(format!("{} frequency range: {reason}", p.name)),
                     }
-                    Ok(RangeOrder::MaxThenMin) => {
-                        write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name));
-                        write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name));
-                    }
-                    Err(reason) => r.fail(format!("{} frequency range: {reason}", p.name)),
-                },
-                (Some(mi), None) => write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name)),
-                (None, Some(ma)) => write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name)),
+                }
+                (Some(mi), None) => {
+                    write_limit("scaling_min_freq", mi, format!("{}=min {mi}", p.name))
+                }
+                (None, Some(ma)) => {
+                    write_limit("scaling_max_freq", ma, format!("{}=max {ma}", p.name))
+                }
                 (None, None) => {}
             }
             if !c.governor.is_empty() {
@@ -229,11 +255,13 @@ impl<'a> Engine<'a> {
         self.apply_input_boost(c, r);
 
         if let Some(b) = c.sched_boost {
-            if self.s.write_first(
-                &["/proc/sys/walt/sched_boost", "/proc/sys/kernel/sched_boost"],
-                &b.to_string(),
-            )
-            .is_some()
+            if self
+                .s
+                .write_first(
+                    &["/proc/sys/walt/sched_boost", "/proc/sys/kernel/sched_boost"],
+                    &b.to_string(),
+                )
+                .is_some()
             {
                 r.ok(format!("sched_boost={b}"));
             }
@@ -249,22 +277,35 @@ impl<'a> Engine<'a> {
                 c.min_freq
                     .as_ref()
                     .and_then(|f| config::resolve_freq(f, &p.avail, true))
-                    .or_else(|| c.min_perf_pct.and_then(|pct| config::resolve_pct(pct, &p.avail, true)))
+                    .or_else(|| {
+                        c.min_perf_pct
+                            .and_then(|pct| config::resolve_pct(pct, &p.avail, true))
+                    })
             } else {
                 c.max_freq
                     .as_ref()
                     .and_then(|f| config::resolve_freq(f, &p.avail, false))
-                    .or_else(|| c.max_perf_pct.and_then(|pct| config::resolve_pct(pct, &p.avail, false)))
+                    .or_else(|| {
+                        c.max_perf_pct
+                            .and_then(|pct| config::resolve_pct(pct, &p.avail, false))
+                    })
             };
             if let Some(freq) = f {
                 parts.push(format!("{idx}:{freq}"));
             }
         }
-        if parts.is_empty() { None } else { Some(parts.join(" ")) }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
     }
 
     fn apply_governor(&self, p: &crate::topo::Policy, pref: &[String], r: &mut ApplyReport) {
-        let avail = self.s.read(&p.rel("scaling_available_governors")).unwrap_or_default();
+        let avail = self
+            .s
+            .read(&p.rel("scaling_available_governors"))
+            .unwrap_or_default();
         let have: Vec<&str> = avail.split_whitespace().collect();
         for g in pref {
             if !have.is_empty() && have.contains(&g.as_str()) {
@@ -372,12 +413,18 @@ impl<'a> Engine<'a> {
                 .max_freq
                 .as_ref()
                 .and_then(|f| config::resolve_freq(f, &node.avail, false))
-                .or_else(|| g.max_perf_pct.and_then(|pct| config::resolve_pct(pct, &node.avail, false)));
+                .or_else(|| {
+                    g.max_perf_pct
+                        .and_then(|pct| config::resolve_pct(pct, &node.avail, false))
+                });
             let min_target = g
                 .min_freq
                 .as_ref()
                 .and_then(|f| config::resolve_freq(f, &node.avail, true))
-                .or_else(|| g.min_perf_pct.and_then(|pct| config::resolve_pct(pct, &node.avail, true)));
+                .or_else(|| {
+                    g.min_perf_pct
+                        .and_then(|pct| config::resolve_pct(pct, &node.avail, true))
+                });
             let current_min = self.s.read_u64(&node.rel("min_freq"));
             let current_max = self.s.read_u64(&node.rel("max_freq"));
             let write_min = |value: u64, r: &mut ApplyReport| {
@@ -397,18 +444,29 @@ impl<'a> Engine<'a> {
                 }
             };
             match (min_target, max_target) {
-                (Some(mi), Some(ma)) => match choose_range_order(current_min, current_max, mi, ma) {
-                    Ok(RangeOrder::MinThenMax) => { write_min(mi, r); write_max(ma, r); }
-                    Ok(RangeOrder::MaxThenMin) => { write_max(ma, r); write_min(mi, r); }
-                    Err(reason) => r.fail(format!("gpu frequency range: {reason}")),
-                },
+                (Some(mi), Some(ma)) => {
+                    match choose_range_order(current_min, current_max, mi, ma) {
+                        Ok(RangeOrder::MinThenMax) => {
+                            write_min(mi, r);
+                            write_max(ma, r);
+                        }
+                        Ok(RangeOrder::MaxThenMin) => {
+                            write_max(ma, r);
+                            write_min(mi, r);
+                        }
+                        Err(reason) => r.fail(format!("gpu frequency range: {reason}")),
+                    }
+                }
                 (Some(mi), None) => write_min(mi, r),
                 (None, Some(ma)) => write_max(ma, r),
                 (None, None) => {}
             }
         }
         for gov in &g.governor {
-            let avail = self.s.read(&node.rel("available_governors")).unwrap_or_default();
+            let avail = self
+                .s
+                .read(&node.rel("available_governors"))
+                .unwrap_or_default();
             let have: Vec<&str> = avail.split_whitespace().collect();
             if !have.is_empty() && have.contains(&gov.as_str()) {
                 let path = node.rel("governor");
@@ -438,8 +496,16 @@ impl<'a> Engine<'a> {
     fn apply_mem(&self, m: &Mem, r: &mut ApplyReport) {
         let inv = crate::inventory::collect(self.s, self.t.identity.clone());
         let envelope = crate::memory::envelope(&inv);
-        let swappiness = match (m.swappiness, envelope.recommended_swappiness_floor, envelope.pressure) {
-            (Some(v), Some(floor), crate::memory::Pressure::Critical | crate::memory::Pressure::Elevated) if v < floor => {
+        let swappiness = match (
+            m.swappiness,
+            envelope.recommended_swappiness_floor,
+            envelope.pressure,
+        ) {
+            (
+                Some(v),
+                Some(floor),
+                crate::memory::Pressure::Critical | crate::memory::Pressure::Elevated,
+            ) if v < floor => {
                 r.ok(format!("vm.swappiness safety-floor: {v} -> {floor}"));
                 Some(floor)
             }
@@ -447,10 +513,22 @@ impl<'a> Engine<'a> {
             (None, _, _) => None,
         };
         self.set_proc_vm("swappiness", swappiness.map(|v| v.to_string()), r);
-        self.set_proc_vm("vfs_cache_pressure", m.vfs_cache_pressure.map(|v| v.to_string()), r);
-        self.set_proc_vm("watermark_scale_factor", m.watermark_scale_factor.map(|v| v.to_string()), r);
+        self.set_proc_vm(
+            "vfs_cache_pressure",
+            m.vfs_cache_pressure.map(|v| v.to_string()),
+            r,
+        );
+        self.set_proc_vm(
+            "watermark_scale_factor",
+            m.watermark_scale_factor.map(|v| v.to_string()),
+            r,
+        );
         self.set_proc_vm("page-cluster", m.page_cluster.map(|v| v.to_string()), r);
-        self.set_proc_vm("extra_free_kbytes", m.extra_free_kbytes.map(|v| v.to_string()), r);
+        self.set_proc_vm(
+            "extra_free_kbytes",
+            m.extra_free_kbytes.map(|v| v.to_string()),
+            r,
+        );
     }
 
     fn apply_io(&self, io: &Io, r: &mut ApplyReport) {
@@ -504,7 +582,9 @@ impl<'a> Engine<'a> {
             let current_min = self.s.read_u64(&p.rel("scaling_min_freq"));
             let current_max = self.s.read_u64(&p.rel("scaling_max_freq"));
             let write_min = |r: &mut ApplyReport| {
-                if p.min_hw == 0 { return; }
+                if p.min_hw == 0 {
+                    return;
+                }
                 let path = p.rel("scaling_min_freq");
                 match self.s.write(&path, &p.min_hw.to_string()) {
                     Ok(()) => r.ok(format!("{}=min_hw {}", p.name, p.min_hw)),
@@ -513,7 +593,9 @@ impl<'a> Engine<'a> {
                 }
             };
             let write_max = |r: &mut ApplyReport| {
-                if p.max_hw == 0 { return; }
+                if p.max_hw == 0 {
+                    return;
+                }
                 let path = p.rel("scaling_max_freq");
                 match self.s.write(&path, &p.max_hw.to_string()) {
                     Ok(()) => r.ok(format!("{}=max_hw {}", p.name, p.max_hw)),
@@ -523,8 +605,14 @@ impl<'a> Engine<'a> {
             };
             if p.min_hw > 0 && p.max_hw > 0 {
                 match choose_range_order(current_min, current_max, p.min_hw, p.max_hw) {
-                    Ok(RangeOrder::MinThenMax) => { write_min(&mut r); write_max(&mut r); }
-                    Ok(RangeOrder::MaxThenMin) => { write_max(&mut r); write_min(&mut r); }
+                    Ok(RangeOrder::MinThenMax) => {
+                        write_min(&mut r);
+                        write_max(&mut r);
+                    }
+                    Ok(RangeOrder::MaxThenMin) => {
+                        write_max(&mut r);
+                        write_min(&mut r);
+                    }
                     Err(reason) => r.fail(format!("{} reset range: {reason}", p.name)),
                 }
             } else {
@@ -547,12 +635,18 @@ impl<'a> Engine<'a> {
 mod tests {
     #[test]
     fn range_order_moves_lower_bound_before_lowering_upper_bound() {
-        assert_eq!(choose_range_order(Some(100), Some(1000), 50, 80), Ok(RangeOrder::MinThenMax));
+        assert_eq!(
+            choose_range_order(Some(100), Some(1000), 50, 80),
+            Ok(RangeOrder::MinThenMax)
+        );
     }
 
     #[test]
     fn range_order_moves_upper_bound_before_raising_lower_bound() {
-        assert_eq!(choose_range_order(Some(100), Some(1000), 1200, 1500), Ok(RangeOrder::MaxThenMin));
+        assert_eq!(
+            choose_range_order(Some(100), Some(1000), 1200, 1500),
+            Ok(RangeOrder::MaxThenMin)
+        );
     }
 
     #[test]
@@ -568,7 +662,10 @@ mod tests {
 
     fn mkroot() -> PathBuf {
         use std::time::{SystemTime, UNIX_EPOCH};
-        let tag = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let tag = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let d = std::env::temp_dir().join(format!("zperf-eng-{tag}"));
         let _ = fs::remove_dir_all(&d);
         d
@@ -587,8 +684,16 @@ mod tests {
         let base = "/sys/devices/system/cpu/cpufreq/policy0";
         w(&root, &format!("{base}/cpuinfo_min_freq"), "300000");
         w(&root, &format!("{base}/cpuinfo_max_freq"), "1843200");
-        w(&root, &format!("{base}/scaling_available_frequencies"), "300000 1017600 1843200");
-        w(&root, &format!("{base}/scaling_available_governors"), "schedutil performance powersave");
+        w(
+            &root,
+            &format!("{base}/scaling_available_frequencies"),
+            "300000 1017600 1843200",
+        );
+        w(
+            &root,
+            &format!("{base}/scaling_available_governors"),
+            "schedutil performance powersave",
+        );
         w(&root, &format!("{base}/scaling_max_freq"), "1017600");
         w(&root, &format!("{base}/scaling_min_freq"), "300000");
         w(&root, &format!("{base}/scaling_governor"), "schedutil");
@@ -609,16 +714,31 @@ mod tests {
             "#,
         )
         .unwrap();
-        let family = crate::family::load(&std::path::PathBuf::from("/dev/null/zairenkai"), t.identity.vendor);
+        let family = crate::family::load(
+            &std::path::PathBuf::from("/dev/null/zairenkai"),
+            t.identity.vendor,
+        );
         let plan = crate::backends::BackendPlan::resolve(&t.identity, &t, family.as_ref());
         let eng = Engine::new(&s, &t, &plan);
         let rep = eng.apply_mode(prof.mode("performance").unwrap());
 
-        assert_eq!(s.read(&format!("{base}/scaling_max_freq")).as_deref(), Some("1843200"));
+        assert_eq!(
+            s.read(&format!("{base}/scaling_max_freq")).as_deref(),
+            Some("1843200")
+        );
         // 50% of 1843200 = 921600 -> floor-snap up to 1017600
-        assert_eq!(s.read(&format!("{base}/scaling_min_freq")).as_deref(), Some("1017600"));
-        assert_eq!(s.read(&format!("{base}/scaling_governor")).as_deref(), Some("performance"));
-        assert_eq!(s.read("/dev/stune/top-app/schedtune.boost").as_deref(), Some("30"));
+        assert_eq!(
+            s.read(&format!("{base}/scaling_min_freq")).as_deref(),
+            Some("1017600")
+        );
+        assert_eq!(
+            s.read(&format!("{base}/scaling_governor")).as_deref(),
+            Some("performance")
+        );
+        assert_eq!(
+            s.read("/dev/stune/top-app/schedtune.boost").as_deref(),
+            Some("30")
+        );
         assert_eq!(s.read("/proc/sys/vm/swappiness").as_deref(), Some("60"));
         assert!(rep.applied.iter().any(|x| x.contains("gov=performance")));
         let _ = fs::remove_dir_all(&root);

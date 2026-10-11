@@ -40,7 +40,11 @@ pub enum PolicyReason {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Confidence { Low, Medium, High }
+pub enum Confidence {
+    Low,
+    Medium,
+    High,
+}
 
 /// Normalized thermal authority output.
 ///
@@ -74,7 +78,10 @@ pub struct PolicyDecision {
 pub fn evaluate(input: PolicyInput<'_>) -> PolicyDecision {
     let low_battery = input.battery_pct.is_some_and(|v| v <= 20);
     let battery_hold = input.battery_pct.is_none_or(|v| v <= 25);
-    let confidence = match (input.battery_pct.is_some(), input.thermal.telemetry_complete) {
+    let confidence = match (
+        input.battery_pct.is_some(),
+        input.thermal.telemetry_complete,
+    ) {
         (true, true) => Confidence::High,
         (true, false) | (false, true) => Confidence::Medium,
         (false, false) => Confidence::Low,
@@ -96,17 +103,27 @@ pub fn evaluate(input: PolicyInput<'_>) -> PolicyDecision {
     }
 
     let headroom = input.thermal.headroom_permille;
-    let performance_release = input.external_power && input.thermal.telemetry_complete
+    let performance_release = input.external_power
+        && input.thermal.telemetry_complete
         && headroom.is_some_and(|v| v >= 600);
-    let performance_hold = input.external_power && input.thermal.telemetry_complete
+    let performance_hold = input.external_power
+        && input.thermal.telemetry_complete
         && headroom.is_some_and(|v| v >= 300);
 
     match input.previous_mode {
         Some("powersave") if battery_hold && !performance_release => {
-            return PolicyDecision { intent: PolicyIntent::BatterySaver, reason: PolicyReason::HoldBatterySaver, confidence };
+            return PolicyDecision {
+                intent: PolicyIntent::BatterySaver,
+                reason: PolicyReason::HoldBatterySaver,
+                confidence,
+            };
         }
         Some("performance") if performance_hold => {
-            return PolicyDecision { intent: PolicyIntent::SustainedPerformance, reason: PolicyReason::HoldPerformance, confidence };
+            return PolicyDecision {
+                intent: PolicyIntent::SustainedPerformance,
+                reason: PolicyReason::HoldPerformance,
+                confidence,
+            };
         }
         _ => {}
     }
@@ -118,8 +135,16 @@ pub fn evaluate(input: PolicyInput<'_>) -> PolicyDecision {
             confidence,
         }
     } else if !input.thermal.telemetry_complete {
-        PolicyDecision { intent: PolicyIntent::Balanced, reason: PolicyReason::InsufficientTelemetry, confidence }
+        PolicyDecision {
+            intent: PolicyIntent::Balanced,
+            reason: PolicyReason::InsufficientTelemetry,
+            confidence,
+        }
     } else {
-        PolicyDecision { intent: PolicyIntent::Balanced, reason: PolicyReason::NormalOperation, confidence }
+        PolicyDecision {
+            intent: PolicyIntent::Balanced,
+            reason: PolicyReason::NormalOperation,
+            confidence,
+        }
     }
 }

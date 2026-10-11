@@ -12,12 +12,12 @@ pub mod audit;
 pub mod authority;
 pub mod capability;
 pub mod health;
-pub mod intelligence;
 pub mod identity;
+pub mod intelligence;
 pub mod manifest;
 pub mod operation;
-pub mod sentinel;
 pub mod policy;
+pub mod sentinel;
 
 pub const CORE_NAME: &str = "Zairenkai Core Platform";
 pub const CORE_ID: &str = "zairenkai.core";
@@ -54,21 +54,41 @@ mod tests {
     fn full_runtime_authority_covers_every_operation() {
         let caps = CapabilitySet::full_runtime();
         let ops = [
-            Operation::Probe, Operation::ReadStatus, Operation::ReadPerformance, Operation::ReadThermal, Operation::ReadLogs, Operation::ReadInventory,
-            Operation::ReadStorage, Operation::ReadNetwork, Operation::ReadMemory, Operation::ReadSecurity, Operation::ReadProperties,
-            Operation::ApplyProfile, Operation::SetCpuTweak,
-            Operation::SetGpuTweak, Operation::SetMemoryTweak,
-            Operation::SetIoTweak, Operation::SetPowerTweak,
-            Operation::SetThermalPolicy, Operation::ResetRuntime,
-            Operation::TuneStorage, Operation::TuneNetwork, Operation::TuneZram,
-            Operation::ManageDeviceRegistry, Operation::ManageDataSources, Operation::ManageEvidence, Operation::ManageRecovery,
+            Operation::Probe,
+            Operation::ReadStatus,
+            Operation::ReadPerformance,
+            Operation::ReadThermal,
+            Operation::ReadLogs,
+            Operation::ReadInventory,
+            Operation::ReadStorage,
+            Operation::ReadNetwork,
+            Operation::ReadMemory,
+            Operation::ReadSecurity,
+            Operation::ReadProperties,
+            Operation::ApplyProfile,
+            Operation::SetCpuTweak,
+            Operation::SetGpuTweak,
+            Operation::SetMemoryTweak,
+            Operation::SetIoTweak,
+            Operation::SetPowerTweak,
+            Operation::SetThermalPolicy,
+            Operation::ResetRuntime,
+            Operation::TuneStorage,
+            Operation::TuneNetwork,
+            Operation::TuneZram,
+            Operation::ManageDeviceRegistry,
+            Operation::ManageDataSources,
+            Operation::ManageEvidence,
+            Operation::ManageRecovery,
             Operation::SetProperty,
-            Operation::InstallLicense, Operation::ModifyPolicy,
+            Operation::InstallLicense,
+            Operation::ModifyPolicy,
             Operation::ManageHooks,
         ];
-        assert!(ops.iter().all(|op| authority::authorize(&caps, *op).decision == Decision::Allow));
+        assert!(ops
+            .iter()
+            .all(|op| authority::authorize(&caps, *op).decision == Decision::Allow));
     }
-
 
     #[test]
     fn policy_evaluator_is_conservative_without_thermal_data() {
@@ -88,9 +108,15 @@ mod tests {
 
     #[test]
     fn measured_evidence_is_not_heuristic() {
-        assert!(!intelligence::can_authorize_from_evidence(intelligence::EvidenceLevel::Heuristic));
-        assert!(intelligence::can_authorize_from_evidence(intelligence::EvidenceLevel::Observed));
-        assert!(intelligence::can_authorize_from_evidence(intelligence::EvidenceLevel::Measured));
+        assert!(!intelligence::can_authorize_from_evidence(
+            intelligence::EvidenceLevel::Heuristic
+        ));
+        assert!(intelligence::can_authorize_from_evidence(
+            intelligence::EvidenceLevel::Observed
+        ));
+        assert!(intelligence::can_authorize_from_evidence(
+            intelligence::EvidenceLevel::Measured
+        ));
     }
 
     #[test]

@@ -3,9 +3,9 @@
 //! Sentinel does not grant authority; it only constrains an already-authorized
 //! operation using current integrity, thermal, power and device evidence.
 
-use serde::{Deserialize, Serialize};
-use crate::operation::Operation;
 use crate::intelligence::EvidenceLevel;
+use crate::operation::Operation;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SafetyClass {
@@ -79,34 +79,62 @@ pub struct SentinelDecision {
 
 pub fn classify(operation: Operation) -> SafetyClass {
     match operation {
-        Operation::Probe | Operation::ReadStatus | Operation::ReadPerformance |
-        Operation::ReadThermal | Operation::ReadLogs |
-        Operation::ReadInventory | Operation::ReadStorage | Operation::ReadNetwork |
-        Operation::ReadMemory | Operation::ReadSecurity | Operation::ReadProperties => SafetyClass::Observe,
+        Operation::Probe
+        | Operation::ReadStatus
+        | Operation::ReadPerformance
+        | Operation::ReadThermal
+        | Operation::ReadLogs
+        | Operation::ReadInventory
+        | Operation::ReadStorage
+        | Operation::ReadNetwork
+        | Operation::ReadMemory
+        | Operation::ReadSecurity
+        | Operation::ReadProperties => SafetyClass::Observe,
         Operation::SetProperty => SafetyClass::FrameworkConfig,
-        Operation::ApplyProfile | Operation::SetCpuTweak | Operation::SetGpuTweak |
-        Operation::SetMemoryTweak | Operation::SetIoTweak | Operation::TuneStorage |
-        Operation::TuneNetwork | Operation::TuneZram => SafetyClass::SafeTune,
-        Operation::SetPowerTweak | Operation::SetThermalPolicy | Operation::ResetRuntime => SafetyClass::GuardedTune,
-        Operation::InstallLicense | Operation::ModifyPolicy | Operation::ManageHooks |
-        Operation::ManageDeviceRegistry | Operation::ManageDataSources |
-        Operation::ManageEvidence | Operation::ManageRecovery => SafetyClass::Critical,
+        Operation::ApplyProfile
+        | Operation::SetCpuTweak
+        | Operation::SetGpuTweak
+        | Operation::SetMemoryTweak
+        | Operation::SetIoTweak
+        | Operation::TuneStorage
+        | Operation::TuneNetwork
+        | Operation::TuneZram => SafetyClass::SafeTune,
+        Operation::SetPowerTweak | Operation::SetThermalPolicy | Operation::ResetRuntime => {
+            SafetyClass::GuardedTune
+        }
+        Operation::InstallLicense
+        | Operation::ModifyPolicy
+        | Operation::ManageHooks
+        | Operation::ManageDeviceRegistry
+        | Operation::ManageDataSources
+        | Operation::ManageEvidence
+        | Operation::ManageRecovery => SafetyClass::Critical,
     }
 }
 
 pub fn evaluate(input: &SentinelInput) -> SentinelDecision {
     let class = classify(input.operation);
     if matches!(class, SafetyClass::Observe) {
-        return SentinelDecision { allowed: true, class, reasons: vec![SentinelReason::ObservationOnly] };
+        return SentinelDecision {
+            allowed: true,
+            class,
+            reasons: vec![SentinelReason::ObservationOnly],
+        };
     }
     if matches!(class, SafetyClass::FrameworkConfig) {
-        return SentinelDecision { allowed: true, class, reasons: vec![SentinelReason::ConfigurationOnly] };
+        return SentinelDecision {
+            allowed: true,
+            class,
+            reasons: vec![SentinelReason::ConfigurationOnly],
+        };
     }
     let mut reasons = Vec::new();
     if !input.kernel_api_compatible && input.operation != Operation::ResetRuntime {
         reasons.push(SentinelReason::KernelIncompatible);
     }
-    if !input.persistent_state_valid { reasons.push(SentinelReason::PersistentStateInvalid); }
+    if !input.persistent_state_valid {
+        reasons.push(SentinelReason::PersistentStateInvalid);
+    }
     if input.safe_mode_active && input.operation != Operation::ResetRuntime {
         reasons.push(SentinelReason::OperationForbidden);
     }
@@ -133,18 +161,34 @@ pub fn evaluate(input: &SentinelInput) -> SentinelDecision {
     {
         reasons.push(SentinelReason::ThermalTelemetryUnavailable);
     }
-    if input.battery_pct.is_some_and(|v| v <= 5) && !input.external_power { reasons.push(SentinelReason::BatteryCritical); }
-    if input.storage_health == StorageHealth::Critical { reasons.push(SentinelReason::StorageCritical); }
-    if !input.device_known && !matches!(class, SafetyClass::Critical) { reasons.push(SentinelReason::UnknownDevice); }
+    if input.battery_pct.is_some_and(|v| v <= 5) && !input.external_power {
+        reasons.push(SentinelReason::BatteryCritical);
+    }
+    if input.storage_health == StorageHealth::Critical {
+        reasons.push(SentinelReason::StorageCritical);
+    }
+    if !input.device_known && !matches!(class, SafetyClass::Critical) {
+        reasons.push(SentinelReason::UnknownDevice);
+    }
     if input.evidence_level == EvidenceLevel::Heuristic && class != SafetyClass::Observe {
         reasons.push(SentinelReason::InsufficientEvidence);
     }
-    if matches!(input.boot_integrity, BootIntegrity::Red | BootIntegrity::Unknown) && class == SafetyClass::Critical {
+    if matches!(
+        input.boot_integrity,
+        BootIntegrity::Red | BootIntegrity::Unknown
+    ) && class == SafetyClass::Critical
+    {
         reasons.push(SentinelReason::WeakBootIntegrity);
     }
     if input.lite_mode && class == SafetyClass::Critical {
         reasons.push(SentinelReason::OperationForbidden);
     }
-    if class == SafetyClass::Forbidden { reasons.push(SentinelReason::OperationForbidden); }
-    SentinelDecision { allowed: reasons.is_empty(), class, reasons }
+    if class == SafetyClass::Forbidden {
+        reasons.push(SentinelReason::OperationForbidden);
+    }
+    SentinelDecision {
+        allowed: reasons.is_empty(),
+        class,
+        reasons,
+    }
 }

@@ -139,7 +139,11 @@ impl VersionInfo {
         }
     }
     pub fn kernel_type_name(&self) -> &'static str {
-        if self.kernel_type == 1 { "gki" } else { "non-gki" }
+        if self.kernel_type == 1 {
+            "gki"
+        } else {
+            "non-gki"
+        }
     }
     pub fn license_state_name(&self) -> &'static str {
         match self.license_state {
@@ -162,7 +166,6 @@ impl VersionInfo {
         cstr_lossy(&self.kernel_release)
     }
 }
-
 
 /// `struct zkfc_license_payload` (136 bytes, little-endian wire layout).
 #[repr(C)]
@@ -209,7 +212,12 @@ fn cstr_lossy(buf: &[u8]) -> String {
 
 const IOC_GET_VERSION: u64 = ior(0x00, std::mem::size_of::<VersionInfo>() as u32);
 const IOC_GET_LICENSE: u64 = ior(0x01, std::mem::size_of::<LicenseStatus>() as u32);
-const IOC_TASK_BOOST: u64 = ioc(DIR_READ | DIR_WRITE, ZKFC_IOC_MAGIC, 0x10, std::mem::size_of::<TaskBoost>() as u32);
+const IOC_TASK_BOOST: u64 = ioc(
+    DIR_READ | DIR_WRITE,
+    ZKFC_IOC_MAGIC,
+    0x10,
+    std::mem::size_of::<TaskBoost>() as u32,
+);
 const IOC_CPUFREQ_QOS: u64 = iow(0x11, std::mem::size_of::<CpufreqQos>() as u32);
 const IOC_INPUT_BOOST: u64 = iow(0x12, std::mem::size_of::<InputBoost>() as u32);
 
@@ -232,14 +240,24 @@ pub struct CapabilityInfo {
 }
 
 impl Default for CapabilityInfo {
-    fn default() -> Self { unsafe { std::mem::zeroed() } }
+    fn default() -> Self {
+        unsafe { std::mem::zeroed() }
+    }
 }
 
 impl CapabilityInfo {
-    pub fn kernel_caps(&self) -> u64 { u64::from_le(self.kernel_caps) }
-    pub fn runtime_caps(&self) -> u64 { u64::from_le(self.runtime_caps) }
-    pub fn kernel_release(&self) -> String { cstr_lossy(&self.kernel_release) }
-    pub fn build_id(&self) -> String { cstr_lossy(&self.build_id) }
+    pub fn kernel_caps(&self) -> u64 {
+        u64::from_le(self.kernel_caps)
+    }
+    pub fn runtime_caps(&self) -> u64 {
+        u64::from_le(self.runtime_caps)
+    }
+    pub fn kernel_release(&self) -> String {
+        cstr_lossy(&self.kernel_release)
+    }
+    pub fn build_id(&self) -> String {
+        cstr_lossy(&self.build_id)
+    }
 }
 
 const IOC_GET_CAPABILITIES: u64 = ior(0x05, std::mem::size_of::<CapabilityInfo>() as u32);
@@ -258,7 +276,9 @@ pub struct ThermalGuard {
 }
 
 impl Default for ThermalGuard {
-    fn default() -> Self { unsafe { std::mem::zeroed() } }
+    fn default() -> Self {
+        unsafe { std::mem::zeroed() }
+    }
 }
 
 const IOC_THERMAL_GUARD: u64 = iow(0x13, std::mem::size_of::<ThermalGuard>() as u32);
@@ -285,7 +305,11 @@ impl Zkfc {
         let mut v = VersionInfo::default();
         // SAFETY: fd is valid; &mut v points at a correctly sized buffer.
         let rc = unsafe {
-            libc::ioctl(self.fd, IOC_GET_VERSION as libc::c_ulong, &mut v as *mut VersionInfo)
+            libc::ioctl(
+                self.fd,
+                IOC_GET_VERSION as libc::c_ulong,
+                &mut v as *mut VersionInfo,
+            )
         };
         if rc < 0 {
             return Err(io::Error::last_os_error());
@@ -297,9 +321,15 @@ impl Zkfc {
     pub fn capabilities(&self) -> io::Result<CapabilityInfo> {
         let mut c = CapabilityInfo::default();
         let rc = unsafe {
-            libc::ioctl(self.fd, IOC_GET_CAPABILITIES as libc::c_ulong, &mut c as *mut CapabilityInfo)
+            libc::ioctl(
+                self.fd,
+                IOC_GET_CAPABILITIES as libc::c_ulong,
+                &mut c as *mut CapabilityInfo,
+            )
         };
-        if rc < 0 { return Err(io::Error::last_os_error()); }
+        if rc < 0 {
+            return Err(io::Error::last_os_error());
+        }
         Ok(c)
     }
 
@@ -328,10 +358,23 @@ impl Zkfc {
     /// The kernel owns task identity, inheritance and thermal suspension, so
     /// the daemon does not need to mutate per-thread scheduler attributes via
     /// ad-hoc sysfs writes.
-    pub fn task_boost(&self, pid: i32, uclamp_min: u32, uclamp_max: u32, flags: u32) -> io::Result<u32> {
-        if pid <= 0 || uclamp_min > 1024 || uclamp_max > 1024 || uclamp_min > uclamp_max
-            || flags & !(ZKFC_TB_THREADS | ZKFC_TB_INHERIT | ZKFC_TB_RESET) != 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid ZKFC task boost request"));
+    pub fn task_boost(
+        &self,
+        pid: i32,
+        uclamp_min: u32,
+        uclamp_max: u32,
+        flags: u32,
+    ) -> io::Result<u32> {
+        if pid <= 0
+            || uclamp_min > 1024
+            || uclamp_max > 1024
+            || uclamp_min > uclamp_max
+            || flags & !(ZKFC_TB_THREADS | ZKFC_TB_INHERIT | ZKFC_TB_RESET) != 0
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid ZKFC task boost request",
+            ));
         }
         let mut req = TaskBoost {
             pid,
@@ -341,7 +384,13 @@ impl Zkfc {
             applied: 0,
             reserved: 0,
         };
-        let rc = unsafe { libc::ioctl(self.fd, IOC_TASK_BOOST as libc::c_ulong, &mut req as *mut TaskBoost) };
+        let rc = unsafe {
+            libc::ioctl(
+                self.fd,
+                IOC_TASK_BOOST as libc::c_ulong,
+                &mut req as *mut TaskBoost,
+            )
+        };
         if rc < 0 {
             return Err(io::Error::last_os_error());
         }
@@ -351,11 +400,27 @@ impl Zkfc {
     /// Apply a transient cpufreq QoS constraint to one policy.
     pub fn cpufreq_qos(&self, cpu: u32, min_khz: u32, max_khz: u32, flags: u32) -> io::Result<()> {
         if min_khz != 0 && max_khz != 0 && min_khz > max_khz {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid cpufreq qos range"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid cpufreq qos range",
+            ));
         }
-        let req = CpufreqQos { cpu, min_khz, max_khz, flags };
-        let rc = unsafe { libc::ioctl(self.fd, IOC_CPUFREQ_QOS as libc::c_ulong, &req as *const CpufreqQos) };
-        if rc < 0 { return Err(io::Error::last_os_error()); }
+        let req = CpufreqQos {
+            cpu,
+            min_khz,
+            max_khz,
+            flags,
+        };
+        let rc = unsafe {
+            libc::ioctl(
+                self.fd,
+                IOC_CPUFREQ_QOS as libc::c_ulong,
+                &req as *const CpufreqQos,
+            )
+        };
+        if rc < 0 {
+            return Err(io::Error::last_os_error());
+        }
         Ok(())
     }
 
@@ -364,7 +429,10 @@ impl Zkfc {
     /// userspace poll loop on every touch event.
     pub fn input_boost(&self, duration_ms: u32, clusters: &[(u32, u32)]) -> io::Result<()> {
         if duration_ms < 10 || duration_ms > 5000 || clusters.len() > 8 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid ZKFC input boost request"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid ZKFC input boost request",
+            ));
         }
         let mut req = InputBoost::default();
         req.enabled = u32::from(!clusters.is_empty());
@@ -374,12 +442,26 @@ impl Zkfc {
             req.cluster_cpu[i] = cpu;
             req.min_khz[i] = min_khz;
         }
-        let rc = unsafe { libc::ioctl(self.fd, IOC_INPUT_BOOST as libc::c_ulong, &req as *const InputBoost) };
-        if rc < 0 { return Err(io::Error::last_os_error()); }
+        let rc = unsafe {
+            libc::ioctl(
+                self.fd,
+                IOC_INPUT_BOOST as libc::c_ulong,
+                &req as *const InputBoost,
+            )
+        };
+        if rc < 0 {
+            return Err(io::Error::last_os_error());
+        }
         Ok(())
     }
 
-    pub fn thermal_guard_config(&self, interval_ms: u32, limit_mdeg: i32, release_mdeg: i32, zones: &[String]) -> io::Result<()> {
+    pub fn thermal_guard_config(
+        &self,
+        interval_ms: u32,
+        limit_mdeg: i32,
+        release_mdeg: i32,
+        zones: &[String],
+    ) -> io::Result<()> {
         let mut cfg = ThermalGuard::default();
         cfg.enabled = 1;
         cfg.interval_ms = interval_ms;
@@ -388,15 +470,29 @@ impl Zkfc {
         cfg.zone_count = zones.len().min(4) as u32;
         for (i, zone) in zones.iter().take(4).enumerate() {
             if zone.is_empty() || zone.len() >= 32 || zone.as_bytes().contains(&0) {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput, "thermal zone name is invalid"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "thermal zone name is invalid",
+                ));
             }
             cfg.zones[i][..zone.len()].copy_from_slice(zone.as_bytes());
         }
         if cfg.zone_count == 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "thermal guard requires at least one zone"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "thermal guard requires at least one zone",
+            ));
         }
-        let rc = unsafe { libc::ioctl(self.fd, IOC_THERMAL_GUARD as libc::c_ulong, &cfg as *const ThermalGuard) };
-        if rc < 0 { return Err(io::Error::last_os_error()); }
+        let rc = unsafe {
+            libc::ioctl(
+                self.fd,
+                IOC_THERMAL_GUARD as libc::c_ulong,
+                &cfg as *const ThermalGuard,
+            )
+        };
+        if rc < 0 {
+            return Err(io::Error::last_os_error());
+        }
         Ok(())
     }
 }

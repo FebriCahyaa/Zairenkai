@@ -40,7 +40,9 @@ pub struct Snapshot {
 }
 
 pub fn collect(s: &Sysroot, t: &Topology) -> Snapshot {
-    let load1 = s.read("/proc/loadavg").and_then(|v| v.split_whitespace().next()?.parse().ok());
+    let load1 = s
+        .read("/proc/loadavg")
+        .and_then(|v| v.split_whitespace().next()?.parse().ok());
     let mem_available_kb = s.read("/proc/meminfo").and_then(|text| {
         let line = text.lines().find(|l| l.starts_with("MemAvailable:"))?;
         line.split_whitespace().nth(1)?.parse().ok()
@@ -55,13 +57,24 @@ pub fn collect(s: &Sysroot, t: &Topology) -> Snapshot {
         });
     }
     let hottest_mdeg = t.thermal_zones.iter().filter_map(|z| z.temp_mdeg).max();
-    let control_temp_mdeg = t.thermal_zones.iter()
-        .filter(|z| matches!(z.role, crate::platform::ThermalRole::Cpu | crate::platform::ThermalRole::Gpu | crate::platform::ThermalRole::SoC))
+    let control_temp_mdeg = t
+        .thermal_zones
+        .iter()
+        .filter(|z| {
+            matches!(
+                z.role,
+                crate::platform::ThermalRole::Cpu
+                    | crate::platform::ThermalRole::Gpu
+                    | crate::platform::ThermalRole::SoC
+            )
+        })
         .filter_map(|z| z.temp_mdeg)
         .max()
         .or(hottest_mdeg);
     Snapshot {
-        battery_pct: s.read_u64("/sys/class/power_supply/battery/capacity").map(|v| v.min(100) as u32),
+        battery_pct: s
+            .read_u64("/sys/class/power_supply/battery/capacity")
+            .map(|v| v.min(100) as u32),
         charging: crate::scene::charging(s),
         load1,
         mem_available_kb,
@@ -77,7 +90,9 @@ pub fn collect(s: &Sysroot, t: &Topology) -> Snapshot {
 }
 
 fn read_psi(s: &Sysroot, path: &str) -> PsiSnapshot {
-    let Some(text) = s.read(path) else { return PsiSnapshot::default(); };
+    let Some(text) = s.read(path) else {
+        return PsiSnapshot::default();
+    };
     let mut out = PsiSnapshot::default();
     for line in text.lines() {
         let Some(rest) = line.strip_prefix("some ") else {
@@ -98,10 +113,20 @@ fn parse_avg10(s: &str) -> Option<f32> {
 
 pub fn json(s: &Sysroot, t: &Topology) -> String {
     let x = collect(s, t);
-    let cpu = x.cpu.iter().map(|c| format!(
-        "{{\"policy\":\"{}\",\"cur_khz\":{},\"min_khz\":{},\"max_khz\":{}}}",
-        escape(&c.policy), opt_u64(c.current_khz), opt_u64(c.min_khz), opt_u64(c.max_khz)
-    )).collect::<Vec<_>>().join(",");
+    let cpu = x
+        .cpu
+        .iter()
+        .map(|c| {
+            format!(
+                "{{\"policy\":\"{}\",\"cur_khz\":{},\"min_khz\":{},\"max_khz\":{}}}",
+                escape(&c.policy),
+                opt_u64(c.current_khz),
+                opt_u64(c.min_khz),
+                opt_u64(c.max_khz)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
     format!(
         "{{\"battery_pct\":{},\"charging\":{},\"load1\":{},\"mem_available_kb\":{},\"hottest_mdeg\":{},\"control_temp_mdeg\":{},\"thermal_zone_count\":{},\"gpu_current_khz\":{},\"cpu\":[{}],\"psi\":{{\"cpu_some_avg10\":{},\"cpu_full_avg10\":{},\"memory_some_avg10\":{},\"memory_full_avg10\":{},\"io_some_avg10\":{},\"io_full_avg10\":{}}}}}",
         opt_u32(x.battery_pct), x.charging, opt_f32(x.load1), opt_u64(x.mem_available_kb), opt_i64(x.hottest_mdeg), opt_i64(x.control_temp_mdeg),
@@ -112,11 +137,23 @@ pub fn json(s: &Sysroot, t: &Topology) -> String {
     )
 }
 
-fn opt_u32(v: Option<u32>) -> String { v.map(|v| v.to_string()).unwrap_or_else(|| "null".into()) }
-fn opt_u64(v: Option<u64>) -> String { v.map(|v| v.to_string()).unwrap_or_else(|| "null".into()) }
-fn opt_i64(v: Option<i64>) -> String { v.map(|v| v.to_string()).unwrap_or_else(|| "null".into()) }
-fn opt_f32(v: Option<f32>) -> String { v.filter(|x| x.is_finite()).map(|v| format!("{v:.3}")).unwrap_or_else(|| "null".into()) }
-fn escape(s: &str) -> String { s.replace('\\', "\\\\").replace('"', "\\\"") }
+fn opt_u32(v: Option<u32>) -> String {
+    v.map(|v| v.to_string()).unwrap_or_else(|| "null".into())
+}
+fn opt_u64(v: Option<u64>) -> String {
+    v.map(|v| v.to_string()).unwrap_or_else(|| "null".into())
+}
+fn opt_i64(v: Option<i64>) -> String {
+    v.map(|v| v.to_string()).unwrap_or_else(|| "null".into())
+}
+fn opt_f32(v: Option<f32>) -> String {
+    v.filter(|x| x.is_finite())
+        .map(|v| format!("{v:.3}"))
+        .unwrap_or_else(|| "null".into())
+}
+fn escape(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
 
 #[cfg(test)]
 mod tests {

@@ -16,7 +16,14 @@ pub struct SystemIdentity {
 
 impl SystemIdentity {
     pub fn canonical_key(&self) -> String {
-        format!("{}:{}:{}:{}:{}:{}", self.vendor, self.soc, self.board,
-                self.architecture, self.kernel_generation, self.kernel_flavor)
+        format!(
+            "{}:{}:{}:{}:{}:{}",
+            self.vendor,
+            self.soc,
+            self.board,
+            self.architecture,
+            self.kernel_generation,
+            self.kernel_flavor
+        )
     }
 }

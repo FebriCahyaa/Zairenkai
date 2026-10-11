@@ -76,17 +76,33 @@ impl Operation {
 
     pub const fn risk_weight(self) -> u8 {
         match self {
-            Self::Probe | Self::ReadStatus | Self::ReadPerformance | Self::ReadThermal | Self::ReadLogs => 1,
-            Self::ApplyProfile | Self::SetCpuTweak | Self::SetGpuTweak |
-            Self::SetMemoryTweak | Self::SetIoTweak | Self::SetPowerTweak => 3,
+            Self::Probe
+            | Self::ReadStatus
+            | Self::ReadPerformance
+            | Self::ReadThermal
+            | Self::ReadLogs => 1,
+            Self::ApplyProfile
+            | Self::SetCpuTweak
+            | Self::SetGpuTweak
+            | Self::SetMemoryTweak
+            | Self::SetIoTweak
+            | Self::SetPowerTweak => 3,
             Self::SetThermalPolicy | Self::ResetRuntime => 4,
-            Self::InstallLicense | Self::ModifyPolicy | Self::ManageHooks |
-            Self::ManageDeviceRegistry | Self::ManageDataSources | Self::ManageEvidence |
-            Self::ManageRecovery => 5,
+            Self::InstallLicense
+            | Self::ModifyPolicy
+            | Self::ManageHooks
+            | Self::ManageDeviceRegistry
+            | Self::ManageDataSources
+            | Self::ManageEvidence
+            | Self::ManageRecovery => 5,
             Self::SetProperty => 2,
             Self::TuneStorage | Self::TuneNetwork | Self::TuneZram => 3,
-            Self::ReadInventory | Self::ReadStorage | Self::ReadNetwork |
-            Self::ReadMemory | Self::ReadSecurity | Self::ReadProperties => 1,
+            Self::ReadInventory
+            | Self::ReadStorage
+            | Self::ReadNetwork
+            | Self::ReadMemory
+            | Self::ReadSecurity
+            | Self::ReadProperties => 1,
         }
     }
 }

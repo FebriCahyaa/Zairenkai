@@ -19,41 +19,216 @@ pub struct Spec {
 }
 
 const SPECS: &[Spec] = &[
-    Spec { id: "cpu_governor", category: "cpu", title: "CPU governor", lite: false },
-    Spec { id: "sched_latency_ns", category: "cpu", title: "Scheduler latency (ns)", lite: false },
-    Spec { id: "sched_min_granularity_ns", category: "cpu", title: "Scheduler min granularity (ns)", lite: false },
-    Spec { id: "sched_migration_cost_ns", category: "cpu", title: "Task migration cost (ns)", lite: false },
-    Spec { id: "sched_boost", category: "cpu", title: "WALT scheduler boost", lite: true },
-    Spec { id: "gpu_governor", category: "gpu", title: "GPU governor", lite: false },
-    Spec { id: "gpu_min_freq", category: "gpu", title: "GPU minimum frequency", lite: false },
-    Spec { id: "gpu_max_freq", category: "gpu", title: "GPU maximum frequency", lite: false },
-    Spec { id: "gpu_force_clk", category: "gpu", title: "GPU force clock on", lite: true },
-    Spec { id: "swappiness", category: "memory", title: "Swappiness", lite: false },
-    Spec { id: "dirty_ratio", category: "memory", title: "Dirty ratio", lite: false },
-    Spec { id: "dirty_background_ratio", category: "memory", title: "Dirty background ratio", lite: false },
-    Spec { id: "vfs_cache_pressure", category: "memory", title: "VFS cache pressure", lite: false },
-    Spec { id: "min_free_kbytes", category: "memory", title: "Min free memory (KiB)", lite: false },
-    Spec { id: "vm_stat_interval", category: "memory", title: "VM stat interval (s)", lite: true },
-    Spec { id: "vm_page_cluster", category: "memory", title: "VM page cluster", lite: true },
-    Spec { id: "dirty_expire_centisecs", category: "memory", title: "Dirty expiry (centisecs)", lite: false },
-    Spec { id: "dirty_writeback_centisecs", category: "memory", title: "Dirty writeback (centisecs)", lite: false },
-    Spec { id: "lmk_minfree", category: "memory", title: "LMK minfree", lite: true },
-    Spec { id: "zram_comp_algorithm", category: "zram", title: "zram compression", lite: false },
-    Spec { id: "zram_disksize", category: "zram", title: "zram size (bytes)", lite: true },
-    Spec { id: "zram_max_comp_streams", category: "zram", title: "zram comp streams", lite: true },
-    Spec { id: "zram_mem_limit", category: "zram", title: "zram memory limit (bytes)", lite: true },
-    Spec { id: "io_scheduler", category: "io", title: "I/O scheduler", lite: false },
-    Spec { id: "io_read_ahead_kb", category: "io", title: "I/O read-ahead (KiB)", lite: false },
-    Spec { id: "io_nr_requests", category: "io", title: "I/O queue depth", lite: false },
-    Spec { id: "io_rq_affinity", category: "io", title: "I/O rq affinity", lite: true },
-    Spec { id: "io_nomerges", category: "io", title: "I/O request merging", lite: true },
-    Spec { id: "fsync", category: "io", title: "fsync enabled", lite: true },
-    Spec { id: "tcp_congestion_control", category: "network", title: "TCP congestion control", lite: false },
-    Spec { id: "tcp_fastopen", category: "network", title: "TCP fast open", lite: false },
-    Spec { id: "tcp_low_latency", category: "network", title: "TCP low latency", lite: true },
-    Spec { id: "kcal", category: "display", title: "Display color (R G B)", lite: true },
-    Spec { id: "kcal_sat", category: "display", title: "Display saturation", lite: true },
-    Spec { id: "charge_limit", category: "battery", title: "Charge control limit", lite: false },
+    Spec {
+        id: "cpu_governor",
+        category: "cpu",
+        title: "CPU governor",
+        lite: false,
+    },
+    Spec {
+        id: "sched_latency_ns",
+        category: "cpu",
+        title: "Scheduler latency (ns)",
+        lite: false,
+    },
+    Spec {
+        id: "sched_min_granularity_ns",
+        category: "cpu",
+        title: "Scheduler min granularity (ns)",
+        lite: false,
+    },
+    Spec {
+        id: "sched_migration_cost_ns",
+        category: "cpu",
+        title: "Task migration cost (ns)",
+        lite: false,
+    },
+    Spec {
+        id: "sched_boost",
+        category: "cpu",
+        title: "WALT scheduler boost",
+        lite: true,
+    },
+    Spec {
+        id: "gpu_governor",
+        category: "gpu",
+        title: "GPU governor",
+        lite: false,
+    },
+    Spec {
+        id: "gpu_min_freq",
+        category: "gpu",
+        title: "GPU minimum frequency",
+        lite: false,
+    },
+    Spec {
+        id: "gpu_max_freq",
+        category: "gpu",
+        title: "GPU maximum frequency",
+        lite: false,
+    },
+    Spec {
+        id: "gpu_force_clk",
+        category: "gpu",
+        title: "GPU force clock on",
+        lite: true,
+    },
+    Spec {
+        id: "swappiness",
+        category: "memory",
+        title: "Swappiness",
+        lite: false,
+    },
+    Spec {
+        id: "dirty_ratio",
+        category: "memory",
+        title: "Dirty ratio",
+        lite: false,
+    },
+    Spec {
+        id: "dirty_background_ratio",
+        category: "memory",
+        title: "Dirty background ratio",
+        lite: false,
+    },
+    Spec {
+        id: "vfs_cache_pressure",
+        category: "memory",
+        title: "VFS cache pressure",
+        lite: false,
+    },
+    Spec {
+        id: "min_free_kbytes",
+        category: "memory",
+        title: "Min free memory (KiB)",
+        lite: false,
+    },
+    Spec {
+        id: "vm_stat_interval",
+        category: "memory",
+        title: "VM stat interval (s)",
+        lite: true,
+    },
+    Spec {
+        id: "vm_page_cluster",
+        category: "memory",
+        title: "VM page cluster",
+        lite: true,
+    },
+    Spec {
+        id: "dirty_expire_centisecs",
+        category: "memory",
+        title: "Dirty expiry (centisecs)",
+        lite: false,
+    },
+    Spec {
+        id: "dirty_writeback_centisecs",
+        category: "memory",
+        title: "Dirty writeback (centisecs)",
+        lite: false,
+    },
+    Spec {
+        id: "lmk_minfree",
+        category: "memory",
+        title: "LMK minfree",
+        lite: true,
+    },
+    Spec {
+        id: "zram_comp_algorithm",
+        category: "zram",
+        title: "zram compression",
+        lite: false,
+    },
+    Spec {
+        id: "zram_disksize",
+        category: "zram",
+        title: "zram size (bytes)",
+        lite: true,
+    },
+    Spec {
+        id: "zram_max_comp_streams",
+        category: "zram",
+        title: "zram comp streams",
+        lite: true,
+    },
+    Spec {
+        id: "zram_mem_limit",
+        category: "zram",
+        title: "zram memory limit (bytes)",
+        lite: true,
+    },
+    Spec {
+        id: "io_scheduler",
+        category: "io",
+        title: "I/O scheduler",
+        lite: false,
+    },
+    Spec {
+        id: "io_read_ahead_kb",
+        category: "io",
+        title: "I/O read-ahead (KiB)",
+        lite: false,
+    },
+    Spec {
+        id: "io_nr_requests",
+        category: "io",
+        title: "I/O queue depth",
+        lite: false,
+    },
+    Spec {
+        id: "io_rq_affinity",
+        category: "io",
+        title: "I/O rq affinity",
+        lite: true,
+    },
+    Spec {
+        id: "io_nomerges",
+        category: "io",
+        title: "I/O request merging",
+        lite: true,
+    },
+    Spec {
+        id: "fsync",
+        category: "io",
+        title: "fsync enabled",
+        lite: true,
+    },
+    Spec {
+        id: "tcp_congestion_control",
+        category: "network",
+        title: "TCP congestion control",
+        lite: false,
+    },
+    Spec {
+        id: "tcp_fastopen",
+        category: "network",
+        title: "TCP fast open",
+        lite: false,
+    },
+    Spec {
+        id: "tcp_low_latency",
+        category: "network",
+        title: "TCP low latency",
+        lite: true,
+    },
+    Spec {
+        id: "kcal",
+        category: "display",
+        title: "Display color (R G B)",
+        lite: true,
+    },
+    Spec {
+        id: "kcal_sat",
+        category: "display",
+        title: "Display saturation",
+        lite: true,
+    },
+    Spec {
+        id: "charge_limit",
+        category: "battery",
+        title: "Charge control limit",
+        lite: false,
+    },
 ];
 
 pub fn find(id: &str) -> Option<&'static Spec> {
@@ -83,13 +258,22 @@ pub fn is_lite(id: &str) -> Option<bool> {
 }
 
 pub fn read(id: &str, s: &Sysroot, t: &Topology) -> Option<String> {
-    if find(id).is_none() { return None; }
+    if find(id).is_none() {
+        return None;
+    }
     match id {
-        "cpu_governor" => t.policies.first().and_then(|p| s.read(&p.rel("scaling_governor"))),
+        "cpu_governor" => t
+            .policies
+            .first()
+            .and_then(|p| s.read(&p.rel("scaling_governor"))),
         "sched_latency_ns" => s.read("/proc/sys/kernel/sched_latency_ns"),
         "sched_min_granularity_ns" => s.read("/proc/sys/kernel/sched_min_granularity_ns"),
         "sched_migration_cost_ns" => s.read("/proc/sys/kernel/sched_migration_cost_ns"),
-        "sched_boost" => first_existing(s, &["/proc/sys/walt/sched_boost", "/proc/sys/kernel/sched_boost"]).and_then(|p| s.read(&p)),
+        "sched_boost" => first_existing(
+            s,
+            &["/proc/sys/walt/sched_boost", "/proc/sys/kernel/sched_boost"],
+        )
+        .and_then(|p| s.read(&p)),
         "gpu_governor" => t.gpu.as_ref().and_then(|g| s.read(&g.rel("governor"))),
         "gpu_min_freq" => t.gpu.as_ref().and_then(|g| s.read(&g.rel("min_freq"))),
         "gpu_max_freq" => t.gpu.as_ref().and_then(|g| s.read(&g.rel("max_freq"))),
@@ -108,11 +292,21 @@ pub fn read(id: &str, s: &Sysroot, t: &Topology) -> Option<String> {
         "zram_disksize" => s.read("/sys/block/zram0/disksize"),
         "zram_max_comp_streams" => s.read("/sys/block/zram0/max_comp_streams"),
         "zram_mem_limit" => s.read("/sys/block/zram0/mem_limit"),
-        "io_scheduler" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/scheduler"))),
-        "io_read_ahead_kb" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/read_ahead_kb"))),
-        "io_nr_requests" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nr_requests"))),
-        "io_rq_affinity" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/rq_affinity"))),
-        "io_nomerges" => crate::storage::safe_block_devices(s).into_iter().find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nomerges"))),
+        "io_scheduler" => crate::storage::safe_block_devices(s)
+            .into_iter()
+            .find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/scheduler"))),
+        "io_read_ahead_kb" => crate::storage::safe_block_devices(s)
+            .into_iter()
+            .find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/read_ahead_kb"))),
+        "io_nr_requests" => crate::storage::safe_block_devices(s)
+            .into_iter()
+            .find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nr_requests"))),
+        "io_rq_affinity" => crate::storage::safe_block_devices(s)
+            .into_iter()
+            .find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/rq_affinity"))),
+        "io_nomerges" => crate::storage::safe_block_devices(s)
+            .into_iter()
+            .find_map(|dev| s.read(&format!("/sys/block/{dev}/queue/nomerges"))),
         "fsync" => s.read("/sys/module/sync/parameters/fsync_enabled"),
         "tcp_congestion_control" => s.read("/proc/sys/net/ipv4/tcp_congestion_control"),
         "tcp_fastopen" => s.read("/proc/sys/net/ipv4/tcp_fastopen"),
@@ -124,13 +318,15 @@ pub fn read(id: &str, s: &Sysroot, t: &Topology) -> Option<String> {
     }
 }
 
-
 fn write_checked(s: &Sysroot, path: &str, value: &str) -> Result<(), String> {
     s.write(path, value).map_err(|e| format!("{path}: {e}"))
 }
 
 fn parse_range(value: &str, min: i64, max: i64) -> Result<String, String> {
-    let n: i64 = value.trim().parse().map_err(|_| format!("expected integer {min}..{max}"))?;
+    let n: i64 = value
+        .trim()
+        .parse()
+        .map_err(|_| format!("expected integer {min}..{max}"))?;
     if !(min..=max).contains(&n) {
         return Err(format!("value {n} outside safe range {min}..{max}"));
     }
@@ -138,17 +334,39 @@ fn parse_range(value: &str, min: i64, max: i64) -> Result<String, String> {
 }
 
 fn effective_congestion_allowlist(allowed: &str, available: &str) -> String {
-    let available_tokens: Vec<&str> = available.split_whitespace().filter(|v| !v.is_empty()).collect();
-    if available_tokens.is_empty() { return String::new(); }
-    let allowed_tokens: std::collections::BTreeSet<&str> = allowed.split_whitespace().filter(|v| !v.is_empty()).collect();
-    if allowed_tokens.is_empty() { return available_tokens.join(" "); }
-    let intersection = available_tokens.iter().copied().filter(|v| allowed_tokens.contains(v)).collect::<Vec<_>>();
-    if intersection.is_empty() { available_tokens.join(" ") } else { intersection.join(" ") }
+    let available_tokens: Vec<&str> = available
+        .split_whitespace()
+        .filter(|v| !v.is_empty())
+        .collect();
+    if available_tokens.is_empty() {
+        return String::new();
+    }
+    let allowed_tokens: std::collections::BTreeSet<&str> = allowed
+        .split_whitespace()
+        .filter(|v| !v.is_empty())
+        .collect();
+    if allowed_tokens.is_empty() {
+        return available_tokens.join(" ");
+    }
+    let intersection = available_tokens
+        .iter()
+        .copied()
+        .filter(|v| allowed_tokens.contains(v))
+        .collect::<Vec<_>>();
+    if intersection.is_empty() {
+        available_tokens.join(" ")
+    } else {
+        intersection.join(" ")
+    }
 }
 
 fn parse_choice(value: &str, available: &str) -> Result<String, String> {
     let value = value.trim();
-    if value.is_empty() || value.bytes().any(|b| b.is_ascii_whitespace() || b == b'/' || b == b'\\') {
+    if value.is_empty()
+        || value
+            .bytes()
+            .any(|b| b.is_ascii_whitespace() || b == b'/' || b == b'\\')
+    {
         return Err("invalid choice".into());
     }
     // sysfs choice nodes commonly mark the active value as `[choice]`; the
@@ -173,10 +391,18 @@ fn first_existing(s: &Sysroot, paths: &[&str]) -> Option<String> {
 
 fn validate_lmk(value: &str) -> Result<String, String> {
     let v = value.trim();
-    if v.is_empty() || v.len() > 512 || !v.bytes().all(|b| b.is_ascii_digit() || b == b',' || b.is_ascii_whitespace()) {
+    if v.is_empty()
+        || v.len() > 512
+        || !v
+            .bytes()
+            .all(|b| b.is_ascii_digit() || b == b',' || b.is_ascii_whitespace())
+    {
         return Err("LMK minfree must be a bounded comma/space-separated integer list".into());
     }
-    if v.split(|c: char| c == ',' || c.is_ascii_whitespace()).filter(|x| !x.is_empty()).any(|x| x.parse::<u64>().is_err()) {
+    if v.split(|c: char| c == ',' || c.is_ascii_whitespace())
+        .filter(|x| !x.is_empty())
+        .any(|x| x.parse::<u64>().is_err())
+    {
         return Err("LMK minfree contains a non-integer".into());
     }
     Ok(v.to_string())
@@ -191,7 +417,11 @@ fn validate_kcal(value: &str) -> Result<String, String> {
     if nums.len() != 3 || nums.iter().any(|v| *v > 255) {
         return Err("KCAL expects three 0..255 channel values".into());
     }
-    Ok(nums.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "))
+    Ok(nums
+        .iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<_>>()
+        .join(" "))
 }
 
 fn zram_size_limit(s: &Sysroot) -> Option<u64> {
@@ -209,40 +439,78 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
     }
     match id {
         "cpu_governor" => {
-            if t.policies.is_empty() { return Err("no cpufreq policies detected".into()); }
+            if t.policies.is_empty() {
+                return Err("no cpufreq policies detected".into());
+            }
             let mut applied = 0usize;
             for p in &t.policies {
-                let avail = s.read(&p.rel("scaling_available_governors")).unwrap_or_default();
+                let avail = s
+                    .read(&p.rel("scaling_available_governors"))
+                    .unwrap_or_default();
                 let gov = parse_choice(value, &avail)?;
                 write_checked(s, &p.rel("scaling_governor"), &gov)?;
                 applied += 1;
             }
             Ok(format!("{applied} policies -> {value}"))
         }
-        "sched_latency_ns" => write_proc(s, "/proc/sys/kernel/sched_latency_ns", value, 100_000, 100_000_000),
-        "sched_min_granularity_ns" => write_proc(s, "/proc/sys/kernel/sched_min_granularity_ns", value, 100_000, 50_000_000),
-        "sched_migration_cost_ns" => write_proc(s, "/proc/sys/kernel/sched_migration_cost_ns", value, 0, 50_000_000),
+        "sched_latency_ns" => write_proc(
+            s,
+            "/proc/sys/kernel/sched_latency_ns",
+            value,
+            100_000,
+            100_000_000,
+        ),
+        "sched_min_granularity_ns" => write_proc(
+            s,
+            "/proc/sys/kernel/sched_min_granularity_ns",
+            value,
+            100_000,
+            50_000_000,
+        ),
+        "sched_migration_cost_ns" => write_proc(
+            s,
+            "/proc/sys/kernel/sched_migration_cost_ns",
+            value,
+            0,
+            50_000_000,
+        ),
         "sched_boost" => {
             let v = parse_range(value, 0, 3)?;
-            let path = first_existing(s, &["/proc/sys/walt/sched_boost", "/proc/sys/kernel/sched_boost"])
-                .ok_or_else(|| "scheduler boost node unavailable".to_string())?;
+            let path = first_existing(
+                s,
+                &["/proc/sys/walt/sched_boost", "/proc/sys/kernel/sched_boost"],
+            )
+            .ok_or_else(|| "scheduler boost node unavailable".to_string())?;
             write_checked(s, &path, &v)?;
             Ok(v)
         }
         "gpu_governor" => {
-            let g = t.gpu.as_ref().ok_or_else(|| "GPU devfreq not detected".to_string())?;
+            let g = t
+                .gpu
+                .as_ref()
+                .ok_or_else(|| "GPU devfreq not detected".to_string())?;
             let avail = s.read(&g.rel("available_governors")).unwrap_or_default();
             let gov = parse_choice(value, &avail)?;
             write_checked(s, &g.rel("governor"), &gov)?;
             Ok(gov)
         }
         "gpu_min_freq" | "gpu_max_freq" => {
-            let g = t.gpu.as_ref().ok_or_else(|| "GPU devfreq not detected".to_string())?;
-            if g.avail.is_empty() { return Err("GPU OPP table unavailable".into()); }
-            let n: u64 = value.trim().parse().map_err(|_| "GPU frequency must be kHz".to_string())?;
+            let g = t
+                .gpu
+                .as_ref()
+                .ok_or_else(|| "GPU devfreq not detected".to_string())?;
+            if g.avail.is_empty() {
+                return Err("GPU OPP table unavailable".into());
+            }
+            let n: u64 = value
+                .trim()
+                .parse()
+                .map_err(|_| "GPU frequency must be kHz".to_string())?;
             let lo = *g.avail.first().unwrap();
             let hi = *g.avail.last().unwrap();
-            if n < lo || n > hi { return Err(format!("GPU frequency outside {lo}..{hi} kHz")); }
+            if n < lo || n > hi {
+                return Err(format!("GPU frequency outside {lo}..{hi} kHz"));
+            }
             let current_min = s.read_u64(&g.rel("min_freq"));
             let current_max = s.read_u64(&g.rel("max_freq"));
             if id == "gpu_min_freq" && current_max.is_none() {
@@ -260,21 +528,46 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             let snapped = if id == "gpu_min_freq" {
                 g.avail.iter().copied().find(|f| *f >= n).unwrap_or(hi)
             } else {
-                g.avail.iter().copied().rev().find(|f| *f <= n).unwrap_or(lo)
+                g.avail
+                    .iter()
+                    .copied()
+                    .rev()
+                    .find(|f| *f <= n)
+                    .unwrap_or(lo)
             };
-            write_checked(s, &g.rel(if id == "gpu_min_freq" { "min_freq" } else { "max_freq" }), &snapped.to_string())?;
+            write_checked(
+                s,
+                &g.rel(if id == "gpu_min_freq" {
+                    "min_freq"
+                } else {
+                    "max_freq"
+                }),
+                &snapped.to_string(),
+            )?;
             Ok(snapped.to_string())
         }
-        "gpu_force_clk" => write_sys_first(s, &["/sys/class/kgsl/kgsl-3d0/force_clk_on"], value, 0, 1),
+        "gpu_force_clk" => {
+            write_sys_first(s, &["/sys/class/kgsl/kgsl-3d0/force_clk_on"], value, 0, 1)
+        }
         "swappiness" => write_proc(s, "/proc/sys/vm/swappiness", value, 0, 200),
         "dirty_ratio" => write_proc(s, "/proc/sys/vm/dirty_ratio", value, 0, 100),
-        "dirty_background_ratio" => write_proc(s, "/proc/sys/vm/dirty_background_ratio", value, 0, 100),
+        "dirty_background_ratio" => {
+            write_proc(s, "/proc/sys/vm/dirty_background_ratio", value, 0, 100)
+        }
         "vfs_cache_pressure" => write_proc(s, "/proc/sys/vm/vfs_cache_pressure", value, 0, 500),
         "min_free_kbytes" => write_proc(s, "/proc/sys/vm/min_free_kbytes", value, 1024, 262_144),
         "vm_stat_interval" => write_proc(s, "/proc/sys/vm/stat_interval", value, 1, 120),
         "vm_page_cluster" => write_proc(s, "/proc/sys/vm/page-cluster", value, 0, 7),
-        "dirty_expire_centisecs" => write_proc(s, "/proc/sys/vm/dirty_expire_centisecs", value, 100, 60_000),
-        "dirty_writeback_centisecs" => write_proc(s, "/proc/sys/vm/dirty_writeback_centisecs", value, 100, 60_000),
+        "dirty_expire_centisecs" => {
+            write_proc(s, "/proc/sys/vm/dirty_expire_centisecs", value, 100, 60_000)
+        }
+        "dirty_writeback_centisecs" => write_proc(
+            s,
+            "/proc/sys/vm/dirty_writeback_centisecs",
+            value,
+            100,
+            60_000,
+        ),
         "lmk_minfree" => {
             let node = "/sys/module/lowmemorykiller/parameters/minfree";
             let v = validate_lmk(value)?;
@@ -284,30 +577,53 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
         "zram_comp_algorithm" => {
             let node = "/sys/block/zram0/comp_algorithm";
             if !crate::memory::zram_uninitialized(s, "zram0") {
-                return Err("zram0 is initialized; compression algorithm is no longer mutable".into());
+                return Err(
+                    "zram0 is initialized; compression algorithm is no longer mutable".into(),
+                );
             }
-            let available = s.read(node).ok_or_else(|| "zram0 compression node unavailable".to_string())?;
+            let available = s
+                .read(node)
+                .ok_or_else(|| "zram0 compression node unavailable".to_string())?;
             let choice = parse_choice(value, &available)?;
             write_checked(s, node, &choice)?;
             Ok(choice)
         }
         "zram_disksize" => {
-            let n: u64 = value.trim().parse().map_err(|_| "zram size must be bytes".to_string())?;
-            let max = zram_size_limit(s).ok_or_else(|| "physical memory size unavailable".to_string())?;
-            if n == 0 { return Err("zram size must be greater than zero".into()); }
-            if n > max { return Err(format!("zram size exceeds safe cap {max} bytes")); }
+            let n: u64 = value
+                .trim()
+                .parse()
+                .map_err(|_| "zram size must be bytes".to_string())?;
+            let max =
+                zram_size_limit(s).ok_or_else(|| "physical memory size unavailable".to_string())?;
+            if n == 0 {
+                return Err("zram size must be greater than zero".into());
+            }
+            if n > max {
+                return Err(format!("zram size exceeds safe cap {max} bytes"));
+            }
             if !crate::memory::zram_uninitialized(s, "zram0") {
-                return Err("zram0 is initialized; disk size cannot be changed without an explicit reset".into());
+                return Err(
+                    "zram0 is initialized; disk size cannot be changed without an explicit reset"
+                        .into(),
+                );
             }
             let node = "/sys/block/zram0/disksize";
             write_checked(s, node, &n.to_string())?;
             Ok(n.to_string())
         }
-        "zram_max_comp_streams" => write_sys_first(s, &["/sys/block/zram0/max_comp_streams"], value, 1, 16),
+        "zram_max_comp_streams" => {
+            write_sys_first(s, &["/sys/block/zram0/max_comp_streams"], value, 1, 16)
+        }
         "zram_mem_limit" => {
-            let n: u64 = value.trim().parse().map_err(|_| "zram memory limit must be bytes".to_string())?;
-            let max = zram_size_limit(s).ok_or_else(|| "physical memory size unavailable".to_string())?;
-            if n > max { return Err(format!("zram memory limit exceeds safe cap {max} bytes")); }
+            let n: u64 = value
+                .trim()
+                .parse()
+                .map_err(|_| "zram memory limit must be bytes".to_string())?;
+            let max =
+                zram_size_limit(s).ok_or_else(|| "physical memory size unavailable".to_string())?;
+            if n > max {
+                return Err(format!("zram memory limit exceeds safe cap {max} bytes"));
+            }
             let node = "/sys/block/zram0/mem_limit";
             write_checked(s, node, &n.to_string())?;
             Ok(n.to_string())
@@ -316,13 +632,17 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             let mut count = 0usize;
             for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/scheduler");
-                if !s.exists(&node) { continue; }
+                if !s.exists(&node) {
+                    continue;
+                }
                 let avail = s.read(&node).unwrap_or_default();
                 let choice = parse_choice(value, &avail)?;
                 write_checked(s, &node, &choice)?;
                 count += 1;
             }
-            if count == 0 { return Err("no block I/O scheduler nodes found".into()); }
+            if count == 0 {
+                return Err("no block I/O scheduler nodes found".into());
+            }
             Ok(format!("{count} block devices -> {value}"))
         }
         "io_read_ahead_kb" => {
@@ -330,11 +650,15 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             let mut count = 0usize;
             for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/read_ahead_kb");
-                if !s.exists(&node) { continue; }
+                if !s.exists(&node) {
+                    continue;
+                }
                 write_checked(s, &node, &v)?;
                 count += 1;
             }
-            if count == 0 { return Err("no block read-ahead nodes found".into()); }
+            if count == 0 {
+                return Err("no block read-ahead nodes found".into());
+            }
             Ok(format!("{count} block devices -> {v} KiB"))
         }
         "io_nr_requests" => {
@@ -342,11 +666,15 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             let mut count = 0usize;
             for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/nr_requests");
-                if !s.exists(&node) { continue; }
+                if !s.exists(&node) {
+                    continue;
+                }
                 write_checked(s, &node, &v)?;
                 count += 1;
             }
-            if count == 0 { return Err("no block queue-depth nodes found".into()); }
+            if count == 0 {
+                return Err("no block queue-depth nodes found".into());
+            }
             Ok(format!("{count} block devices -> {v}"))
         }
         "io_rq_affinity" => {
@@ -354,11 +682,15 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             let mut count = 0usize;
             for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/rq_affinity");
-                if !s.exists(&node) { continue; }
+                if !s.exists(&node) {
+                    continue;
+                }
                 write_checked(s, &node, &v)?;
                 count += 1;
             }
-            if count == 0 { return Err("no safe rq_affinity nodes found".into()); }
+            if count == 0 {
+                return Err("no safe rq_affinity nodes found".into());
+            }
             Ok(format!("{count} block devices -> {v}"))
         }
         "io_nomerges" => {
@@ -366,18 +698,32 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             let mut count = 0usize;
             for dev in crate::storage::safe_block_devices(s) {
                 let node = format!("/sys/block/{dev}/queue/nomerges");
-                if !s.exists(&node) { continue; }
+                if !s.exists(&node) {
+                    continue;
+                }
                 write_checked(s, &node, &v)?;
                 count += 1;
             }
-            if count == 0 { return Err("no safe nomerges nodes found".into()); }
+            if count == 0 {
+                return Err("no safe nomerges nodes found".into());
+            }
             Ok(format!("{count} block devices -> {v}"))
         }
-        "fsync" => write_sys_first(s, &["/sys/module/sync/parameters/fsync_enabled"], value, 0, 1),
+        "fsync" => write_sys_first(
+            s,
+            &["/sys/module/sync/parameters/fsync_enabled"],
+            value,
+            0,
+            1,
+        ),
         "tcp_congestion_control" => {
             let node = "/proc/sys/net/ipv4/tcp_congestion_control";
-            let allowed = s.read("/proc/sys/net/ipv4/tcp_allowed_congestion_control").unwrap_or_default();
-            let available = s.read("/proc/sys/net/ipv4/tcp_available_congestion_control").unwrap_or_default();
+            let allowed = s
+                .read("/proc/sys/net/ipv4/tcp_allowed_congestion_control")
+                .unwrap_or_default();
+            let available = s
+                .read("/proc/sys/net/ipv4/tcp_available_congestion_control")
+                .unwrap_or_default();
             let effective = effective_congestion_allowlist(&allowed, &available);
             let choice = parse_choice(value, &effective)?;
             write_checked(s, node, &choice)?;
@@ -390,7 +736,13 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
             write_checked(s, "/sys/devices/platform/kcal_ctrl.0/kcal", &v)?;
             Ok(v)
         }
-        "kcal_sat" => write_sys_first(s, &["/sys/devices/platform/kcal_ctrl.0/kcal_sat"], value, 128, 383),
+        "kcal_sat" => write_sys_first(
+            s,
+            &["/sys/devices/platform/kcal_ctrl.0/kcal_sat"],
+            value,
+            128,
+            383,
+        ),
         "charge_limit" => {
             let node = "/sys/class/power_supply/battery/charge_control_limit";
             if !s.exists(node) {
@@ -406,12 +758,20 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
 
 fn write_proc(s: &Sysroot, node: &str, value: &str, min: i64, max: i64) -> Result<String, String> {
     let v = parse_range(value, min, max)?;
-    if !s.exists(node) { return Err(format!("{node} unavailable")); }
+    if !s.exists(node) {
+        return Err(format!("{node} unavailable"));
+    }
     write_checked(s, node, &v)?;
     Ok(v)
 }
 
-fn write_sys_first(s: &Sysroot, paths: &[&str], value: &str, min: i64, max: i64) -> Result<String, String> {
+fn write_sys_first(
+    s: &Sysroot,
+    paths: &[&str],
+    value: &str,
+    min: i64,
+    max: i64,
+) -> Result<String, String> {
     let v = parse_range(value, min, max)?;
     let node = first_existing(s, paths).ok_or_else(|| "tunable unavailable".to_string())?;
     write_checked(s, &node, &v)?;
@@ -426,13 +786,19 @@ mod tests {
 
     #[test]
     fn sysfs_active_choice_brackets_are_ignored() {
-        assert_eq!(parse_choice("mq-deadline", "[mq-deadline] bfq" ).unwrap(), "mq-deadline");
+        assert_eq!(
+            parse_choice("mq-deadline", "[mq-deadline] bfq").unwrap(),
+            "mq-deadline"
+        );
         assert!(parse_choice("kyber", "[mq-deadline] bfq").is_err());
     }
 
     #[test]
     fn choice_validation_accepts_plain_lists() {
-        assert_eq!(parse_choice("schedutil", "schedutil performance").unwrap(), "schedutil");
+        assert_eq!(
+            parse_choice("schedutil", "schedutil performance").unwrap(),
+            "schedutil"
+        );
     }
 
     #[test]
@@ -469,9 +835,14 @@ pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
         "/sys/devices/platform/kcal_ctrl.0/kcal",
         "/sys/devices/platform/kcal_ctrl.0/kcal_sat",
         "/sys/class/kgsl/kgsl-3d0/force_clk_on",
-    ].into_iter().map(String::from).collect::<Vec<_>>();
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect::<Vec<_>>();
     if let Some(g) = &t.gpu {
-        for leaf in ["min_freq", "max_freq", "governor"] { out.push(g.rel(leaf)); }
+        for leaf in ["min_freq", "max_freq", "governor"] {
+            out.push(g.rel(leaf));
+        }
     }
     for p in &t.policies {
         out.push(p.rel("scaling_governor"));
@@ -479,7 +850,13 @@ pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
         out.push(p.rel("scaling_max_freq"));
     }
     for dev in s.list_dir("/sys/block") {
-        for leaf in ["scheduler", "read_ahead_kb", "nr_requests", "rq_affinity", "nomerges"] {
+        for leaf in [
+            "scheduler",
+            "read_ahead_kb",
+            "nr_requests",
+            "rq_affinity",
+            "nomerges",
+        ] {
             out.push(format!("/sys/block/{dev}/queue/{leaf}"));
         }
     }
@@ -490,7 +867,9 @@ pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
     for p in [
         "/sys/class/power_supply/battery/charge_control_limit",
         "/sys/class/power_supply/battery/batt_slate_mode",
-    ] { out.push(p.into()); }
+    ] {
+        out.push(p.into());
+    }
     out.sort();
     out.dedup();
     out

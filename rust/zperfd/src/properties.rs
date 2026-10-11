@@ -30,18 +30,42 @@ pub struct Spec {
 }
 
 pub const SPECS: &[Spec] = &[
-    Spec { key: "persist.zairenkai.profile", scope: Scope::FrameworkOwned, description: "selected profile" },
-    Spec { key: "persist.zairenkai.mode", scope: Scope::FrameworkOwned, description: "requested runtime mode" },
-    Spec { key: "persist.zairenkai.safety", scope: Scope::FrameworkOwned, description: "Sentinel safety state" },
-    Spec { key: "persist.zairenkai.boost", scope: Scope::FrameworkOwned, description: "runtime boost budget" },
+    Spec {
+        key: "persist.zairenkai.profile",
+        scope: Scope::FrameworkOwned,
+        description: "selected profile",
+    },
+    Spec {
+        key: "persist.zairenkai.mode",
+        scope: Scope::FrameworkOwned,
+        description: "requested runtime mode",
+    },
+    Spec {
+        key: "persist.zairenkai.safety",
+        scope: Scope::FrameworkOwned,
+        description: "Sentinel safety state",
+    },
+    Spec {
+        key: "persist.zairenkai.boost",
+        scope: Scope::FrameworkOwned,
+        description: "runtime boost budget",
+    },
 ];
 
 fn valid_read_key(key: &str) -> bool {
     !key.is_empty()
         && key.len() <= 92
-        && key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')
-        && key.as_bytes().first().is_some_and(|b| b.is_ascii_alphanumeric())
-        && key.as_bytes().last().is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_' || *b == b'-')
+        && key
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')
+        && key
+            .as_bytes()
+            .first()
+            .is_some_and(|b| b.is_ascii_alphanumeric())
+        && key
+            .as_bytes()
+            .last()
+            .is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_' || *b == b'-')
 }
 
 const READ_ONLY_KEYS: &[&str] = &[
@@ -74,10 +98,15 @@ fn valid_value(value: &str) -> bool {
 }
 
 fn valid_value_for(key: &str, value: &str) -> bool {
-    if !valid_value(value) { return false; }
+    if !valid_value(value) {
+        return false;
+    }
     match key {
-        "persist.zairenkai.profile" | "persist.zairenkai.mode" | "persist.zairenkai.safety" =>
-            value.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-'),
+        "persist.zairenkai.profile" | "persist.zairenkai.mode" | "persist.zairenkai.safety" => {
+            value
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')
+        }
         "persist.zairenkai.boost" => value.parse::<u32>().is_ok_and(|v| v <= 1000),
         _ => false,
     }
@@ -107,9 +136,13 @@ fn run_bounded(command: &mut Command) -> Result<String, String> {
         let mut chunk = [0u8; 1024];
         loop {
             let n = stdout.read(&mut chunk).ok()?;
-            if n == 0 { break; }
+            if n == 0 {
+                break;
+            }
             let keep = n.min(MAX_OUTPUT_BYTES.saturating_sub(out.len()));
-            if keep > 0 { out.extend_from_slice(&chunk[..keep]); }
+            if keep > 0 {
+                out.extend_from_slice(&chunk[..keep]);
+            }
         }
         Some(out)
     });
@@ -126,7 +159,11 @@ fn run_bounded(command: &mut Command) -> Result<String, String> {
             }
         }
     };
-    let out = reader.join().ok().flatten().ok_or("property tool output unreadable")?;
+    let out = reader
+        .join()
+        .ok()
+        .flatten()
+        .ok_or("property tool output unreadable")?;
     if !status.success() {
         return Err(format!("property tool failed: {status}"));
     }
@@ -134,7 +171,9 @@ fn run_bounded(command: &mut Command) -> Result<String, String> {
 }
 
 pub fn get(key: &str) -> Result<String, String> {
-    if !valid_read_key(key) { return Err("invalid Android property key".into()); }
+    if !valid_read_key(key) {
+        return Err("invalid Android property key".into());
+    }
     if spec(key).is_none() && !READ_ONLY_KEYS.contains(&key) {
         return Err("property is outside the Zairenkai property allowlist".into());
     }
@@ -142,8 +181,12 @@ pub fn get(key: &str) -> Result<String, String> {
 }
 
 pub fn set(key: &str, value: &str) -> Result<(), String> {
-    if !valid_owned_key(key) { return Err("property is not a registered Zairenkai-owned property".into()); }
-    if !valid_value_for(key, value) { return Err("property value is invalid for this key".into()); }
+    if !valid_owned_key(key) {
+        return Err("property is not a registered Zairenkai-owned property".into());
+    }
+    if !valid_value_for(key, value) {
+        return Err("property value is invalid for this key".into());
+    }
     run_bounded(Command::new("setprop").arg(key).arg(value)).map(|_| ())
 }
 

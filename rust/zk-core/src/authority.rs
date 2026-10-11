@@ -5,7 +5,11 @@ use crate::capability::CapabilitySet;
 use crate::operation::Operation;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Decision { Allow, Deny, Degrade }
+pub enum Decision {
+    Allow,
+    Deny,
+    Degrade,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Authorization {

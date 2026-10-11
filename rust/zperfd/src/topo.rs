@@ -85,7 +85,8 @@ impl Topology {
             ])
             .and_then(|p| p.rsplit_once('/').map(|(d, _)| d.to_string()));
 
-        let flavor = Self::detect_flavor(&release, cgroup_v2, top_app_uclamp.is_some(), has_msm_perf);
+        let flavor =
+            Self::detect_flavor(&release, cgroup_v2, top_app_uclamp.is_some(), has_msm_perf);
         let gki = flavor == KernelFlavor::Gki;
         let kernel_generation = kernel_generation(&release);
 
@@ -120,9 +121,11 @@ impl Topology {
     /// highest-performance policy. ZKFC cpufreq QoS accepts any CPU in the
     /// policy, so only the first discovered CPU is required.
     pub fn performance_policy(&self) -> Option<(usize, u64, u64)> {
-        self.policies.iter().filter(|p| p.max_hw > 0 && !p.cpus.is_empty()).max_by_key(|p| p.max_hw).map(|p| {
-            (p.cpus[0], p.min_hw, p.max_hw)
-        })
+        self.policies
+            .iter()
+            .filter(|p| p.max_hw > 0 && !p.cpus.is_empty())
+            .max_by_key(|p| p.max_hw)
+            .map(|p| (p.cpus[0], p.min_hw, p.max_hw))
     }
 
     pub fn flavor_kind(&self) -> KernelFlavor {
@@ -133,7 +136,12 @@ impl Topology {
         self.kernel_flavor.as_str()
     }
 
-    fn detect_flavor(release: &str, cgroup_v2: bool, has_uclamp_cg: bool, has_msm_perf: bool) -> KernelFlavor {
+    fn detect_flavor(
+        release: &str,
+        cgroup_v2: bool,
+        has_uclamp_cg: bool,
+        has_msm_perf: bool,
+    ) -> KernelFlavor {
         if has_gki_release_format(release) {
             return KernelFlavor::Gki;
         }
@@ -162,7 +170,11 @@ impl Topology {
                     .unwrap_or(false)
             })
             .collect();
-        names.sort_by_key(|n| n.trim_start_matches("policy").parse::<u32>().unwrap_or(u32::MAX));
+        names.sort_by_key(|n| {
+            n.trim_start_matches("policy")
+                .parse::<u32>()
+                .unwrap_or(u32::MAX)
+        });
 
         for name in names {
             let base = format!("/sys/devices/system/cpu/cpufreq/{name}");
@@ -177,11 +189,23 @@ impl Topology {
             if max_hw > 0 && min_hw > max_hw {
                 continue;
             }
-            let mut cpus = s.read(&format!("{base}/related_cpus")).map(|v| crate::workload::parse_cpu_list(&v)).unwrap_or_default();
+            let mut cpus = s
+                .read(&format!("{base}/related_cpus"))
+                .map(|v| crate::workload::parse_cpu_list(&v))
+                .unwrap_or_default();
             if cpus.is_empty() {
-                cpus = s.read(&format!("{base}/affected_cpus")).map(|v| crate::workload::parse_cpu_list(&v)).unwrap_or_default();
+                cpus = s
+                    .read(&format!("{base}/affected_cpus"))
+                    .map(|v| crate::workload::parse_cpu_list(&v))
+                    .unwrap_or_default();
             }
-            out.push(Policy { name, avail, min_hw, max_hw, cpus });
+            out.push(Policy {
+                name,
+                avail,
+                min_hw,
+                max_hw,
+                cpus,
+            });
         }
         out
     }
@@ -190,7 +214,11 @@ impl Topology {
         let kgsl = "/sys/class/kgsl/kgsl-3d0/devfreq";
         if s.exists(&format!("{kgsl}/max_freq")) {
             let avail = s.read_u64_list(&format!("{kgsl}/available_frequencies"));
-            return Some(GpuNode { provider: GpuProvider::Kgsl, devfreq: kgsl.to_string(), avail });
+            return Some(GpuNode {
+                provider: GpuProvider::Kgsl,
+                devfreq: kgsl.to_string(),
+                avail,
+            });
         }
 
         let mut candidates = Vec::new();
@@ -210,7 +238,11 @@ impl Topology {
                 continue;
             }
             let avail = s.read_u64_list(&format!("{devfreq}/available_frequencies"));
-            candidates.push(GpuNode { provider, devfreq, avail });
+            candidates.push(GpuNode {
+                provider,
+                devfreq,
+                avail,
+            });
         }
         candidates.sort_by_key(|g| match g.provider {
             GpuProvider::Mali => 0,
@@ -230,7 +262,10 @@ fn has_gki_release_format(release: &str) -> bool {
     let mut nums = version.split('.');
     let version_ok = [nums.next(), nums.next(), nums.next()]
         .into_iter()
-        .all(|v| v.map(|x| !x.is_empty() && x.bytes().all(|b| b.is_ascii_digit())).unwrap_or(false))
+        .all(|v| {
+            v.map(|x| !x.is_empty() && x.bytes().all(|b| b.is_ascii_digit()))
+                .unwrap_or(false)
+        })
         && nums.next().is_none();
     let android_num = android.strip_prefix("android").unwrap_or_default();
     let android_ok = !android_num.is_empty() && android_num.bytes().all(|b| b.is_ascii_digit());
@@ -244,7 +279,9 @@ fn parse_kver(release: &str) -> Option<(u32, u32)> {
 }
 
 fn kernel_generation(release: &str) -> String {
-    let Some((major, minor)) = parse_kver(release) else { return "unknown".into(); };
+    let Some((major, minor)) = parse_kver(release) else {
+        return "unknown".into();
+    };
     match (major, minor) {
         (4, 14) => "4.14".into(),
         (4, 19) => "4.19".into(),
@@ -287,8 +324,14 @@ mod tests {
 
     #[test]
     fn vendor_kernel_is_not_promoted_to_gki_by_heuristics() {
-        assert_eq!(Topology::detect_flavor("6.1.99-oem", true, true, false), KernelFlavor::Unknown);
-        assert_eq!(Topology::detect_flavor("4.19.325-vendor", false, false, true), KernelFlavor::NonGki);
+        assert_eq!(
+            Topology::detect_flavor("6.1.99-oem", true, true, false),
+            KernelFlavor::Unknown
+        );
+        assert_eq!(
+            Topology::detect_flavor("4.19.325-vendor", false, false, true),
+            KernelFlavor::NonGki
+        );
     }
 
     #[test]
@@ -297,18 +340,44 @@ mod tests {
         w(&r, "/proc/sys/kernel/osrelease", "6.6.1-oem");
         w(&r, "/dev/props/ro.board.platform", "mt6893");
         w(&r, "/sys/class/devfreq/1-gpu/max_freq", "1000000");
-        w(&r, "/sys/class/devfreq/1-gpu/available_frequencies", "500000 1000000");
-        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_min_freq", "500000");
-        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq", "1800000");
-        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/scaling_available_frequencies", "500000 1800000");
-        w(&r, "/sys/devices/system/cpu/cpufreq/policy0/related_cpus", "0-3");
+        w(
+            &r,
+            "/sys/class/devfreq/1-gpu/available_frequencies",
+            "500000 1000000",
+        );
+        w(
+            &r,
+            "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_min_freq",
+            "500000",
+        );
+        w(
+            &r,
+            "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq",
+            "1800000",
+        );
+        w(
+            &r,
+            "/sys/devices/system/cpu/cpufreq/policy0/scaling_available_frequencies",
+            "500000 1800000",
+        );
+        w(
+            &r,
+            "/sys/devices/system/cpu/cpufreq/policy0/related_cpus",
+            "0-3",
+        );
         w(&r, "/sys/class/thermal/thermal_zone0/type", "mtktscpu");
         w(&r, "/sys/class/thermal/thermal_zone0/temp", "42000");
         let t = Topology::detect(&Sysroot::new(&r));
         assert_eq!(t.identity.vendor.as_str(), "mediatek");
-        assert_eq!(t.gpu.as_ref().unwrap().provider, GpuProvider::GenericDevfreq);
+        assert_eq!(
+            t.gpu.as_ref().unwrap().provider,
+            GpuProvider::GenericDevfreq
+        );
         assert_eq!(t.thermal_zones.len(), 1);
-        assert_eq!(t.thermal_zones[0].provider, crate::platform::ThermalProvider::MediaTek);
+        assert_eq!(
+            t.thermal_zones[0].provider,
+            crate::platform::ThermalProvider::MediaTek
+        );
         assert_eq!(t.performance_cpus(), vec![0, 1, 2, 3]);
         let _ = fs::remove_dir_all(r);
     }

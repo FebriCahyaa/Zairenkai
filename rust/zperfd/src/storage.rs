@@ -9,10 +9,20 @@
 use crate::inventory::{Inventory, StorageInfo};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Kind { Ufs, Emmc, Sd, Generic }
+pub enum Kind {
+    Ufs,
+    Emmc,
+    Sd,
+    Generic,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Health { Good, Warning, Critical, Unknown }
+pub enum Health {
+    Good,
+    Warning,
+    Critical,
+    Unknown,
+}
 
 pub fn kind(s: &StorageInfo) -> Kind {
     match s.kind.as_str() {
@@ -41,7 +51,12 @@ pub fn queue_tuning_allowed(s: &StorageInfo) -> bool {
 pub fn safe_block_devices(s: &crate::nodes::Sysroot) -> Vec<String> {
     let mut out = Vec::new();
     for name in s.list_dir("/sys/block") {
-        if name.starts_with("loop") || name.starts_with("ram") || name.starts_with("zram") || name.starts_with("dm-") || name.starts_with("sr") {
+        if name.starts_with("loop")
+            || name.starts_with("ram")
+            || name.starts_with("zram")
+            || name.starts_with("dm-")
+            || name.starts_with("sr")
+        {
             continue;
         }
         let base = format!("/sys/block/{name}");
@@ -61,7 +76,10 @@ pub fn safe_block_devices(s: &crate::nodes::Sysroot) -> Vec<String> {
 }
 
 pub fn safe_devices(inv: &Inventory) -> usize {
-    inv.storage.iter().filter(|s| queue_tuning_allowed(s)).count()
+    inv.storage
+        .iter()
+        .filter(|s| queue_tuning_allowed(s))
+        .count()
 }
 
 #[cfg(test)]
@@ -69,7 +87,17 @@ mod tests {
     use super::*;
 
     fn storage(kind: &str, health: &str) -> StorageInfo {
-        StorageInfo { name: "sda".into(), kind: kind.into(), kind_evidence: "test".into(), model: None, size_bytes: None, scheduler: None, read_ahead_kb: None, health: health.into(), health_evidence: "test".into() }
+        StorageInfo {
+            name: "sda".into(),
+            kind: kind.into(),
+            kind_evidence: "test".into(),
+            model: None,
+            size_bytes: None,
+            scheduler: None,
+            read_ahead_kb: None,
+            health: health.into(),
+            health_evidence: "test".into(),
+        }
     }
 
     #[test]

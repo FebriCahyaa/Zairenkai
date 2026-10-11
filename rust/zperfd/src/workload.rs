@@ -24,10 +24,12 @@ pub enum ThreadClass {
     Other,
 }
 
-
 impl ThreadClass {
     pub fn performance_candidate(self) -> bool {
-        matches!(self, Self::Main | Self::Render | Self::Game | Self::Audio | Self::Worker)
+        matches!(
+            self,
+            Self::Main | Self::Render | Self::Game | Self::Audio | Self::Worker
+        )
     }
 }
 
@@ -68,7 +70,9 @@ pub struct WorkloadSnapshot {
 
 impl WorkloadSnapshot {
     pub fn top_thread_util_pct(&self) -> f64 {
-        self.threads.first().map_or(0.0, |thread| thread.cpu_util_pct)
+        self.threads
+            .first()
+            .map_or(0.0, |thread| thread.cpu_util_pct)
     }
 
     pub fn render_util_pct(&self) -> f64 {
@@ -106,7 +110,9 @@ pub struct WorkloadAnalyzer {
 }
 
 impl Default for WorkloadAnalyzer {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WorkloadAnalyzer {
@@ -144,7 +150,11 @@ impl WorkloadAnalyzer {
         if package.is_empty() {
             return None;
         }
-        let pid = if self.cached_pid.as_ref().is_some_and(|(cached, pid)| cached == package && process_matches(s, *pid, package)) {
+        let pid = if self
+            .cached_pid
+            .as_ref()
+            .is_some_and(|(cached, pid)| cached == package && process_matches(s, *pid, package))
+        {
             self.cached_pid.as_ref().map(|(_, pid)| *pid)?
         } else {
             let pid = find_package_pid(s, package)?;
@@ -176,21 +186,23 @@ impl WorkloadAnalyzer {
                 start_time_ticks: process_stat.start_time_ticks,
             },
         );
-        let process_delta = process_delta.filter(|counter| counter.start_time_ticks == process_stat.start_time_ticks);
-        let process_util = delta_util(
-            process_delta,
-            process_stat.ticks,
-            elapsed,
-            self.clk_tck,
-        );
+        let process_delta = process_delta
+            .filter(|counter| counter.start_time_ticks == process_stat.start_time_ticks);
+        let process_util = delta_util(process_delta, process_stat.ticks, elapsed, self.clk_tck);
 
         let mut threads = Vec::new();
         let task_dir = format!("/proc/{pid}/task");
         for tid_s in s.list_dir(&task_dir) {
-            let Ok(tid) = tid_s.parse::<i32>() else { continue };
-            if tid <= 0 { continue; }
+            let Ok(tid) = tid_s.parse::<i32>() else {
+                continue;
+            };
+            if tid <= 0 {
+                continue;
+            }
             let stat_path = format!("{task_dir}/{tid}/stat");
-            let Some(stat) = read_stat(s, &stat_path) else { continue };
+            let Some(stat) = read_stat(s, &stat_path) else {
+                continue;
+            };
             let name = s
                 .read(&format!("{task_dir}/{tid}/comm"))
                 .unwrap_or_else(|| stat.name.clone());
@@ -220,7 +232,9 @@ impl WorkloadAnalyzer {
         }
 
         threads.sort_by(|a, b| {
-            b.cpu_util_pct.partial_cmp(&a.cpu_util_pct).unwrap_or(Ordering::Equal)
+            b.cpu_util_pct
+                .partial_cmp(&a.cpu_util_pct)
+                .unwrap_or(Ordering::Equal)
         });
         let top_threads = threads.iter().take(8).map(|t| t.tid).collect::<Vec<_>>();
         let confidence = if !threads.is_empty() { 90 } else { 55 };
@@ -229,18 +243,18 @@ impl WorkloadAnalyzer {
         let rss_kb = read_rss_kb(s, pid);
         let io_read_bps = elapsed_bps(process_delta.map(|c| c.io_read), process_io.0, elapsed);
         let io_write_bps = elapsed_bps(process_delta.map(|c| c.io_write), process_io.1, elapsed);
-        let run_queue_delay_ms = elapsed_delta_ms(
-            process_delta.map(|c| c.run_delay_ns),
-            process_run_delay,
-        );
+        let run_queue_delay_ms =
+            elapsed_delta_ms(process_delta.map(|c| c.run_delay_ns), process_run_delay);
 
         // Remove stale thread entries from the previous process incarnation.
         // Keeping this bounded is important on long-running daemons.
         if self.thread_last.len() > 4096 {
-            self.thread_last.retain(|tid, _| s.exists(&format!("/proc/{tid}")));
+            self.thread_last
+                .retain(|tid, _| s.exists(&format!("/proc/{tid}")));
         }
         if self.process_last.len() > 128 {
-            self.process_last.retain(|pid, _| s.exists(&format!("/proc/{pid}")));
+            self.process_last
+                .retain(|pid, _| s.exists(&format!("/proc/{pid}")));
         }
 
         Some(WorkloadSnapshot {
@@ -271,9 +285,15 @@ struct ProcStat {
 fn find_package_pid(s: &Sysroot, package: &str) -> Option<i32> {
     let mut best = None;
     for entry in s.list_dir("/proc") {
-        let Ok(pid) = entry.parse::<i32>() else { continue };
-        if pid <= 0 { continue; }
-        let Some(cmd) = s.read(&format!("/proc/{pid}/cmdline")) else { continue; };
+        let Ok(pid) = entry.parse::<i32>() else {
+            continue;
+        };
+        if pid <= 0 {
+            continue;
+        }
+        let Some(cmd) = s.read(&format!("/proc/{pid}/cmdline")) else {
+            continue;
+        };
         let first = cmd.split('\0').next().unwrap_or_default();
         let name = first.rsplit('/').next().unwrap_or(first);
         if first == package || name == package || first.starts_with(&format!("{package}:")) {
@@ -286,7 +306,9 @@ fn find_package_pid(s: &Sysroot, package: &str) -> Option<i32> {
 }
 
 fn process_matches(s: &Sysroot, pid: i32, package: &str) -> bool {
-    let Some(cmd) = s.read(&format!("/proc/{pid}/cmdline")) else { return false; };
+    let Some(cmd) = s.read(&format!("/proc/{pid}/cmdline")) else {
+        return false;
+    };
     let first = cmd.split('\0').next().unwrap_or_default();
     let name = first.rsplit('/').next().unwrap_or(first);
     first == package || name == package || first.starts_with(&format!("{package}:"))
@@ -296,7 +318,10 @@ fn read_stat(s: &Sysroot, path: &str) -> Option<ProcStat> {
     let text = s.read(path)?;
     let close = text.rfind(") ")?;
     let name = text.get(1..close)?.to_string();
-    let fields = text.get(close + 2..)?.split_whitespace().collect::<Vec<_>>();
+    let fields = text
+        .get(close + 2..)?
+        .split_whitespace()
+        .collect::<Vec<_>>();
     // fields[0] = state (field #3), fields[11]/[12] = utime/stime (#14/#15).
     let utime = fields.get(11)?.parse::<u64>().ok()?;
     let stime = fields.get(12)?.parse::<u64>().ok()?;
@@ -326,15 +351,21 @@ fn read_rss_kb(s: &Sysroot, pid: i32) -> Option<u64> {
     let statm = s.read(&format!("/proc/{pid}/statm"))?;
     let rss_pages = statm.split_whitespace().nth(1)?.parse::<u64>().ok()?;
     let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
-    if page_size <= 0 { return None; }
+    if page_size <= 0 {
+        return None;
+    }
     Some(rss_pages.saturating_mul(page_size as u64) / 1024)
 }
 
 fn delta_util(prev: Option<Counter>, current_ticks: u64, elapsed: Duration, clk_tck: f64) -> f64 {
-    let Some(prev) = prev else { return 0.0; };
+    let Some(prev) = prev else {
+        return 0.0;
+    };
     let delta = current_ticks.saturating_sub(prev.ticks) as f64;
     let secs = elapsed.as_secs_f64();
-    if secs <= 0.000_001 { return 0.0; }
+    if secs <= 0.000_001 {
+        return 0.0;
+    }
     (delta / clk_tck / secs * 100.0).clamp(0.0, 800.0)
 }
 
@@ -350,7 +381,9 @@ fn read_schedstat(s: &Sysroot, pid: i32) -> Option<u64> {
 fn elapsed_bps(prev: Option<u64>, current: u64, elapsed: Duration) -> Option<u64> {
     let prev = prev?;
     let secs = elapsed.as_secs_f64();
-    if secs <= 0.000_001 { return None; }
+    if secs <= 0.000_001 {
+        return None;
+    }
     Some((current.saturating_sub(prev) as f64 / secs) as u64)
 }
 
@@ -358,11 +391,19 @@ pub fn parse_cpu_list(input: &str) -> Vec<usize> {
     let mut out = Vec::new();
     for token in input.trim().split(',') {
         let token = token.trim();
-        if token.is_empty() { continue; }
+        if token.is_empty() {
+            continue;
+        }
         if let Some((a, b)) = token.split_once('-') {
-            let Ok(a) = a.trim().parse::<usize>() else { continue };
-            let Ok(b) = b.trim().parse::<usize>() else { continue };
-            for cpu in a..=b.min(a.saturating_add(255)) { out.push(cpu); }
+            let Ok(a) = a.trim().parse::<usize>() else {
+                continue;
+            };
+            let Ok(b) = b.trim().parse::<usize>() else {
+                continue;
+            };
+            for cpu in a..=b.min(a.saturating_add(255)) {
+                out.push(cpu);
+            }
         } else if let Ok(cpu) = token.parse::<usize>() {
             out.push(cpu);
         }
@@ -387,7 +428,9 @@ fn read_gpu_util(s: &Sysroot, devfreq_path: &str) -> Option<f64> {
                 if let Some(second) = fields.get(1).and_then(|v| v.parse::<f64>().ok()) {
                     if second > 0.0 && first <= second {
                         let pct = first / second * 100.0;
-                        if pct.is_finite() && (0.0..=100.0).contains(&pct) { return Some(pct); }
+                        if pct.is_finite() && (0.0..=100.0).contains(&pct) {
+                            return Some(pct);
+                        }
                     }
                 }
             }
@@ -410,12 +453,21 @@ fn classify_thread(name: &str) -> ThreadClass {
     if n == "main" || n.ends_with("main") || n.contains("choreographer") {
         return ThreadClass::Main;
     }
-    if n.contains("renderthread") || n.contains("hwui") || n.contains("glthread")
-        || n.contains("surface") || n.contains("rhi") || n.contains("renderer") {
+    if n.contains("renderthread")
+        || n.contains("hwui")
+        || n.contains("glthread")
+        || n.contains("surface")
+        || n.contains("rhi")
+        || n.contains("renderer")
+    {
         return ThreadClass::Render;
     }
-    if n.contains("gamethread") || n.contains("unity") || n.contains("ue4")
-        || n.contains("unreal") || n.contains("game") {
+    if n.contains("gamethread")
+        || n.contains("unity")
+        || n.contains("ue4")
+        || n.contains("unreal")
+        || n.contains("game")
+    {
         return ThreadClass::Game;
     }
     if n.contains("audio") || n.contains("sound") || n.contains("opensl") {
@@ -452,7 +504,10 @@ mod tests {
         let _ = std::fs::remove_dir_all(&r);
         std::fs::create_dir_all(r.join("sys/gpu")).unwrap();
         std::fs::write(r.join("sys/gpu/load"), "70 100").unwrap();
-        assert_eq!(super::read_gpu_util(&crate::nodes::Sysroot::new(&r), "/sys/gpu"), Some(70.0));
+        assert_eq!(
+            super::read_gpu_util(&crate::nodes::Sysroot::new(&r), "/sys/gpu"),
+            Some(70.0)
+        );
         let _ = std::fs::remove_dir_all(r);
     }
 }

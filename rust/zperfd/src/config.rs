@@ -36,12 +36,20 @@ pub struct Meta {
 
 impl Default for Meta {
     fn default() -> Self {
-        Meta { name: default_name(), soc: String::new(), default_mode: default_mode() }
+        Meta {
+            name: default_name(),
+            soc: String::new(),
+            default_mode: default_mode(),
+        }
     }
 }
 
-fn default_name() -> String { "generic".into() }
-fn default_mode() -> String { "balance".into() }
+fn default_name() -> String {
+    "generic".into()
+}
+fn default_mode() -> String {
+    "balance".into()
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AdaptiveConfig {
@@ -98,18 +106,42 @@ impl Default for AdaptiveConfig {
     }
 }
 
-fn default_true() -> bool { true }
-fn default_frame_budget_ms() -> f64 { 16.666_667 }
-fn default_max_extra_boost() -> u32 { 35 }
-fn default_jank_threshold() -> u32 { 8 }
-fn default_engage_windows() -> u8 { 2 }
-fn default_release_windows() -> u8 { 3 }
-fn default_frame_probe_ms() -> u32 { 900 }
-fn default_frame_source() -> String { "surfaceflinger".into() }
-fn default_interaction_boost_pct() -> u32 { 15 }
-fn default_interaction_boost_ms() -> u32 { 120 }
-fn default_interaction_hold_ms() -> u32 { 180 }
-fn default_input_scan_ms() -> u32 { 20 }
+fn default_true() -> bool {
+    true
+}
+fn default_frame_budget_ms() -> f64 {
+    16.666_667
+}
+fn default_max_extra_boost() -> u32 {
+    35
+}
+fn default_jank_threshold() -> u32 {
+    8
+}
+fn default_engage_windows() -> u8 {
+    2
+}
+fn default_release_windows() -> u8 {
+    3
+}
+fn default_frame_probe_ms() -> u32 {
+    900
+}
+fn default_frame_source() -> String {
+    "surfaceflinger".into()
+}
+fn default_interaction_boost_pct() -> u32 {
+    15
+}
+fn default_interaction_boost_ms() -> u32 {
+    120
+}
+fn default_interaction_hold_ms() -> u32 {
+    180
+}
+fn default_input_scan_ms() -> u32 {
+    20
+}
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Mode {
@@ -188,18 +220,32 @@ impl Profile {
 
 impl Profile {
     pub fn validate(&self) -> Result<(), String> {
-        if self.meta.name.trim().is_empty() || self.meta.name.len() > 64 { return Err("invalid profile name".into()); }
-        if self.meta.default_mode.is_empty() || !self.mode.contains_key(&self.meta.default_mode) {
-            return Err(format!("default_mode '{}' has no matching mode", self.meta.default_mode));
+        if self.meta.name.trim().is_empty() || self.meta.name.len() > 64 {
+            return Err("invalid profile name".into());
         }
-        if self.mode.is_empty() { return Err("profile has no modes".into()); }
+        if self.meta.default_mode.is_empty() || !self.mode.contains_key(&self.meta.default_mode) {
+            return Err(format!(
+                "default_mode '{}' has no matching mode",
+                self.meta.default_mode
+            ));
+        }
+        if self.mode.is_empty() {
+            return Err("profile has no modes".into());
+        }
         for (name, mode) in &self.mode {
-            if name.is_empty() || name.len() > 32 || !name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-')) {
+            if name.is_empty()
+                || name.len() > 32
+                || !name
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
+            {
                 return Err(format!("invalid mode name '{name}'"));
             }
             mode.validate()?;
         }
-        if !self.adaptive.frame_budget_ms.is_finite() || !(4.0..=100.0).contains(&self.adaptive.frame_budget_ms) {
+        if !self.adaptive.frame_budget_ms.is_finite()
+            || !(4.0..=100.0).contains(&self.adaptive.frame_budget_ms)
+        {
             return Err("adaptive.frame_budget_ms must be finite and 4..100ms".into());
         }
         if self.adaptive.max_extra_boost_pct > 60 {
@@ -208,13 +254,20 @@ impl Profile {
         if self.adaptive.jank_threshold_pct > 100 {
             return Err("adaptive.jank_threshold_pct must be 0..100".into());
         }
-        if self.adaptive.engage_windows == 0 || self.adaptive.engage_windows > 8 || self.adaptive.release_windows == 0 || self.adaptive.release_windows > 16 {
+        if self.adaptive.engage_windows == 0
+            || self.adaptive.engage_windows > 8
+            || self.adaptive.release_windows == 0
+            || self.adaptive.release_windows > 16
+        {
             return Err("adaptive window counts are out of range".into());
         }
         if !(250..=5_000).contains(&self.adaptive.frame_probe_ms) {
             return Err("adaptive.frame_probe_ms must be 250..5000ms".into());
         }
-        if !matches!(self.adaptive.frame_source.as_str(), "auto" | "surfaceflinger" | "gfxinfo") {
+        if !matches!(
+            self.adaptive.frame_source.as_str(),
+            "auto" | "surfaceflinger" | "gfxinfo"
+        ) {
             return Err("adaptive.frame_source must be auto, surfaceflinger, or gfxinfo".into());
         }
         if self.adaptive.interaction_boost_pct > 35 {
@@ -230,9 +283,16 @@ impl Profile {
             return Err("adaptive.input_scan_ms must be 5..250ms".into());
         }
         for (pkg, mode) in &self.perapp {
-            let valid = pkg.split('.').count() >= 2 && pkg.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_');
-            if !valid || pkg.len() > 255 { return Err(format!("invalid package '{pkg}'")); }
-            if !self.mode.contains_key(mode) { return Err(format!("perapp '{pkg}' references unknown mode '{mode}'")); }
+            let valid = pkg.split('.').count() >= 2
+                && pkg
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_');
+            if !valid || pkg.len() > 255 {
+                return Err(format!("invalid package '{pkg}'"));
+            }
+            if !self.mode.contains_key(mode) {
+                return Err(format!("perapp '{pkg}' references unknown mode '{mode}'"));
+            }
         }
         Ok(())
     }
@@ -240,17 +300,53 @@ impl Profile {
 
 impl Mode {
     pub fn validate(&self) -> Result<(), String> {
-        let pct = |v: Option<u32>, n: &str| -> Result<(), String> { if v.unwrap_or(0) > 100 { Err(format!("{n} must be 0..100")) } else { Ok(()) } };
-        pct(self.cpu.min_perf_pct, "cpu.min_perf_pct")?; pct(self.cpu.max_perf_pct, "cpu.max_perf_pct")?;
-        pct(self.cpu.uclamp_min_pct, "cpu.uclamp_min_pct")?; pct(self.cpu.uclamp_max_pct, "cpu.uclamp_max_pct")?;
-        pct(self.cpu.input_boost_pct, "cpu.input_boost_pct")?; pct(self.gpu.min_perf_pct, "gpu.min_perf_pct")?; pct(self.gpu.max_perf_pct, "gpu.max_perf_pct")?;
-        if let (Some(a), Some(b)) = (self.cpu.uclamp_min_pct, self.cpu.uclamp_max_pct) { if a > b { return Err("uclamp_min_pct > uclamp_max_pct".into()); } }
-        if self.cpu.input_boost_ms.unwrap_or(0) > 10_000 { return Err("input_boost_ms too large".into()); }
-        if !(-100..=100).contains(&self.cpu.sched_boost.unwrap_or(0)) { return Err("sched_boost must be -100..100".into()); }
-        if self.mem.swappiness.unwrap_or(0) > 200 || self.mem.vfs_cache_pressure.unwrap_or(0) > 1000 { return Err("memory value out of safe range".into()); }
-        if self.io.read_ahead_kb.unwrap_or(0) > 4096 || self.io.nr_requests.map(|v| v == 0 || v > 4096).unwrap_or(false) { return Err("io value out of safe range".into()); }
+        let pct = |v: Option<u32>, n: &str| -> Result<(), String> {
+            if v.unwrap_or(0) > 100 {
+                Err(format!("{n} must be 0..100"))
+            } else {
+                Ok(())
+            }
+        };
+        pct(self.cpu.min_perf_pct, "cpu.min_perf_pct")?;
+        pct(self.cpu.max_perf_pct, "cpu.max_perf_pct")?;
+        pct(self.cpu.uclamp_min_pct, "cpu.uclamp_min_pct")?;
+        pct(self.cpu.uclamp_max_pct, "cpu.uclamp_max_pct")?;
+        pct(self.cpu.input_boost_pct, "cpu.input_boost_pct")?;
+        pct(self.gpu.min_perf_pct, "gpu.min_perf_pct")?;
+        pct(self.gpu.max_perf_pct, "gpu.max_perf_pct")?;
+        if let (Some(a), Some(b)) = (self.cpu.uclamp_min_pct, self.cpu.uclamp_max_pct) {
+            if a > b {
+                return Err("uclamp_min_pct > uclamp_max_pct".into());
+            }
+        }
+        if self.cpu.input_boost_ms.unwrap_or(0) > 10_000 {
+            return Err("input_boost_ms too large".into());
+        }
+        if !(-100..=100).contains(&self.cpu.sched_boost.unwrap_or(0)) {
+            return Err("sched_boost must be -100..100".into());
+        }
+        if self.mem.swappiness.unwrap_or(0) > 200 || self.mem.vfs_cache_pressure.unwrap_or(0) > 1000
+        {
+            return Err("memory value out of safe range".into());
+        }
+        if self.io.read_ahead_kb.unwrap_or(0) > 4096
+            || self
+                .io
+                .nr_requests
+                .map(|v| v == 0 || v > 4096)
+                .unwrap_or(false)
+        {
+            return Err("io value out of safe range".into());
+        }
         for list in [&self.cpu.governor, &self.gpu.governor, &self.io.scheduler] {
-            if list.len() > 16 || list.iter().any(|x| x.is_empty() || x.len() > 64 || x.chars().any(|c| c.is_whitespace() || c == '/' || c == '\\')) {
+            if list.len() > 16
+                || list.iter().any(|x| {
+                    x.is_empty()
+                        || x.len() > 64
+                        || x.chars()
+                            .any(|c| c.is_whitespace() || c == '/' || c == '\\')
+                })
+            {
                 return Err("invalid candidate list".into());
             }
         }
@@ -258,7 +354,9 @@ impl Mode {
     }
 }
 
-pub fn uclamp_from_pct(pct: u32) -> u32 { ((pct.min(100) as u64 * 1024 + 50) / 100) as u32 }
+pub fn uclamp_from_pct(pct: u32) -> u32 {
+    ((pct.min(100) as u64 * 1024 + 50) / 100) as u32
+}
 
 /// Resolve a [FreqSpec] against a device's available-frequency table (kHz,
 /// sorted ascending). The result is snapped to a real OPP: for a ceiling we
@@ -295,7 +393,9 @@ fn parse_freq_str(s: &str, lo: u64, hi: u64) -> Option<u64> {
     }
     if let Some(p) = t.strip_suffix('%') {
         let pct: f64 = p.trim().parse().ok()?;
-        if !pct.is_finite() || !(0.0..=100.0).contains(&pct) { return None; }
+        if !pct.is_finite() || !(0.0..=100.0).contains(&pct) {
+            return None;
+        }
         return Some(((hi as f64) * pct / 100.0) as u64);
     }
     // max-relative, e.g. "-300MHz"
@@ -316,17 +416,23 @@ fn parse_unit_khz(body: &str) -> Option<u64> {
     let b = body.trim().to_ascii_lowercase();
     if let Some(v) = b.strip_suffix("ghz") {
         let f: f64 = v.trim().parse().ok()?;
-        if !f.is_finite() || f < 0.0 { return None; }
+        if !f.is_finite() || f < 0.0 {
+            return None;
+        }
         return Some((f * 1_000_000.0) as u64);
     }
     if let Some(v) = b.strip_suffix("mhz") {
         let f: f64 = v.trim().parse().ok()?;
-        if !f.is_finite() || f < 0.0 { return None; }
+        if !f.is_finite() || f < 0.0 {
+            return None;
+        }
         return Some((f * 1_000.0) as u64);
     }
     if let Some(v) = b.strip_suffix("khz") {
         let f: f64 = v.trim().parse().ok()?;
-        if !f.is_finite() || f < 0.0 { return None; }
+        if !f.is_finite() || f < 0.0 {
+            return None;
+        }
         return Some(f as u64);
     }
     b.parse().ok()
@@ -335,10 +441,19 @@ fn parse_unit_khz(body: &str) -> Option<u64> {
 fn snap(target: u64, avail_asc: &[u64], is_floor: bool) -> u64 {
     if is_floor {
         // lowest OPP >= target, else the highest OPP
-        avail_asc.iter().copied().find(|&f| f >= target).unwrap_or(*avail_asc.last().unwrap())
+        avail_asc
+            .iter()
+            .copied()
+            .find(|&f| f >= target)
+            .unwrap_or(*avail_asc.last().unwrap())
     } else {
         // highest OPP <= target, else the lowest OPP
-        avail_asc.iter().copied().rev().find(|&f| f <= target).unwrap_or(*avail_asc.first().unwrap())
+        avail_asc
+            .iter()
+            .copied()
+            .rev()
+            .find(|&f| f <= target)
+            .unwrap_or(*avail_asc.first().unwrap())
     }
 }
 
@@ -350,39 +465,63 @@ mod tests {
 
     #[test]
     fn keywords() {
-        assert_eq!(resolve_freq(&FreqSpec::Spec("min".into()), AVAIL, false), Some(300000));
-        assert_eq!(resolve_freq(&FreqSpec::Spec("max".into()), AVAIL, false), Some(2400000));
+        assert_eq!(
+            resolve_freq(&FreqSpec::Spec("min".into()), AVAIL, false),
+            Some(300000)
+        );
+        assert_eq!(
+            resolve_freq(&FreqSpec::Spec("max".into()), AVAIL, false),
+            Some(2400000)
+        );
     }
 
     #[test]
     fn percent_and_snap_ceiling() {
         // 80% of 2.4GHz = 1.92GHz -> snap down to 1.8GHz
-        assert_eq!(resolve_freq(&FreqSpec::Spec("80%".into()), AVAIL, false), Some(1800000));
+        assert_eq!(
+            resolve_freq(&FreqSpec::Spec("80%".into()), AVAIL, false),
+            Some(1800000)
+        );
         assert_eq!(resolve_pct(50, AVAIL, false), Some(1200000));
     }
 
     #[test]
     fn units_and_relative() {
-        assert_eq!(resolve_freq(&FreqSpec::Spec("1.8GHz".into()), AVAIL, false), Some(1800000));
-        assert_eq!(resolve_freq(&FreqSpec::Spec("1200MHz".into()), AVAIL, false), Some(1200000));
+        assert_eq!(
+            resolve_freq(&FreqSpec::Spec("1.8GHz".into()), AVAIL, false),
+            Some(1800000)
+        );
+        assert_eq!(
+            resolve_freq(&FreqSpec::Spec("1200MHz".into()), AVAIL, false),
+            Some(1200000)
+        );
         // -600MHz off 2.4GHz = 1.8GHz
-        assert_eq!(resolve_freq(&FreqSpec::Spec("-600MHz".into()), AVAIL, false), Some(1800000));
+        assert_eq!(
+            resolve_freq(&FreqSpec::Spec("-600MHz".into()), AVAIL, false),
+            Some(1800000)
+        );
     }
 
     #[test]
     fn raw_khz_floor() {
         // floor snap: lowest >= 1000000 is 1200000
-        assert_eq!(resolve_freq(&FreqSpec::Khz(1_000_000), AVAIL, true), Some(1200000));
+        assert_eq!(
+            resolve_freq(&FreqSpec::Khz(1_000_000), AVAIL, true),
+            Some(1200000)
+        );
     }
 
     #[test]
     fn adaptive_defaults_are_conservative() {
-        let p = Profile::parse(r#"
+        let p = Profile::parse(
+            r#"
             [meta]
             name = "test"
             default_mode = "balance"
             [mode.balance]
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
         assert!(p.adaptive.enabled);
         assert_eq!(p.adaptive.engage_windows, 2);
         assert_eq!(p.adaptive.release_windows, 3);
@@ -419,7 +558,13 @@ mod tests {
         assert_eq!(p.meta.name, "test");
         assert_eq!(p.meta.default_mode, "balance");
         assert!(p.mode.contains_key("balance"));
-        assert_eq!(p.perapp.get("com.tencent.tmgp.sgame").map(|s| s.as_str()), Some("performance"));
-        assert_eq!(p.mode("performance").unwrap().cpu.input_boost_ms, Some(2000));
+        assert_eq!(
+            p.perapp.get("com.tencent.tmgp.sgame").map(|s| s.as_str()),
+            Some("performance")
+        );
+        assert_eq!(
+            p.mode("performance").unwrap().cpu.input_boost_ms,
+            Some(2000)
+        );
     }
 }

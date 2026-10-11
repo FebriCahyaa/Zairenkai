@@ -150,7 +150,11 @@ impl PlatformIdentity {
             crate::scene::getprops().unwrap_or_default()
         };
         let prop = |key: &str| {
-            props.get(key).cloned().or_else(|| read_prop(s, key)).unwrap_or_default()
+            props
+                .get(key)
+                .cloned()
+                .or_else(|| read_prop(s, key))
+                .unwrap_or_default()
         };
         let platform = prop("ro.board.platform");
         let soc_model = prop("ro.soc.model");
@@ -215,7 +219,11 @@ impl PlatformIdentity {
 }
 
 fn read_prop(s: &Sysroot, key: &str) -> Option<String> {
-    if key.is_empty() || !key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-') {
+    if key.is_empty()
+        || !key
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')
+    {
         return None;
     }
     // Unit tests and offline probing may provide props directly in sysroot.
@@ -227,20 +235,42 @@ fn read_prop(s: &Sysroot, key: &str) -> Option<String> {
 }
 
 fn classify_vendor(corpus: &str) -> SocVendor {
-    if contains_any(corpus, &["google tensor", "tensor gs", "gs101", "gs201", "gs301", "tensor g"])
-        || corpus.contains("google,gs")
+    if contains_any(
+        corpus,
+        &[
+            "google tensor",
+            "tensor gs",
+            "gs101",
+            "gs201",
+            "gs301",
+            "tensor g",
+        ],
+    ) || corpus.contains("google,gs")
     {
         return SocVendor::GoogleTensor;
     }
-    if contains_any(corpus, &["mediatek", "mt6", "mt7", "mt8", "mt9", "dimensity", "helio"]) {
+    if contains_any(
+        corpus,
+        &["mediatek", "mt6", "mt7", "mt8", "mt9", "dimensity", "helio"],
+    ) {
         return SocVendor::MediaTek;
     }
-    if contains_any(corpus, &["samsung,exynos", "exynos", "s5e"])
-        && !corpus.contains("tensor")
-    {
+    if contains_any(corpus, &["samsung,exynos", "exynos", "s5e"]) && !corpus.contains("tensor") {
         return SocVendor::SamsungExynos;
     }
-    if contains_any(corpus, &["qualcomm", "qcom", "sdm", "sm6", "sm7", "sm8", "sm9", "snapdragon"]) {
+    if contains_any(
+        corpus,
+        &[
+            "qualcomm",
+            "qcom",
+            "sdm",
+            "sm6",
+            "sm7",
+            "sm8",
+            "sm9",
+            "snapdragon",
+        ],
+    ) {
         return SocVendor::Qualcomm;
     }
     SocVendor::Unknown
@@ -318,22 +348,52 @@ pub struct ThermalZoneInfo {
 
 pub fn classify_thermal_role(name: &str, ty: &str) -> ThermalRole {
     let low = format!("{} {}", name, ty).to_ascii_lowercase();
-    if contains_any(&low, &["battery", "batt", "charger", "pmic-batt"]) { return ThermalRole::Battery; }
-    if contains_any(&low, &["skin", "surface", "backglass", "shell"]) { return ThermalRole::Skin; }
-    if contains_any(&low, &["gpu", "kgsl", "adreno", "mali", "xclipse", "g3d"]) { return ThermalRole::Gpu; }
-    if contains_any(&low, &["cpu", "cluster", "a7", "a53", "a55", "a7x", "a78", "x1", "x2", "x3", "x4", "cortex"]) { return ThermalRole::Cpu; }
-    if contains_any(&low, &["soc", "package", "tsens", "mtktscpu", "lvts", "exynos", "tensor"]) { return ThermalRole::SoC; }
-    if contains_any(&low, &["ddr", "dram", "memory", "memctl"]) { return ThermalRole::Memory; }
+    if contains_any(&low, &["battery", "batt", "charger", "pmic-batt"]) {
+        return ThermalRole::Battery;
+    }
+    if contains_any(&low, &["skin", "surface", "backglass", "shell"]) {
+        return ThermalRole::Skin;
+    }
+    if contains_any(&low, &["gpu", "kgsl", "adreno", "mali", "xclipse", "g3d"]) {
+        return ThermalRole::Gpu;
+    }
+    if contains_any(
+        &low,
+        &[
+            "cpu", "cluster", "a7", "a53", "a55", "a7x", "a78", "x1", "x2", "x3", "x4", "cortex",
+        ],
+    ) {
+        return ThermalRole::Cpu;
+    }
+    if contains_any(
+        &low,
+        &[
+            "soc", "package", "tsens", "mtktscpu", "lvts", "exynos", "tensor",
+        ],
+    ) {
+        return ThermalRole::SoC;
+    }
+    if contains_any(&low, &["ddr", "dram", "memory", "memctl"]) {
+        return ThermalRole::Memory;
+    }
     ThermalRole::Generic
 }
 
 pub fn classify_thermal(vendor: SocVendor, ty: &str) -> ThermalProvider {
     let low = ty.to_ascii_lowercase();
     match vendor {
-        SocVendor::Qualcomm if contains_any(&low, &["qcom", "msm", "tsens", "pmic"]) => ThermalProvider::Qualcomm,
-        SocVendor::MediaTek if contains_any(&low, &["mtk", "mt6", "mt7", "mt8", "mt9", "lvts"]) => ThermalProvider::MediaTek,
-        SocVendor::SamsungExynos if contains_any(&low, &["exynos", "s5e"]) => ThermalProvider::Exynos,
-        SocVendor::GoogleTensor if contains_any(&low, &["tensor", "gs", "g3", "g4", "g5"]) => ThermalProvider::Tensor,
+        SocVendor::Qualcomm if contains_any(&low, &["qcom", "msm", "tsens", "pmic"]) => {
+            ThermalProvider::Qualcomm
+        }
+        SocVendor::MediaTek if contains_any(&low, &["mtk", "mt6", "mt7", "mt8", "mt9", "lvts"]) => {
+            ThermalProvider::MediaTek
+        }
+        SocVendor::SamsungExynos if contains_any(&low, &["exynos", "s5e"]) => {
+            ThermalProvider::Exynos
+        }
+        SocVendor::GoogleTensor if contains_any(&low, &["tensor", "gs", "g3", "g4", "g5"]) => {
+            ThermalProvider::Tensor
+        }
         _ if !low.is_empty() => ThermalProvider::LinuxThermal,
         _ => ThermalProvider::Unknown,
     }
@@ -352,11 +412,29 @@ fn parse_trip_type(raw: &str) -> ThermalTripType {
 fn scan_trips(s: &Sysroot, base: &str) -> Vec<ThermalTrip> {
     let mut trips = Vec::new();
     for entry in s.list_dir(base) {
-        let Some(index) = entry.strip_prefix("trip_point_").and_then(|x| x.strip_suffix("_temp")) else { continue; };
-        if index.is_empty() || !index.bytes().all(|b| b.is_ascii_digit()) { continue; }
-        let Some(temp) = s.read(&format!("{base}/{entry}")).and_then(|v| v.parse::<i64>().ok()) else { continue; };
-        let kind = s.read(&format!("{base}/trip_point_{index}_type")).map(|v| parse_trip_type(&v)).unwrap_or(ThermalTripType::Unknown);
-        trips.push(ThermalTrip { temp_mdeg: temp, kind });
+        let Some(index) = entry
+            .strip_prefix("trip_point_")
+            .and_then(|x| x.strip_suffix("_temp"))
+        else {
+            continue;
+        };
+        if index.is_empty() || !index.bytes().all(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        let Some(temp) = s
+            .read(&format!("{base}/{entry}"))
+            .and_then(|v| v.parse::<i64>().ok())
+        else {
+            continue;
+        };
+        let kind = s
+            .read(&format!("{base}/trip_point_{index}_type"))
+            .map(|v| parse_trip_type(&v))
+            .unwrap_or(ThermalTripType::Unknown);
+        trips.push(ThermalTrip {
+            temp_mdeg: temp,
+            kind,
+        });
     }
     trips.sort_by_key(|t| t.temp_mdeg);
     trips
@@ -370,7 +448,9 @@ pub fn scan_thermal(s: &Sysroot, vendor: SocVendor) -> Vec<ThermalZoneInfo> {
         }
         let base = format!("/sys/class/thermal/{name}");
         let ty = s.read(&format!("{base}/type")).unwrap_or_default();
-        let temp_mdeg = s.read(&format!("{base}/temp")).and_then(|v| v.parse::<i64>().ok());
+        let temp_mdeg = s
+            .read(&format!("{base}/temp"))
+            .and_then(|v| v.parse::<i64>().ok());
         let role = classify_thermal_role(&name, &ty);
         zones.push(ThermalZoneInfo {
             name,
@@ -406,10 +486,22 @@ mod tests {
 
     #[test]
     fn classifies_known_vendors_from_evidence() {
-        assert_eq!(classify_vendor("qcom,something sm8550"), SocVendor::Qualcomm);
-        assert_eq!(classify_vendor("mediatek mt6893 dimensity"), SocVendor::MediaTek);
-        assert_eq!(classify_vendor("samsung,exynos 2200 s5e9925"), SocVendor::SamsungExynos);
-        assert_eq!(classify_vendor("google gs101 tensor"), SocVendor::GoogleTensor);
+        assert_eq!(
+            classify_vendor("qcom,something sm8550"),
+            SocVendor::Qualcomm
+        );
+        assert_eq!(
+            classify_vendor("mediatek mt6893 dimensity"),
+            SocVendor::MediaTek
+        );
+        assert_eq!(
+            classify_vendor("samsung,exynos 2200 s5e9925"),
+            SocVendor::SamsungExynos
+        );
+        assert_eq!(
+            classify_vendor("google gs101 tensor"),
+            SocVendor::GoogleTensor
+        );
     }
 
     #[test]

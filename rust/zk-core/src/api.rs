@@ -38,12 +38,30 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn ok(request: &Request, message: impl Into<String>, payload: BTreeMap<String, String>) -> Self {
-        Self { api_version: API_VERSION, request_id: request.request_id, ok: true, code: "ok".into(), message: message.into(), payload }
+    pub fn ok(
+        request: &Request,
+        message: impl Into<String>,
+        payload: BTreeMap<String, String>,
+    ) -> Self {
+        Self {
+            api_version: API_VERSION,
+            request_id: request.request_id,
+            ok: true,
+            code: "ok".into(),
+            message: message.into(),
+            payload,
+        }
     }
 
     pub fn error(request_id: u64, code: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { api_version: API_VERSION, request_id, ok: false, code: code.into(), message: message.into(), payload: BTreeMap::new() }
+        Self {
+            api_version: API_VERSION,
+            request_id,
+            ok: false,
+            code: code.into(),
+            message: message.into(),
+            payload: BTreeMap::new(),
+        }
     }
 }
 
@@ -73,13 +91,17 @@ pub fn decode_request(body: &str) -> Result<Request, String> {
 
 pub fn encode_response(response: &Response) -> Result<Vec<u8>, String> {
     let body = toml::to_string(response).map_err(|e| format!("encode response: {e}"))?;
-    if body.len() > MAX_RESPONSE_BYTES { return Err("response exceeds size limit".into()); }
+    if body.len() > MAX_RESPONSE_BYTES {
+        return Err("response exceeds size limit".into());
+    }
     frame(&body, MAX_RESPONSE_BYTES)
 }
 
 fn frame(body: &str, max_bytes: usize) -> Result<Vec<u8>, String> {
     let bytes = body.as_bytes();
-    if bytes.len() > max_bytes { return Err("frame exceeds size limit".into()); }
+    if bytes.len() > max_bytes {
+        return Err("frame exceeds size limit".into());
+    }
     let len = u32::try_from(bytes.len()).map_err(|_| "frame too large")?;
     let mut out = Vec::with_capacity(8 + bytes.len());
     out.extend_from_slice(PROTOCOL_MAGIC);
@@ -96,11 +118,16 @@ mod tests {
     fn request_round_trip_is_bounded() {
         let mut args = BTreeMap::new();
         args.insert("scope".into(), "runtime".into());
-        let request = Request { api_version: API_VERSION, request_id: 42, method: "core.info".into(), args };
+        let request = Request {
+            api_version: API_VERSION,
+            request_id: 42,
+            method: "core.info".into(),
+            args,
+        };
         let framed = encode_request(&request).unwrap();
         assert_eq!(&framed[..4], PROTOCOL_MAGIC);
         let len = u32::from_le_bytes(framed[4..8].try_into().unwrap()) as usize;
-        let parsed = decode_request(std::str::from_utf8(&framed[8..8+len]).unwrap()).unwrap();
+        let parsed = decode_request(std::str::from_utf8(&framed[8..8 + len]).unwrap()).unwrap();
         assert_eq!(parsed, request);
     }
 

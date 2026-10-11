@@ -15,32 +15,52 @@ use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 
-use zairenkai_core::api::{self as protocol, Request, Response, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, PROTOCOL_MAGIC};
+use zairenkai_core::api::{
+    self as protocol, Request, Response, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, PROTOCOL_MAGIC,
+};
 
 use super::Args;
 
 const DEFAULT_SOCKET_NAME: &str = "api.sock";
 
 pub fn run(args: &Args) -> i32 {
-    let socket = args.positional.first().map(PathBuf::from).unwrap_or_else(|| Path::new(&args.state).join(DEFAULT_SOCKET_NAME));
+    let socket = args
+        .positional
+        .first()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| Path::new(&args.state).join(DEFAULT_SOCKET_NAME));
     match serve(args, &socket) {
         Ok(()) => 0,
-        Err(e) => { eprintln!("zperfd api: {e}"); 5 }
+        Err(e) => {
+            eprintln!("zperfd api: {e}");
+            5
+        }
     }
 }
 
 fn serve(args: &Args, socket: &Path) -> Result<(), String> {
-    let parent = socket.parent().ok_or_else(|| "API socket has no parent directory".to_string())?;
+    let parent = socket
+        .parent()
+        .ok_or_else(|| "API socket has no parent directory".to_string())?;
     fs::create_dir_all(parent).map_err(|e| format!("create socket directory: {e}"))?;
-    fs::set_permissions(parent, fs::Permissions::from_mode(0o700)).map_err(|e| format!("chmod socket directory: {e}"))?;
+    fs::set_permissions(parent, fs::Permissions::from_mode(0o700))
+        .map_err(|e| format!("chmod socket directory: {e}"))?;
     if socket.exists() {
-        let metadata = fs::symlink_metadata(socket).map_err(|e| format!("inspect existing socket: {e}"))?;
-        if !metadata.file_type().is_socket() { return Err("refusing to replace a non-socket API path".into()); }
+        let metadata =
+            fs::symlink_metadata(socket).map_err(|e| format!("inspect existing socket: {e}"))?;
+        if !metadata.file_type().is_socket() {
+            return Err("refusing to replace a non-socket API path".into());
+        }
         fs::remove_file(socket).map_err(|e| format!("remove stale socket: {e}"))?;
     }
-    let listener = UnixListener::bind(socket).map_err(|e| format!("bind {}: {e}", socket.display()))?;
-    fs::set_permissions(socket, fs::Permissions::from_mode(0o600)).map_err(|e| format!("chmod socket: {e}"))?;
-    eprintln!("zperfd api: listening on {} (root peer only)", socket.display());
+    let listener =
+        UnixListener::bind(socket).map_err(|e| format!("bind {}: {e}", socket.display()))?;
+    fs::set_permissions(socket, fs::Permissions::from_mode(0o600))
+        .map_err(|e| format!("chmod socket: {e}"))?;
+    eprintln!(
+        "zperfd api: listening on {} (root peer only)",
+        socket.display()
+    );
 
     for stream in listener.incoming() {
         match stream {
@@ -63,39 +83,69 @@ fn serve(args: &Args, socket: &Path) -> Result<(), String> {
 
 fn require_root_peer(stream: &UnixStream) -> Result<(), String> {
     let fd = stream.as_raw_fd();
-    let mut cred = libc::ucred { pid: 0, uid: u32::MAX, gid: u32::MAX };
+    let mut cred = libc::ucred {
+        pid: 0,
+        uid: u32::MAX,
+        gid: u32::MAX,
+    };
     let mut len = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
     let rc = unsafe {
-        libc::getsockopt(fd, libc::SOL_SOCKET, libc::SO_PEERCRED,
-            &mut cred as *mut libc::ucred as *mut libc::c_void, &mut len)
+        libc::getsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            libc::SO_PEERCRED,
+            &mut cred as *mut libc::ucred as *mut libc::c_void,
+            &mut len,
+        )
     };
-    if rc != 0 { return Err(format!("SO_PEERCRED failed: {}", std::io::Error::last_os_error())); }
-    if cred.uid != 0 { return Err(format!("peer uid {} is not root", cred.uid)); }
+    if rc != 0 {
+        return Err(format!(
+            "SO_PEERCRED failed: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    if cred.uid != 0 {
+        return Err(format!("peer uid {} is not root", cred.uid));
+    }
     Ok(())
 }
 
 fn read_frame(stream: &mut UnixStream) -> Result<String, String> {
     let mut header = [0u8; 8];
-    stream.read_exact(&mut header).map_err(|e| format!("read frame header: {e}"))?;
-    if &header[..4] != PROTOCOL_MAGIC { return Err("invalid ZLP magic".into()); }
+    stream
+        .read_exact(&mut header)
+        .map_err(|e| format!("read frame header: {e}"))?;
+    if &header[..4] != PROTOCOL_MAGIC {
+        return Err("invalid ZLP magic".into());
+    }
     let len = u32::from_le_bytes(header[4..8].try_into().unwrap()) as usize;
-    if len == 0 || len > MAX_FRAME_BYTES { return Err(format!("request frame length {len} is invalid")); }
+    if len == 0 || len > MAX_FRAME_BYTES {
+        return Err(format!("request frame length {len} is invalid"));
+    }
     let mut body = vec![0u8; len];
-    stream.read_exact(&mut body).map_err(|e| format!("read frame body: {e}"))?;
+    stream
+        .read_exact(&mut body)
+        .map_err(|e| format!("read frame body: {e}"))?;
     String::from_utf8(body).map_err(|e| format!("request is not UTF-8: {e}"))
 }
 
 fn write_response(stream: &mut UnixStream, response: &Response) -> Result<(), String> {
     let frame = protocol::encode_response(response)?;
-    if frame.len() > MAX_RESPONSE_BYTES + 8 { return Err("response frame too large".into()); }
-    stream.write_all(&frame).map_err(|e| format!("write response: {e}"))
+    if frame.len() > MAX_RESPONSE_BYTES + 8 {
+        return Err("response frame too large".into());
+    }
+    stream
+        .write_all(&frame)
+        .map_err(|e| format!("write response: {e}"))
 }
 
 fn handle(args: &Args, stream: &mut UnixStream) -> Result<(), String> {
     let body = read_frame(stream)?;
     let request = match protocol::decode_request(&body) {
         Ok(v) => v,
-        Err(e) => { return write_response(stream, &Response::error(0, "invalid_request", e)); }
+        Err(e) => {
+            return write_response(stream, &Response::error(0, "invalid_request", e));
+        }
     };
     let response = dispatch(args, &request);
     write_response(stream, &response)
@@ -110,7 +160,9 @@ fn dispatch(args: &Args, request: &Request) -> Response {
         "safety.evaluate" => None,
         "runtime.status" => Some(zairenkai_core::operation::Operation::ReadStatus),
         "thermal.status" => Some(zairenkai_core::operation::Operation::ReadThermal),
-        "property.list" | "property.get" => Some(zairenkai_core::operation::Operation::ReadProperties),
+        "property.list" | "property.get" => {
+            Some(zairenkai_core::operation::Operation::ReadProperties)
+        }
         _ => None,
     };
     if let Some(operation) = required {
@@ -123,7 +175,10 @@ fn dispatch(args: &Args, request: &Request) -> Response {
             let mut p = BTreeMap::new();
             p.insert("core_id".into(), zairenkai_core::CORE_ID.into());
             p.insert("core_name".into(), zairenkai_core::CORE_NAME.into());
-            p.insert("core_api".into(), zairenkai_core::CORE_API_VERSION.to_string());
+            p.insert(
+                "core_api".into(),
+                zairenkai_core::CORE_API_VERSION.to_string(),
+            );
             Response::ok(request, "core information", p)
         }
         "core.permissions" => {
@@ -160,21 +215,51 @@ fn dispatch(args: &Args, request: &Request) -> Response {
             Response::ok(request, "read-only optimization plan", p)
         }
         "safety.evaluate" => {
-            let Some(name) = request.args.get("operation") else { return Response::error(request.request_id, "missing_argument", "operation is required"); };
-            let Some(operation) = super::parse_operation_name(name) else { return Response::error(request.request_id, "invalid_operation", "unsupported operation"); };
-            if super::core_authorize(operation).is_err() { return Response::error(request.request_id, "authority_denied", "core authority denied operation"); }
+            let Some(name) = request.args.get("operation") else {
+                return Response::error(
+                    request.request_id,
+                    "missing_argument",
+                    "operation is required",
+                );
+            };
+            let Some(operation) = super::parse_operation_name(name) else {
+                return Response::error(
+                    request.request_id,
+                    "invalid_operation",
+                    "unsupported operation",
+                );
+            };
+            if super::core_authorize(operation).is_err() {
+                return Response::error(
+                    request.request_id,
+                    "authority_denied",
+                    "core authority denied operation",
+                );
+            }
             let decision = super::sentinel_evaluate(args, operation);
             let mut p = BTreeMap::new();
             p.insert("allowed".into(), decision.allowed.to_string());
             p.insert("class".into(), format!("{:?}", decision.class));
-            p.insert("reasons".into(), decision.reasons.iter().map(|r| format!("{:?}", r)).collect::<Vec<_>>().join(","));
+            p.insert(
+                "reasons".into(),
+                decision
+                    .reasons
+                    .iter()
+                    .map(|r| format!("{:?}", r))
+                    .collect::<Vec<_>>()
+                    .join(","),
+            );
             Response::ok(request, "Sentinel evaluation", p)
         }
         "thermal.status" => thermal_status(args, request),
         "property.list" => property_list(request),
         "property.get" => property_get(request),
         "runtime.status" => runtime_status(args, request),
-        _ => Response::error(request.request_id, "method_not_supported", "method is not available in ZLP v1"),
+        _ => Response::error(
+            request.request_id,
+            "method_not_supported",
+            "method is not available in ZLP v1",
+        ),
     }
 }
 
@@ -186,16 +271,59 @@ fn thermal_status(args: &Args, request: &Request) -> Response {
     let mut p = BTreeMap::new();
     p.insert("band".into(), format!("{:?}", env.band));
     p.insert("boost_permille".into(), env.boost_permille.to_string());
-    p.insert("hottest_mdeg".into(), snap.hottest_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
-    p.insert("control_temp_mdeg".into(), snap.control_temp_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
-    p.insert("performance_trip_mdeg".into(), snap.performance_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
-    p.insert("critical_trip_mdeg".into(), snap.critical_trip_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
-    p.insert("control_zone".into(), snap.control_zone.clone().unwrap_or_else(|| "unknown".into()));
-    p.insert("release_mdeg".into(), snap.release_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
-    p.insert("headroom_mdeg".into(), snap.headroom_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
-    p.insert("headroom_permille".into(), snap.headroom_permille.map(|v| v.to_string()).unwrap_or_else(|| "unknown".into()));
+    p.insert(
+        "hottest_mdeg".into(),
+        snap.hottest_mdeg
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "unknown".into()),
+    );
+    p.insert(
+        "control_temp_mdeg".into(),
+        snap.control_temp_mdeg
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "unknown".into()),
+    );
+    p.insert(
+        "performance_trip_mdeg".into(),
+        snap.performance_trip_mdeg
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "unknown".into()),
+    );
+    p.insert(
+        "critical_trip_mdeg".into(),
+        snap.critical_trip_mdeg
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "unknown".into()),
+    );
+    p.insert(
+        "control_zone".into(),
+        snap.control_zone
+            .clone()
+            .unwrap_or_else(|| "unknown".into()),
+    );
+    p.insert(
+        "release_mdeg".into(),
+        snap.release_mdeg
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "unknown".into()),
+    );
+    p.insert(
+        "headroom_mdeg".into(),
+        snap.headroom_mdeg
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "unknown".into()),
+    );
+    p.insert(
+        "headroom_permille".into(),
+        snap.headroom_permille
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "unknown".into()),
+    );
     p.insert("critical_reached".into(), snap.critical_reached.to_string());
-    p.insert("telemetry_complete".into(), snap.telemetry_complete.to_string());
+    p.insert(
+        "telemetry_complete".into(),
+        snap.telemetry_complete.to_string(),
+    );
     p.insert("external_power".into(), snap.external_power.to_string());
     p.insert("reason".into(), env.reason.into());
     Response::ok(request, "thermal status", p)
@@ -203,22 +331,41 @@ fn thermal_status(args: &Args, request: &Request) -> Response {
 
 fn property_list(request: &Request) -> Response {
     let mut p = BTreeMap::new();
-    p.insert("properties".into(), super::properties::list().map(|s| s.key).collect::<Vec<_>>().join(","));
+    p.insert(
+        "properties".into(),
+        super::properties::list()
+            .map(|s| s.key)
+            .collect::<Vec<_>>()
+            .join(","),
+    );
     Response::ok(request, "property registry", p)
 }
 
 fn property_get(request: &Request) -> Response {
-    let Some(key) = request.args.get("key") else { return Response::error(request.request_id, "missing_argument", "key is required"); };
+    let Some(key) = request.args.get("key") else {
+        return Response::error(request.request_id, "missing_argument", "key is required");
+    };
     match super::properties::get(key) {
-        Ok(value) => { let mut p = BTreeMap::new(); p.insert("key".into(), key.clone()); p.insert("value".into(), value); Response::ok(request, "property value", p) }
+        Ok(value) => {
+            let mut p = BTreeMap::new();
+            p.insert("key".into(), key.clone());
+            p.insert("value".into(), value);
+            Response::ok(request, "property value", p)
+        }
         Err(e) => Response::error(request.request_id, "property_read_failed", e),
     }
 }
 
 fn runtime_status(args: &Args, request: &Request) -> Response {
     let state_dir = Path::new(&args.state);
-    let desired = fs::read_to_string(state_dir.join("mode")).unwrap_or_else(|_| "unknown".into()).trim().to_string();
-    let effective = fs::read_to_string(state_dir.join("effective_mode")).unwrap_or_else(|_| "unknown".into()).trim().to_string();
+    let desired = fs::read_to_string(state_dir.join("mode"))
+        .unwrap_or_else(|_| "unknown".into())
+        .trim()
+        .to_string();
+    let effective = fs::read_to_string(state_dir.join("effective_mode"))
+        .unwrap_or_else(|_| "unknown".into())
+        .trim()
+        .to_string();
     let pending = state_dir.join("transaction.pending").exists();
     let mut p = BTreeMap::new();
     p.insert("desired".into(), desired);
@@ -233,7 +380,19 @@ mod tests {
 
     #[test]
     fn socket_default_stays_inside_state() {
-        let args = Args { cmd: "api".into(), positional: vec![], root: "/".into(), profile: None, state: "/data/adb/zperf".into(), interval_ms: 1500, lite: false, json: false };
-        assert_eq!(Path::new(&args.state).join(DEFAULT_SOCKET_NAME), PathBuf::from("/data/adb/zperf/api.sock"));
+        let args = Args {
+            cmd: "api".into(),
+            positional: vec![],
+            root: "/".into(),
+            profile: None,
+            state: "/data/adb/zperf".into(),
+            interval_ms: 1500,
+            lite: false,
+            json: false,
+        };
+        assert_eq!(
+            Path::new(&args.state).join(DEFAULT_SOCKET_NAME),
+            PathBuf::from("/data/adb/zperf/api.sock")
+        );
     }
 }

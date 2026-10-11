@@ -9,31 +9,31 @@
 mod api;
 mod backends;
 mod catalog;
-mod config;
 mod cgroup;
+mod config;
 mod engine;
 mod family;
+mod fas;
 mod frame;
 mod interaction;
 mod inventory;
-mod fas;
+mod memory;
 mod nodes;
-mod scene_engine;
-mod task_controller;
-mod workload;
 mod optimize;
 mod platform;
-mod scene;
-mod state;
-mod telemetry;
-mod thermal;
-mod memory;
 mod properties;
+mod scene;
+mod scene_engine;
+mod state;
 mod storage;
-mod topo;
-mod tweak;
+mod task_controller;
+mod telemetry;
 #[cfg(test)]
 mod test_support;
+mod thermal;
+mod topo;
+mod tweak;
+mod workload;
 
 use backends::BackendPlan;
 use config::Profile;
@@ -41,16 +41,16 @@ use engine::Engine;
 use nodes::Sysroot;
 use state::StateStore;
 use std::fs::{self, File, OpenOptions};
-use std::path::Path;
 use std::hash::{Hash, Hasher};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use topo::Topology;
-use zkfc_sys::Zkfc;
 use zairenkai_core::authority::authorize;
 use zairenkai_core::capability::CapabilitySet;
 use zairenkai_core::manifest::CoreManifest;
 use zairenkai_core::operation::Operation;
+use zkfc_sys::Zkfc;
 
 const GENERIC: &str = include_str!("../profiles/generic.toml");
 const LAVENDER: &str = include_str!("../profiles/lavender.toml");
@@ -171,12 +171,14 @@ fn json_escape(s: &str) -> String {
     out
 }
 
-
 fn core_authorize(operation: Operation) -> Result<(), String> {
     let auth = authorize(&CapabilitySet::full_runtime(), operation);
     match auth.decision {
         zairenkai_core::authority::Decision::Allow => Ok(()),
-        _ => Err(format!("core authority denied {:?}: {}", operation, auth.reason)),
+        _ => Err(format!(
+            "core authority denied {:?}: {}",
+            operation, auth.reason
+        )),
     }
 }
 
@@ -204,7 +206,9 @@ fn kernel_license_ok() -> Result<(), String> {
         .license_state()
         .map_err(|e| format!("ZKFC license query failed: {e}"))?;
     if status != 1 {
-        return Err(format!("ZKFC license state {status}; performance mutation locked"));
+        return Err(format!(
+            "ZKFC license state {status}; performance mutation locked"
+        ));
     }
     Ok(())
 }
@@ -249,15 +253,37 @@ fn requested_mode(profile: &Profile, sysroot: &Sysroot, requested: &str) -> Resu
     Ok(mode.to_string())
 }
 
-
 pub(crate) fn permission_names() -> String {
     const NAMES: &[&str] = &[
-        "read.device", "read.kernel", "read.thermal", "read.performance", "read.logs", "read.inventory", "read.storage",
-        "read.network", "read.memory", "read.security", "read.properties", "apply.profile", "tune.cpu",
-        "tune.gpu", "tune.memory", "tune.io", "tune.power", "tune.thermal",
-        "tune.storage", "tune.network", "tune.zram", "control.reset", "security.license",
-        "security.policy", "control.hooks", "manage.device_registry", "manage.data_sources",
-        "manage.evidence", "manage.recovery",
+        "read.device",
+        "read.kernel",
+        "read.thermal",
+        "read.performance",
+        "read.logs",
+        "read.inventory",
+        "read.storage",
+        "read.network",
+        "read.memory",
+        "read.security",
+        "read.properties",
+        "apply.profile",
+        "tune.cpu",
+        "tune.gpu",
+        "tune.memory",
+        "tune.io",
+        "tune.power",
+        "tune.thermal",
+        "tune.storage",
+        "tune.network",
+        "tune.zram",
+        "control.reset",
+        "security.license",
+        "security.policy",
+        "control.hooks",
+        "manage.device_registry",
+        "manage.data_sources",
+        "manage.evidence",
+        "manage.recovery",
     ];
     NAMES.join(",")
 }
@@ -301,14 +327,26 @@ fn cmd_core_permissions(json: bool) -> i32 {
             format!("{{\"operation\":\"{}\",\"capability\":\"{:?}\",\"risk\":{},\"decision\":\"{:?}\"}}",
                 name, auth.required, auth.risk_weight, auth.decision)
         }).collect::<Vec<_>>().join(",");
-        println!("{{\"core_id\":\"{}\",\"permissions\":[{}]}}", zairenkai_core::CORE_ID, entries);
+        println!(
+            "{{\"core_id\":\"{}\",\"permissions\":[{}]}}",
+            zairenkai_core::CORE_ID,
+            entries
+        );
         return 0;
     }
     println!("{} permissions:", zairenkai_core::CORE_NAME);
     for (op, name) in OPS {
-        println!("  {:<18} -> {:?} (risk={})", name, op.required_capability(), op.risk_weight());
+        println!(
+            "  {:<18} -> {:?} (risk={})",
+            name,
+            op.required_capability(),
+            op.risk_weight()
+        );
     }
-    println!("  runtime principal capabilities: {}", CapabilitySet::full_runtime().iter().count());
+    println!(
+        "  runtime principal capabilities: {}",
+        CapabilitySet::full_runtime().iter().count()
+    );
     0
 }
 
@@ -323,17 +361,29 @@ fn cmd_core(json: bool) -> i32 {
             0
         }
         Ok(m) => {
-            println!("{} {} api={} arch={} kernel-models={} generations={}",
-                m.product, m.id, m.core_api, m.supported_architectures.len(),
-                m.supported_kernel_models.len(), m.supported_kernel_generations.len());
+            println!(
+                "{} {} api={} arch={} kernel-models={} generations={}",
+                m.product,
+                m.id,
+                m.core_api,
+                m.supported_architectures.len(),
+                m.supported_kernel_models.len(),
+                m.supported_kernel_generations.len()
+            );
             0
         }
-        Err(e) => { eprintln!("core: {e}"); 1 }
+        Err(e) => {
+            eprintln!("core: {e}");
+            1
+        }
     }
 }
 
 fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
-    if let Err(e) = core_authorize(Operation::Probe) { eprintln!("{e}"); return 1; }
+    if let Err(e) = core_authorize(Operation::Probe) {
+        eprintln!("{e}");
+        return 1;
+    }
     let topology = Topology::detect(s);
     let family = family::load(&state.join("database"), topology.identity.vendor);
     let atlas = catalog::resolve(&state.join("database"), &topology.identity);
@@ -354,32 +404,52 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
                 )
             })
             .collect::<Vec<_>>();
-        let thermal = topology.thermal_zones.iter().map(|z| format!(
-            "{{\"name\":\"{}\",\"type\":\"{}\",\"provider\":\"{}\",\"temp_mdeg\":{}}}",
-            json_escape(&z.name), json_escape(&z.ty), z.provider.as_str(),
-            z.temp_mdeg.map(|v| v.to_string()).unwrap_or_else(|| "null".into())
-        )).collect::<Vec<_>>().join(",");
+        let thermal = topology
+            .thermal_zones
+            .iter()
+            .map(|z| {
+                format!(
+                    "{{\"name\":\"{}\",\"type\":\"{}\",\"provider\":\"{}\",\"temp_mdeg\":{}}}",
+                    json_escape(&z.name),
+                    json_escape(&z.ty),
+                    z.provider.as_str(),
+                    z.temp_mdeg
+                        .map(|v| v.to_string())
+                        .unwrap_or_else(|| "null".into())
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
         let boost = format!(
             "{{\"uclamp\":{},\"schedtune\":{},\"cpu_boost\":{}}}",
             topology.top_app_uclamp.is_some(),
             topology.stune_top.is_some(),
             topology.cpu_boost_dir.is_some(),
         );
-        let gpu = topology.gpu.as_ref().map(|g| {
-            format!(
-                "{{\"provider\":\"{}\",\"opps\":{},\"min\":{},\"max\":{}}}",
-                g.provider.as_str(),
-                g.avail.len(),
-                g.avail.first().copied().unwrap_or(0),
-                g.avail.last().copied().unwrap_or(0),
-            )
-        }).unwrap_or_else(|| "null".into());
+        let gpu = topology
+            .gpu
+            .as_ref()
+            .map(|g| {
+                format!(
+                    "{{\"provider\":\"{}\",\"opps\":{},\"min\":{},\"max\":{}}}",
+                    g.provider.as_str(),
+                    g.avail.len(),
+                    g.avail.first().copied().unwrap_or(0),
+                    g.avail.last().copied().unwrap_or(0),
+                )
+            })
+            .unwrap_or_else(|| "null".into());
         let kernel_caps = Zkfc::open().ok().and_then(|z| z.capabilities().ok()).map(|c| format!(
             "{{\"kernel_caps\":{},\"runtime_caps\":{},\"kernel\":\"{}.{}.{}\",\"page_size\":{},\"cpu_count\":{}}}",
             c.kernel_caps(), c.runtime_caps(), c.kernel_major, c.kernel_minor, c.kernel_patch, c.page_size, c.cpu_count
         )).unwrap_or_else(|| "null".into());
         let telemetry = telemetry::json(s, &topology);
-        let vendor_surfaces = plan.vendor_surfaces.iter().map(|x| format!("\"{}\"", x)).collect::<Vec<_>>().join(",");
+        let vendor_surfaces = plan
+            .vendor_surfaces
+            .iter()
+            .map(|x| format!("\"{}\"", x))
+            .collect::<Vec<_>>()
+            .join(",");
         println!(
             "{{\"ok\":true,\"vendor\":\"{}\",\"soc\":\"{}\",\"flavor\":\"{}\",\"kernel_generation\":\"{}\",\"release\":\"{}\",\"cgroup_v2\":{},\"has_msm_perf\":{},\"boost\":{},\"atlas\":{{\"known\":{},\"device_id\":{}}},\"backend\":{{\"cpu\":{},\"boost\":\"{:?}\",\"gpu\":\"{:?}\",\"thermal_providers\":[{}],\"vendor_surfaces\":[{}],\"family_profile\":{}}},\"policies\":[{}],\"gpu\":{},\"thermal\":[{}],\"kernel_capabilities\":{},\"telemetry\":{}}}",
             topology.identity.vendor.as_str(),
@@ -439,39 +509,60 @@ fn configure_kernel_thermal_guard(args: &Args, snapshot: &thermal::Snapshot) -> 
         return Err("no thermal control zones available; refusing performance mutation".into());
     }
     let z = Zkfc::open().map_err(|e| format!("ZKFC unavailable for thermal guard: {e}"))?;
-    let caps = z.capabilities().map_err(|e| format!("ZKFC capability query failed: {e}"))?;
+    let caps = z
+        .capabilities()
+        .map_err(|e| format!("ZKFC capability query failed: {e}"))?;
     if caps.kernel_caps() & zkfc_sys::ZKFC_CAP_TUNE_THERMAL == 0 {
         return Err("kernel does not advertise ZKFC thermal capability".into());
     }
     let interval_ms = args.interval_ms.clamp(250, 5000) as u32;
-    let limit = thermal::kernel_guard_limit(snapshot).ok_or_else(|| "runtime thermal trip point is unavailable; kernel guard cannot be armed".to_string())?;
-    let release = thermal::kernel_guard_release(snapshot).ok_or_else(|| "runtime thermal release point is unavailable; kernel guard cannot be armed".to_string())?;
+    let limit = thermal::kernel_guard_limit(snapshot).ok_or_else(|| {
+        "runtime thermal trip point is unavailable; kernel guard cannot be armed".to_string()
+    })?;
+    let release = thermal::kernel_guard_release(snapshot).ok_or_else(|| {
+        "runtime thermal release point is unavailable; kernel guard cannot be armed".to_string()
+    })?;
     z.thermal_guard_config(interval_ms, limit, release, &zones)
         .map_err(|e| format!("ZKFC thermal guard configuration failed: {e}"))
 }
 
-
-fn configure_kernel_input_boost(topology: &Topology, mode: Option<&config::Mode>) -> Result<(), String> {
+fn configure_kernel_input_boost(
+    topology: &Topology,
+    mode: Option<&config::Mode>,
+) -> Result<(), String> {
     let Some(z) = Zkfc::open().ok() else {
         return Ok(());
     };
     // The legacy cpu_boost sysfs path already owns the vendor input boost. Do
     // not double-boost it, but explicitly disable any previous ZKFC fast path.
     if topology.cpu_boost_dir.is_some() {
-        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+        return z
+            .input_boost(10, &[])
+            .map_err(|e| format!("disable ZKFC input boost: {e}"));
     }
     let Some(mode) = mode else {
-        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+        return z
+            .input_boost(10, &[])
+            .map_err(|e| format!("disable ZKFC input boost: {e}"));
     };
     let Some(pct) = mode.cpu.input_boost_pct.filter(|v| *v > 0) else {
-        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+        return z
+            .input_boost(10, &[])
+            .map_err(|e| format!("disable ZKFC input boost: {e}"));
     };
     let duration = mode.cpu.input_boost_ms.unwrap_or(0);
     if duration == 0 {
-        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+        return z
+            .input_boost(10, &[])
+            .map_err(|e| format!("disable ZKFC input boost: {e}"));
     }
     let mut clusters = Vec::with_capacity(topology.policies.len().min(8));
-    for policy in topology.policies.iter().filter(|p| !p.cpus.is_empty()).take(8) {
+    for policy in topology
+        .policies
+        .iter()
+        .filter(|p| !p.cpus.is_empty())
+        .take(8)
+    {
         if policy.max_hw == 0 || policy.max_hw < policy.min_hw {
             continue;
         }
@@ -484,14 +575,19 @@ fn configure_kernel_input_boost(topology: &Topology, mode: Option<&config::Mode>
         clusters.push((policy.cpus[0] as u32, floor));
     }
     if clusters.is_empty() {
-        return z.input_boost(10, &[]).map_err(|e| format!("disable ZKFC input boost: {e}"));
+        return z
+            .input_boost(10, &[])
+            .map_err(|e| format!("disable ZKFC input boost: {e}"));
     }
     z.input_boost(duration.clamp(10, 5000), &clusters)
         .map_err(|e| format!("configure ZKFC input boost: {e}"))
 }
 
 fn apply_transaction(args: &Args, requested: &str) -> i32 {
-    if let Err(e) = core_authorize(Operation::ApplyProfile) { eprintln!("{e}"); return 1; }
+    if let Err(e) = core_authorize(Operation::ApplyProfile) {
+        eprintln!("{e}");
+        return 1;
+    }
     if let Err(e) = kernel_license_ok() {
         eprintln!("apply blocked: {e}");
         return 4;
@@ -500,7 +596,10 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
     let thermal_snapshot = thermal::snapshot(&s, &topology);
-    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let family = family::load(
+        &Path::new(&args.state).join("database"),
+        topology.identity.vendor,
+    );
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     let engine = Engine::new(&s, &topology, &plan);
     let nodes = all_managed_nodes(&s, &topology, &engine);
@@ -559,7 +658,10 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     };
     let therm = thermal::envelope(&thermal_snapshot);
     let constrained = thermal::constrain_mode(mode, therm);
-    eprintln!("thermal envelope: band={:?} boost={}‰ cap={:?} reason={}", therm.band, therm.boost_permille, therm.max_perf_cap_pct, therm.reason);
+    eprintln!(
+        "thermal envelope: band={:?} boost={}‰ cap={:?} reason={}",
+        therm.band, therm.boost_permille, therm.max_perf_cap_pct, therm.reason
+    );
     let report = engine.apply_mode(&constrained);
     if !report.failed.is_empty() || report.applied.is_empty() {
         let rollback = state.rollback(&s);
@@ -609,7 +711,11 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
 }
 
 fn cmd_tweak(args: &Args) -> i32 {
-    let sub = args.positional.first().map(String::as_str).unwrap_or("list");
+    let sub = args
+        .positional
+        .first()
+        .map(String::as_str)
+        .unwrap_or("list");
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
 
@@ -617,13 +723,7 @@ fn cmd_tweak(args: &Args) -> i32 {
         "list" => {
             for spec in tweak::specs().filter(|spec| !(args.lite && spec.lite)) {
                 let value = tweak::read(spec.id, &s, &topology).unwrap_or_else(|| "".into());
-                println!(
-                    "{}\t{}\t{}\t{}",
-                    spec.id,
-                    spec.category,
-                    spec.title,
-                    value
-                );
+                println!("{}\t{}\t{}\t{}", spec.id, spec.category, spec.title, value);
             }
             0
         }
@@ -650,7 +750,10 @@ fn cmd_tweak(args: &Args) -> i32 {
                 eprintln!("usage: tweak set <id> <value>");
                 return 2;
             };
-            if let Err(e) = core_authorize(tweak::operation_for(id)) { eprintln!("{e}"); return 1; }
+            if let Err(e) = core_authorize(tweak::operation_for(id)) {
+                eprintln!("{e}");
+                return 1;
+            }
             if let Err(e) = kernel_license_ok() {
                 eprintln!("tweak blocked: {e}");
                 return 4;
@@ -664,7 +767,10 @@ fn cmd_tweak(args: &Args) -> i32 {
                 return 2;
             }
 
-            let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+            let family = family::load(
+                &Path::new(&args.state).join("database"),
+                topology.identity.vendor,
+            );
             let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
             let engine = Engine::new(&s, &topology, &plan);
             let mut nodes = all_managed_nodes(&s, &topology, &engine);
@@ -672,7 +778,10 @@ fn cmd_tweak(args: &Args) -> i32 {
             nodes.sort();
             nodes.dedup();
             let mut state = StateStore::new(&args.state);
-            if let Err(e) = state.ensure_boot(&s, &nodes).and_then(|_| state.recover(&s)) {
+            if let Err(e) = state
+                .ensure_boot(&s, &nodes)
+                .and_then(|_| state.recover(&s))
+            {
                 eprintln!("state recovery failed: {e}");
                 return 3;
             }
@@ -688,7 +797,11 @@ fn cmd_tweak(args: &Args) -> i32 {
             match tweak::apply(id, value, &s, &topology) {
                 Ok(effective) => match state.commit(None, None) {
                     Ok(()) => {
-                        println!("{{\"ok\":true,\"id\":\"{}\",\"value\":\"{}\"}}", json_escape(id), json_escape(&effective));
+                        println!(
+                            "{{\"ok\":true,\"id\":\"{}\",\"value\":\"{}\"}}",
+                            json_escape(id),
+                            json_escape(&effective)
+                        );
                         0
                     }
                     Err(e) => {
@@ -714,14 +827,25 @@ fn cmd_tweak(args: &Args) -> i32 {
 }
 
 fn cmd_inventory(args: &Args) -> i32 {
-    if let Err(e) = core_authorize(Operation::ReadInventory) { eprintln!("{e}"); return 1; }
+    if let Err(e) = core_authorize(Operation::ReadInventory) {
+        eprintln!("{e}");
+        return 1;
+    }
     let s = Sysroot::new(&args.root);
     let identity = platform::PlatformIdentity::detect(&s);
     let inv = inventory::collect(&s, identity.clone());
-    if args.json { println!("{}", inventory::json(&inv)); }
-    else {
-        println!("device      : {} {}", identity.vendor.as_str(), identity.platform);
-        println!("memory      : {:?} KiB available={:?}", inv.memory.total_kb, inv.memory.available_kb);
+    if args.json {
+        println!("{}", inventory::json(&inv));
+    } else {
+        println!(
+            "device      : {} {}",
+            identity.vendor.as_str(),
+            identity.platform
+        );
+        println!(
+            "memory      : {:?} KiB available={:?}",
+            inv.memory.total_kb, inv.memory.available_kb
+        );
         println!("zram        : {} device(s)", inv.memory.zram.len());
         println!("storage     : {} device(s)", inv.storage.len());
         println!("network     : {} interface(s)", inv.network.interface_count);
@@ -731,9 +855,11 @@ fn cmd_inventory(args: &Args) -> i32 {
     0
 }
 
-
 fn cmd_thermal(args: &Args) -> i32 {
-    if let Err(e) = core_authorize(Operation::ReadThermal) { eprintln!("{e}"); return 1; }
+    if let Err(e) = core_authorize(Operation::ReadThermal) {
+        eprintln!("{e}");
+        return 1;
+    }
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
     let snap = thermal::snapshot(&s, &topology);
@@ -770,49 +896,93 @@ fn cmd_thermal(args: &Args) -> i32 {
 }
 
 fn cmd_prop(args: &Args) -> i32 {
-    match args.positional.first().map(String::as_str).unwrap_or("list") {
+    match args
+        .positional
+        .first()
+        .map(String::as_str)
+        .unwrap_or("list")
+    {
         "list" => {
-            if let Err(e) = core_authorize(Operation::ReadProperties) { eprintln!("{e}"); return 1; }
-            for spec in properties::list() { println!("{}\t{:?}\t{}", spec.key, spec.scope, spec.description); }
+            if let Err(e) = core_authorize(Operation::ReadProperties) {
+                eprintln!("{e}");
+                return 1;
+            }
+            for spec in properties::list() {
+                println!("{}\t{:?}\t{}", spec.key, spec.scope, spec.description);
+            }
             0
         }
         "get" => {
-            if let Err(e) = core_authorize(Operation::ReadProperties) { eprintln!("{e}"); return 1; }
-            let Some(key) = args.positional.get(1) else { eprintln!("usage: prop get <key>"); return 2; };
+            if let Err(e) = core_authorize(Operation::ReadProperties) {
+                eprintln!("{e}");
+                return 1;
+            }
+            let Some(key) = args.positional.get(1) else {
+                eprintln!("usage: prop get <key>");
+                return 2;
+            };
             match properties::get(key) {
-                Ok(v) => { println!("{v}"); 0 }
-                Err(e) => { eprintln!("property read failed: {e}"); 3 }
+                Ok(v) => {
+                    println!("{v}");
+                    0
+                }
+                Err(e) => {
+                    eprintln!("property read failed: {e}");
+                    3
+                }
             }
         }
         "set" => {
-            if let Err(e) = core_authorize(Operation::SetProperty) { eprintln!("{e}"); return 1; }
+            if let Err(e) = core_authorize(Operation::SetProperty) {
+                eprintln!("{e}");
+                return 1;
+            }
             let (Some(key), Some(value)) = (args.positional.get(1), args.positional.get(2)) else {
-                eprintln!("usage: prop set <key> <value>"); return 2;
+                eprintln!("usage: prop set <key> <value>");
+                return 2;
             };
             match properties::set(key, value) {
-                Ok(()) => { println!("{{\"ok\":true,\"key\":\"{}\"}}", json_escape(key)); 0 }
-                Err(e) => { eprintln!("property write failed: {e}"); 3 }
+                Ok(()) => {
+                    println!("{{\"ok\":true,\"key\":\"{}\"}}", json_escape(key));
+                    0
+                }
+                Err(e) => {
+                    eprintln!("property write failed: {e}");
+                    3
+                }
             }
         }
-        _ => { eprintln!("usage: prop list|get <key>|set <key> <value>"); 2 }
+        _ => {
+            eprintln!("usage: prop list|get <key>|set <key> <value>");
+            2
+        }
     }
 }
 
 fn cmd_optimize(args: &Args) -> i32 {
-    if let Err(e) = core_authorize(Operation::ReadPerformance) { eprintln!("{e}"); return 1; }
+    if let Err(e) = core_authorize(Operation::ReadPerformance) {
+        eprintln!("{e}");
+        return 1;
+    }
     let s = Sysroot::new(&args.root);
     let identity = platform::PlatformIdentity::detect(&s);
     let inv = inventory::collect(&s, identity.clone());
     let plan = optimize::plan(&s, &identity, &inv);
-    if args.json { println!("{}", optimize::json(&plan)); }
-    else {
+    if args.json {
+        println!("{}", optimize::json(&plan));
+    } else {
         println!("RAM class            : {}", plan.ram_class);
         println!("storage class        : {}", plan.storage_class);
         println!("thermal safe         : {}", plan.thermal_safe);
         println!("network control      : {}", plan.network_control_available);
         println!("safe controls        : {}", plan.safe_controls.join(", "));
-        println!("blocked controls     : {}", plan.blocked_controls.join(", "));
-        for note in plan.notes { println!("note                 : {note}"); }
+        println!(
+            "blocked controls     : {}",
+            plan.blocked_controls.join(", ")
+        );
+        for note in plan.notes {
+            println!("note                 : {note}");
+        }
     }
     0
 }
@@ -839,7 +1009,12 @@ fn parse_operation_name(name: &str) -> Option<Operation> {
 }
 
 fn boot_integrity(inv: &inventory::Inventory) -> zairenkai_core::sentinel::BootIntegrity {
-    match inv.security.verified_boot.as_deref().map(|v| v.trim().to_ascii_lowercase()) {
+    match inv
+        .security
+        .verified_boot
+        .as_deref()
+        .map(|v| v.trim().to_ascii_lowercase())
+    {
         Some(v) if v == "green" => zairenkai_core::sentinel::BootIntegrity::Green,
         Some(v) if v == "yellow" => zairenkai_core::sentinel::BootIntegrity::Yellow,
         Some(v) if v == "orange" => zairenkai_core::sentinel::BootIntegrity::Orange,
@@ -848,11 +1023,17 @@ fn boot_integrity(inv: &inventory::Inventory) -> zairenkai_core::sentinel::BootI
     }
 }
 
-fn sentinel_evaluate(args: &Args, operation: Operation) -> zairenkai_core::sentinel::SentinelDecision {
+fn sentinel_evaluate(
+    args: &Args,
+    operation: Operation,
+) -> zairenkai_core::sentinel::SentinelDecision {
     let s = Sysroot::new(&args.root);
     let identity = platform::PlatformIdentity::detect(&s);
     let inv = inventory::collect(&s, identity.clone());
-    let compatible = Zkfc::open().ok().and_then(|z| z.version().ok()).is_some_and(|v| v.api_compatible());
+    let compatible = Zkfc::open()
+        .ok()
+        .and_then(|z| z.version().ok())
+        .is_some_and(|v| v.api_compatible());
     let state_dir = Path::new(&args.state);
     let safe_mode_active = Path::new(SAFE_MODE).exists() || state_dir.join("safe_mode").exists();
     let persistent_valid = !state_dir.join("transaction.pending").exists();
@@ -863,7 +1044,9 @@ fn sentinel_evaluate(args: &Args, operation: Operation) -> zairenkai_core::senti
         1 => zairenkai_core::intelligence::EvidenceLevel::Heuristic,
         _ => zairenkai_core::intelligence::EvidenceLevel::Observed,
     };
-    let battery_pct = s.read_u64("/sys/class/power_supply/battery/capacity").map(|v| v.min(100) as u8);
+    let battery_pct = s
+        .read_u64("/sys/class/power_supply/battery/capacity")
+        .map(|v| v.min(100) as u8);
     let topology = Topology::detect(&s);
     let thermal_snapshot = thermal::snapshot(&s, &topology);
     zairenkai_core::sentinel::evaluate(&zairenkai_core::sentinel::SentinelInput {
@@ -886,24 +1069,55 @@ fn sentinel_evaluate(args: &Args, operation: Operation) -> zairenkai_core::senti
 }
 
 fn cmd_sentinel(args: &Args) -> i32 {
-    let Some(name) = args.positional.first() else { eprintln!("usage: sentinel <operation>"); return 2; };
-    let Some(operation) = parse_operation_name(name) else { eprintln!("unknown operation '{name}'"); return 2; };
-    if let Err(e) = core_authorize(operation) { eprintln!("{e}"); return 1; }
+    let Some(name) = args.positional.first() else {
+        eprintln!("usage: sentinel <operation>");
+        return 2;
+    };
+    let Some(operation) = parse_operation_name(name) else {
+        eprintln!("unknown operation '{name}'");
+        return 2;
+    };
+    if let Err(e) = core_authorize(operation) {
+        eprintln!("{e}");
+        return 1;
+    }
     let decision = sentinel_evaluate(args, operation);
     if args.json {
-        println!("{{\"allowed\":{},\"class\":\"{:?}\",\"reasons\":[{}]}}", decision.allowed, decision.class,
-            decision.reasons.iter().map(|r| format!("\"{:?}\"", r)).collect::<Vec<_>>().join(","));
+        println!(
+            "{{\"allowed\":{},\"class\":\"{:?}\",\"reasons\":[{}]}}",
+            decision.allowed,
+            decision.class,
+            decision
+                .reasons
+                .iter()
+                .map(|r| format!("\"{:?}\"", r))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
     } else {
-        println!("allowed: {}\nclass  : {:?}", decision.allowed, decision.class);
-        for reason in decision.reasons { println!("reason : {:?}", reason); }
+        println!(
+            "allowed: {}\nclass  : {:?}",
+            decision.allowed, decision.class
+        );
+        for reason in decision.reasons {
+            println!("reason : {:?}", reason);
+        }
     }
-    if decision.allowed { 0 } else { 4 }
+    if decision.allowed {
+        0
+    } else {
+        4
+    }
 }
 
 fn cmd_adaptive(args: &Args) -> i32 {
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let profile = match load_profile(args.profile.as_deref(), Path::new(&args.state), &topology.identity) {
+    let profile = match load_profile(
+        args.profile.as_deref(),
+        Path::new(&args.state),
+        &topology.identity,
+    ) {
         Ok(profile) => profile,
         Err(e) => {
             eprintln!("adaptive profile error: {e}");
@@ -914,7 +1128,9 @@ fn cmd_adaptive(args: &Args) -> i32 {
     let scene = scene_engine.observe(&s, &profile);
     let desired = {
         let state = StateStore::new(&args.state);
-        state.mode().unwrap_or_else(|| profile.meta.default_mode.clone())
+        state
+            .mode()
+            .unwrap_or_else(|| profile.meta.default_mode.clone())
     };
     let mut effective = if desired == "auto" {
         scene::resolve_auto_with_previous(&s, None).to_string()
@@ -927,20 +1143,33 @@ fn cmd_adaptive(args: &Args) -> i32 {
         }
     }
 
-    let observe = profile.adaptive.enabled
-        && effective != "powersave"
-        && scene.kind.performance_candidate();
+    let observe =
+        profile.adaptive.enabled && effective != "powersave" && scene.kind.performance_candidate();
     let mut workload_analyzer = workload::WorkloadAnalyzer::new();
     let workload = if observe {
-        workload_analyzer.sample_with_gpu(&s, scene.package.as_deref(), topology.gpu.as_ref().map(|g| g.devfreq.as_str()))
+        workload_analyzer.sample_with_gpu(
+            &s,
+            scene.package.as_deref(),
+            topology.gpu.as_ref().map(|g| g.devfreq.as_str()),
+        )
     } else {
         None
     };
     let mut interaction_engine = interaction::InteractionEngine::new();
     let interaction = if observe && profile.adaptive.input_enabled && scene.interactive {
-        let _ = interaction_engine.observe(&s, profile.adaptive.input_scan_ms, profile.adaptive.interaction_hold_ms);
-        std::thread::sleep(Duration::from_millis(u64::from(profile.adaptive.input_scan_ms.clamp(5, 50))));
-        interaction_engine.observe(&s, profile.adaptive.input_scan_ms, profile.adaptive.interaction_hold_ms)
+        let _ = interaction_engine.observe(
+            &s,
+            profile.adaptive.input_scan_ms,
+            profile.adaptive.interaction_hold_ms,
+        );
+        std::thread::sleep(Duration::from_millis(u64::from(
+            profile.adaptive.input_scan_ms.clamp(5, 50),
+        )));
+        interaction_engine.observe(
+            &s,
+            profile.adaptive.input_scan_ms,
+            profile.adaptive.interaction_hold_ms,
+        )
     } else {
         interaction::InteractionSnapshot::default()
     };
@@ -972,7 +1201,10 @@ fn cmd_adaptive(args: &Args) -> i32 {
         &profile.adaptive,
     );
 
-    let zkfc_caps = Zkfc::open().ok().and_then(|z| z.capabilities().ok()).map(|c| c.kernel_caps());
+    let zkfc_caps = Zkfc::open()
+        .ok()
+        .and_then(|z| z.capabilities().ok())
+        .map(|c| c.kernel_caps());
     if args.json {
         println!(
             "{{\"scene\":\"{}\",\"kind\":\"{:?}\",\"event\":\"{:?}\",\"effective\":\"{}\",\"observe\":{},\"workload\":{},\"gpu_util_pct\":{},\"run_queue_delay_ms\":{},\"frame_available\":{},\"frame_fresh\":{},\"fps\":{:.3},\"p95_ms\":{:.3},\"jank_pct\":{:.3},\"thermal_headroom_permille\":{},\"decision_active\":{},\"extra_boost_pct\":{},\"uclamp_min_pct\":{},\"cpu_floor_pct\":{},\"confidence\":{},\"reason\":\"{}\",\"input_recent\":{},\"input_age_ms\":{},\"input_sources\":{},\"frame_source\":\"{}\",\"zkfc_perf_capable\":{}}}",
@@ -1003,7 +1235,12 @@ fn cmd_adaptive(args: &Args) -> i32 {
             zkfc_caps.is_some_and(|caps| caps & zkfc_sys::ZKFC_CAP_TUNE_PERF != 0),
         );
     } else {
-        println!("scene       : {} ({:?}, {:?})", scene.package.as_deref().unwrap_or("none"), scene.kind, scene.event);
+        println!(
+            "scene       : {} ({:?}, {:?})",
+            scene.package.as_deref().unwrap_or("none"),
+            scene.kind,
+            scene.event
+        );
         println!("effective   : {effective}");
         println!("observe     : {observe}");
         if let Some(w) = workload {
@@ -1013,18 +1250,40 @@ fn cmd_adaptive(args: &Args) -> i32 {
         }
         println!("frame       : source={} available={} fresh={} new={} fps={:.1} p95={:.2}ms jank={:.1}% budget={:.2}ms", frame.source, frame.available, frame.fresh, frame.new_frames, frame.fps, frame.p95_ms, frame.jank_ratio * 100.0, frame.budget_ms);
         println!("interaction : recent={} active={} touch={} age={:?}ms burst={} sources={} confidence={}", interaction.recent, interaction.active, interaction.touch_active, interaction.age_ms, interaction.burst_count, interaction.source_count, interaction.confidence);
-        println!("thermal     : headroom={:?} critical={} complete={}", thermal_snapshot.headroom_permille, thermal_snapshot.critical_reached, thermal_snapshot.telemetry_complete);
-        println!("decision    : active={} boost=+{}% uclamp={}%% cpu_floor={}%% confidence={} reason={}", decision.active, decision.extra_boost_pct, decision.target_uclamp_min_pct, decision.cpu_floor_pct, decision.confidence, decision.reason);
-        println!("zkfc perf   : {}", zkfc_caps.is_some_and(|caps| caps & zkfc_sys::ZKFC_CAP_TUNE_PERF != 0));
+        println!(
+            "thermal     : headroom={:?} critical={} complete={}",
+            thermal_snapshot.headroom_permille,
+            thermal_snapshot.critical_reached,
+            thermal_snapshot.telemetry_complete
+        );
+        println!(
+            "decision    : active={} boost=+{}% uclamp={}%% cpu_floor={}%% confidence={} reason={}",
+            decision.active,
+            decision.extra_boost_pct,
+            decision.target_uclamp_min_pct,
+            decision.cpu_floor_pct,
+            decision.confidence,
+            decision.reason
+        );
+        println!(
+            "zkfc perf   : {}",
+            zkfc_caps.is_some_and(|caps| caps & zkfc_sys::ZKFC_CAP_TUNE_PERF != 0)
+        );
     }
     0
 }
 
 fn cmd_reset(args: &Args) -> i32 {
-    if let Err(e) = core_authorize(Operation::ResetRuntime) { eprintln!("{e}"); return 1; }
+    if let Err(e) = core_authorize(Operation::ResetRuntime) {
+        eprintln!("{e}");
+        return 1;
+    }
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let family = family::load(
+        &Path::new(&args.state).join("database"),
+        topology.identity.vendor,
+    );
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     let engine = Engine::new(&s, &topology, &plan);
     let nodes = all_managed_nodes(&s, &topology, &engine);
@@ -1077,7 +1336,10 @@ fn cmd_modes(args: &Args) -> i32 {
 fn cmd_status(args: &Args) -> i32 {
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let family = family::load(
+        &Path::new(&args.state).join("database"),
+        topology.identity.vendor,
+    );
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     let engine = Engine::new(&s, &topology, &plan);
     let nodes = all_managed_nodes(&s, &topology, &engine);
@@ -1114,7 +1376,6 @@ fn cmd_status(args: &Args) -> i32 {
     0
 }
 
-
 fn acquire_daemon_lock(state: &Path) -> std::io::Result<File> {
     fs::create_dir_all(state)?;
     let file = OpenOptions::new()
@@ -1122,7 +1383,12 @@ fn acquire_daemon_lock(state: &Path) -> std::io::Result<File> {
         .read(true)
         .write(true)
         .open(state.join("daemon.lock"))?;
-    let rc = unsafe { libc::flock(std::os::fd::AsRawFd::as_raw_fd(&file), libc::LOCK_EX | libc::LOCK_NB) };
+    let rc = unsafe {
+        libc::flock(
+            std::os::fd::AsRawFd::as_raw_fd(&file),
+            libc::LOCK_EX | libc::LOCK_NB,
+        )
+    };
     if rc != 0 {
         return Err(std::io::Error::last_os_error());
     }
@@ -1145,7 +1411,10 @@ fn cmd_daemon(args: &Args) -> i32 {
 
     let s = Sysroot::new(&args.root);
     let topology = Topology::detect(&s);
-    let family = family::load(&Path::new(&args.state).join("database"), topology.identity.vendor);
+    let family = family::load(
+        &Path::new(&args.state).join("database"),
+        topology.identity.vendor,
+    );
     let plan = BackendPlan::resolve(&topology.identity, &topology, family.as_ref());
     let engine = Engine::new(&s, &topology, &plan);
     let mut nodes = all_managed_nodes(&s, &topology, &engine);
@@ -1170,7 +1439,14 @@ fn cmd_daemon(args: &Args) -> i32 {
             return 2;
         }
     };
-    eprintln!("zperfd: {} backend={} oem={} profile '{}' family={}", topology.flavor(), plan.backend.as_str(), plan.oem.as_str(), profile.meta.name, family.as_ref().map(|f| f.vendor.as_str()).unwrap_or("none"));
+    eprintln!(
+        "zperfd: {} backend={} oem={} profile '{}' family={}",
+        topology.flavor(),
+        plan.backend.as_str(),
+        plan.oem.as_str(),
+        profile.meta.name,
+        family.as_ref().map(|f| f.vendor.as_str()).unwrap_or("none")
+    );
 
     // Adaptive control is a separate runtime layer above the durable profile.
     // Base-mode changes remain transactional; transient task boosts/affinity
@@ -1227,7 +1503,10 @@ fn cmd_daemon(args: &Args) -> i32 {
         }
 
         let scene_snapshot = scene_engine.observe(&s, &profile);
-        if matches!(scene_snapshot.event, scene_engine::SceneEvent::Switch | scene_engine::SceneEvent::Exit) {
+        if matches!(
+            scene_snapshot.event,
+            scene_engine::SceneEvent::Switch | scene_engine::SceneEvent::Exit
+        ) {
             task_controller.reset();
             fas_controller.reset();
             last_adaptive_report = None;
@@ -1236,15 +1515,21 @@ fn cmd_daemon(args: &Args) -> i32 {
             interaction_engine.reset();
             last_frame_probe = None;
         }
-        let desired_raw = state.mode().unwrap_or_else(|| profile.meta.default_mode.clone());
+        let desired_raw = state
+            .mode()
+            .unwrap_or_else(|| profile.meta.default_mode.clone());
         let desired = if desired_raw == "auto" || profile.mode.contains_key(&desired_raw) {
             desired_raw
         } else {
-            eprintln!("zperfd: invalid persisted mode '{desired_raw}', falling back to '{}'", profile.meta.default_mode);
+            eprintln!(
+                "zperfd: invalid persisted mode '{desired_raw}', falling back to '{}'",
+                profile.meta.default_mode
+            );
             profile.meta.default_mode.clone()
         };
         let mut effective = if desired == "auto" {
-            scene::resolve_auto_with_previous(&s, (!last.is_empty()).then_some(last.as_str())).to_string()
+            scene::resolve_auto_with_previous(&s, (!last.is_empty()).then_some(last.as_str()))
+                .to_string()
         } else {
             desired.clone()
         };
@@ -1264,12 +1549,18 @@ fn cmd_daemon(args: &Args) -> i32 {
             last_frame_probe = None;
             was_adaptive_observing = adaptive_observation;
         }
-        let interaction = if adaptive_observation && profile.adaptive.input_enabled && scene_snapshot.interactive {
-            interaction_engine.observe(&s, profile.adaptive.input_scan_ms, profile.adaptive.interaction_hold_ms)
-        } else {
-            interaction_engine.disable();
-            interaction::InteractionSnapshot::default()
-        };
+        let interaction =
+            if adaptive_observation && profile.adaptive.input_enabled && scene_snapshot.interactive
+            {
+                interaction_engine.observe(
+                    &s,
+                    profile.adaptive.input_scan_ms,
+                    profile.adaptive.interaction_hold_ms,
+                )
+            } else {
+                interaction_engine.disable();
+                interaction::InteractionSnapshot::default()
+            };
         let workload = if adaptive_observation {
             workload_analyzer.sample_with_gpu(
                 &s,
@@ -1288,20 +1579,28 @@ fn cmd_daemon(args: &Args) -> i32 {
                             | scene_engine::SceneKind::Benchmark
                             | scene_engine::SceneKind::Camera
                             | scene_engine::SceneKind::Video
-                    )
-                        || w.cpu_util_pct >= 20.0
+                    ) || w.cpu_util_pct >= 20.0
                         || w.top_thread_util_pct() >= 20.0
                         || w.render_util_pct() >= 15.0
                         || w.gpu_util_pct.is_some_and(|v| v >= 70.0))
             }) {
             if let Some(pkg) = scene_snapshot.package.as_deref() {
                 let probe_due = last_frame_probe
-                    .map(|t| Instant::now().saturating_duration_since(t) >= Duration::from_millis(profile.adaptive.frame_probe_ms as u64))
+                    .map(|t| {
+                        Instant::now().saturating_duration_since(t)
+                            >= Duration::from_millis(profile.adaptive.frame_probe_ms as u64)
+                    })
                     .unwrap_or(true);
                 if probe_due {
                     last_frame_probe = Some(Instant::now());
                     let refresh_hz = frame_analyzer.current_refresh_hz();
-                    frame_analyzer.sample(pkg, workload.as_ref().map(|w| w.pid).unwrap_or_default(), refresh_hz, profile.adaptive.frame_budget_ms, &profile.adaptive.frame_source)
+                    frame_analyzer.sample(
+                        pkg,
+                        workload.as_ref().map(|w| w.pid).unwrap_or_default(),
+                        refresh_hz,
+                        profile.adaptive.frame_budget_ms,
+                        &profile.adaptive.frame_source,
+                    )
                 } else {
                     frame_analyzer.cached()
                 }
@@ -1345,15 +1644,20 @@ fn cmd_daemon(args: &Args) -> i32 {
                     } else {
                         let Some(mode) = profile.mode(&effective) else {
                             let _ = state.rollback(&s);
-                            eprintln!("apply failed: validated profile is missing mode '{effective}'");
+                            eprintln!(
+                                "apply failed: validated profile is missing mode '{effective}'"
+                            );
                             return 3;
                         };
                         let thermal_snapshot = thermal::snapshot(&s, &topology);
                         if thermal_snapshot.telemetry_complete {
-                            if let Err(e) = configure_kernel_thermal_guard(args, &thermal_snapshot) {
+                            if let Err(e) = configure_kernel_thermal_guard(args, &thermal_snapshot)
+                            {
                                 eprintln!("zperfd: thermal guard configuration failed: {e}");
                                 let _ = state.rollback(&s);
-                                std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
+                                std::thread::sleep(Duration::from_millis(
+                                    args.interval_ms.max(500),
+                                ));
                                 continue;
                             }
                         } else {
@@ -1361,7 +1665,10 @@ fn cmd_daemon(args: &Args) -> i32 {
                         }
                         let therm = thermal::envelope(&thermal_snapshot);
                         let constrained = thermal::constrain_mode(mode, therm);
-                        eprintln!("zperfd: thermal envelope band={:?} boost={}‰ cap={:?}", therm.band, therm.boost_permille, therm.max_perf_cap_pct);
+                        eprintln!(
+                            "zperfd: thermal envelope band={:?} boost={}‰ cap={:?}",
+                            therm.band, therm.boost_permille, therm.max_perf_cap_pct
+                        );
                         let report = engine.apply_mode(&constrained);
                         if report.failed.is_empty() && !report.applied.is_empty() {
                             if let Err(e) = configure_kernel_input_boost(&topology, Some(mode)) {
@@ -1379,7 +1686,7 @@ fn cmd_daemon(args: &Args) -> i32 {
                                         report.skipped.len()
                                     );
                                 }
-                                                Err(e) => {
+                                Err(e) => {
                                     let _ = configure_kernel_input_boost(&topology, None);
                                     let _ = state.recover(&s);
                                     eprintln!("zperfd: commit failed: {e}");
@@ -1429,7 +1736,15 @@ fn cmd_daemon(args: &Args) -> i32 {
                         let sentinel = sentinel_evaluate(args, Operation::SetCpuTweak);
                         if !sentinel.allowed {
                             eprintln!("zperfd: adaptive blocked: {:?}", sentinel.reasons);
-                        } else if let Err(e) = task_controller.apply(&s, &plan, &interaction, &decision, workload, &performance_cpus, performance_policy) {
+                        } else if let Err(e) = task_controller.apply(
+                            &s,
+                            &plan,
+                            &interaction,
+                            &decision,
+                            workload,
+                            &performance_cpus,
+                            performance_policy,
+                        ) {
                             eprintln!("zperfd: adaptive actuator failed: {e}");
                         } else {
                             let key = (workload.pid, decision.extra_boost_pct);
@@ -1467,7 +1782,11 @@ fn cmd_daemon(args: &Args) -> i32 {
                     let was_active = last_adaptive_report.take().is_some();
                     task_controller.reset();
                     if was_active {
-                        eprintln!("zperfd: adaptive release scene={} reason={}", scene_snapshot.package.as_deref().unwrap_or("none"), decision.reason);
+                        eprintln!(
+                            "zperfd: adaptive release scene={} reason={}",
+                            scene_snapshot.package.as_deref().unwrap_or("none"),
+                            decision.reason
+                        );
                     }
                 }
             }
@@ -1506,7 +1825,13 @@ fn main() {
         "adaptive" => cmd_adaptive(&args),
         "prop" => cmd_prop(&args),
         "sentinel" => cmd_sentinel(&args),
-        "core" => if args.positional.first().map(|x| x.as_str()) == Some("permissions") { cmd_core_permissions(args.json) } else { cmd_core(args.json) },
+        "core" => {
+            if args.positional.first().map(|x| x.as_str()) == Some("permissions") {
+                cmd_core_permissions(args.json)
+            } else {
+                cmd_core(args.json)
+            }
+        }
         "api" => api::run(&args),
         "daemon" => cmd_daemon(&args),
         "" => {

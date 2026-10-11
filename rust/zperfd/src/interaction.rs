@@ -92,7 +92,9 @@ pub struct InteractionEngine {
 }
 
 impl Default for InteractionEngine {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InteractionEngine {
@@ -158,7 +160,8 @@ impl InteractionEngine {
 
     pub fn observe(&mut self, s: &Sysroot, scan_ms: u32, hold_ms: u32) -> InteractionSnapshot {
         self.scan_ms.store(scan_ms.clamp(5, 250), Ordering::Release);
-        self.hold_ms.store(hold_ms.clamp(20, 5000), Ordering::Release);
+        self.hold_ms
+            .store(hold_ms.clamp(20, 5000), Ordering::Release);
         self.enabled.store(true, Ordering::Release);
         self.ensure_worker(s);
         self.state
@@ -337,7 +340,8 @@ impl InputScanner {
                 if n == 0 || n != raw.len() {
                     break;
                 }
-                let event = unsafe { std::ptr::read_unaligned(raw.as_ptr() as *const RawInputEvent) };
+                let event =
+                    unsafe { std::ptr::read_unaligned(raw.as_ptr() as *const RawInputEvent) };
                 if let Some(kind) = classify_event(event) {
                     self.record(kind, now, hold_ms);
                 }
@@ -374,7 +378,10 @@ fn classify_event(e: RawInputEvent) -> Option<InteractionKind> {
             if matches!(
                 e.code,
                 ABS_X | ABS_Y | ABS_MT_POSITION_X | ABS_MT_POSITION_Y
-            ) => Some(InteractionKind::TouchMove),
+            ) =>
+        {
+            Some(InteractionKind::TouchMove)
+        }
         EV_REL if e.value != 0 => Some(InteractionKind::Scroll),
         _ => None,
     }
@@ -399,9 +406,7 @@ fn looks_interactive(name: &str, abs: Option<&str>, key: Option<&str>) -> bool {
     {
         return true;
     }
-    if abs.is_some_and(|v| {
-        bitmap_has(v, ABS_MT_POSITION_X) || bitmap_has(v, ABS_MT_POSITION_Y)
-    }) {
+    if abs.is_some_and(|v| bitmap_has(v, ABS_MT_POSITION_X) || bitmap_has(v, ABS_MT_POSITION_Y)) {
         return true;
     }
     key.is_some_and(|v| bitmap_has(v, BTN_GAMEPAD))

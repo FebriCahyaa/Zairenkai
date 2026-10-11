@@ -27,7 +27,9 @@ pub struct Envelope {
 
 fn ratio_bps(available: Option<u64>, total: Option<u64>) -> Option<u64> {
     let total = total?;
-    if total == 0 { return None; }
+    if total == 0 {
+        return None;
+    }
     Some(available.unwrap_or(0).saturating_mul(10_000) / total)
 }
 
@@ -59,7 +61,9 @@ pub fn envelope(inv: &Inventory) -> Envelope {
 /// conservative fallback.
 pub fn zram_uninitialized(s: &Sysroot, name: &str) -> bool {
     let base = format!("/sys/block/{name}");
-    if !s.exists(&base) { return false; }
+    if !s.exists(&base) {
+        return false;
+    }
     if let Some(init) = s.read(&format!("{base}/initstate")) {
         return init.trim() == "0";
     }
@@ -74,11 +78,40 @@ mod tests {
 
     fn inv(avail: Option<u64>) -> Inventory {
         Inventory {
-            identity: PlatformIdentity { oem: crate::platform::OemVendor::Unknown, vendor: SocVendor::Unknown, platform: "x".into(), model: "m".into(), compatible: "".into(), evidence: vec![] },
-            memory: MemoryInfo { total_kb: Some(4_000_000), available_kb: avail, swap_total_kb: Some(1), swap_free_kb: Some(1), zram: vec![ZramInfo { name: "zram0".into(), size_bytes: Some(1), algorithm: Some("lz4".into()) }] },
+            identity: PlatformIdentity {
+                oem: crate::platform::OemVendor::Unknown,
+                vendor: SocVendor::Unknown,
+                platform: "x".into(),
+                model: "m".into(),
+                compatible: "".into(),
+                evidence: vec![],
+            },
+            memory: MemoryInfo {
+                total_kb: Some(4_000_000),
+                available_kb: avail,
+                swap_total_kb: Some(1),
+                swap_free_kb: Some(1),
+                zram: vec![ZramInfo {
+                    name: "zram0".into(),
+                    size_bytes: Some(1),
+                    algorithm: Some("lz4".into()),
+                }],
+            },
             storage: Vec::<StorageInfo>::new(),
-            network: NetworkInfo { interface_count: 0, interfaces: vec![], tcp_congestion: None, tcp_allowed: None, tcp_available: None },
-            security: SecurityInfo { selinux_enforcing: None, verified_boot: None, verity_mode: None, device_mapper_devices: vec![], module_sig_enforce: None },
+            network: NetworkInfo {
+                interface_count: 0,
+                interfaces: vec![],
+                tcp_congestion: None,
+                tcp_allowed: None,
+                tcp_available: None,
+            },
+            security: SecurityInfo {
+                selinux_enforcing: None,
+                verified_boot: None,
+                verity_mode: None,
+                device_mapper_devices: vec![],
+                module_sig_enforce: None,
+            },
         }
     }
 

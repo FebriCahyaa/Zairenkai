@@ -38,7 +38,9 @@ fn safe_relative_path(raw: &str) -> Option<PathBuf> {
     if p.is_absolute() {
         return None;
     }
-    if p.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+    if p.components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
         return None;
     }
     Some(p.to_path_buf())
@@ -78,48 +80,68 @@ struct DeviceMetadata {
 }
 
 fn token_match(corpus: &str, tokens: &[String]) -> usize {
-    tokens.iter().filter(|t| {
-        let normalized = normalize_identifier(t);
-        !normalized.is_empty() && corpus.contains(normalized.as_str())
-    }).count()
+    tokens
+        .iter()
+        .filter(|t| {
+            let normalized = normalize_identifier(t);
+            !normalized.is_empty() && corpus.contains(normalized.as_str())
+        })
+        .count()
 }
 
 pub fn resolve(database_root: &Path, identity: &PlatformIdentity) -> Option<Resolution> {
     let index_path = database_root.join("index.toml");
     let text = fs::read_to_string(index_path).ok()?;
     let index: Index = toml::from_str(&text).ok()?;
-    if index.schema_version != 1 { return None; }
+    if index.schema_version != 1 {
+        return None;
+    }
 
     let platform = normalize_identifier(&identity.platform);
     let model = normalize_identifier(&identity.model);
     let compatible = normalize_identifier(&identity.compatible);
 
-    let mut ranked = index.device.into_iter().filter_map(|entry| {
-        let metadata = safe_relative_path(&entry.metadata)
-            .and_then(|p| fs::read_to_string(database_root.join(p)).ok())
-            .and_then(|v| toml::from_str::<DeviceMetadata>(&v).ok())?;
-        if metadata.id != entry.id || metadata.vendor != entry.vendor || metadata.soc != entry.soc {
-            return None;
-        }
-        let mut score = 0usize;
-        let normalized_soc = normalize_identifier(&entry.soc);
-        if !platform.is_empty() && platform == normalized_soc { score += 120; }
-        if !identity.soc_key().is_empty() && identity.soc_key() == normalized_soc { score += 100; }
-        score += token_match(&platform, &metadata.r#match.platform_tokens) * 60;
-        score += token_match(&compatible, &metadata.r#match.compatible_tokens) * 40;
-        score += token_match(&model, &metadata.r#match.model_tokens) * 50;
-        if identity.vendor.as_str() == entry.vendor { score += 20; }
-        (score > 0).then(|| (score, entry))
-    }).collect::<Vec<_>>();
+    let mut ranked = index
+        .device
+        .into_iter()
+        .filter_map(|entry| {
+            let metadata = safe_relative_path(&entry.metadata)
+                .and_then(|p| fs::read_to_string(database_root.join(p)).ok())
+                .and_then(|v| toml::from_str::<DeviceMetadata>(&v).ok())?;
+            if metadata.id != entry.id
+                || metadata.vendor != entry.vendor
+                || metadata.soc != entry.soc
+            {
+                return None;
+            }
+            let mut score = 0usize;
+            let normalized_soc = normalize_identifier(&entry.soc);
+            if !platform.is_empty() && platform == normalized_soc {
+                score += 120;
+            }
+            if !identity.soc_key().is_empty() && identity.soc_key() == normalized_soc {
+                score += 100;
+            }
+            score += token_match(&platform, &metadata.r#match.platform_tokens) * 60;
+            score += token_match(&compatible, &metadata.r#match.compatible_tokens) * 40;
+            score += token_match(&model, &metadata.r#match.model_tokens) * 50;
+            if identity.vendor.as_str() == entry.vendor {
+                score += 20;
+            }
+            (score > 0).then(|| (score, entry))
+        })
+        .collect::<Vec<_>>();
     ranked.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.id.cmp(&b.1.id)));
-    ranked.into_iter().next().map(|(_, entry)| Resolution { entry, database_root: database_root.to_path_buf() })
+    ranked.into_iter().next().map(|(_, entry)| Resolution {
+        entry,
+        database_root: database_root.to_path_buf(),
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write;
-
 
     #[test]
     fn rejects_path_traversal_in_index() {
@@ -168,7 +190,11 @@ mod tests {
         writeln!(f, "schema_version = 1\n[[device]]\nid=\"qualcomm.sm8550\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\nmetadata=\"devices/qualcomm/sm8550.toml\"\ncatalog=\"generic.toml\"").unwrap();
         // Index entries are only trusted when their metadata record agrees.
         fs::create_dir_all(root.join("devices/qualcomm")).unwrap();
-        fs::write(root.join("devices/qualcomm/sm8550.toml"), "id=\"qualcomm.sm8550\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\n").unwrap();
+        fs::write(
+            root.join("devices/qualcomm/sm8550.toml"),
+            "id=\"qualcomm.sm8550\"\nvendor=\"qualcomm\"\nsoc=\"sm8550\"\n",
+        )
+        .unwrap();
         let identity = PlatformIdentity {
             oem: crate::platform::OemVendor::Unknown,
             vendor: crate::platform::SocVendor::Qualcomm,

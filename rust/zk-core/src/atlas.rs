@@ -16,7 +16,6 @@ pub enum TrustTier {
     Runtime = 6,
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum KnowledgeKind {
     Identity,
@@ -42,7 +41,10 @@ pub struct AtlasClaim {
 
 impl AtlasClaim {
     pub fn may_control(&self) -> bool {
-        matches!(self.trust, TrustTier::Runtime | TrustTier::Official | TrustTier::Upstream)
+        matches!(
+            self.trust,
+            TrustTier::Runtime | TrustTier::Official | TrustTier::Upstream
+        )
     }
 
     pub fn conflicts_with(&self, other: &Self) -> bool {
@@ -85,7 +87,8 @@ pub struct DeviceKnowledge {
 
 impl DeviceKnowledge {
     pub fn strongest(&self, key: &str) -> Option<&AtlasClaim> {
-        self.claims.iter()
+        self.claims
+            .iter()
             .filter(|c| c.key == key)
             .max_by_key(|c| c.trust)
     }
@@ -102,11 +105,29 @@ mod tests {
     #[test]
     fn runtime_claim_wins_over_static_data() {
         let k = DeviceKnowledge {
-            device_id: "x".into(), vendor: "qualcomm".into(), soc: "sm8550".into(),
+            device_id: "x".into(),
+            vendor: "qualcomm".into(),
+            soc: "sm8550".into(),
             kernel_generation: Some("6.1".into()),
             claims: vec![
-                AtlasClaim { key: "thermal.provider".into(), value: "generic".into(), kind: KnowledgeKind::Thermal, trust: TrustTier::Official, source_id: "aosp".into(), observed_at_unix_s: None, evidence_id: None },
-                AtlasClaim { key: "thermal.provider".into(), value: "qcom".into(), kind: KnowledgeKind::Thermal, trust: TrustTier::Runtime, source_id: "runtime".into(), observed_at_unix_s: Some(1), evidence_id: Some("obs".into()) },
+                AtlasClaim {
+                    key: "thermal.provider".into(),
+                    value: "generic".into(),
+                    kind: KnowledgeKind::Thermal,
+                    trust: TrustTier::Official,
+                    source_id: "aosp".into(),
+                    observed_at_unix_s: None,
+                    evidence_id: None,
+                },
+                AtlasClaim {
+                    key: "thermal.provider".into(),
+                    value: "qcom".into(),
+                    kind: KnowledgeKind::Thermal,
+                    trust: TrustTier::Runtime,
+                    source_id: "runtime".into(),
+                    observed_at_unix_s: Some(1),
+                    evidence_id: Some("obs".into()),
+                },
             ],
         };
         assert_eq!(k.strongest("thermal.provider").unwrap().value, "qcom");
@@ -115,7 +136,15 @@ mod tests {
 
     #[test]
     fn heuristic_claim_cannot_authorize_control() {
-        let c = AtlasClaim { key: "storage.kind".into(), value: "ufs".into(), kind: KnowledgeKind::Storage, trust: TrustTier::Heuristic, source_id: "heuristic".into(), observed_at_unix_s: None, evidence_id: None };
+        let c = AtlasClaim {
+            key: "storage.kind".into(),
+            value: "ufs".into(),
+            kind: KnowledgeKind::Storage,
+            trust: TrustTier::Heuristic,
+            source_id: "heuristic".into(),
+            observed_at_unix_s: None,
+            evidence_id: None,
+        };
         assert!(!c.may_control());
     }
 }

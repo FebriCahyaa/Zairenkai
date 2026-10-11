@@ -19,18 +19,23 @@ pub struct Sysroot {
 }
 
 impl Sysroot {
-    pub fn new<P: Into<PathBuf>>(root: P) -> Self { Self { root: root.into() } }
+    pub fn new<P: Into<PathBuf>>(root: P) -> Self {
+        Self { root: root.into() }
+    }
 
     #[allow(dead_code)]
-    pub fn host() -> Self { Self::new("/") }
+    pub fn host() -> Self {
+        Self::new("/")
+    }
 
     fn safe_rel(rel: &str) -> bool {
         let p = Path::new(rel.trim_start_matches('/'));
-        !p.as_os_str().is_empty()
-            && p.components().all(|c| matches!(c, Component::Normal(_)))
+        !p.as_os_str().is_empty() && p.components().all(|c| matches!(c, Component::Normal(_)))
     }
 
-    pub fn root(&self) -> &Path { &self.root }
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
 
     pub fn path(&self, rel: &str) -> PathBuf {
         self.root.join(rel.trim_start_matches('/'))
@@ -41,15 +46,26 @@ impl Sysroot {
     }
 
     pub fn read(&self, rel: &str) -> Option<String> {
-        if !Self::safe_rel(rel) { return None; }
-        fs::read_to_string(self.path(rel)).ok().map(|s| s.trim().to_string())
+        if !Self::safe_rel(rel) {
+            return None;
+        }
+        fs::read_to_string(self.path(rel))
+            .ok()
+            .map(|s| s.trim().to_string())
     }
 
-    pub fn read_u64(&self, rel: &str) -> Option<u64> { self.read(rel).and_then(|s| s.parse().ok()) }
+    pub fn read_u64(&self, rel: &str) -> Option<u64> {
+        self.read(rel).and_then(|s| s.parse().ok())
+    }
 
     pub fn read_u64_list(&self, rel: &str) -> Vec<u64> {
-        let mut v: Vec<u64> = self.read(rel)
-            .map(|s| s.split_whitespace().filter_map(|t| t.parse().ok()).collect())
+        let mut v: Vec<u64> = self
+            .read(rel)
+            .map(|s| {
+                s.split_whitespace()
+                    .filter_map(|t| t.parse().ok())
+                    .collect()
+            })
             .unwrap_or_default();
         v.sort_unstable();
         v.dedup();
@@ -57,11 +73,15 @@ impl Sysroot {
     }
 
     pub fn list_dir(&self, rel: &str) -> Vec<String> {
-        if !Self::safe_rel(rel) { return Vec::new(); }
+        if !Self::safe_rel(rel) {
+            return Vec::new();
+        }
         let mut out = Vec::new();
         if let Ok(rd) = fs::read_dir(self.path(rel)) {
             for e in rd.flatten() {
-                if let Some(name) = e.file_name().to_str() { out.push(name.to_string()); }
+                if let Some(name) = e.file_name().to_str() {
+                    out.push(name.to_string());
+                }
             }
         }
         out.sort();
@@ -140,13 +160,18 @@ impl Sysroot {
 
     pub fn write_first(&self, candidates: &[&str], val: &str) -> Option<String> {
         for rel in candidates {
-            if self.exists(rel) && self.write(rel, val).is_ok() { return Some((*rel).to_string()); }
+            if self.exists(rel) && self.write(rel, val).is_ok() {
+                return Some((*rel).to_string());
+            }
         }
         None
     }
 
     pub fn first_existing(&self, candidates: &[&str]) -> Option<String> {
-        candidates.iter().find(|c| self.exists(c)).map(|s| (*s).to_string())
+        candidates
+            .iter()
+            .find(|c| self.exists(c))
+            .map(|s| (*s).to_string())
     }
 }
 
@@ -164,31 +189,34 @@ mod tests {
 
     #[test]
     fn write_roundtrip_preserves_mode_without_permission_toggle() {
-        let root=tmp();
-        let p=root.join("sys/x/knob");
+        let root = tmp();
+        let p = root.join("sys/x/knob");
         fs::create_dir_all(p.parent().unwrap()).unwrap();
-        fs::write(&p,"0").unwrap();
-        fs::set_permissions(&p,fs::Permissions::from_mode(0o640)).unwrap();
-        let s=Sysroot::new(&root);
-        s.write("/sys/x/knob","42").unwrap();
-        assert_eq!(s.read("/sys/x/knob").as_deref(),Some("42"));
-        assert_eq!(fs::metadata(&p).unwrap().permissions().mode() & 0o777,0o640);
-        let _=fs::remove_dir_all(&root);
+        fs::write(&p, "0").unwrap();
+        fs::set_permissions(&p, fs::Permissions::from_mode(0o640)).unwrap();
+        let s = Sysroot::new(&root);
+        s.write("/sys/x/knob", "42").unwrap();
+        assert_eq!(s.read("/sys/x/knob").as_deref(), Some("42"));
+        assert_eq!(
+            fs::metadata(&p).unwrap().permissions().mode() & 0o777,
+            0o640
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
     fn rejects_parent_and_symlink_paths() {
-        let root=tmp();
-        let real=root.join("sys/x/knob");
+        let root = tmp();
+        let real = root.join("sys/x/knob");
         fs::create_dir_all(real.parent().unwrap()).unwrap();
-        fs::write(&real,"1").unwrap();
-        std::os::unix::fs::symlink(&real,root.join("sys/x/link")).unwrap();
-        let parent_link=root.join("sys/parent-link");
+        fs::write(&real, "1").unwrap();
+        std::os::unix::fs::symlink(&real, root.join("sys/x/link")).unwrap();
+        let parent_link = root.join("sys/parent-link");
         std::os::unix::fs::symlink(root.join("sys/x"), &parent_link).unwrap();
-        let s=Sysroot::new(&root);
+        let s = Sysroot::new(&root);
         assert!(!s.exists("/sys/x/../x/knob"));
-        assert!(s.write("/sys/x/link","2").is_err());
-        assert!(s.write("/sys/parent-link/knob","2").is_err());
-        let _=fs::remove_dir_all(&root);
+        assert!(s.write("/sys/x/link", "2").is_err());
+        assert!(s.write("/sys/parent-link/knob", "2").is_err());
+        let _ = fs::remove_dir_all(&root);
     }
 }

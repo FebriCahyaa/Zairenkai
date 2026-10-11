@@ -53,7 +53,9 @@ impl FamilyProfile {
             "boost" => &self.provider_order.boost,
             _ => return usize::MAX,
         };
-        list.iter().position(|x| x == provider).unwrap_or(usize::MAX)
+        list.iter()
+            .position(|x| x == provider)
+            .unwrap_or(usize::MAX)
     }
 
     pub fn boost_prefers(&self, provider: &str) -> bool {

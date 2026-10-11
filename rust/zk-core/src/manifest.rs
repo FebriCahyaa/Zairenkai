@@ -23,12 +23,24 @@ impl CoreManifest {
     }
 
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 1 { return Err("unsupported manifest schema".into()); }
-        if self.id != "zairenkai.core" { return Err("invalid core id".into()); }
-        if self.core_api == 0 { return Err("core_api must be non-zero".into()); }
-        if self.supported_architectures.is_empty() { return Err("no architectures declared".into()); }
-        if self.supported_kernel_models.is_empty() { return Err("no kernel models declared".into()); }
-        if self.supported_kernel_generations.is_empty() { return Err("no kernel generations declared".into()); }
+        if self.schema_version != 1 {
+            return Err("unsupported manifest schema".into());
+        }
+        if self.id != "zairenkai.core" {
+            return Err("invalid core id".into());
+        }
+        if self.core_api == 0 {
+            return Err("core_api must be non-zero".into());
+        }
+        if self.supported_architectures.is_empty() {
+            return Err("no architectures declared".into());
+        }
+        if self.supported_kernel_models.is_empty() {
+            return Err("no kernel models declared".into());
+        }
+        if self.supported_kernel_generations.is_empty() {
+            return Err("no kernel generations declared".into());
+        }
         Ok(())
     }
 }

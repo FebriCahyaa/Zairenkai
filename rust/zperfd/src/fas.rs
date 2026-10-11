@@ -52,12 +52,21 @@ pub struct FasController {
 }
 
 impl Default for FasController {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FasController {
     pub fn new() -> Self {
-        Self { integral: 0.0, previous_error: 0.0, bad_windows: 0, good_windows: 0, last_pid: None, last_boost_pct: 0 }
+        Self {
+            integral: 0.0,
+            previous_error: 0.0,
+            bad_windows: 0,
+            good_windows: 0,
+            last_pid: None,
+            last_boost_pct: 0,
+        }
     }
 
     pub fn reset(&mut self) {
@@ -79,9 +88,16 @@ impl FasController {
         base_uclamp_min_pct: u32,
         config: &AdaptiveConfig,
     ) -> FasDecision {
-        if !config.enabled { return self.inactive(); }
-        let Some(workload) = workload else { return self.inactive(); };
-        if !scene.interactive || matches!(scene.kind, SceneKind::Idle | SceneKind::System) || !workload.active {
+        if !config.enabled {
+            return self.inactive();
+        }
+        let Some(workload) = workload else {
+            return self.inactive();
+        };
+        if !scene.interactive
+            || matches!(scene.kind, SceneKind::Idle | SceneKind::System)
+            || !workload.active
+        {
             return self.inactive();
         }
         if self.last_pid != Some(workload.pid) {
@@ -103,16 +119,29 @@ impl FasController {
             };
         }
 
-        let budget_ms = if frame.available { frame.budget_ms.max(1.0) } else { config.frame_budget_ms.max(1.0) };
-        let p95_error = if frame.available { (frame.p95_ms - budget_ms) / budget_ms } else { 0.0 };
-        let jank_error = if frame.available { frame.jank_ratio } else { 0.0 };
+        let budget_ms = if frame.available {
+            frame.budget_ms.max(1.0)
+        } else {
+            config.frame_budget_ms.max(1.0)
+        };
+        let p95_error = if frame.available {
+            (frame.p95_ms - budget_ms) / budget_ms
+        } else {
+            0.0
+        };
+        let jank_error = if frame.available {
+            frame.jank_ratio
+        } else {
+            0.0
+        };
         let top_thread_util = workload.top_thread_util_pct();
         let render_util = workload.render_util_pct();
         let run_queue_delay_ms = workload.run_queue_delay_ms.unwrap_or(0.0);
         let top_thread_run_queue_delay_ms = workload.top_thread_run_queue_delay_ms();
         let gpu_util_pct = workload.gpu_util_pct.unwrap_or(0.0);
         let cpu_error = ((workload.cpu_util_pct - 80.0) / 40.0).max(0.0);
-        let contention_error = ((run_queue_delay_ms.max(top_thread_run_queue_delay_ms) - 1.0) / 4.0).clamp(0.0, 1.5);
+        let contention_error =
+            ((run_queue_delay_ms.max(top_thread_run_queue_delay_ms) - 1.0) / 4.0).clamp(0.0, 1.5);
         let thread_error = ((top_thread_util.max(render_util) - 70.0) / 30.0).max(0.0);
         let gpu_error = ((gpu_util_pct - 82.0) / 18.0).max(0.0);
         let frame_error = if frame.available && frame.fresh {
@@ -120,14 +149,20 @@ impl FasController {
         } else {
             0.0
         };
-        let raw_error = (frame_error + cpu_error + thread_error * 0.6 + contention_error * 0.4 + gpu_error * 0.25).clamp(0.0, 2.0);
+        let raw_error = (frame_error
+            + cpu_error
+            + thread_error * 0.6
+            + contention_error * 0.4
+            + gpu_error * 0.25)
+            .clamp(0.0, 2.0);
         let derivative = raw_error - self.previous_error;
         if frame.fresh || !frame.available {
             self.previous_error = raw_error;
             self.integral = (self.integral + raw_error).clamp(0.0, 6.0);
         }
 
-        let bad_frame = frame.available && frame.fresh
+        let bad_frame = frame.available
+            && frame.fresh
             && (p95_error > 0.03 || jank_error * 100.0 > config.jank_threshold_pct as f64);
         let bad_workload = workload.cpu_util_pct > 88.0
             || top_thread_util > 90.0
@@ -136,7 +171,8 @@ impl FasController {
             || top_thread_run_queue_delay_ms > 3.0
             || gpu_util_pct > 92.0;
         let bad = bad_frame || bad_workload;
-        let good_frame = !frame.available || !frame.fresh || (p95_error < -0.03 && jank_error < 0.03);
+        let good_frame =
+            !frame.available || !frame.fresh || (p95_error < -0.03 && jank_error < 0.03);
         let good = good_frame
             && workload.cpu_util_pct < 75.0
             && top_thread_util < 80.0
@@ -147,28 +183,50 @@ impl FasController {
         // probe must not freeze the controller. Fresh frame windows refine the
         // signal; workload-only windows keep the loop responsive between probes.
         if frame.fresh || !frame.available || bad_workload {
-            if bad { self.bad_windows = self.bad_windows.saturating_add(1); self.good_windows = 0; }
-            else if good { self.good_windows = self.good_windows.saturating_add(1); self.bad_windows = 0; }
-            else { self.good_windows = 0; }
+            if bad {
+                self.bad_windows = self.bad_windows.saturating_add(1);
+                self.good_windows = 0;
+            } else if good {
+                self.good_windows = self.good_windows.saturating_add(1);
+                self.bad_windows = 0;
+            } else {
+                self.good_windows = 0;
+            }
         }
 
-        let mut extra = (raw_error * 18.0 + self.integral * 1.2 + derivative.max(0.0) * 2.0).round() as i32;
+        let mut extra =
+            (raw_error * 18.0 + self.integral * 1.2 + derivative.max(0.0) * 2.0).round() as i32;
         if interaction.recent {
             let boost_window = config.interaction_boost_ms.max(20) as f64;
             let hold_window = config.interaction_hold_ms.max(20) as f64;
-            let age = interaction.age_ms.unwrap_or(config.interaction_hold_ms as u64) as f64;
+            let age = interaction
+                .age_ms
+                .unwrap_or(config.interaction_hold_ms as u64) as f64;
             let decay_window = boost_window.max(hold_window);
             let pressure = (1.0 - age / (decay_window * 2.0)).clamp(0.0, 1.0);
             extra += (config.interaction_boost_pct as f64 * pressure).round() as i32;
         }
-        if scene.kind == SceneKind::Benchmark { extra += 4; }
-        if scene.kind == SceneKind::Game { extra += 2; }
+        if scene.kind == SceneKind::Benchmark {
+            extra += 4;
+        }
+        if scene.kind == SceneKind::Game {
+            extra += 2;
+        }
         extra = extra.clamp(0, config.max_extra_boost_pct as i32);
 
         // Thermal headroom is a direct multiplier, not a Celsius heuristic.
-        let thermal_scale = if headroom < 0.25 { 0.35 } else if headroom < 0.40 { 0.60 } else if headroom < 0.60 { 0.80 } else { 1.0 };
+        let thermal_scale = if headroom < 0.25 {
+            0.35
+        } else if headroom < 0.40 {
+            0.60
+        } else if headroom < 0.60 {
+            0.80
+        } else {
+            1.0
+        };
         let extra = (extra as f64 * thermal_scale).round() as u32;
-        let engage = self.bad_windows >= config.engage_windows || (!frame.available && workload.cpu_util_pct >= 92.0);
+        let engage = self.bad_windows >= config.engage_windows
+            || (!frame.available && workload.cpu_util_pct >= 92.0);
         let release = self.good_windows >= config.release_windows;
         let extra = if release {
             // Slew the boost down instead of abruptly dropping it. A smooth
@@ -183,13 +241,19 @@ impl FasController {
         self.last_boost_pct = extra;
 
         let active = extra > 0;
-        let severe_frame = frame.available && frame.fresh && (p95_error > 0.10 || jank_error * 100.0 > (config.jank_threshold_pct as f64 * 1.5));
+        let severe_frame = frame.available
+            && frame.fresh
+            && (p95_error > 0.10 || jank_error * 100.0 > (config.jank_threshold_pct as f64 * 1.5));
         let cpu_floor_pct = if active && severe_frame {
             base_uclamp_min_pct.saturating_add(extra).clamp(35, 85)
         } else {
             0
         };
-        let confidence = if frame.available { workload.confidence.min(frame.confidence) } else { workload.confidence.min(55) };
+        let confidence = if frame.available {
+            workload.confidence.min(frame.confidence)
+        } else {
+            workload.confidence.min(55)
+        };
         FasDecision {
             active,
             confidence,
@@ -197,7 +261,9 @@ impl FasController {
             target_uclamp_min_pct: base_uclamp_min_pct.saturating_add(extra).min(100),
             target_uclamp_max_pct: 100,
             cpu_floor_pct,
-            affinity_hint: config.affinity_hint && active && matches!(scene.kind, SceneKind::Game | SceneKind::Benchmark),
+            affinity_hint: config.affinity_hint
+                && active
+                && matches!(scene.kind, SceneKind::Game | SceneKind::Benchmark),
             reason: if frame.available && frame.fresh {
                 if interaction.recent && raw_error < 0.20 {
                     "input interaction"
@@ -241,25 +307,82 @@ mod tests {
 
     fn thermal() -> ThermalSnapshot {
         ThermalSnapshot {
-            hottest_mdeg: Some(50_000), control_temp_mdeg: Some(50_000), performance_trip_mdeg: Some(90_000),
-            critical_trip_mdeg: Some(110_000), control_zone: Some("cpu".into()), release_mdeg: Some(85_000),
-            headroom_mdeg: Some(35_000), headroom_permille: Some(875), critical_reached: false,
-            telemetry_complete: true, battery_pct: Some(80), external_power: true,
+            hottest_mdeg: Some(50_000),
+            control_temp_mdeg: Some(50_000),
+            performance_trip_mdeg: Some(90_000),
+            critical_trip_mdeg: Some(110_000),
+            control_zone: Some("cpu".into()),
+            release_mdeg: Some(85_000),
+            headroom_mdeg: Some(35_000),
+            headroom_permille: Some(875),
+            critical_reached: false,
+            telemetry_complete: true,
+            battery_pct: Some(80),
+            external_power: true,
         }
     }
 
     fn workload() -> WorkloadSnapshot {
-        WorkloadSnapshot { package: "com.game".into(), pid: 123, start_time_ticks: 1, cpu_util_pct: 92.0, io_read_bps: None, io_write_bps: None, rss_kb: None, run_queue_delay_ms: None, threads: vec![], top_threads: vec![], active: true, gpu_util_pct: None, confidence: 90 }
+        WorkloadSnapshot {
+            package: "com.game".into(),
+            pid: 123,
+            start_time_ticks: 1,
+            cpu_util_pct: 92.0,
+            io_read_bps: None,
+            io_write_bps: None,
+            rss_kb: None,
+            run_queue_delay_ms: None,
+            threads: vec![],
+            top_threads: vec![],
+            active: true,
+            gpu_util_pct: None,
+            confidence: 90,
+        }
     }
 
     #[test]
     fn controller_requires_consecutive_bad_windows() {
-        let scene = SceneSnapshot { package: Some("com.game".into()), kind: SceneKind::Game, event: SceneEvent::Enter, interactive: true, age: Default::default(), reason: "game" };
-        let frame = FrameMetrics { available: true, source: "test".into(), frames: 10, new_frames: 2, fps: 55.0, avg_ms: 18.0, p95_ms: 22.0, jank_ratio: 0.4, budget_ms: 16.67, confidence: 90, fresh: true };
+        let scene = SceneSnapshot {
+            package: Some("com.game".into()),
+            kind: SceneKind::Game,
+            event: SceneEvent::Enter,
+            interactive: true,
+            age: Default::default(),
+            reason: "game",
+        };
+        let frame = FrameMetrics {
+            available: true,
+            source: "test".into(),
+            frames: 10,
+            new_frames: 2,
+            fps: 55.0,
+            avg_ms: 18.0,
+            p95_ms: 22.0,
+            jank_ratio: 0.4,
+            budget_ms: 16.67,
+            confidence: 90,
+            fresh: true,
+        };
         let mut c = FasController::new();
-        let a = c.update(&scene, Some(&workload()), &frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
+        let a = c.update(
+            &scene,
+            Some(&workload()),
+            &frame,
+            &thermal(),
+            &InteractionSnapshot::default(),
+            20,
+            &AdaptiveConfig::default(),
+        );
         assert!(!a.active);
-        let b = c.update(&scene, Some(&workload()), &frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
+        let b = c.update(
+            &scene,
+            Some(&workload()),
+            &frame,
+            &thermal(),
+            &InteractionSnapshot::default(),
+            20,
+            &AdaptiveConfig::default(),
+        );
         assert!(b.active);
         assert!(b.target_uclamp_min_pct > 20);
     }
@@ -292,13 +415,64 @@ mod tests {
             ..bad_frame.clone()
         };
         let mut c = FasController::new();
-        let _ = c.update(&scene, Some(&workload()), &bad_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
-        let engaged = c.update(&scene, Some(&workload()), &bad_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
+        let _ = c.update(
+            &scene,
+            Some(&workload()),
+            &bad_frame,
+            &thermal(),
+            &InteractionSnapshot::default(),
+            20,
+            &AdaptiveConfig::default(),
+        );
+        let engaged = c.update(
+            &scene,
+            Some(&workload()),
+            &bad_frame,
+            &thermal(),
+            &InteractionSnapshot::default(),
+            20,
+            &AdaptiveConfig::default(),
+        );
         assert!(engaged.active);
-        let _ = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
-        let _ = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
-        let released = c.update(&scene, Some(&WorkloadSnapshot { cpu_util_pct: 50.0, active: true, ..workload() }), &good_frame, &thermal(), &InteractionSnapshot::default(), 20, &AdaptiveConfig::default());
+        let _ = c.update(
+            &scene,
+            Some(&WorkloadSnapshot {
+                cpu_util_pct: 50.0,
+                active: true,
+                ..workload()
+            }),
+            &good_frame,
+            &thermal(),
+            &InteractionSnapshot::default(),
+            20,
+            &AdaptiveConfig::default(),
+        );
+        let _ = c.update(
+            &scene,
+            Some(&WorkloadSnapshot {
+                cpu_util_pct: 50.0,
+                active: true,
+                ..workload()
+            }),
+            &good_frame,
+            &thermal(),
+            &InteractionSnapshot::default(),
+            20,
+            &AdaptiveConfig::default(),
+        );
+        let released = c.update(
+            &scene,
+            Some(&WorkloadSnapshot {
+                cpu_util_pct: 50.0,
+                active: true,
+                ..workload()
+            }),
+            &good_frame,
+            &thermal(),
+            &InteractionSnapshot::default(),
+            20,
+            &AdaptiveConfig::default(),
+        );
         assert!(released.extra_boost_pct < engaged.extra_boost_pct);
     }
-
 }

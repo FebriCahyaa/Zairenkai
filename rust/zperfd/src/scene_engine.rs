@@ -21,7 +21,10 @@ pub enum SceneKind {
 
 impl SceneKind {
     pub fn performance_candidate(self) -> bool {
-        matches!(self, Self::Game | Self::Benchmark | Self::Camera | Self::Video | Self::App)
+        matches!(
+            self,
+            Self::Game | Self::Benchmark | Self::Camera | Self::Video | Self::App
+        )
     }
 }
 
@@ -53,7 +56,9 @@ pub struct SceneEngine {
 }
 
 impl Default for SceneEngine {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SceneEngine {
@@ -82,9 +87,9 @@ impl SceneEngine {
         let package;
         let interactive;
         if runtime_root {
-            let fresh = self
-                .last_runtime_probe
-                .is_none_or(|t| Instant::now().saturating_duration_since(t) >= Duration::from_millis(700));
+            let fresh = self.last_runtime_probe.is_none_or(|t| {
+                Instant::now().saturating_duration_since(t) >= Duration::from_millis(700)
+            });
             if fresh {
                 self.last_runtime_probe = Some(Instant::now());
                 self.cached_package = crate::scene::foreground_pkg();
@@ -101,14 +106,23 @@ impl SceneEngine {
 
     /// Testable path and useful for future event sources (Accessibility,
     /// ActivityTaskManager, SurfaceFlinger notifications, app widgets, etc.).
-    pub fn observe_package(&mut self, package: Option<String>, interactive: bool, profile: &Profile) -> SceneSnapshot {
+    pub fn observe_package(
+        &mut self,
+        package: Option<String>,
+        interactive: bool,
+        profile: &Profile,
+    ) -> SceneSnapshot {
         let kind = classify(package.as_deref(), profile);
         let now = Instant::now();
         let changed = self.last_package != package || self.last_kind != kind;
         let event = if package.is_none() && self.last_package.is_some() {
             SceneEvent::Exit
         } else if changed {
-            if self.last_package.is_none() { SceneEvent::Enter } else { SceneEvent::Switch }
+            if self.last_package.is_none() {
+                SceneEvent::Enter
+            } else {
+                SceneEvent::Switch
+            }
         } else {
             SceneEvent::Stable
         };
@@ -122,14 +136,19 @@ impl SceneEngine {
             kind,
             event,
             interactive,
-            age: self.entered_at.map(|v| now.saturating_duration_since(v)).unwrap_or_default(),
+            age: self
+                .entered_at
+                .map(|v| now.saturating_duration_since(v))
+                .unwrap_or_default(),
             reason: reason_for(kind),
         }
     }
 }
 
 fn classify(package: Option<&str>, profile: &Profile) -> SceneKind {
-    let Some(pkg) = package else { return SceneKind::Idle; };
+    let Some(pkg) = package else {
+        return SceneKind::Idle;
+    };
     let low = pkg.to_ascii_lowercase();
     if low == "com.android.systemui" || low.contains("launcher") || low.contains("home") {
         return SceneKind::System;
@@ -137,15 +156,27 @@ fn classify(package: Option<&str>, profile: &Profile) -> SceneKind {
     if low.contains("camera") || low.contains("gallery") && low.contains("camera") {
         return SceneKind::Camera;
     }
-    if low.contains("youtube") || low.contains("netflix") || low.contains("vidio")
-        || low.contains("mxplayer") || low.contains("video") {
+    if low.contains("youtube")
+        || low.contains("netflix")
+        || low.contains("vidio")
+        || low.contains("mxplayer")
+        || low.contains("video")
+    {
         return SceneKind::Video;
     }
-    if low.contains("antutu") || low.contains("geekbench") || low.contains("3dmark")
-        || low.contains("gfxbench") || low.contains("pcmark") {
+    if low.contains("antutu")
+        || low.contains("geekbench")
+        || low.contains("3dmark")
+        || low.contains("gfxbench")
+        || low.contains("pcmark")
+    {
         return SceneKind::Benchmark;
     }
-    if profile.perapp.get(pkg).is_some_and(|m| matches!(m.as_str(), "performance" | "fast")) {
+    if profile
+        .perapp
+        .get(pkg)
+        .is_some_and(|m| matches!(m.as_str(), "performance" | "fast"))
+    {
         return SceneKind::Game;
     }
     SceneKind::App
@@ -163,14 +194,14 @@ fn reason_for(kind: SceneKind) -> &'static str {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::config::Profile;
 
     fn profile() -> Profile {
-        Profile::parse(r#"
+        Profile::parse(
+            r#"
 [meta]
 name="test"
 default_mode="balance"
@@ -178,7 +209,9 @@ default_mode="balance"
 [mode.performance]
 [perapp]
 "com.game.demo"="performance"
-"#).unwrap()
+"#,
+        )
+        .unwrap()
     }
 
     #[test]
@@ -193,8 +226,19 @@ default_mode="balance"
     fn switch_is_distinct_from_stable() {
         let mut e = SceneEngine::new();
         let p = profile();
-        assert_eq!(e.observe_package(Some("com.game.demo".into()), true, &p).event, SceneEvent::Enter);
-        assert_eq!(e.observe_package(Some("com.game.demo".into()), true, &p).event, SceneEvent::Stable);
-        assert_eq!(e.observe_package(Some("com.other".into()), true, &p).event, SceneEvent::Switch);
+        assert_eq!(
+            e.observe_package(Some("com.game.demo".into()), true, &p)
+                .event,
+            SceneEvent::Enter
+        );
+        assert_eq!(
+            e.observe_package(Some("com.game.demo".into()), true, &p)
+                .event,
+            SceneEvent::Stable
+        );
+        assert_eq!(
+            e.observe_package(Some("com.other".into()), true, &p).event,
+            SceneEvent::Switch
+        );
     }
 }

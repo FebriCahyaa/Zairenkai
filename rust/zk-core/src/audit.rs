@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-use serde::{Deserialize, Serialize};
-use crate::operation::Operation;
 use crate::authority::Decision;
+use crate::operation::Operation;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEvent {
