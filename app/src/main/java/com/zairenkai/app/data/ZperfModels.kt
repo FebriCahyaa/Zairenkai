@@ -45,6 +45,23 @@ data class ZperfProbe(
     val gpu: ZperfGpu? = null,
 )
 
+/**
+ * Result line of `zperfd tweak set`. zperfd prints one JSON object on stdout
+ * for both outcomes; [kind] classifies a failure (framework_unavailable,
+ * framework_incompatible, license, sentinel, unauthorized, rejected,
+ * not_observed, rollback_failed, state, lite, unknown, usage). The client adds
+ * engine_unavailable, timeout and protocol for failures zperfd never reported.
+ */
+@Serializable
+data class TweakWriteResult(
+    val ok: Boolean = false,
+    val id: String = "",
+    val value: String? = null,
+    val targets: Int = 0,
+    val kind: String? = null,
+    val error: String? = null,
+)
+
 @Serializable
 data class ZperfStatus(
     val ok: Boolean = false,

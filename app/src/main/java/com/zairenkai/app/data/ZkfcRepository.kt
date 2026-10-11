@@ -20,7 +20,15 @@ class ZkfcRepository(
     suspend fun license() = client.license()
     suspend fun installToken(path: String) = client.installToken(path)
     suspend fun security() = client.security()
-    suspend fun tweaks(lite: Boolean) = client.tweaks(lite)
+
+    /**
+     * zperfd publishes the authoritative, writable descriptor. When the engine
+     * is absent the legacy zkfctl list is shown read-only (source = "zkfctl").
+     */
+    suspend fun tweaks(lite: Boolean): TweakList {
+        if (zperf.available()) zperf.tweaks(lite)?.let { return it }
+        return client.tweaks(lite).copy(source = "zkfctl")
+    }
     suspend fun monitor(intervalMs: Int) = client.monitor(intervalMs)
     suspend fun boostStatus() = client.boostStatus()
     suspend fun boostReset() = client.boostReset()
@@ -31,13 +39,12 @@ class ZkfcRepository(
     suspend fun safeStatus() = client.safeStatus()
     suspend fun safeConfirm() = client.safeConfirm()
 
-    suspend fun setTweak(id: String, value: String, @Suppress("UNUSED_PARAMETER") lite: Boolean): TweakList {
-        if (!zperf.available() || !zperf.setTweak(id, value)) {
-            return TweakList(ok = false, error = "zperfd tidak tersedia atau menolak perubahan", tweaks = emptyList())
+    /** The only tweak mutation path: zperfd (license gate, Sentinel, transaction, readback). */
+    suspend fun setTweak(id: String, value: String, lite: Boolean): TweakWriteResult {
+        if (!zperf.available()) {
+            return TweakWriteResult(ok = false, id = id, kind = "engine_unavailable", error = "zperfd tidak terpasang")
         }
-        return runCatching { client.tweaks(lite) }.getOrElse {
-            TweakList(ok = false, error = it.message ?: "gagal membaca status", tweaks = emptyList())
-        }
+        return zperf.setTweak(id, value, lite)
     }
 
 

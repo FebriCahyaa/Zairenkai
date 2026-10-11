@@ -95,15 +95,23 @@ data class Tweak(
     val category: String = "other",
     val available: Boolean = false,
     @SerialName("lite_hidden") val liteHidden: Boolean = false,
+    /** "range", "choice" or "text" (zperfd); absent in the legacy zkfctl list. */
+    val kind: String? = null,
     val min: Long? = null,
     val max: Long? = null,
+    /** Values this device accepts right now (zperfd runtime allowlist). */
+    val choices: List<String> = emptyList(),
     val value: String? = null,
+    /** Present when the node exists but the engine refuses to change it now. */
+    @SerialName("locked_reason") val lockedReason: String? = null,
 )
 
 @Serializable
 data class TweakList(
     val ok: Boolean = false,
     val error: String? = null,
+    /** "zperfd" (authoritative, writable) or "zkfctl" (read-only fallback). */
+    val source: String = "zkfctl",
     @SerialName("lite_mode") val liteMode: Boolean = false,
     val tweaks: List<Tweak> = emptyList(),
 )

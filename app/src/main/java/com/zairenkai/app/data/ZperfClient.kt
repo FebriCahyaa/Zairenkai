@@ -57,15 +57,28 @@ class ZperfClient(
     suspend fun setAuto(enabled: Boolean): Boolean =
         apply(if (enabled) "auto" else "balance")
 
-    /** Apply one validated tweak through zperfd's transactional engine. */
-    suspend fun setTweak(id: String, value: String, lite: Boolean = false): Boolean {
-        if (id.isBlank() || value.isBlank() || value.length > 4096) return false
+    /** Runtime tweak descriptors from zperfd, the same engine that writes them. */
+    suspend fun tweaks(lite: Boolean = false): TweakList? {
+        val lflag = if (lite) "--lite " else ""
+        val r = RootShell.run("${shellQuote(bin)} ${lflag}--json tweak list", 8000)
+        if (!r.ok) return null
+        return parseTweakList(r.stdout)
+    }
+
+    /**
+     * Apply one tweak through zperfd's transactional engine. Success means the
+     * value was written to every target, read back, and committed.
+     */
+    suspend fun setTweak(id: String, value: String, lite: Boolean = false): TweakWriteResult {
+        if (id.isBlank() || value.isBlank() || value.length > 4096) {
+            return TweakWriteResult(ok = false, id = id, kind = "rejected", error = "nilai kosong atau terlalu panjang")
+        }
         val lflag = if (lite) "--lite " else ""
         val r = RootShell.run(
             "${shellQuote(bin)} ${lflag}tweak set ${shellQuote(id)} ${shellQuote(value)}",
             12_000,
         )
-        return r.ok
+        return parseTweakWrite(id, r.exitCode, r.stdout, r.stderr)
     }
 
     suspend fun reset(): Boolean =
@@ -91,6 +104,38 @@ class ZperfClient(
         "'" + value.replace("'", "'\\''") + "'"
 
     companion object {
+        private val parser = Json { ignoreUnknownKeys = true }
+
+        private fun firstJsonLine(stdout: String): String? =
+            stdout.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("{") }
+
+        /** Decode `zperfd --json tweak list`; null when the output is not that contract. */
+        fun parseTweakList(stdout: String): TweakList? {
+            val line = firstJsonLine(stdout) ?: return null
+            val list = runCatching { parser.decodeFromString<TweakList>(line) }.getOrNull() ?: return null
+            return list.takeIf { it.ok && it.source == "zperfd" }
+        }
+
+        /**
+         * Decode a `zperfd tweak set` outcome. The exit status is authoritative:
+         * a zero exit without a matching success line, or a success line with a
+         * non-zero exit, is a protocol error and never reported as applied.
+         */
+        fun parseTweakWrite(id: String, exitCode: Int, stdout: String, stderr: String): TweakWriteResult {
+            val reported = firstJsonLine(stdout)?.let {
+                runCatching { parser.decodeFromString<TweakWriteResult>(it) }.getOrNull()
+            }
+            if (exitCode == 0 && reported?.ok == true && reported.id == id) return reported
+            if (exitCode != 0 && reported != null && !reported.ok) return reported
+            val detail = stderr.trim().lineSequence().lastOrNull()?.takeIf { it.isNotBlank() }
+            val kind = when (exitCode) {
+                124 -> "timeout"
+                125, 126, 127 -> "engine_unavailable"
+                else -> "protocol"
+            }
+            return TweakWriteResult(ok = false, id = id, kind = kind, error = detail ?: "exit $exitCode")
+        }
+
         private val VALID_MODES = setOf("powersave", "balance", "performance", "fast", "auto")
 
         /** Map a Zairenkai profile onto the zperfd power-mode contract. */

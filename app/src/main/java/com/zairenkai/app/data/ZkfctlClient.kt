@@ -89,17 +89,8 @@ class ZkfctlClient {
     suspend fun tweaks(lite: Boolean): TweakList =
         json.decodeFromString(raw("tweak list", lite, 8000))
 
-    suspend fun setTweak(id: String, value: String, lite: Boolean): TweakList {
-        val r = raw("tweak set ${shellQuote(id)} ${shellQuote(value)}", lite, 8000)
-        // Re-list so the UI reflects the applied value.
-        return if (r.contains("\"ok\":true")) tweaks(lite) else json.decodeFromString(
-            """{"ok":false,"error":"apply failed","tweaks":[]}""",
-        )
-    }
-
-    /** Apply one tweak without re-listing. Returns true on success. */
-    suspend fun applyTweak(id: String, value: String, lite: Boolean): Boolean =
-        raw("tweak set ${shellQuote(id)} ${shellQuote(value)}", lite, 6000).contains("\"ok\":true")
+    // Tweak writes are not exposed here: zperfd is the only mutation path
+    // (ZperfClient.setTweak), so writes share its gate, transaction and readback.
 
     suspend fun monitor(intervalMs: Int): MonitorResult =
         json.decodeFromString(raw("monitor $intervalMs", false, (intervalMs + 6000).toLong()))

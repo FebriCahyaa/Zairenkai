@@ -187,27 +187,45 @@ fn core_manifest() -> Result<CoreManifest, String> {
 }
 
 fn kernel_license_ok() -> Result<(), String> {
-    let z = Zkfc::open().map_err(|e| format!("ZKFC unavailable: {e}"))?;
-    let version = z
-        .version()
-        .map_err(|e| format!("ZKFC version query failed: {e}"))?;
+    kernel_gate().map_err(|(_, message)| message)
+}
+
+/// Kernel gate with a failure class, so clients can tell a missing or
+/// incompatible framework apart from a framework that is present but not
+/// authorized by a valid API token.
+fn kernel_gate() -> Result<(), (&'static str, String)> {
+    let z =
+        Zkfc::open().map_err(|e| ("framework_unavailable", format!("ZKFC unavailable: {e}")))?;
+    let version = z.version().map_err(|e| {
+        (
+            "framework_unavailable",
+            format!("ZKFC version query failed: {e}"),
+        )
+    })?;
     if !version.api_compatible() {
-        return Err(format!(
-            "incompatible ZKFC API {}.{}.{} (min supported {}.{}.{})",
-            version.api_major(),
-            version.api_minor(),
-            version.api_patch(),
-            (version.api_min_supported >> 16) & 0xff,
-            (version.api_min_supported >> 8) & 0xff,
-            version.api_min_supported & 0xff,
+        return Err((
+            "framework_incompatible",
+            format!(
+                "incompatible ZKFC API {}.{}.{} (min supported {}.{}.{})",
+                version.api_major(),
+                version.api_minor(),
+                version.api_patch(),
+                (version.api_min_supported >> 16) & 0xff,
+                (version.api_min_supported >> 8) & 0xff,
+                version.api_min_supported & 0xff,
+            ),
         ));
     }
-    let status = z
-        .license_state()
-        .map_err(|e| format!("ZKFC license query failed: {e}"))?;
+    let status = z.license_state().map_err(|e| {
+        (
+            "framework_unavailable",
+            format!("ZKFC license query failed: {e}"),
+        )
+    })?;
     if status != 1 {
-        return Err(format!(
-            "ZKFC license state {status}; performance mutation locked"
+        return Err((
+            "license",
+            format!("ZKFC license state {status}; performance mutation locked"),
         ));
     }
     Ok(())
@@ -721,7 +739,19 @@ fn cmd_tweak(args: &Args) -> i32 {
 
     match sub {
         "list" => {
-            for spec in tweak::specs().filter(|spec| !(args.lite && spec.lite)) {
+            let specs = tweak::specs().filter(|spec| !(args.lite && spec.lite));
+            if args.json {
+                let entries = specs
+                    .map(|spec| tweak_descriptor_json(&tweak::describe(spec, &s, &topology)))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                println!(
+                    "{{\"ok\":true,\"source\":\"zperfd\",\"lite_mode\":{},\"tweaks\":[{}]}}",
+                    args.lite, entries
+                );
+                return 0;
+            }
+            for spec in specs {
                 let value = tweak::read(spec.id, &s, &topology).unwrap_or_else(|| "".into());
                 println!("{}\t{}\t{}\t{}", spec.id, spec.category, spec.title, value);
             }
@@ -747,24 +777,24 @@ fn cmd_tweak(args: &Args) -> i32 {
         }
         "set" => {
             let (Some(id), Some(value)) = (args.positional.get(1), args.positional.get(2)) else {
-                eprintln!("usage: tweak set <id> <value>");
-                return 2;
+                return tweak_fail(2, "usage", "", "usage: tweak set <id> <value>");
             };
             if let Err(e) = core_authorize(tweak::operation_for(id)) {
-                eprintln!("{e}");
-                return 1;
+                return tweak_fail(1, "unauthorized", id, &e.to_string());
             }
-            if let Err(e) = kernel_license_ok() {
-                eprintln!("tweak blocked: {e}");
-                return 4;
+            if let Err((kind, e)) = kernel_gate() {
+                return tweak_fail(4, kind, id, &format!("tweak blocked: {e}"));
             }
             let Some(spec) = tweak::find(id) else {
-                eprintln!("unknown tweak '{id}'");
-                return 2;
+                return tweak_fail(2, "unknown", id, &format!("unknown tweak '{id}'"));
             };
             if args.lite && spec.lite {
-                eprintln!("tweak '{id}' is disabled in lite mode");
-                return 2;
+                return tweak_fail(
+                    2,
+                    "lite",
+                    id,
+                    &format!("tweak '{id}' is disabled in lite mode"),
+                );
             }
 
             let family = family::load(
@@ -782,41 +812,56 @@ fn cmd_tweak(args: &Args) -> i32 {
                 .ensure_boot(&s, &nodes)
                 .and_then(|_| state.recover(&s))
             {
-                eprintln!("state recovery failed: {e}");
-                return 3;
+                return tweak_fail(3, "state", id, &format!("state recovery failed: {e}"));
             }
             let sentinel = sentinel_evaluate(args, tweak::operation_for(id));
             if !sentinel.allowed {
-                eprintln!("tweak blocked by Sentinel: {:?}", sentinel.reasons);
-                return 4;
+                return tweak_fail(
+                    4,
+                    "sentinel",
+                    id,
+                    &format!("tweak blocked by Sentinel: {:?}", sentinel.reasons),
+                );
             }
             if let Err(e) = state.begin(&s, &nodes) {
-                eprintln!("transaction begin failed: {e}");
-                return 3;
+                return tweak_fail(3, "state", id, &format!("transaction begin failed: {e}"));
             }
-            match tweak::apply(id, value, &s, &topology) {
-                Ok(effective) => match state.commit(None, None) {
+            // Success requires the write to be observable on every target
+            // before the transaction commits (CORE_INVARIANTS: State).
+            let outcome = tweak::apply(id, value, &s, &topology)
+                .map_err(|e| ("rejected", format!("tweak failed: {e}")))
+                .and_then(|applied| {
+                    tweak::verify(id, &applied, &s, &topology)
+                        .map(|()| applied)
+                        .map_err(|e| ("not_observed", format!("write not observable: {e}")))
+                });
+            match outcome {
+                Ok(applied) => match state.commit(None, None) {
                     Ok(()) => {
                         println!(
-                            "{{\"ok\":true,\"id\":\"{}\",\"value\":\"{}\"}}",
+                            "{{\"ok\":true,\"id\":\"{}\",\"value\":\"{}\",\"targets\":{}}}",
                             json_escape(id),
-                            json_escape(&effective)
+                            json_escape(&applied.value),
+                            applied.targets
                         );
                         0
                     }
                     Err(e) => {
                         let _ = state.recover(&s);
-                        eprintln!("state commit failed: {e}");
-                        3
+                        tweak_fail(3, "state", id, &format!("state commit failed: {e}"))
                     }
                 },
-                Err(e) => {
-                    if let Err(rollback) = state.rollback(&s) {
-                        eprintln!("rollback failed: {rollback}");
-                    }
-                    eprintln!("tweak failed: {e}");
-                    3
-                }
+                Err((kind, message)) => match state.rollback(&s) {
+                    Ok(()) => tweak_fail(3, kind, id, &message),
+                    // The journal stays in place; the next recovery pass (or
+                    // SAFE MODE) restores the snapshot.
+                    Err(rollback) => tweak_fail(
+                        3,
+                        "rollback_failed",
+                        id,
+                        &format!("{message}; rollback failed: {rollback}"),
+                    ),
+                },
             }
         }
         _ => {
@@ -824,6 +869,56 @@ fn cmd_tweak(args: &Args) -> i32 {
             2
         }
     }
+}
+
+/// Report a `tweak set` failure on stdout as JSON (the success line is JSON
+/// too) and on stderr for logs. `kind` lets clients tell an unavailable
+/// engine, a policy/authorization block and an invalid value apart.
+fn tweak_fail(code: i32, kind: &str, id: &str, message: &str) -> i32 {
+    println!(
+        "{{\"ok\":false,\"id\":\"{}\",\"kind\":\"{}\",\"error\":\"{}\"}}",
+        json_escape(id),
+        json_escape(kind),
+        json_escape(message)
+    );
+    eprintln!("{message}");
+    code
+}
+
+fn tweak_descriptor_json(d: &tweak::Descriptor) -> String {
+    let opt = |v: Option<&str>| {
+        v.map(|v| format!("\"{}\"", json_escape(v)))
+            .unwrap_or_else(|| "null".into())
+    };
+    let (kind, min, max, choices) = match &d.constraint {
+        tweak::Constraint::Range { min, max } => {
+            ("range", min.to_string(), max.to_string(), String::new())
+        }
+        tweak::Constraint::Choice(list) => (
+            "choice",
+            "null".into(),
+            "null".into(),
+            list.iter()
+                .map(|c| format!("\"{}\"", json_escape(c)))
+                .collect::<Vec<_>>()
+                .join(","),
+        ),
+        tweak::Constraint::Text => ("text", "null".into(), "null".into(), String::new()),
+    };
+    format!(
+        "{{\"id\":\"{}\",\"title\":\"{}\",\"category\":\"{}\",\"available\":{},\"lite_hidden\":{},\"kind\":\"{}\",\"min\":{},\"max\":{},\"choices\":[{}],\"value\":{},\"locked_reason\":{}}}",
+        json_escape(d.spec.id),
+        json_escape(d.spec.title),
+        json_escape(d.spec.category),
+        d.available,
+        d.spec.lite,
+        kind,
+        min,
+        max,
+        choices,
+        opt(d.value.as_deref()),
+        opt(d.locked),
+    )
 }
 
 fn cmd_inventory(args: &Args) -> i32 {

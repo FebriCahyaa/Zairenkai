@@ -45,6 +45,9 @@ jobs:
       - name: Assemble debug APKs (standard + spoofed)
         run: ./gradlew :app:assembleStandardDebug :app:assembleSpoofedDebug --stacktrace
 
+      - name: Unit tests (engine JSON contracts, tweak outcomes)
+        run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
+
       - name: Lint
         run: ./gradlew :app:lintStandardDebug --stacktrace
 

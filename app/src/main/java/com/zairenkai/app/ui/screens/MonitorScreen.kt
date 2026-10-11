@@ -245,7 +245,7 @@ private fun MonitorHeader(
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusPill(
+                LiveStatusPill(
                     label = when {
                         !isRunning -> "PAUSED"
                         hasSample -> "LIVE"
@@ -278,7 +278,6 @@ private fun MonitorHeader(
         FilledTonalIconButton(
             onClick = onOpenHistory,
             modifier = Modifier.size(52.dp),
-            shapes = IconButtonDefaults.shapes(),
         ) {
             Icon(Icons.Rounded.History, contentDescription = "Riwayat penggunaan")
         }
@@ -288,7 +287,7 @@ private fun MonitorHeader(
 private fun refreshHzLabel(value: Float): String = "%.0f Hz".format(value.coerceAtLeast(1f))
 
 @Composable
-private fun StatusPill(
+private fun LiveStatusPill(
     label: String,
     dotColor: Color,
     containerColor: Color,

@@ -48,6 +48,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
+      # Never publish a preview the unit tests reject.
+      - name: Unit tests
+        run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
+
       - name: Build minified debug-signed preview APK
         run: ./gradlew :app:assembleStandardPreview --stacktrace
 

@@ -167,8 +167,13 @@ data class TweaksUi(
     val loading: Boolean = true,
     val lite: Boolean = false,
     val tweaks: List<Tweak> = emptyList(),
+    /** False when the list came from the zkfctl fallback: nothing is writable. */
+    val writable: Boolean = false,
+    /** Set when the list itself could not be read (not the same as "no tunables"). */
+    val loadError: String? = null,
     val busyId: String? = null,
     val error: String? = null,
+    val notice: String? = null,
 )
 
 class TweaksViewModel(private val c: AppContainer) : ViewModel() {
@@ -179,25 +184,49 @@ class TweaksViewModel(private val c: AppContainer) : ViewModel() {
 
     fun load() = viewModelScope.launch {
         val lite = c.settings.settings.first().liteMode
-        val list = runCatching { c.repository.tweaks(lite) }.getOrNull()
-        _ui.value = TweaksUi(false, lite, list?.tweaks ?: emptyList())
+        _ui.value = _ui.value.copy(loading = true, lite = lite)
+        if (!c.repository.rootAvailable()) {
+            _ui.value = TweaksUi(loading = false, lite = lite, loadError = "Akses root tidak tersedia.")
+            return@launch
+        }
+        val list = runCatching { c.repository.tweaks(lite) }
+        _ui.value = list.fold(
+            onSuccess = {
+                TweaksUi(
+                    loading = false,
+                    lite = lite,
+                    tweaks = it.tweaks,
+                    writable = it.source == "zperfd",
+                    loadError = if (!it.ok) (it.error ?: "Daftar tweak tidak dapat dibaca.") else null,
+                )
+            },
+            onFailure = {
+                TweaksUi(loading = false, lite = lite, loadError = "Daftar tweak tidak dapat dibaca: ${it.message ?: "galat"}")
+            },
+        )
     }
 
     fun set(id: String, value: String) = viewModelScope.launch {
-        _ui.value = _ui.value.copy(busyId = id)
-        val daemonAvailable = runCatching { c.zperf.available() }.getOrDefault(false)
-        val success = if (daemonAvailable) {
-            // zperfd is the only supported mutation path; it snapshots and rolls back.
-            runCatching { c.zperf.setTweak(id, value, _ui.value.lite) }.getOrDefault(false)
-        } else {
-            false
+        _ui.value = _ui.value.copy(busyId = id, error = null, notice = null)
+        val lite = _ui.value.lite
+        val result = runCatching { c.repository.setTweak(id, value, lite) }.getOrElse {
+            TweakWriteResult(ok = false, id = id, kind = "protocol", error = it.message)
         }
-        val list = if (success) runCatching { c.repository.tweaks(_ui.value.lite) }.getOrNull() else null
+        if (!result.ok) {
+            _ui.value = _ui.value.copy(busyId = null, error = tweakFailureMessage(result))
+            return@launch
+        }
+        // Re-read from the engine so the row shows the observed value, not the request.
+        val list = runCatching { c.repository.tweaks(lite) }.getOrNull()
         _ui.value = _ui.value.copy(
             busyId = null,
             tweaks = list?.tweaks ?: _ui.value.tweaks,
-            error = if (!success) "zperfd tidak tersedia atau tweak ditolak; perubahan tidak diterapkan." else null,
+            notice = tweakSuccessMessage(result),
         )
+    }
+
+    fun dismissMessages() {
+        _ui.value = _ui.value.copy(error = null, notice = null)
     }
 }
 
@@ -308,6 +337,12 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
             zperf = runCatching { c.zperf.probe() }.getOrNull(),
         )
     }
+
+    /** Install an API token staged at [path]; malformed engine output is a rejection, not a crash. */
+    suspend fun installToken(path: String): LicenseResult =
+        runCatching { c.repository.installToken(path) }.getOrElse {
+            LicenseResult(ok = false, state = "engine_error", error = it.message)
+        }
 }
 
 /* ---------------- runtime platform ---------------- */

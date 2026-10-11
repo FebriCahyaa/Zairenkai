@@ -1,0 +1,1 @@
+{"id":"zairenkai.core","product":"Zairenkai Core Platform","core_api":1,"architectures":["arm64","x86_64","riscv64"],"kernel_models":["gki","non-gki","unknown"],"kernel_generations":["4.14","4.19","5.4","5.10","5.15","6.1","6.6","6.12","6.18"]}

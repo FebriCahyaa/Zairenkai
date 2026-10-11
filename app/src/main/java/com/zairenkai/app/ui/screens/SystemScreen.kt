@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.data.SignatureGuard
 import com.zairenkai.app.data.SignatureState
-import com.zairenkai.app.data.ZkfctlClient
 import com.zairenkai.app.ui.SystemViewModel
 import com.zairenkai.app.ui.VmFactory
 import com.zairenkai.app.ui.components.SectionCard
@@ -28,6 +27,7 @@ import com.zairenkai.app.ui.theme.ZkBad
 import com.zairenkai.app.ui.theme.ZkGood
 import com.zairenkai.app.ui.theme.ZkWarn
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -45,7 +45,13 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
         if (uri != null) scope.launch {
             val path = withContext(Dispatchers.IO) { copyToCache(ctx, uri) }
             if (path == null) { tokenMsg = "Gagal membaca file token."; return@launch }
-            val res = withContext(Dispatchers.IO) { ZkfctlClient().installToken(path) }
+            val res = try {
+                vm.installToken(path)
+            } finally {
+                // The engine keeps its own persistent copy; never leave token
+                // material behind in the app cache.
+                withContext(NonCancellable + Dispatchers.IO) { File(path).delete() }
+            }
             tokenMsg = if (res.state == "valid") "Token terpasang untuk ${res.token?.licensee ?: "perangkat"}."
             else "Ditolak: ${res.state}"
             vm.refresh()
@@ -186,8 +192,8 @@ private fun copyToCache(ctx: Context, uri: android.net.Uri): String? = try {
     ctx.contentResolver.openInputStream(uri)?.use { input ->
         out.outputStream().use { input.copyTo(it) }
     }
-    // Make it readable by root-run zkfctl.
-    out.setReadable(true, false)
+    // App-private files are owner-only (0600); root reads them without the
+    // file being exposed to other apps, so it is never made world-readable.
     out.absolutePath
 } catch (e: Exception) {
     null

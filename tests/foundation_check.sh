@@ -33,7 +33,11 @@ grep -q 't->lite' userspace/zkfctl/main.c
 grep -q 'tests/abi/zkfc_uapi_test.c' .github/workflows/native.yml
 grep -q 'tools/profile_validate.py database' .github/workflows/native.yml
 grep -q 'diff -qr database module/zperf/database' .github/workflows/native.yml
-grep -q 'setTweak(id, value, _ui.value.lite)' app/src/main/java/com/zairenkai/app/ui/Vm.kt
+# Lite mode must reach the engine on every tweak write: ViewModel -> repository
+# -> ZperfClient -> `zperfd --lite`.
+grep -q 'c.repository.setTweak(id, value, lite)' app/src/main/java/com/zairenkai/app/ui/Vm.kt
+grep -q 'zperf.setTweak(id, value, lite)' app/src/main/java/com/zairenkai/app/data/ZkfcRepository.kt
+grep -q 'if (lite) "--lite " else ""' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
 grep -q 'MAX_JOURNAL_BYTES' rust/zperfd/src/state.rs
 grep -q 'write_commit_marker' rust/zperfd/src/state.rs
 grep -q 'O_NOFOLLOW | libc::O_CLOEXEC' rust/zperfd/src/nodes.rs
