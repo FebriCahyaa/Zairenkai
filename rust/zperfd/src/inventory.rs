@@ -348,7 +348,7 @@ mod tests {
         fs::create_dir_all(&p).unwrap();
         p
     }
-    fn write(r: &PathBuf, path: &str, value: &str) {
+    fn write(r: &std::path::Path, path: &str, value: &str) {
         let p = r.join(path.trim_start_matches('/'));
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, value).unwrap();

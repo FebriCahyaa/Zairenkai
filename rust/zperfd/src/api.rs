@@ -209,7 +209,7 @@ fn dispatch(args: &Args, request: &Request) -> Response {
             let s = super::Sysroot::new(&args.root);
             let identity = super::platform::PlatformIdentity::detect(&s);
             let inv = super::inventory::collect(&s, identity.clone());
-            let plan = super::optimize::plan(&s, &identity, &inv);
+            let plan = super::optimize::plan(&s, &inv);
             let mut p = BTreeMap::new();
             p.insert("plan_json".into(), super::optimize::json(&plan));
             Response::ok(request, "read-only optimization plan", p)

@@ -253,14 +253,8 @@ pub fn operation_for(id: &str) -> zairenkai_core::operation::Operation {
     }
 }
 
-pub fn is_lite(id: &str) -> Option<bool> {
-    find(id).map(|spec| spec.lite)
-}
-
 pub fn read(id: &str, s: &Sysroot, t: &Topology) -> Option<String> {
-    if find(id).is_none() {
-        return None;
-    }
+    find(id)?;
     match id {
         "cpu_governor" => t
             .policies
@@ -749,7 +743,7 @@ pub fn apply(id: &str, value: &str, s: &Sysroot, t: &Topology) -> Result<String,
                 return Err("battery charge_control_limit node unavailable".into());
             }
             let v = parse_range(value, 0, 100)?;
-            write_checked(s, &node, &v)?;
+            write_checked(s, node, &v)?;
             Ok(v)
         }
         _ => unreachable!(),
@@ -779,34 +773,6 @@ fn write_sys_first(
 }
 
 /// Paths potentially modified by the individual tweak interface.
-#[cfg(test)]
-mod tests {
-    use super::effective_congestion_allowlist;
-    use super::parse_choice;
-
-    #[test]
-    fn sysfs_active_choice_brackets_are_ignored() {
-        assert_eq!(
-            parse_choice("mq-deadline", "[mq-deadline] bfq").unwrap(),
-            "mq-deadline"
-        );
-        assert!(parse_choice("kyber", "[mq-deadline] bfq").is_err());
-    }
-
-    #[test]
-    fn choice_validation_accepts_plain_lists() {
-        assert_eq!(
-            parse_choice("schedutil", "schedutil performance").unwrap(),
-            "schedutil"
-        );
-    }
-
-    #[test]
-    fn choice_validation_fails_closed_without_runtime_allowlist() {
-        assert!(parse_choice("cubic", "").is_err());
-    }
-}
-
 pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
     let mut out = vec![
         "/proc/sys/kernel/sched_latency_ns",
@@ -873,4 +839,51 @@ pub fn managed_nodes(s: &Sysroot, t: &Topology) -> Vec<String> {
     out.sort();
     out.dedup();
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::effective_congestion_allowlist;
+    use super::parse_choice;
+
+    #[test]
+    fn sysfs_active_choice_brackets_are_ignored() {
+        assert_eq!(
+            parse_choice("mq-deadline", "[mq-deadline] bfq").unwrap(),
+            "mq-deadline"
+        );
+        assert!(parse_choice("kyber", "[mq-deadline] bfq").is_err());
+    }
+
+    #[test]
+    fn choice_validation_accepts_plain_lists() {
+        assert_eq!(
+            parse_choice("schedutil", "schedutil performance").unwrap(),
+            "schedutil"
+        );
+    }
+
+    #[test]
+    fn choice_validation_fails_closed_without_runtime_allowlist() {
+        assert!(parse_choice("cubic", "").is_err());
+    }
+
+    #[test]
+    fn congestion_allowlist_is_bounded_by_available_algorithms() {
+        assert_eq!(
+            effective_congestion_allowlist("cubic bbr", "reno cubic bbr"),
+            "cubic bbr"
+        );
+        assert_eq!(
+            effective_congestion_allowlist("", "reno cubic"),
+            "reno cubic"
+        );
+        assert_eq!(
+            effective_congestion_allowlist("bbr2", "reno cubic"),
+            "reno cubic"
+        );
+        // No runtime-available algorithms: nothing is selectable.
+        assert_eq!(effective_congestion_allowlist("bbr", ""), "");
+        assert!(parse_choice("bbr", &effective_congestion_allowlist("bbr", "")).is_err());
+    }
 }

@@ -63,9 +63,6 @@ impl ThreadCgroupController {
             capability_parent: None,
         }
     }
-    pub fn capabilities(&self) -> CgroupCapabilities {
-        self.capabilities
-    }
     pub fn reset(&mut self, s: &Sysroot) {
         let assignments = self.assignments.values().cloned().collect::<Vec<_>>();
         for a in assignments {

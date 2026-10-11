@@ -24,19 +24,9 @@ pub enum ThreadClass {
     Other,
 }
 
-impl ThreadClass {
-    pub fn performance_candidate(self) -> bool {
-        matches!(
-            self,
-            Self::Main | Self::Render | Self::Game | Self::Audio | Self::Worker
-        )
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct ThreadSample {
     pub tid: i32,
-    pub name: String,
     pub class: ThreadClass,
     pub cpu_util_pct: f64,
     pub run_queue_delay_ms: Option<f64>,
@@ -136,10 +126,6 @@ impl WorkloadAnalyzer {
         self.last_pid = None;
     }
 
-    pub fn sample(&mut self, s: &Sysroot, package: Option<&str>) -> Option<WorkloadSnapshot> {
-        self.sample_with_gpu(s, package, None)
-    }
-
     pub fn sample_with_gpu(
         &mut self,
         s: &Sysroot,
@@ -224,7 +210,6 @@ impl WorkloadAnalyzer {
             threads.push(ThreadSample {
                 tid,
                 class: classify_thread(&name),
-                name,
                 cpu_util_pct: util,
                 run_queue_delay_ms,
                 start_time_ticks: stat.start_time_ticks,
@@ -495,7 +480,6 @@ mod tests {
     fn classifies_render_and_game_threads() {
         assert_eq!(classify_thread("RenderThread"), ThreadClass::Render);
         assert_eq!(classify_thread("UnityMain"), ThreadClass::Game);
-        assert!(classify_thread("RenderThread").performance_candidate());
     }
 
     #[test]

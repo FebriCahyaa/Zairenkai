@@ -553,7 +553,6 @@ mod tests {
     fn test_topology() -> Topology {
         Topology {
             release: "test".into(),
-            gki: false,
             kernel_flavor: crate::platform::KernelFlavor::NonGki,
             kernel_generation: "6.6".into(),
             cgroup_v2: false,

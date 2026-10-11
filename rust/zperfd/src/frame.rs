@@ -138,7 +138,7 @@ impl FrameAnalyzer {
         }
         self.last_budget_ns = budget_ns;
 
-        let mut parsed = Vec::new();
+        let mut parsed;
         let prefer_sf = matches!(source_preference, "auto" | "surfaceflinger");
         if prefer_sf {
             if let Some(output) = bounded_command(
@@ -287,16 +287,11 @@ fn parse_framestats(text: &str) -> Vec<FrameTiming> {
     let mut rows = Vec::new();
     for line in text.lines() {
         let upper = line.to_ascii_uppercase();
-        let normalized = upper.replace('_', "").replace(' ', "");
+        let normalized = upper.replace(['_', ' '], "");
         if normalized.contains("INTENDEDVSYNC") && normalized.contains("FRAMECOMPLETED") {
             let cols = line
                 .split(',')
-                .map(|s| {
-                    s.trim()
-                        .to_ascii_uppercase()
-                        .replace('_', "")
-                        .replace(' ', "")
-                })
+                .map(|s| s.trim().to_ascii_uppercase().replace(['_', ' '], ""))
                 .collect::<Vec<_>>();
             intended_idx = cols.iter().position(|v| v == "INTENDEDVSYNC");
             completed_idx = cols.iter().position(|v| v == "FRAMECOMPLETED");
@@ -343,15 +338,15 @@ fn parse_surfaceflinger_frametimeline(text: &str, package: &str, pid: i32) -> Ve
     let mut actual_start = None::<i64>;
     let mut actual_end = None::<i64>;
     let mut actual_present = None::<i64>;
-    let mut flush = |rows: &mut Vec<FrameTiming>,
-                     token: &mut i64,
-                     owner_pid: &mut i32,
-                     layer_match: &mut bool,
-                     jank: &mut bool,
-                     expected_start: &mut Option<i64>,
-                     actual_start: &mut Option<i64>,
-                     actual_end: &mut Option<i64>,
-                     actual_present: &mut Option<i64>| {
+    let flush = |rows: &mut Vec<FrameTiming>,
+                 token: &mut i64,
+                 owner_pid: &mut i32,
+                 layer_match: &mut bool,
+                 jank: &mut bool,
+                 expected_start: &mut Option<i64>,
+                 actual_start: &mut Option<i64>,
+                 actual_end: &mut Option<i64>,
+                 actual_present: &mut Option<i64>| {
         let match_frame = *owner_pid == pid || (*layer_match && !package.is_empty());
         if match_frame {
             if let (Some(start), Some(end)) = (*actual_start, *actual_end) {
@@ -429,7 +424,7 @@ fn parse_surfaceflinger_frametimeline(text: &str, package: &str, pid: i32) -> Ve
 
 fn parse_timeline_values(line: &str) -> Vec<f64> {
     line.split('|')
-        .flat_map(|part| part.trim().split_whitespace())
+        .flat_map(|part| part.split_whitespace())
         .filter_map(|x| x.parse::<f64>().ok())
         .collect()
 }

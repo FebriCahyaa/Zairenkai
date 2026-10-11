@@ -967,7 +967,7 @@ fn cmd_optimize(args: &Args) -> i32 {
     let s = Sysroot::new(&args.root);
     let identity = platform::PlatformIdentity::detect(&s);
     let inv = inventory::collect(&s, identity.clone());
-    let plan = optimize::plan(&s, &identity, &inv);
+    let plan = optimize::plan(&s, &inv);
     if args.json {
         println!("{}", optimize::json(&plan));
     } else {
@@ -1244,12 +1244,12 @@ fn cmd_adaptive(args: &Args) -> i32 {
         println!("effective   : {effective}");
         println!("observe     : {observe}");
         if let Some(w) = workload {
-            println!("workload    : pid={} cpu={:.1}% top={:.1}% render={:.1}% gpu={:?}% rq={:?}ms active={} confidence={}", w.pid, w.cpu_util_pct, w.top_thread_util_pct(), w.render_util_pct(), w.gpu_util_pct, w.run_queue_delay_ms, w.active, w.confidence);
+            println!("workload    : package={} pid={} cpu={:.1}% top={:.1}% render={:.1}% gpu={:?}% rq={:?}ms active={} confidence={}", w.package, w.pid, w.cpu_util_pct, w.top_thread_util_pct(), w.render_util_pct(), w.gpu_util_pct, w.run_queue_delay_ms, w.active, w.confidence);
         } else {
             println!("workload    : unavailable");
         }
-        println!("frame       : source={} available={} fresh={} new={} fps={:.1} p95={:.2}ms jank={:.1}% budget={:.2}ms", frame.source, frame.available, frame.fresh, frame.new_frames, frame.fps, frame.p95_ms, frame.jank_ratio * 100.0, frame.budget_ms);
-        println!("interaction : recent={} active={} touch={} age={:?}ms burst={} sources={} confidence={}", interaction.recent, interaction.active, interaction.touch_active, interaction.age_ms, interaction.burst_count, interaction.source_count, interaction.confidence);
+        println!("frame       : source={} available={} fresh={} window={} new={} fps={:.1} p95={:.2}ms jank={:.1}% budget={:.2}ms", frame.source, frame.available, frame.fresh, frame.frames, frame.new_frames, frame.fps, frame.p95_ms, frame.jank_ratio * 100.0, frame.budget_ms);
+        println!("interaction : recent={} active={} touch={} last={:?} age={:?}ms burst={} sources={} confidence={}", interaction.recent, interaction.active, interaction.touch_active, interaction.kind, interaction.age_ms, interaction.burst_count, interaction.source_count, interaction.confidence);
         println!(
             "thermal     : headroom={:?} critical={} complete={}",
             thermal_snapshot.headroom_permille,
@@ -1257,7 +1257,7 @@ fn cmd_adaptive(args: &Args) -> i32 {
             thermal_snapshot.telemetry_complete
         );
         println!(
-            "decision    : active={} boost=+{}% uclamp={}%% cpu_floor={}%% confidence={} reason={}",
+            "decision    : active={} boost=+{}% uclamp={}% cpu_floor={}% confidence={} reason={}",
             decision.active,
             decision.extra_boost_pct,
             decision.target_uclamp_min_pct,
@@ -1380,6 +1380,7 @@ fn acquire_daemon_lock(state: &Path) -> std::io::Result<File> {
     fs::create_dir_all(state)?;
     let file = OpenOptions::new()
         .create(true)
+        .truncate(false)
         .read(true)
         .write(true)
         .open(state.join("daemon.lock"))?;
@@ -1405,8 +1406,9 @@ fn cmd_daemon(args: &Args) -> i32 {
     };
 
     unsafe {
-        libc::signal(libc::SIGTERM, on_signal as libc::sighandler_t);
-        libc::signal(libc::SIGINT, on_signal as libc::sighandler_t);
+        let handler = on_signal as extern "C" fn(libc::c_int) as libc::sighandler_t;
+        libc::signal(libc::SIGTERM, handler);
+        libc::signal(libc::SIGINT, handler);
     }
 
     let s = Sysroot::new(&args.root);
@@ -1801,7 +1803,6 @@ fn cmd_daemon(args: &Args) -> i32 {
     fas_controller.reset();
     interaction_engine.reset();
     let _ = configure_kernel_input_boost(&topology, None);
-    last_adaptive_report = None;
     eprintln!("zperfd: stopping");
     0
 }

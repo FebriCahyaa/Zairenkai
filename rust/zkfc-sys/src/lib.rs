@@ -14,7 +14,7 @@ use std::os::unix::io::{AsRawFd, RawFd};
 
 pub const ZKFC_DEVICE_PATH: &str = "/dev/zkfc";
 pub const ZKFC_API_VERSION: u32 = (1u32 << 16) | (1u32 << 8);
-pub const ZKFC_API_MIN_SUPPORTED: u32 = (1u32 << 16);
+pub const ZKFC_API_MIN_SUPPORTED: u32 = 1u32 << 16;
 const ZKFC_IOC_MAGIC: u32 = b'Z' as u32;
 
 // asm-generic ioctl encoding (arm64 / x86_64 / riscv64).
@@ -428,16 +428,18 @@ impl Zkfc {
     /// the kernel's input handler applies the per-cluster floors without a
     /// userspace poll loop on every touch event.
     pub fn input_boost(&self, duration_ms: u32, clusters: &[(u32, u32)]) -> io::Result<()> {
-        if duration_ms < 10 || duration_ms > 5000 || clusters.len() > 8 {
+        if !(10..=5000).contains(&duration_ms) || clusters.len() > 8 {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "invalid ZKFC input boost request",
             ));
         }
-        let mut req = InputBoost::default();
-        req.enabled = u32::from(!clusters.is_empty());
-        req.duration_ms = duration_ms;
-        req.cluster_count = clusters.len() as u32;
+        let mut req = InputBoost {
+            enabled: u32::from(!clusters.is_empty()),
+            duration_ms,
+            cluster_count: clusters.len() as u32,
+            ..InputBoost::default()
+        };
         for (i, &(cpu, min_khz)) in clusters.iter().take(8).enumerate() {
             req.cluster_cpu[i] = cpu;
             req.min_khz[i] = min_khz;
@@ -462,12 +464,14 @@ impl Zkfc {
         release_mdeg: i32,
         zones: &[String],
     ) -> io::Result<()> {
-        let mut cfg = ThermalGuard::default();
-        cfg.enabled = 1;
-        cfg.interval_ms = interval_ms;
-        cfg.limit_mdeg = limit_mdeg;
-        cfg.release_mdeg = release_mdeg;
-        cfg.zone_count = zones.len().min(4) as u32;
+        let mut cfg = ThermalGuard {
+            enabled: 1,
+            interval_ms,
+            limit_mdeg,
+            release_mdeg,
+            zone_count: zones.len().min(4) as u32,
+            ..ThermalGuard::default()
+        };
         for (i, zone) in zones.iter().take(4).enumerate() {
             if zone.is_empty() || zone.len() >= 32 || zone.as_bytes().contains(&0) {
                 return Err(io::Error::new(

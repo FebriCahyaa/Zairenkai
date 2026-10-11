@@ -30,7 +30,6 @@ struct Index {
 #[derive(Debug, Clone)]
 pub struct Resolution {
     pub entry: DeviceEntry,
-    pub database_root: PathBuf,
 }
 
 fn safe_relative_path(raw: &str) -> Option<PathBuf> {
@@ -47,12 +46,6 @@ fn safe_relative_path(raw: &str) -> Option<PathBuf> {
 }
 
 impl Resolution {
-    pub fn metadata_path(&self) -> PathBuf {
-        safe_relative_path(&self.entry.metadata)
-            .map(|p| self.database_root.join(p))
-            .unwrap_or_else(|| self.database_root.join("__invalid__"))
-    }
-
     pub fn catalog_path(&self, catalog_root: &Path) -> PathBuf {
         safe_relative_path(&self.entry.catalog)
             .map(|p| catalog_root.join(p))
@@ -128,14 +121,14 @@ pub fn resolve(database_root: &Path, identity: &PlatformIdentity) -> Option<Reso
             if identity.vendor.as_str() == entry.vendor {
                 score += 20;
             }
-            (score > 0).then(|| (score, entry))
+            (score > 0).then_some((score, entry))
         })
         .collect::<Vec<_>>();
     ranked.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.id.cmp(&b.1.id)));
-    ranked.into_iter().next().map(|(_, entry)| Resolution {
-        entry,
-        database_root: database_root.to_path_buf(),
-    })
+    ranked
+        .into_iter()
+        .next()
+        .map(|(_, entry)| Resolution { entry })
 }
 
 #[cfg(test)]

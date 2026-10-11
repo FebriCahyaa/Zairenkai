@@ -78,6 +78,11 @@ impl FasController {
         self.last_boost_pct = 0;
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one control step consumes independent runtime signals; bundling them \
+                  would only move the same fields into a single-use struct"
+    )]
     pub fn update(
         &mut self,
         scene: &SceneSnapshot,

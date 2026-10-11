@@ -159,7 +159,6 @@ fn escape(s: &str) -> String {
 mod tests {
     use super::*;
     use std::fs;
-    use std::path::PathBuf;
 
     #[test]
     fn parses_psi() {

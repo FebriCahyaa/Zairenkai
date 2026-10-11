@@ -574,61 +574,6 @@ impl<'a> Engine<'a> {
             }
         }
     }
-
-    /// Best-effort restore toward stock: open freq range, schedutil, no boost.
-    pub fn reset(&self) -> ApplyReport {
-        let mut r = ApplyReport::default();
-        for p in &self.t.policies {
-            let current_min = self.s.read_u64(&p.rel("scaling_min_freq"));
-            let current_max = self.s.read_u64(&p.rel("scaling_max_freq"));
-            let write_min = |r: &mut ApplyReport| {
-                if p.min_hw == 0 {
-                    return;
-                }
-                let path = p.rel("scaling_min_freq");
-                match self.s.write(&path, &p.min_hw.to_string()) {
-                    Ok(()) => r.ok(format!("{}=min_hw {}", p.name, p.min_hw)),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
-                    Err(e) => r.fail(format!("{}=min_hw {}: {e}", p.name, p.min_hw)),
-                }
-            };
-            let write_max = |r: &mut ApplyReport| {
-                if p.max_hw == 0 {
-                    return;
-                }
-                let path = p.rel("scaling_max_freq");
-                match self.s.write(&path, &p.max_hw.to_string()) {
-                    Ok(()) => r.ok(format!("{}=max_hw {}", p.name, p.max_hw)),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
-                    Err(e) => r.fail(format!("{}=max_hw {}: {e}", p.name, p.max_hw)),
-                }
-            };
-            if p.min_hw > 0 && p.max_hw > 0 {
-                match choose_range_order(current_min, current_max, p.min_hw, p.max_hw) {
-                    Ok(RangeOrder::MinThenMax) => {
-                        write_min(&mut r);
-                        write_max(&mut r);
-                    }
-                    Ok(RangeOrder::MaxThenMin) => {
-                        write_max(&mut r);
-                        write_min(&mut r);
-                    }
-                    Err(reason) => r.fail(format!("{} reset range: {reason}", p.name)),
-                }
-            } else {
-                write_min(&mut r);
-                write_max(&mut r);
-            }
-            self.apply_governor(p, &["schedutil".to_string(), "walt".to_string()], &mut r);
-        }
-        if let Some(dir) = &self.t.top_app_uclamp {
-            let _ = self.s.write(&format!("{dir}/cpu.uclamp.min"), "0");
-        }
-        if let Some(dir) = &self.t.stune_top {
-            let _ = self.s.write(&format!("{dir}/schedtune.boost"), "0");
-        }
-        r
-    }
 }
 
 #[cfg(test)]
@@ -670,7 +615,7 @@ mod tests {
         let _ = fs::remove_dir_all(&d);
         d
     }
-    fn w(root: &PathBuf, rel: &str, val: &str) {
+    fn w(root: &std::path::Path, rel: &str, val: &str) {
         let p = root.join(rel.trim_start_matches('/'));
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, val).unwrap();

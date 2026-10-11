@@ -1,52 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-//! Storage capability and health classifier.
+//! Storage queue-tuning target selection.
 //!
 //! Storage tuning never infers UFS/eMMC health from a model string. Runtime
-//! queue attributes and health descriptors are the authority.
+//! queue attributes and health descriptors are the authority: device health
+//! is aggregated by `inventory::storage_health`, and Sentinel blocks every
+//! storage/IO mutation while any device reports critical health.
 //!
 //! Copyright (C) 2026 FebriCahyaa
-
-use crate::inventory::{Inventory, StorageInfo};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Kind {
-    Ufs,
-    Emmc,
-    Sd,
-    Generic,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Health {
-    Good,
-    Warning,
-    Critical,
-    Unknown,
-}
-
-pub fn kind(s: &StorageInfo) -> Kind {
-    match s.kind.as_str() {
-        "ufs" => Kind::Ufs,
-        "emmc" => Kind::Emmc,
-        "sd" => Kind::Sd,
-        _ => Kind::Generic,
-    }
-}
-
-pub fn health(s: &StorageInfo) -> Health {
-    match s.health.as_str() {
-        "critical" => Health::Critical,
-        "warning" => Health::Warning,
-        "good" => Health::Good,
-        "reported" => Health::Unknown,
-        _ => Health::Unknown,
-    }
-}
-
-pub fn queue_tuning_allowed(s: &StorageInfo) -> bool {
-    matches!(kind(s), Kind::Ufs | Kind::Emmc | Kind::Generic)
-        && !matches!(health(s), Health::Critical)
-}
 
 pub fn safe_block_devices(s: &crate::nodes::Sysroot) -> Vec<String> {
     let mut out = Vec::new();
@@ -73,47 +33,4 @@ pub fn safe_block_devices(s: &crate::nodes::Sysroot) -> Vec<String> {
     }
     out.sort();
     out
-}
-
-pub fn safe_devices(inv: &Inventory) -> usize {
-    inv.storage
-        .iter()
-        .filter(|s| queue_tuning_allowed(s))
-        .count()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn storage(kind: &str, health: &str) -> StorageInfo {
-        StorageInfo {
-            name: "sda".into(),
-            kind: kind.into(),
-            kind_evidence: "test".into(),
-            model: None,
-            size_bytes: None,
-            scheduler: None,
-            read_ahead_kb: None,
-            health: health.into(),
-            health_evidence: "test".into(),
-        }
-    }
-
-    #[test]
-    fn critical_storage_is_never_tuned() {
-        assert!(!queue_tuning_allowed(&storage("ufs", "critical")));
-    }
-
-    #[test]
-    fn reported_storage_is_not_assumed_healthy() {
-        assert_eq!(health(&storage("emmc", "reported")), Health::Unknown);
-        assert!(queue_tuning_allowed(&storage("emmc", "reported")));
-    }
-
-    #[test]
-    fn critical_health_blocks_queue_tuning_but_unknown_does_not_fake_health() {
-        assert!(!queue_tuning_allowed(&storage("ufs", "critical")));
-        assert_eq!(health(&storage("ufs", "unknown")), Health::Unknown);
-    }
 }

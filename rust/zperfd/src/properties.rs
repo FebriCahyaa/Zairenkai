@@ -19,6 +19,11 @@ const TIMEOUT: Duration = Duration::from_millis(750);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Scope {
     FrameworkOwned,
+    #[expect(
+        dead_code,
+        reason = "no external key is registered yet; mutation checks match FrameworkOwned \
+                  explicitly so a future external entry stays immutable"
+    )]
     ExternalReadOnly,
 }
 

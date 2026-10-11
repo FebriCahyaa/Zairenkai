@@ -45,7 +45,6 @@ impl GpuNode {
 #[derive(Debug, Clone)]
 pub struct Topology {
     pub release: String,
-    pub gki: bool,
     pub kernel_flavor: KernelFlavor,
     pub kernel_generation: String,
     pub cgroup_v2: bool,
@@ -87,12 +86,10 @@ impl Topology {
 
         let flavor =
             Self::detect_flavor(&release, cgroup_v2, top_app_uclamp.is_some(), has_msm_perf);
-        let gki = flavor == KernelFlavor::Gki;
         let kernel_generation = kernel_generation(&release);
 
         Self {
             release,
-            gki,
             kernel_flavor: flavor,
             kernel_generation,
             cgroup_v2,
@@ -126,10 +123,6 @@ impl Topology {
             .filter(|p| p.max_hw > 0 && !p.cpus.is_empty())
             .max_by_key(|p| p.max_hw)
             .map(|p| (p.cpus[0], p.min_hw, p.max_hw))
-    }
-
-    pub fn flavor_kind(&self) -> KernelFlavor {
-        self.kernel_flavor
     }
 
     pub fn flavor(&self) -> &'static str {
@@ -274,7 +267,7 @@ fn has_gki_release_format(release: &str) -> bool {
 }
 
 fn parse_kver(release: &str) -> Option<(u32, u32)> {
-    let mut it = release.split(|c: char| c == '.' || c == '-');
+    let mut it = release.split(['.', '-']);
     Some((it.next()?.parse().ok()?, it.next()?.parse().ok()?))
 }
 
@@ -308,7 +301,7 @@ mod tests {
         fs::create_dir_all(&p).unwrap();
         p
     }
-    fn w(r: &PathBuf, path: &str, value: &str) {
+    fn w(r: &std::path::Path, path: &str, value: &str) {
         let p = r.join(path.trim_start_matches('/'));
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, value).unwrap();

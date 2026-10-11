@@ -177,13 +177,6 @@ impl InteractionEngine {
     pub fn disable(&mut self) {
         self.reset();
     }
-
-    pub fn available(&self) -> bool {
-        self.state
-            .lock()
-            .map(|s| s.snapshot.source_count > 0)
-            .unwrap_or(false)
-    }
 }
 
 impl Drop for InteractionEngine {
@@ -326,8 +319,8 @@ impl InputScanner {
         if rc <= 0 {
             return;
         }
-        for i in 0..pfds.len() {
-            if pfds[i].revents & libc::POLLIN == 0 {
+        for (i, pfd) in pfds.iter().enumerate() {
+            if pfd.revents & libc::POLLIN == 0 {
                 continue;
             }
             for _ in 0..MAX_EVENTS_PER_POLL {

@@ -84,9 +84,7 @@ impl SceneEngine {
 
     pub fn observe(&mut self, s: &Sysroot, profile: &Profile) -> SceneSnapshot {
         let runtime_root = s.root() == std::path::Path::new("/");
-        let package;
-        let interactive;
-        if runtime_root {
+        let (package, interactive) = if runtime_root {
             let fresh = self.last_runtime_probe.is_none_or(|t| {
                 Instant::now().saturating_duration_since(t) >= Duration::from_millis(700)
             });
@@ -95,12 +93,10 @@ impl SceneEngine {
                 self.cached_package = crate::scene::foreground_pkg();
                 self.cached_interactive = crate::scene::interactive_power_state();
             }
-            package = self.cached_package.clone();
-            interactive = self.cached_interactive;
+            (self.cached_package.clone(), self.cached_interactive)
         } else {
-            package = None;
-            interactive = true;
-        }
+            (None, true)
+        };
         self.observe_package(package, interactive, profile)
     }
 

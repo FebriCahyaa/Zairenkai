@@ -4,7 +4,6 @@
 
 use crate::inventory::Inventory;
 use crate::nodes::Sysroot;
-use crate::platform::PlatformIdentity;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OptimizationPlan {
@@ -18,7 +17,7 @@ pub struct OptimizationPlan {
     pub notes: Vec<&'static str>,
 }
 
-pub fn plan(s: &Sysroot, identity: &PlatformIdentity, inv: &Inventory) -> OptimizationPlan {
+pub fn plan(s: &Sysroot, inv: &Inventory) -> OptimizationPlan {
     let ram = inv.memory.total_kb.unwrap_or(0);
     let ram_class = match ram {
         0 => "unknown",

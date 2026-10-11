@@ -25,23 +25,11 @@ pub struct ProviderOrder {
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct DiscoveryHints {
-    #[serde(default)]
-    pub platform_tokens: Vec<String>,
-    #[serde(default)]
-    pub compatible_tokens: Vec<String>,
-    #[serde(default)]
-    pub thermal_type_patterns: Vec<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Default)]
 pub struct FamilyProfile {
     pub schema_version: u32,
     pub vendor: String,
     #[serde(default)]
     pub provider_order: ProviderOrder,
-    #[serde(default)]
-    pub discovery: DiscoveryHints,
 }
 
 impl FamilyProfile {
@@ -98,7 +86,6 @@ mod tests {
                 boost: vec!["uclamp".into(), "schedtune".into()],
                 ..ProviderOrder::default()
             },
-            discovery: DiscoveryHints::default(),
         };
         assert_eq!(profile.provider_rank("boost", "uclamp"), 0);
         assert_eq!(profile.provider_rank("boost", "schedtune"), 1);

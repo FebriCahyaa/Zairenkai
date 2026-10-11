@@ -81,15 +81,6 @@ impl CapabilitySet {
         ])
     }
 
-    pub fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = Capability>,
-    {
-        Self {
-            values: iter.into_iter().collect(),
-        }
-    }
-
     pub fn contains(&self, cap: Capability) -> bool {
         self.values.contains(&cap)
     }
@@ -104,6 +95,14 @@ impl CapabilitySet {
     }
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
+    }
+}
+
+impl FromIterator<Capability> for CapabilitySet {
+    fn from_iter<I: IntoIterator<Item = Capability>>(iter: I) -> Self {
+        Self {
+            values: iter.into_iter().collect(),
+        }
     }
 }
 

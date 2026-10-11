@@ -51,46 +51,18 @@ impl VendorBackendKind {
             Self::Generic => "generic",
         }
     }
-
-    /// Stable, vendor-neutral operation family. Concrete sysfs/service writes
-    /// are still authorized by runtime topology/capability probes.
-    pub fn operation_family(self) -> &'static str {
-        match self {
-            Self::Qualcomm => "qcom",
-            Self::MediaTek => "mtk",
-            Self::Google => "aosp",
-            Self::Xiaomi => "xiaomi",
-            Self::Generic => "generic",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct BackendCapabilities {
-    pub frame_timeline: bool,
-    pub perfetto_frametimeline: bool,
-    pub evdev_input: bool,
-    pub cgroup_v2: bool,
-    pub per_thread_cgroup: bool,
-    pub cpuset: bool,
-    pub uclamp: bool,
-    pub gpu_devfreq: bool,
-    pub thermal_standard: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct BackendPlan {
-    pub vendor: SocVendor,
     pub oem: OemVendor,
     pub backend: VendorBackendKind,
-    pub kernel: KernelFlavor,
     pub cpu: Option<CpuPolicyBackend>,
     pub boost: BoostBackend,
     pub gpu: GpuBackend,
     pub thermal: Vec<ThermalProvider>,
     pub vendor_surfaces: Vec<&'static str>,
     pub family_profile: Option<String>,
-    pub capabilities: BackendCapabilities,
 }
 
 impl BackendPlan {
@@ -99,7 +71,6 @@ impl BackendPlan {
         topology: &Topology,
         family: Option<&FamilyProfile>,
     ) -> Self {
-        let kernel = topology.flavor_kind();
         let boost = if topology.kernel_flavor == KernelFlavor::NonGki
             && family
                 .map(|f| f.boost_prefers("schedtune"))
@@ -159,51 +130,27 @@ impl BackendPlan {
             VendorBackendKind::Xiaomi => vendor_surfaces.push("miui-runtime"),
             VendorBackendKind::Generic => {}
         }
-        let capabilities = BackendCapabilities {
-            frame_timeline: !topology.policies.is_empty(),
-            perfetto_frametimeline: true,
-            evdev_input: true,
-            cgroup_v2: topology.cgroup_v2,
-            // Runtime cgroup discovery owns these two capabilities. Keeping them
-            // false here prevents the vendor resolver from claiming delegated
-            // cpuset control merely because cgroup-v2 exists.
-            per_thread_cgroup: false,
-            cpuset: false,
-            uclamp: boost == BoostBackend::Uclamp,
-            gpu_devfreq: !matches!(gpu, GpuBackend::None),
-            thermal_standard: !topology.thermal_zones.is_empty(),
-        };
         Self {
-            vendor: identity.vendor,
             oem: identity.oem,
             backend,
-            kernel,
             cpu: (!topology.policies.is_empty()).then_some(CpuPolicyBackend::Cpufreq),
             boost,
             gpu,
             thermal,
             vendor_surfaces,
             family_profile: family.map(|f| f.vendor.clone()),
-            capabilities,
         }
-    }
-
-    pub fn conservative(&self) -> bool {
-        self.kernel == KernelFlavor::Unknown
-            || self.cpu.is_none()
-            || self.gpu == GpuBackend::None && self.vendor == SocVendor::Unknown
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::family::{DiscoveryHints, ProviderOrder};
+    use crate::family::ProviderOrder;
     use crate::platform::{OemVendor, PlatformIdentity, SocVendor};
     fn topology(flavor: KernelFlavor, uclamp: bool, stune: bool) -> Topology {
         Topology {
             release: "test".into(),
-            gki: flavor == KernelFlavor::Gki,
             kernel_flavor: flavor,
             kernel_generation: "6.18".into(),
             cgroup_v2: uclamp,
@@ -239,7 +186,6 @@ mod tests {
                 boost: vec!["schedtune".into(), "uclamp".into()],
                 ..ProviderOrder::default()
             },
-            discovery: DiscoveryHints::default(),
         };
         let p = BackendPlan::resolve(
             &topology(KernelFlavor::Gki, true, true).identity,
@@ -258,7 +204,6 @@ mod tests {
                 boost: vec!["schedtune".into(), "uclamp".into()],
                 ..ProviderOrder::default()
             },
-            discovery: DiscoveryHints::default(),
         };
         let t = topology(KernelFlavor::NonGki, true, true);
         let p = BackendPlan::resolve(&t.identity, &t, Some(&family));

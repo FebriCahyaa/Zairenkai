@@ -156,10 +156,6 @@ pub fn getprop(key: &str) -> Option<String> {
     (!v.is_empty()).then_some(v)
 }
 
-pub fn soc_platform() -> Option<String> {
-    getprop("ro.board.platform").map(|s| s.to_ascii_lowercase())
-}
-
 pub fn battery_percent(s: &Sysroot) -> Option<u32> {
     s.read_u64("/sys/class/power_supply/battery/capacity")
         .map(|v| v.min(100) as u32)
@@ -256,7 +252,7 @@ mod tests {
         p
     }
 
-    fn write(r: &PathBuf, path: &str, value: &str) {
+    fn write(r: &std::path::Path, path: &str, value: &str) {
         let p = r.join(path.trim_start_matches('/'));
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, value).unwrap();

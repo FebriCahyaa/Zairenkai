@@ -47,7 +47,7 @@ fn hex(value: &str) -> String {
 }
 
 fn unhex(value: &str) -> Option<String> {
-    if value.len() % 2 != 0 {
+    if !value.len().is_multiple_of(2) {
         return None;
     }
     fn nibble(b: u8) -> Option<u8> {
@@ -59,8 +59,9 @@ fn unhex(value: &str) -> Option<String> {
         }
     }
     let mut bytes = Vec::with_capacity(value.len() / 2);
-    for pair in value.as_bytes().chunks_exact(2) {
-        bytes.push(nibble(pair[0])? * 16 + nibble(pair[1])?);
+    let (pairs, _) = value.as_bytes().as_chunks::<2>();
+    for [hi, lo] in pairs {
+        bytes.push(nibble(*hi)? * 16 + nibble(*lo)?);
     }
     String::from_utf8(bytes).ok()
 }
@@ -100,6 +101,7 @@ impl StateGuard {
         let path = root.join(LOCK_FILE);
         let file = OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(path)?;
