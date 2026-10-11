@@ -24,6 +24,7 @@ const NEXT_EFFECTIVE: &str = "effective_mode.next";
 const MODE: &str = "mode";
 const EFFECTIVE: &str = "effective_mode";
 const BOOT_ID: &str = "boot.id";
+const MODE_FINGERPRINT: &str = "mode.fingerprint";
 const LOCK_FILE: &str = ".lock";
 const MAX_JOURNAL_BYTES: u64 = 1 << 20;
 const MAX_JOURNAL_ENTRIES: usize = 4096;
@@ -525,7 +526,25 @@ impl StateStore {
         Ok(())
     }
 
+    /// Explicit reset: restore the boot baseline and publish `stock` as both
+    /// the requested and the effective mode.
     pub fn restore_baseline(&mut self, s: &Sysroot, nodes: &[String]) -> io::Result<usize> {
+        self.restore_baseline_publishing(s, nodes, true)
+    }
+
+    /// Temporary hold (SAFE MODE, unconfirmed device fingerprint): restore the
+    /// boot baseline and publish only `effective = stock`. The user's requested
+    /// mode is preserved so it can be re-applied once the hold is lifted.
+    pub fn hold_baseline(&mut self, s: &Sysroot, nodes: &[String]) -> io::Result<usize> {
+        self.restore_baseline_publishing(s, nodes, false)
+    }
+
+    fn restore_baseline_publishing(
+        &mut self,
+        s: &Sysroot,
+        nodes: &[String],
+        publish_mode: bool,
+    ) -> io::Result<usize> {
         self.acquire()?;
         let result = (|| {
             self.ensure_boot_unlocked(s, nodes)?;
@@ -563,10 +582,14 @@ impl StateStore {
                 // Publish the semantic state only after every runtime node
                 // has been restored successfully. The committed marker makes
                 // publication idempotent across power loss.
-                self.write_value(NEXT_MODE, "stock")?;
+                if publish_mode {
+                    self.write_value(NEXT_MODE, "stock")?;
+                }
                 self.write_value(NEXT_EFFECTIVE, "stock")?;
-                self.write_commit_marker(true, true)?;
-                fs::rename(self.file(NEXT_MODE), self.file(MODE))?;
+                self.write_commit_marker(publish_mode, true)?;
+                if publish_mode {
+                    fs::rename(self.file(NEXT_MODE), self.file(MODE))?;
+                }
                 fs::rename(self.file(NEXT_EFFECTIVE), self.file(EFFECTIVE))?;
                 remove_if_exists(&self.file(TXN))?;
                 remove_if_exists(&self.file(COMMITTED))?;
@@ -592,6 +615,18 @@ impl StateStore {
             .ok()
             .map(|v| v.trim().to_string())
             .filter(|v| !v.is_empty())
+    }
+
+    /// Fingerprint of the kernel/device on which the requested mode was chosen.
+    pub fn mode_fingerprint(&self) -> Option<String> {
+        fs::read_to_string(self.file(MODE_FINGERPRINT))
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+    }
+
+    pub fn set_mode_fingerprint(&self, fingerprint: &str) -> io::Result<()> {
+        self.write_value(MODE_FINGERPRINT, fingerprint)
     }
 
     pub fn effective_mode(&self) -> Option<String> {
@@ -778,6 +813,39 @@ mod tests {
             fs::read_to_string(state_root.join(BOOT_ID)).unwrap(),
             "old-boot"
         );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn hold_preserves_the_requested_mode_while_reset_publishes_stock() {
+        let root = root("hold");
+        write(&root, "/proc/sys/x", "stock-x");
+        write(&root, "/proc/sys/kernel/random/boot_id", "boot-a");
+        let s = Sysroot::new(&root);
+        let nodes = vec!["/proc/sys/x".to_string()];
+        let mut state = StateStore::new(root.join("state"));
+        state.ensure_boot(&s, &nodes).unwrap();
+        state.begin(&s, &nodes).unwrap();
+        s.write("/proc/sys/x", "tuned").unwrap();
+        state
+            .commit(Some("performance"), Some("performance"))
+            .unwrap();
+        state
+            .set_mode_fingerprint("zk-fp-v1:0000000000000001")
+            .unwrap();
+
+        state.hold_baseline(&s, &nodes).unwrap();
+        assert_eq!(s.read("/proc/sys/x").as_deref(), Some("stock-x"));
+        assert_eq!(state.mode().as_deref(), Some("performance"));
+        assert_eq!(state.effective_mode().as_deref(), Some("stock"));
+        assert_eq!(
+            state.mode_fingerprint().as_deref(),
+            Some("zk-fp-v1:0000000000000001")
+        );
+        assert!(!state.has_pending_transaction());
+
+        state.restore_baseline(&s, &nodes).unwrap();
+        assert_eq!(state.mode().as_deref(), Some("stock"));
         let _ = fs::remove_dir_all(root);
     }
 

@@ -11,7 +11,6 @@
  */
 package com.zairenkai.app.data
 
-import com.zairenkai.app.domain.ProfileId
 import kotlinx.serialization.json.Json
 
 class ZperfClient(
@@ -49,13 +48,18 @@ class ZperfClient(
     }
 
     /** Ask zperfd to apply and durably commit a requested mode. */
-    suspend fun apply(mode: String): Boolean {
-        if (mode !in VALID_MODES) return false
-        return RootShell.run("${shellQuote(bin)} set ${shellQuote(mode)}", 12_000).ok
+    suspend fun apply(mode: String): ModeApplyResult {
+        if (mode !in VALID_MODES) return ModeApplyResult(ok = false, kind = "rejected", error = "mode tidak dikenal: $mode")
+        val r = RootShell.run("${shellQuote(bin)} set ${shellQuote(mode)}", 12_000)
+        return parseModeApply(r.exitCode, r.stdout, r.stderr)
     }
 
-    suspend fun setAuto(enabled: Boolean): Boolean =
-        apply(if (enabled) "auto" else "balance")
+    /** Modes of the device profile zperfd resolved, with what each one requests. */
+    suspend fun modes(): ModesResult? {
+        val r = RootShell.run("${shellQuote(bin)} --json modes", 6000)
+        if (!r.ok) return null
+        return parseModes(r.stdout)
+    }
 
     /** Runtime tweak descriptors from zperfd, the same engine that writes them. */
     suspend fun tweaks(lite: Boolean = false): TweakList? {
@@ -136,16 +140,42 @@ class ZperfClient(
             return TweakWriteResult(ok = false, id = id, kind = kind, error = detail ?: "exit $exitCode")
         }
 
+        fun parseModes(stdout: String): ModesResult? {
+            val line = firstJsonLine(stdout) ?: return null
+            return runCatching { parser.decodeFromString<ModesResult>(line) }.getOrNull()?.takeIf { it.ok }
+        }
+
+        /** Progress/diagnostic stderr lines zperfd also prints on success. */
+        private val INFO_PREFIXES = listOf("thermal envelope:", "thermal guard:", "warning:")
+
+        /**
+         * Decode `zperfd set`. Success needs exit 0 and the `mode=` summary
+         * line; anything else is a failure classified by exit status, with
+         * the engine's own reason lines as detail.
+         */
+        fun parseModeApply(exitCode: Int, stdout: String, stderr: String): ModeApplyResult {
+            val summary = stdout.lineSequence().any { it.trimStart().startsWith("mode=") }
+            if (exitCode == 0 && summary) return ModeApplyResult(ok = true)
+            val detail = stderr.lineSequence()
+                .map { it.trim() }
+                .filter { line -> line.isNotEmpty() && INFO_PREFIXES.none { line.startsWith(it) } }
+                .take(4)
+                .joinToString("\n")
+                .ifBlank { null }
+            val kind = when (exitCode) {
+                0 -> "protocol"
+                1 -> "unauthorized"
+                2 -> "rejected"
+                3 -> "failed"
+                4 -> "blocked"
+                124 -> "timeout"
+                125, 126, 127 -> "engine_unavailable"
+                else -> "failed"
+            }
+            return ModeApplyResult(ok = false, kind = kind, error = detail ?: "exit $exitCode")
+        }
+
         private val VALID_MODES = setOf("powersave", "balance", "performance", "fast", "auto")
 
-        /** Map a Zairenkai profile onto the zperfd power-mode contract. */
-        fun modeFor(id: ProfileId): String = when (id) {
-            ProfileId.GAME -> "fast"
-            ProfileId.DAILY -> "balance"
-            ProfileId.MEDIA -> "balance"
-            ProfileId.BATTERY -> "powersave"
-            ProfileId.BALANCED -> "balance"
-            ProfileId.AUTO -> "auto"
-        }
     }
 }

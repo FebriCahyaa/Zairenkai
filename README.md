@@ -77,9 +77,13 @@ durable transaction engine rather than introducing a second mutation path.
 - **Tweaks** — CPU/GPU governor, I/O scheduler, zram, RAM (swappiness, dirty
   ratios, VFS), network (TCP), refresh/scheduler, display color, battery, and a
   broad "old-SoC" optimization set — all multi-SoC with graceful fallback.
-- **Profiles** — Game, Harian, Media, Hemat Baterai, Seimbang, and an
-  **Otomatis** mode that adapts conservatively to charging, battery level and
-  temperature with hysteresis to avoid rapid profile flapping.
+- **Profiles** — one per zperfd mode: Hemat Baterai (`powersave`), Seimbang
+  (`balance`), Performa (`performance`), Game (`fast`), and an **Otomatis**
+  mode (`auto`) that adapts conservatively to charging, battery level and
+  thermal headroom with hysteresis to avoid rapid profile flapping. The app
+  shows what each mode requests from the resolved device profile. A chosen
+  mode is replayed at boot only on the kernel build and device it was chosen
+  on; otherwise zperfd holds the stock baseline until the user confirms it.
 - **Tweaks engine in-kernel** — input boost, per-task uclamp boost with thread
   inheritance, cpufreq QoS, and a thermal guard that backs boosts off when hot.
 - **System & security** — UID/GID/groups, kernel integrity, ZKFC license,

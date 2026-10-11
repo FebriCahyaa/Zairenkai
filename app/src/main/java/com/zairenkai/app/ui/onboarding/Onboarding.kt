@@ -180,7 +180,7 @@ private fun StepFeatures() {
         val items = listOf(
             Triple(Icons.Rounded.Speed, "Monitor realtime", "FPS, CPU/GPU per-core, dan thermal."),
             Triple(Icons.Rounded.Tune, "Tweaks menyeluruh", "CPU, GPU, RAM, zram, I/O, jaringan, layar."),
-            Triple(Icons.Rounded.AutoMode, "Profil otomatis", "Game, Harian, Media, Hemat — atau Auto."),
+            Triple(Icons.Rounded.AutoMode, "Profil otomatis", "Hemat, Seimbang, Performa, Game — atau Otomatis."),
             Triple(Icons.Rounded.Shield, "Aman & terkunci", "Fitur performa dibuka oleh token API bertanda tangan."),
         )
         items.forEachIndexed { i, (ic, t, b) ->
@@ -226,7 +226,7 @@ private fun StepProfiles() {
     StepScaffold(
         icon = Icons.Rounded.Rocket,
         title = "Siap dioptimalkan",
-        body = "Setelah ini, pilih profil seperti ${Profiles.GAME.name} atau ${Profiles.DAILY.name} di tab Profil, " +
+        body = "Setelah ini, pilih profil seperti ${Profiles.GAME.name} atau ${Profiles.BALANCED.name} di tab Profil, " +
             "atau nyalakan mode Otomatis. Semua bisa diubah kapan saja.",
         accent = ZkAqua,
     )

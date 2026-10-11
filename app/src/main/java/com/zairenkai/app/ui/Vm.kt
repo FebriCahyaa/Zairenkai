@@ -232,82 +232,94 @@ class TweaksViewModel(private val c: AppContainer) : ViewModel() {
 
 /* ---------------- profiles ---------------- */
 data class ProfilesUi(
-    val active: ProfileId? = null,
-    val auto: Boolean = false,
+    val loading: Boolean = true,
+    val engineAvailable: Boolean = false,
+    /** Engine truth: desired/effective mode, hold reason. Null when zperfd is unreachable. */
+    val status: ZperfStatus? = null,
+    /** Modes the device profile defines, keyed by mode id. Empty when unknown. */
+    val modes: Map<String, ModeSummary> = emptyMap(),
+    /** Last explicit profile from local settings; shown only as unverified when the engine is down. */
+    val cachedProfile: ProfileId? = null,
     val applying: ProfileId? = null,
-    val lastApplied: ProfileId? = null,
     val error: String? = null,
-)
+    val notice: String? = null,
+) {
+    /** The user's persisted choice according to the engine; null means the engine default applies. */
+    val selected: Profile? get() = status?.takeIf { it.saved }?.let { Profiles.byMode(it.desired) }
+    val auto: Boolean get() = selected?.id == ProfileId.AUTO
+    /** True when the device profile does not define the mode a profile needs. */
+    fun unsupported(profile: Profile): Boolean =
+        profile.id != ProfileId.AUTO && modes.isNotEmpty() && profile.mode !in modes
+}
 
 class ProfilesViewModel(private val c: AppContainer) : ViewModel() {
     private val _ui = MutableStateFlow(ProfilesUi())
     val ui: StateFlow<ProfilesUi> = _ui.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            val s = c.settings.settings.first()
-            val daemon = runCatching { c.zperf.status() }.getOrNull()
-            _ui.value = _ui.value.copy(
-                active = s.activeProfile,
-                auto = daemon?.auto ?: s.autoProfile,
-            )
+    init { refresh() }
+
+    fun refresh() = viewModelScope.launch {
+        val cached = c.settings.settings.first().activeProfile
+        val available = runCatching { c.zperf.available() }.getOrDefault(false)
+        if (!available) {
+            _ui.value = _ui.value.copy(loading = false, engineAvailable = false, status = null,
+                modes = emptyMap(), cachedProfile = cached)
+            return@launch
         }
+        val status = runCatching { c.zperf.status() }.getOrNull()
+        val modes = runCatching { c.zperf.modes() }.getOrNull()?.modes.orEmpty().associateBy { it.id }
+        _ui.value = _ui.value.copy(
+            loading = false,
+            engineAvailable = status != null,
+            status = status,
+            modes = modes,
+            cachedProfile = cached,
+        )
     }
 
     fun apply(profile: Profile) = viewModelScope.launch {
-        _ui.value = _ui.value.copy(applying = profile.id, error = null)
-        val available = runCatching { c.zperf.available() }.getOrDefault(false)
-        if (!available) {
+        _ui.value = _ui.value.copy(applying = profile.id, error = null, notice = null)
+        if (!runCatching { c.zperf.available() }.getOrDefault(false)) {
             _ui.value = _ui.value.copy(
                 applying = null,
                 error = "zperfd belum aktif. Profil tidak diterapkan agar tidak melewati transaction engine.",
             )
             return@launch
         }
-        val applied = runCatching { c.zperf.apply(ZperfClient.modeFor(profile.id)) }.getOrDefault(false)
-        if (applied) {
-            c.settings.setActiveProfile(profile.id)
-            _ui.value = _ui.value.copy(
-                applying = null,
-                active = profile.id,
-                lastApplied = profile.id,
-            )
-        } else {
-            _ui.value = _ui.value.copy(
-                applying = null,
-                error = "Profil gagal diterapkan. Engine melakukan rollback dan status aktif tidak diubah.",
-            )
+        val result = runCatching { c.zperf.apply(profile.mode) }.getOrElse {
+            ModeApplyResult(ok = false, kind = "protocol", error = it.message)
         }
+        if (result.ok) {
+            // Local settings only cache the last explicit choice for offline
+            // display; the engine status read below is the source of truth.
+            if (profile.id != ProfileId.AUTO) c.settings.setActiveProfile(profile.id)
+            c.settings.setAutoProfile(profile.id == ProfileId.AUTO)
+            _ui.value = _ui.value.copy(applying = null, notice = "Profil ${profile.name} diterapkan.")
+        } else {
+            _ui.value = _ui.value.copy(applying = null, error = profileFailureMessage(result))
+        }
+        refresh()
     }
 
-    fun setAuto(enabled: Boolean) = viewModelScope.launch {
-        _ui.value = _ui.value.copy(error = null)
-        val settings = c.settings.settings.first()
-        val fallback = settings.activeProfile
-            ?.takeIf { it != ProfileId.AUTO }
-            ?.let(ZperfClient::modeFor)
-            ?: "balance"
-        val mode = if (enabled) "auto" else fallback
-        val result = runCatching {
-            c.zperf.available() && c.zperf.apply(mode)
-        }.getOrDefault(false)
-        if (!result) {
-            _ui.value = _ui.value.copy(error = "Mode otomatis membutuhkan zperfd yang aktif dan berlisensi.")
-            return@launch
-        }
-        c.settings.setAutoProfile(enabled)
-        // Keep the last explicit profile in persistent state; Auto is a mode,
-        // not a replacement for the user's selected profile.
-        if (!enabled && settings.activeProfile != null && settings.activeProfile != ProfileId.AUTO) {
-            _ui.value = _ui.value.copy(
-                auto = false,
-                active = settings.activeProfile,
-            )
-        } else {
-            _ui.value = _ui.value.copy(auto = enabled)
-        }
+    /** Re-apply the saved choice after a kernel/device change (engine hold: revalidation_required). */
+    fun confirmSaved() {
+        val saved = _ui.value.status?.takeIf { it.saved }?.let { Profiles.byMode(it.desired) } ?: return
+        apply(saved)
     }
 
+    fun setAuto(enabled: Boolean) {
+        if (enabled) {
+            apply(Profiles.AUTO)
+            return
+        }
+        val fallback = _ui.value.cachedProfile?.takeIf { it != ProfileId.AUTO }?.let(Profiles::byId)
+            ?: Profiles.BALANCED
+        apply(fallback)
+    }
+
+    fun dismissMessages() {
+        _ui.value = _ui.value.copy(error = null, notice = null)
+    }
 }
 
 /* ---------------- system / security ---------------- */

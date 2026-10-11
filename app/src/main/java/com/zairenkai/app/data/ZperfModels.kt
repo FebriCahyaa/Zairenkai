@@ -68,8 +68,69 @@ data class ZperfStatus(
     val desired: String = "balance",
     val effective: String = "balance",
     val auto: Boolean = false,
+    /** True when `desired` is a persisted user choice, false when it is the engine default. */
+    val saved: Boolean = false,
+    /** Why the engine holds the stock baseline: safe_mode, stock or revalidation_required. */
+    val hold: String? = null,
+    @SerialName("revalidation_required") val revalidationRequired: Boolean = false,
     @SerialName("pending_transaction") val pendingTransaction: Boolean = false,
     @SerialName("safe_mode") val safeMode: Boolean = false,
+)
+
+/** One mode of the device profile resolved by zperfd (`zperfd --json modes`). */
+@Serializable
+data class ModeCpu(
+    @SerialName("min_freq") val minFreq: String? = null,
+    @SerialName("max_freq") val maxFreq: String? = null,
+    @SerialName("max_perf_pct") val maxPerfPct: Int? = null,
+    val governors: List<String> = emptyList(),
+    @SerialName("uclamp_min_pct") val uclampMinPct: Int? = null,
+    @SerialName("input_boost_pct") val inputBoostPct: Int? = null,
+    @SerialName("input_boost_ms") val inputBoostMs: Int? = null,
+)
+
+@Serializable
+data class ModeGpu(
+    @SerialName("min_freq") val minFreq: String? = null,
+    @SerialName("max_freq") val maxFreq: String? = null,
+    @SerialName("max_perf_pct") val maxPerfPct: Int? = null,
+    val governors: List<String> = emptyList(),
+)
+
+@Serializable
+data class ModeMem(
+    val swappiness: Int? = null,
+    @SerialName("vfs_cache_pressure") val vfsCachePressure: Int? = null,
+)
+
+@Serializable
+data class ModeIo(
+    val schedulers: List<String> = emptyList(),
+    @SerialName("read_ahead_kb") val readAheadKb: Int? = null,
+)
+
+@Serializable
+data class ModeSummary(
+    val id: String = "",
+    val cpu: ModeCpu = ModeCpu(),
+    val gpu: ModeGpu = ModeGpu(),
+    val mem: ModeMem = ModeMem(),
+    val io: ModeIo = ModeIo(),
+)
+
+@Serializable
+data class ModesResult(
+    val ok: Boolean = false,
+    val profile: String = "",
+    val default: String = "",
+    val modes: List<ModeSummary> = emptyList(),
+)
+
+/** Outcome of `zperfd set <mode>`; [kind] mirrors the engine exit status. */
+data class ModeApplyResult(
+    val ok: Boolean,
+    val kind: String? = null,
+    val error: String? = null,
 )
 
 @Serializable

@@ -1,99 +1,64 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * Built-in optimization profiles. Each profile is a set of tweak id -> value
- * pairs plus an optional input-boost intent. Values are applied best-effort;
- * tweaks a device lacks are skipped.
+ * Profiles are the user-facing names of zperfd modes, one to one. What a
+ * profile actually does is defined by the device profile zperfd resolves
+ * (`zperfd --json modes`) and is constrained at apply time by the live OPP
+ * table and the thermal envelope; nothing here duplicates those values.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.domain
 
-enum class ProfileId { GAME, DAILY, MEDIA, BATTERY, BALANCED, AUTO }
+enum class ProfileId {
+    BATTERY, BALANCED, PERFORMANCE, GAME, AUTO;
+
+    companion object {
+        /**
+         * Parse a persisted id. DAILY and MEDIA were earlier names that
+         * always applied the engine's `balance` mode, so they migrate to
+         * BALANCED instead of silently clearing the user's choice.
+         */
+        fun fromStored(name: String?): ProfileId? = when (name) {
+            null -> null
+            "DAILY", "MEDIA" -> BALANCED
+            else -> entries.firstOrNull { it.name == name }
+        }
+    }
+}
 
 data class Profile(
     val id: ProfileId,
     val name: String,
     val tagline: String,
     val icon: String,              // material icon name key, resolved in UI
-    val tweaks: Map<String, String>,
-    val inputBoost: Boolean,
-    val lite: Boolean = false,
+    /** The zperfd mode this profile selects. */
+    val mode: String,
 )
 
 object Profiles {
-    val GAME = Profile(
-        ProfileId.GAME, "Game", "Performa maksimal, latensi input terendah", "sports_esports",
-        tweaks = mapOf(
-            "cpu_governor" to "performance",
-            "io_scheduler" to "none",
-            "swappiness" to "60",
-            "vfs_cache_pressure" to "80",
-            "sched_migration_cost_ns" to "500000",
-            "tcp_congestion_control" to "bbr",
-            "gpu_governor" to "performance",
-        ),
-        inputBoost = true,
-    )
-    val DAILY = Profile(
-        ProfileId.DAILY, "Harian", "Mulus untuk sosmed & aplikasi sehari-hari", "smartphone",
-        tweaks = mapOf(
-            "cpu_governor" to "schedutil",
-            "io_scheduler" to "mq-deadline",
-            "swappiness" to "100",
-            "vfs_cache_pressure" to "120",
-            "tcp_congestion_control" to "bbr",
-            "gpu_governor" to "msm-adreno-tz",
-        ),
-        inputBoost = true,
-    )
-    val MEDIA = Profile(
-        ProfileId.MEDIA, "Media", "Streaming lancar & efisien", "movie",
-        tweaks = mapOf(
-            "cpu_governor" to "schedutil",
-            "io_scheduler" to "bfq",
-            "swappiness" to "120",
-            "dirty_ratio" to "40",
-            "dirty_background_ratio" to "10",
-        ),
-        inputBoost = false,
-    )
     val BATTERY = Profile(
-        ProfileId.BATTERY, "Hemat Baterai", "Dingin & irit daya", "battery_saver",
-        tweaks = mapOf(
-            "cpu_governor" to "powersave",
-            "io_scheduler" to "mq-deadline",
-            "swappiness" to "160",
-            "vfs_cache_pressure" to "200",
-            "gpu_governor" to "powersave",
-        ),
-        inputBoost = false,
-        lite = true,
+        ProfileId.BATTERY, "Hemat Baterai", "Batas performa rendah, dingin & irit daya", "battery_saver",
+        mode = "powersave",
     )
     val BALANCED = Profile(
-        ProfileId.BALANCED, "Seimbang", "Default yang pas untuk semua", "balance",
-        tweaks = mapOf(
-            "cpu_governor" to "schedutil",
-            "io_scheduler" to "mq-deadline",
-            "swappiness" to "100",
-            "vfs_cache_pressure" to "100",
-        ),
-        inputBoost = true,
+        ProfileId.BALANCED, "Seimbang", "Rentang frekuensi penuh dengan boost input sedang", "balance",
+        mode = "balance",
+    )
+    val PERFORMANCE = Profile(
+        ProfileId.PERFORMANCE, "Performa", "Lantai frekuensi dan uclamp lebih tinggi untuk beban berat", "speed",
+        mode = "performance",
+    )
+    val GAME = Profile(
+        ProfileId.GAME, "Game", "Lantai frekuensi tertinggi dan boost input terkuat", "sports_esports",
+        mode = "fast",
     )
     val AUTO = Profile(
-        ProfileId.AUTO, "Otomatis", "Menyesuaikan sendiri dengan kondisi perangkat", "auto_mode",
-        tweaks = emptyMap(),
-        inputBoost = true,
+        ProfileId.AUTO, "Otomatis", "Engine memilih mode dari baterai, daya & headroom termal", "auto_mode",
+        mode = "auto",
     )
 
-    val all = listOf(GAME, DAILY, MEDIA, BATTERY, BALANCED, AUTO)
+    val all = listOf(BATTERY, BALANCED, PERFORMANCE, GAME, AUTO)
     fun byId(id: ProfileId) = all.first { it.id == id }
 
-    /**
-     * Auto mode: pick a concrete profile from live conditions.
-     * charging + cool -> GAME; low battery or hot -> BATTERY; else DAILY.
-     */
-    fun resolveAuto(charging: Boolean, batteryPct: Int, hottestC: Float): Profile = when {
-        batteryPct in 1..20 || hottestC >= 46f -> BATTERY
-        charging && hottestC < 42f -> GAME
-        else -> DAILY
-    }
+    /** The profile for an engine mode name, or null for modes with no profile (e.g. "stock"). */
+    fun byMode(mode: String?): Profile? = all.firstOrNull { it.mode == mode }
 }

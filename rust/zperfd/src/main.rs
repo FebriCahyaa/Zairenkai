@@ -14,6 +14,7 @@ mod config;
 mod engine;
 mod family;
 mod fas;
+mod fingerprint;
 mod frame;
 mod interaction;
 mod inventory;
@@ -713,6 +714,13 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
         }
         return 3;
     }
+    // Record where this choice was validated. If this write fails the next
+    // boot simply holds the baseline until the user confirms again.
+    if let Err(e) = state.set_mode_fingerprint(&fingerprint::compute(&s, &topology.identity)) {
+        eprintln!(
+            "warning: mode fingerprint not saved ({e}); confirmation will be required after reboot"
+        );
+    }
 
     println!(
         "mode={requested} effective={effective} applied={} skipped={}",
@@ -1404,6 +1412,48 @@ fn cmd_reset(args: &Args) -> i32 {
     }
 }
 
+/// What a mode requests, straight from the resolved device profile. Values
+/// are requests: frequency specs are resolved against the live OPP table and
+/// the thermal envelope can still reduce them at apply time.
+fn mode_summary_json(id: &str, mode: &config::Mode) -> String {
+    fn freq(spec: &Option<config::FreqSpec>) -> String {
+        match spec {
+            Some(config::FreqSpec::Khz(khz)) => format!("\"{khz}kHz\""),
+            Some(config::FreqSpec::Spec(text)) => format!("\"{}\"", json_escape(text)),
+            None => "null".into(),
+        }
+    }
+    fn num<T: std::fmt::Display>(v: Option<T>) -> String {
+        v.map(|v| v.to_string()).unwrap_or_else(|| "null".into())
+    }
+    fn list(items: &[String]) -> String {
+        items
+            .iter()
+            .map(|v| format!("\"{}\"", json_escape(v)))
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+    format!(
+        "{{\"id\":\"{}\",\"cpu\":{{\"min_freq\":{},\"max_freq\":{},\"max_perf_pct\":{},\"governors\":[{}],\"uclamp_min_pct\":{},\"input_boost_pct\":{},\"input_boost_ms\":{}}},\"gpu\":{{\"min_freq\":{},\"max_freq\":{},\"max_perf_pct\":{},\"governors\":[{}]}},\"mem\":{{\"swappiness\":{},\"vfs_cache_pressure\":{}}},\"io\":{{\"schedulers\":[{}],\"read_ahead_kb\":{}}}}}",
+        json_escape(id),
+        freq(&mode.cpu.min_freq),
+        freq(&mode.cpu.max_freq),
+        num(mode.cpu.max_perf_pct),
+        list(&mode.cpu.governor),
+        num(mode.cpu.uclamp_min_pct),
+        num(mode.cpu.input_boost_pct),
+        num(mode.cpu.input_boost_ms),
+        freq(&mode.gpu.min_freq),
+        freq(&mode.gpu.max_freq),
+        num(mode.gpu.max_perf_pct),
+        list(&mode.gpu.governor),
+        num(mode.mem.swappiness),
+        num(mode.mem.vfs_cache_pressure),
+        list(&mode.io.scheduler),
+        num(mode.io.read_ahead_kb),
+    )
+}
+
 fn cmd_modes(args: &Args) -> i32 {
     let topology = Topology::detect(&Sysroot::new(&args.root));
     match load_profile(
@@ -1411,6 +1461,21 @@ fn cmd_modes(args: &Args) -> i32 {
         Path::new(&args.state),
         &topology.identity,
     ) {
+        Ok(profile) if args.json => {
+            let modes = profile
+                .mode
+                .iter()
+                .map(|(id, mode)| mode_summary_json(id, mode))
+                .collect::<Vec<_>>()
+                .join(",");
+            println!(
+                "{{\"ok\":true,\"profile\":\"{}\",\"default\":\"{}\",\"modes\":[{}]}}",
+                json_escape(&profile.meta.name),
+                json_escape(&profile.meta.default_mode),
+                modes
+            );
+            0
+        }
         Ok(profile) => {
             println!(
                 "profile: {} (soc={})\ndefault: {}\nmodes: {}",
@@ -1447,26 +1512,44 @@ fn cmd_status(args: &Args) -> i32 {
         eprintln!("state recovery failed: {e}");
         return 3;
     }
-    let desired = state.mode().unwrap_or_else(|| "balance".into());
-    let effective = state.effective_mode().unwrap_or_else(|| {
-        if desired == "auto" {
-            scene::resolve_auto(&Sysroot::new(&args.root)).into()
-        } else {
-            desired.clone()
-        }
-    });
+    let saved = state.mode();
+    let safe_mode = Path::new(SAFE_MODE).exists();
+    let hold = hold_reason(
+        safe_mode,
+        saved.as_deref(),
+        state.mode_fingerprint().as_deref(),
+        &fingerprint::compute(&s, &topology.identity),
+    );
+    let desired = saved.clone().unwrap_or_else(|| "balance".into());
+    let effective = if hold.is_some() {
+        "stock".to_string()
+    } else {
+        state.effective_mode().unwrap_or_else(|| {
+            if desired == "auto" {
+                scene::resolve_auto(&Sysroot::new(&args.root)).into()
+            } else {
+                desired.clone()
+            }
+        })
+    };
     let auto = desired == "auto";
     if args.json {
         println!(
-            "{{\"ok\":true,\"desired\":\"{}\",\"effective\":\"{}\",\"auto\":{},\"pending_transaction\":{},\"safe_mode\":{}}}",
+            "{{\"ok\":true,\"desired\":\"{}\",\"effective\":\"{}\",\"auto\":{},\"saved\":{},\"hold\":{},\"revalidation_required\":{},\"pending_transaction\":{},\"safe_mode\":{}}}",
             json_escape(&desired),
             json_escape(&effective),
             auto,
+            saved.is_some(),
+            hold.map(|h| format!("\"{h}\"")).unwrap_or_else(|| "null".into()),
+            hold == Some("revalidation_required"),
             state.has_pending_transaction(),
-            Path::new(SAFE_MODE).exists(),
+            safe_mode,
         );
     } else {
         println!("desired   : {desired}\neffective : {effective}\nauto      : {auto}");
+        if let Some(reason) = hold {
+            println!("hold      : {reason}");
+        }
     }
     0
 }
@@ -1489,6 +1572,31 @@ fn acquire_daemon_lock(state: &Path) -> std::io::Result<File> {
         return Err(std::io::Error::last_os_error());
     }
     Ok(file)
+}
+
+/// Why the daemon must hold the boot baseline instead of applying a mode.
+///
+/// - `safe_mode`: the boot fail-safe is active.
+/// - `stock`: the user explicitly reset to stock (`zperfd reset`).
+/// - `revalidation_required`: a mode was saved on a different kernel build or
+///   device (or before fingerprints existed) and has not been confirmed here.
+///
+/// No saved mode means no user choice to replay; the profile default applies.
+fn hold_reason(
+    safe_mode: bool,
+    saved_mode: Option<&str>,
+    saved_fingerprint: Option<&str>,
+    current_fingerprint: &str,
+) -> Option<&'static str> {
+    if safe_mode {
+        return Some("safe_mode");
+    }
+    match saved_mode {
+        None => None,
+        Some("stock") => Some("stock"),
+        Some(_) if saved_fingerprint != Some(current_fingerprint) => Some("revalidation_required"),
+        Some(_) => None,
+    }
 }
 
 fn cmd_daemon(args: &Args) -> i32 {
@@ -1565,18 +1673,30 @@ fn cmd_daemon(args: &Args) -> i32 {
     let mut last_observed = None;
     let mut next_reconcile = Instant::now();
     let reconcile_every = Duration::from_millis(args.interval_ms.saturating_mul(4).max(2_000));
-    let mut was_safe = false;
+    // The identity cannot change within one boot; compute it once.
+    let current_fingerprint = fingerprint::compute(&s, &topology.identity);
+    let mut held: Option<&'static str> = None;
     while !STOP.load(Ordering::SeqCst) {
-        let safe = Path::new(SAFE_MODE).exists();
-        if safe {
-            if !was_safe {
-                if let Err(e) = state.restore_baseline(&s, &nodes) {
-                    eprintln!("zperfd: SAFE MODE restore failed: {e}");
-                } else {
-                    eprintln!("zperfd: SAFE MODE active; baseline restored");
+        let hold = hold_reason(
+            Path::new(SAFE_MODE).exists(),
+            state.mode().as_deref(),
+            state.mode_fingerprint().as_deref(),
+            &current_fingerprint,
+        );
+        if let Some(reason) = hold {
+            if held != Some(reason) {
+                // hold_baseline keeps the requested mode, so it can be
+                // re-applied once the user clears SAFE MODE or confirms it.
+                // A failed hold is retried on the next iteration rather than
+                // assumed done.
+                match state.hold_baseline(&s, &nodes) {
+                    Ok(_) => {
+                        eprintln!("zperfd: holding stock baseline ({reason})");
+                        held = Some(reason);
+                    }
+                    Err(e) => eprintln!("zperfd: baseline hold ({reason}) failed: {e}"),
                 }
             }
-            was_safe = true;
             task_controller.reset();
             let _ = configure_kernel_input_boost(&topology, None);
             fas_controller.reset();
@@ -1592,11 +1712,11 @@ fn cmd_daemon(args: &Args) -> i32 {
             std::thread::sleep(Duration::from_millis(args.interval_ms.max(500)));
             continue;
         }
-        if was_safe {
-            // The user explicitly cleared safe mode. Re-apply the desired
-            // policy even when its effective name has not changed.
+        if held.take().is_some() {
+            // The user cleared SAFE MODE or confirmed the mode on this
+            // device. Re-apply the desired policy even when its effective
+            // name has not changed.
             last.clear();
-            was_safe = false;
         }
 
         let scene_snapshot = scene_engine.observe(&s, &profile);
@@ -1941,4 +2061,36 @@ fn main() {
         }
     };
     std::process::exit(code);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::hold_reason;
+
+    const FP: &str = "zk-fp-v1:00000000000000aa";
+
+    #[test]
+    fn saved_mode_replays_only_on_the_device_it_was_confirmed_on() {
+        assert_eq!(hold_reason(false, Some("fast"), Some(FP), FP), None);
+        assert_eq!(
+            hold_reason(false, Some("fast"), Some("zk-fp-v1:00000000000000bb"), FP),
+            Some("revalidation_required")
+        );
+        // Saved before fingerprints existed: never replayed blindly.
+        assert_eq!(
+            hold_reason(false, Some("auto"), None, FP),
+            Some("revalidation_required")
+        );
+    }
+
+    #[test]
+    fn stock_and_safe_mode_hold_while_no_choice_uses_the_profile_default() {
+        assert_eq!(hold_reason(false, Some("stock"), None, FP), Some("stock"));
+        assert_eq!(
+            hold_reason(true, Some("fast"), Some(FP), FP),
+            Some("safe_mode")
+        );
+        assert_eq!(hold_reason(true, None, None, FP), Some("safe_mode"));
+        assert_eq!(hold_reason(false, None, None, FP), None);
+    }
 }

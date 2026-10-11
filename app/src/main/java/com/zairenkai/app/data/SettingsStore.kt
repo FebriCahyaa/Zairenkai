@@ -59,7 +59,7 @@ class SettingsStore(private val context: Context) {
             liteMode = p[Keys.LITE] ?: false,
             deviceMitigation = p[Keys.MITIGATION] ?: false,
             logLevel = p[Keys.LOG] ?: "info",
-            activeProfile = p[Keys.PROFILE]?.let { runCatching { ProfileId.valueOf(it) }.getOrNull() },
+            activeProfile = ProfileId.fromStored(p[Keys.PROFILE]),
             autoProfile = p[Keys.AUTO] ?: false,
             dynamicColor = p[Keys.DYNAMIC] ?: true,
             themeMode = p[Keys.THEME_MODE] ?: "system",
