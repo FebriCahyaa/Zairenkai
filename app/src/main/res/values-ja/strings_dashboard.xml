@@ -14,8 +14,6 @@
 
     <!-- Stat tiles -->
     <string name="dashboard_zkfc_status">ZKFCステータス</string>
-    <!-- %1$s: hook mode reported by ZKFC -->
-    <string name="dashboard_hook_sub">フック: %1$s</string>
     <string name="dashboard_license">APIライセンス</string>
 
     <!-- License states -->
@@ -35,13 +33,9 @@
     <string name="dashboard_build">ビルド</string>
 
     <!-- Thermal section -->
-    <string name="dashboard_thermal_envelope">熱エンベロープ</string>
-    <string name="dashboard_envelope">エンベロープ</string>
-    <string name="dashboard_headroom">ヘッドルーム</string>
     <string name="dashboard_control_zone">制御ゾーン</string>
-    <string name="dashboard_critical_trip">クリティカルトリップ</string>
-    <string name="dashboard_unknown">不明</string>
-    <string name="dashboard_thermal_no_evidence">サーマルオーソリティから十分な根拠がまだ得られていません。</string>
+    <string name="dashboard_critical_trip">危険しきい値</string>
+    <string name="dashboard_thermal_no_evidence">エンジンからの温度データがまだ十分ではありません。</string>
 
     <!-- Active performance section -->
     <string name="dashboard_active_performance">現在のパフォーマンス</string>

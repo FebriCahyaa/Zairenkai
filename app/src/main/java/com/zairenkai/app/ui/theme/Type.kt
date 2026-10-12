@@ -69,3 +69,6 @@ val ZkTypography = Typography(
 /** The setup greeting: large, soft and wide like a handwritten hello. */
 val GreetingStyle: TextStyle = base.displayMedium.with(family(opsz = 72f, round = 100f, wdth = 104f), FontWeight.Medium, (-0.8).sp)
     .copy(fontSize = 40.sp, lineHeight = 46.sp)
+
+/** The home greeting: the same voice as setup, a little smaller. */
+val HomeGreetingStyle: TextStyle = GreetingStyle.copy(fontSize = 34.sp, lineHeight = 40.sp)

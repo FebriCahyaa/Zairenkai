@@ -71,15 +71,43 @@ report (`diagnosticsReport`). The report holds component states, versions,
 paths and the raw reasons. It holds no token contents, licensee or key
 fingerprints.
 
-### Dashboard
+### Home (Dashboard)
 
-The Dashboard shows the system check first, with Retry and the technical
-details. Results that did not come back `ok` are dropped, so their defaults
-are never shown as device data (API 0.0.0, hook "none", token "missing", zero
-boosts, thermal "normal"). Fields with no reported value are left out.
-Without the module, the Dashboard says what still works: battery and RAM in
-the Monitor. CPU, GPU, thermal, the FPS recorder, profiles and tweaks need
-the module.
+`HomeScreen` (`ui/home/HomeScreen.kt`) is stateless; `DashboardScreen` connects
+it to `OverviewViewModel`. It has the setup's character: the brand backdrop
+(`BrandBackdrop`), a greeting for the time of day that types itself, and a
+one-line summary in the brand gradient (checking / root needed / all ready /
+*n* components need attention). Below the summary, a strip shows root, ZKFC,
+zperfd and the token at a glance.
+
+Then, in order (each card rises in after the previous one):
+
+1. **System check**: first while something needs attention, with every
+   reason, next step, Retry and the technical details. When everything is
+   ready it moves to the bottom as one line with Retry.
+2. Safe-mode and outdated-API banners.
+3. **Active profile**: the profile zperfd runs (desired, and the effective
+   mode when it differs), Auto, any baseline hold, and a shortcut to
+   Profiles. Shown only when `zperfd status` answered `ok`.
+4. **Thermal**: the engine's headroom as a gauge and its band (normal, warm,
+   hot, critical), with the hottest sensor, control zone and critical limit
+   when reported. The app sets no thresholds; band and colour come from
+   zperfd.
+5. **Active performance**: input boost, boosted tasks, cpufreq requests and
+   thermal mitigation, from ZKFC.
+6. **Device**: ZKFC and licence state, architecture, kernel type, hook mode,
+   API, licensee, kernel and build.
+
+Results that did not come back `ok` are dropped, so their defaults are never
+shown as device data (API 0.0.0, hook "none", token "missing", zero boosts,
+thermal "normal"). Fields with no reported value are left out, and so are
+the thermal card without the engine and the boost card without ZKFC. Without the
+module, the home says what still works: battery and RAM in the Monitor. CPU,
+GPU, thermal, the FPS recorder, profiles and tweaks need the module.
+
+Status colours used as text (`statusInk`) are adjusted per theme to 4.5:1
+on every container and in their tinted pills; graphics (`statusGraphic`)
+to 3:1. `ContrastTest` checks both.
 
 Boot confirmation (`zkfctl safe confirm`) runs only after ZKFC answered `ok`,
 safe mode is off, and 15 s later the engine and its probe answer again.
@@ -203,6 +231,7 @@ screens (CPU & GPU, Battery, FPS, FPS session).
 ./gradlew :app:testStandardDebugUnitTest
 ```
 
+- **Home:** `HomeUiTest` (ready, missing module, no root, checking, safe mode; light and dark, viewport and full page) and `HomeModelTest` (greeting, summary, thermal bands).
 - **Visual review:** `SetupArtRenderTest` renders every animation as a filmstrip (light and dark), the custom icons, and the app icon in several masks.
 - **Logic:**
   - `InstallFactsTest`: probe parsing, root/zkfctl classification, read-only script.

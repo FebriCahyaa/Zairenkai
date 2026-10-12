@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Greeting by time of day (pagi 04-10, siang 11-14, sore 15-17, malam 18-03) -->
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_midday">Good afternoon</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_night">Good evening</string>
+
+    <!-- One-line summary under the greeting -->
+    <string name="home_summary_checking">Checking your system…</string>
+    <string name="home_summary_no_root">Root access is needed</string>
+    <string name="home_summary_ready">All systems ready</string>
+    <plurals name="home_summary_attention">
+        <item quantity="one">%d component needs attention</item>
+        <item quantity="other">%d components need attention</item>
+    </plurals>
+
+    <!-- Component strip -->
+    <string name="home_chip_token">Token</string>
+    <!-- %1$s: component name, %2$s: its state -->
+    <string name="home_chip_a11y">%1$s: %2$s</string>
+
+    <!-- Active profile -->
+    <string name="home_mode_label">Active profile</string>
+    <string name="home_mode_default">Engine default, not chosen yet</string>
+    <string name="home_mode_change">Change profile</string>
+
+    <!-- Thermal (bands come from zperfd) -->
+    <string name="home_thermal_title">Thermal</string>
+    <string name="home_thermal_hottest">Hottest</string>
+    <string name="home_thermal_headroom">headroom</string>
+    <!-- %1$s: headroom, e.g. 72% -->
+    <string name="home_thermal_headroom_a11y">Thermal headroom %1$s</string>
+    <string name="home_band_nominal">Normal</string>
+    <string name="home_band_warm">Warm</string>
+    <string name="home_band_hot">Hot</string>
+    <string name="home_band_critical">Critical</string>
+    <string name="home_band_unknown">Not known yet</string>
+
+    <string name="home_licensee">Licensee</string>
+</resources>

@@ -14,8 +14,6 @@
 
     <!-- Stat tiles -->
     <string name="dashboard_zkfc_status">ZKFC 状态</string>
-    <!-- %1$s: hook mode reported by ZKFC -->
-    <string name="dashboard_hook_sub">Hook：%1$s</string>
     <string name="dashboard_license">API 许可证</string>
 
     <!-- License states -->
@@ -35,13 +33,9 @@
     <string name="dashboard_build">构建版本</string>
 
     <!-- Thermal section -->
-    <string name="dashboard_thermal_envelope">温控包络</string>
-    <string name="dashboard_envelope">包络</string>
-    <string name="dashboard_headroom">余量</string>
     <string name="dashboard_control_zone">控制区间</string>
-    <string name="dashboard_critical_trip">临界触发点</string>
-    <string name="dashboard_unknown">未知</string>
-    <string name="dashboard_thermal_no_evidence">温控仲裁尚未提供足够的依据。</string>
+    <string name="dashboard_critical_trip">临界阈值</string>
+    <string name="dashboard_thermal_no_evidence">引擎尚未报告足够的温度数据。</string>
 
     <!-- Active performance section -->
     <string name="dashboard_active_performance">当前性能</string>

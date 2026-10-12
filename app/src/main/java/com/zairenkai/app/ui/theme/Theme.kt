@@ -13,6 +13,7 @@
 package com.zairenkai.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -20,6 +21,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -61,6 +63,38 @@ internal fun readableOn(c: Color, surface: Color, onColor: Color, min: Float = 4
     }
     return out
 }
+
+/**
+ * [c] moved just far enough towards black (on a light [surface]) or white (on
+ * a dark one) to read as text there (4.5:1). For status colours such as
+ * [ZkGood], which are too light for text on light surfaces.
+ */
+internal fun readableInk(c: Color, surface: Color, min: Float = 4.5f): Color {
+    val target = if (surface.luminance() < 0.5f) Color.White else Color.Black
+    var out = c
+    var t = 0f
+    while (contrast(out, surface) < min && t < 1f) {
+        t += 0.04f
+        out = lerp(c, target, t)
+    }
+    return out
+}
+
+/**
+ * A status colour ([ZkGood], [ZkWarn], [ZkBad] …) that reads on every surface
+ * container of [cs], and on its own 12 % tint (status pills), hence the margin
+ * above 4.5:1. Checked by ContrastTest.
+ */
+internal fun statusInkOn(c: Color, cs: ColorScheme): Color = readableInk(c, cs.surfaceContainerHighest, min = 5.2f)
+
+@Composable
+@ReadOnlyComposable
+fun statusInk(c: Color): Color = statusInkOn(c, MaterialTheme.colorScheme)
+
+/** A status colour for graphics (gauges, dots): 3:1 against every container, so it stays bright. */
+@Composable
+@ReadOnlyComposable
+fun statusGraphic(c: Color): Color = readableInk(c, MaterialTheme.colorScheme.surfaceContainerHighest, min = 3f)
 
 @Composable
 fun ZairenkaiTheme(

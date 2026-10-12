@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Greeting by time of day (pagi 04-10, siang 11-14, sore 15-17, malam 18-03) -->
+    <string name="home_greeting_morning">おはようございます</string>
+    <string name="home_greeting_midday">こんにちは</string>
+    <string name="home_greeting_afternoon">こんにちは</string>
+    <string name="home_greeting_night">こんばんは</string>
+
+    <!-- One-line summary under the greeting -->
+    <string name="home_summary_checking">システムを確認しています…</string>
+    <string name="home_summary_no_root">root アクセスが必要です</string>
+    <string name="home_summary_ready">すべて準備完了</string>
+    <plurals name="home_summary_attention">
+        <item quantity="other">%d 件の項目に対応が必要です</item>
+    </plurals>
+
+    <!-- Component strip -->
+    <string name="home_chip_token">トークン</string>
+    <!-- %1$s: component name, %2$s: its state -->
+    <string name="home_chip_a11y">%1$s: %2$s</string>
+
+    <!-- Active profile -->
+    <string name="home_mode_label">有効なプロファイル</string>
+    <string name="home_mode_default">エンジンの既定値（未選択）</string>
+    <string name="home_mode_change">プロファイルを変更</string>
+
+    <!-- Thermal (bands come from zperfd) -->
+    <string name="home_thermal_title">温度</string>
+    <string name="home_thermal_hottest">最高温度</string>
+    <string name="home_thermal_headroom">余裕</string>
+    <!-- %1$s: headroom, e.g. 72% -->
+    <string name="home_thermal_headroom_a11y">温度の余裕 %1$s</string>
+    <string name="home_band_nominal">正常</string>
+    <string name="home_band_warm">やや高温</string>
+    <string name="home_band_hot">高温</string>
+    <string name="home_band_critical">危険</string>
+    <string name="home_band_unknown">まだ不明</string>
+
+    <string name="home_licensee">ライセンス保持者</string>
+</resources>

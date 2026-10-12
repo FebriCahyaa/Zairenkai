@@ -14,8 +14,6 @@
 
     <!-- Stat tiles -->
     <string name="dashboard_zkfc_status">ZKFC status</string>
-    <!-- %1$s: hook mode reported by ZKFC -->
-    <string name="dashboard_hook_sub">Hook: %1$s</string>
     <string name="dashboard_license">API license</string>
 
     <!-- License states -->
@@ -35,13 +33,9 @@
     <string name="dashboard_build">Build</string>
 
     <!-- Thermal section -->
-    <string name="dashboard_thermal_envelope">Thermal envelope</string>
-    <string name="dashboard_envelope">Envelope</string>
-    <string name="dashboard_headroom">Headroom</string>
     <string name="dashboard_control_zone">Control zone</string>
-    <string name="dashboard_critical_trip">Critical trip</string>
-    <string name="dashboard_unknown">Unknown</string>
-    <string name="dashboard_thermal_no_evidence">The thermal authority has not provided enough evidence yet.</string>
+    <string name="dashboard_critical_trip">Critical limit</string>
+    <string name="dashboard_thermal_no_evidence">The engine hasn\'t reported enough thermal data yet.</string>
 
     <!-- Active performance section -->
     <string name="dashboard_active_performance">Active performance</string>

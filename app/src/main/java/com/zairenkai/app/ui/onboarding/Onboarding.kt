@@ -117,6 +117,7 @@ import com.zairenkai.app.ui.theme.GreetingStyle
 import com.zairenkai.app.ui.theme.ZkBad
 import com.zairenkai.app.ui.theme.ZkGood
 import com.zairenkai.app.ui.theme.ZkWarn
+import com.zairenkai.app.ui.theme.statusInk
 
 /** Shared motion: page changes slide a short distance and fade; no bounce. */
 private const val PAGE_MS = 360
@@ -400,8 +401,9 @@ private fun rememberSchemeColors() = MaterialTheme.colorScheme.let { cs ->
     )
 }
 
+/** A brand line animation (res/raw), recoloured to the scheme; shared with the home screen. */
 @Composable
-private fun SetupAnimation(@RawRes res: Int, loop: Boolean, modifier: Modifier = Modifier) {
+internal fun SetupAnimation(@RawRes res: Int, loop: Boolean, modifier: Modifier = Modifier) {
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(res))
     val still = reducedMotion()
     val progress by animateLottieCompositionAsState(
@@ -585,9 +587,9 @@ private data class StateLook(val icon: ImageVector?, val color: Color, val label
 @Composable
 private fun look(state: CheckState): StateLook = when (state) {
     CheckState.CHECKING -> StateLook(null, MaterialTheme.colorScheme.primary, R.string.setup_state_checking)
-    CheckState.OK -> StateLook(Icons.Rounded.CheckCircle, ZkGood, R.string.setup_state_ok)
-    CheckState.WARN -> StateLook(Icons.Rounded.Warning, ZkWarn, R.string.setup_state_warn)
-    CheckState.MISSING -> StateLook(Icons.Rounded.Close, ZkBad, R.string.setup_state_missing)
+    CheckState.OK -> StateLook(Icons.Rounded.CheckCircle, statusInk(ZkGood), R.string.setup_state_ok)
+    CheckState.WARN -> StateLook(Icons.Rounded.Warning, statusInk(ZkWarn), R.string.setup_state_warn)
+    CheckState.MISSING -> StateLook(Icons.Rounded.Close, statusInk(ZkBad), R.string.setup_state_missing)
 }
 
 /** One readiness row; the state badge cross-fades as the probe answers. Shared with the Dashboard. */

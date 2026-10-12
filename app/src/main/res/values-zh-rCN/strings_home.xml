@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Greeting by time of day (pagi 04-10, siang 11-14, sore 15-17, malam 18-03) -->
+    <string name="home_greeting_morning">早上好</string>
+    <string name="home_greeting_midday">中午好</string>
+    <string name="home_greeting_afternoon">下午好</string>
+    <string name="home_greeting_night">晚上好</string>
+
+    <!-- One-line summary under the greeting -->
+    <string name="home_summary_checking">正在检查系统…</string>
+    <string name="home_summary_no_root">需要 root 权限</string>
+    <string name="home_summary_ready">系统一切就绪</string>
+    <plurals name="home_summary_attention">
+        <item quantity="other">%d 个组件需要处理</item>
+    </plurals>
+
+    <!-- Component strip -->
+    <string name="home_chip_token">令牌</string>
+    <!-- %1$s: component name, %2$s: its state -->
+    <string name="home_chip_a11y">%1$s：%2$s</string>
+
+    <!-- Active profile -->
+    <string name="home_mode_label">当前配置</string>
+    <string name="home_mode_default">引擎默认，尚未选择</string>
+    <string name="home_mode_change">更改配置</string>
+
+    <!-- Thermal (bands come from zperfd) -->
+    <string name="home_thermal_title">温控</string>
+    <string name="home_thermal_hottest">最高温度</string>
+    <string name="home_thermal_headroom">余量</string>
+    <!-- %1$s: headroom, e.g. 72% -->
+    <string name="home_thermal_headroom_a11y">温控余量 %1$s</string>
+    <string name="home_band_nominal">正常</string>
+    <string name="home_band_warm">偏热</string>
+    <string name="home_band_hot">较热</string>
+    <string name="home_band_critical">危险</string>
+    <string name="home_band_unknown">暂未知</string>
+
+    <string name="home_licensee">授权持有人</string>
+</resources>

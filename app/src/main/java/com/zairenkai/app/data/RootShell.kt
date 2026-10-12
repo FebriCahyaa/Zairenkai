@@ -18,6 +18,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
@@ -129,8 +130,11 @@ object RootShell {
                 // A pipe read does not react to thread interrupts, so a
                 // cancelled collector would wait for the next line. This
                 // child destroys the process on cancellation, which ends
-                // the read immediately.
-                val killer = launch {
+                // the read immediately. Started undispatched so its finally
+                // is armed before the first read: a fast child can deliver
+                // every line before a dispatched launch would ever run, and a
+                // coroutine cancelled before it starts skips its finally.
+                val killer = launch(start = CoroutineStart.UNDISPATCHED) {
                     try {
                         awaitCancellation()
                     } finally {

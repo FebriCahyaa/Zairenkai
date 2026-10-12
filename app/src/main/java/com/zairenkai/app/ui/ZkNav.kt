@@ -112,7 +112,20 @@ fun ZairenkaiRoot(container: AppContainer) {
             },
             popExitTransition = { fadeOut(spring(stiffness = 800f)) },
         ) {
-            composable(Dest.DASHBOARD.route) { DashboardScreen(factory, onOpenSettings = { nav.navigate("settings") }) }
+            composable(Dest.DASHBOARD.route) {
+                DashboardScreen(
+                    factory,
+                    onOpenSettings = { nav.navigate("settings") },
+                    // Same as tapping the Profiles tab, so its state is kept.
+                    onOpenProfiles = {
+                        nav.navigate(Dest.PROFILES.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
             composable(Dest.MONITOR.route) {
                 MonitorScreen(
                     factory,

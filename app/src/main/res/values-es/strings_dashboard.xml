@@ -14,8 +14,6 @@
 
     <!-- Stat tiles -->
     <string name="dashboard_zkfc_status">Estado de ZKFC</string>
-    <!-- %1$s: hook mode reported by ZKFC -->
-    <string name="dashboard_hook_sub">Hook: %1$s</string>
     <string name="dashboard_license">Licencia de API</string>
 
     <!-- License states -->
@@ -35,13 +33,9 @@
     <string name="dashboard_build">Compilación</string>
 
     <!-- Thermal section -->
-    <string name="dashboard_thermal_envelope">Envolvente térmica</string>
-    <string name="dashboard_envelope">Envolvente</string>
-    <string name="dashboard_headroom">Margen</string>
     <string name="dashboard_control_zone">Zona de control</string>
     <string name="dashboard_critical_trip">Umbral crítico</string>
-    <string name="dashboard_unknown">Desconocido</string>
-    <string name="dashboard_thermal_no_evidence">La autoridad térmica aún no ha aportado suficiente evidencia.</string>
+    <string name="dashboard_thermal_no_evidence">El motor aún no ha informado suficientes datos térmicos.</string>
 
     <!-- Active performance section -->
     <string name="dashboard_active_performance">Rendimiento activo</string>

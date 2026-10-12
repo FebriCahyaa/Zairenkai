@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Greeting by time of day (pagi 04-10, siang 11-14, sore 15-17, malam 18-03) -->
+    <string name="home_greeting_morning">Buenos días</string>
+    <string name="home_greeting_midday">Buenas tardes</string>
+    <string name="home_greeting_afternoon">Buenas tardes</string>
+    <string name="home_greeting_night">Buenas noches</string>
+
+    <!-- One-line summary under the greeting -->
+    <string name="home_summary_checking">Revisando el sistema…</string>
+    <string name="home_summary_no_root">Se necesita acceso root</string>
+    <string name="home_summary_ready">Todo el sistema está listo</string>
+    <plurals name="home_summary_attention">
+        <item quantity="one">%d componente necesita atención</item>
+        <item quantity="many">%d componentes necesitan atención</item>
+        <item quantity="other">%d componentes necesitan atención</item>
+    </plurals>
+
+    <!-- Component strip -->
+    <string name="home_chip_token">Token</string>
+    <!-- %1$s: component name, %2$s: its state -->
+    <string name="home_chip_a11y">%1$s: %2$s</string>
+
+    <!-- Active profile -->
+    <string name="home_mode_label">Perfil activo</string>
+    <string name="home_mode_default">Predeterminado del motor, aún sin elegir</string>
+    <string name="home_mode_change">Cambiar perfil</string>
+
+    <!-- Thermal (bands come from zperfd) -->
+    <string name="home_thermal_title">Térmica</string>
+    <string name="home_thermal_hottest">Más caliente</string>
+    <string name="home_thermal_headroom">margen</string>
+    <!-- %1$s: headroom, e.g. 72% -->
+    <string name="home_thermal_headroom_a11y">Margen térmico %1$s</string>
+    <string name="home_band_nominal">Normal</string>
+    <string name="home_band_warm">Templado</string>
+    <string name="home_band_hot">Caliente</string>
+    <string name="home_band_critical">Crítico</string>
+    <string name="home_band_unknown">Aún desconocido</string>
+
+    <string name="home_licensee">Titular de la licencia</string>
+</resources>

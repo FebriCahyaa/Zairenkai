@@ -80,22 +80,32 @@ fun brandGradient(dark: Boolean): List<Color> = if (dark) {
 fun isDarkSurface(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
 /**
- * Pastel backdrop: the surface, a luminous arc across the top (it breathes
- * slowly and moves a little per step), and a soft glow at the bottom. The
+ * Setup backdrop: the brand backdrop (a luminous arc across the top that
+ * breathes slowly, and a soft glow at the bottom); the arc moves a little per step. The
  * arc's colours come from the scheme, so dynamic colour still applies.
  * Text drawn on it gets the scheme's onSurface colour.
  */
 @Composable
 fun SetupBackdrop(step: SetupStep, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    val arcY by animateFloatAsState(
+        if (step == SetupStep.WELCOME || step == SetupStep.DONE) -0.36f else -0.44f,
+        spring(stiffness = Spring.StiffnessVeryLow), label = "arcY",
+    )
+    BrandBackdrop(arcY = { arcY }, modifier = modifier, content = content)
+}
+
+/**
+ * The backdrop itself, shared by setup and the home screen. [arcY] is the
+ * arc centre as a fraction of the height (negative: above the screen); it is
+ * read in the draw phase, so moving it does not recompose.
+ */
+@Composable
+fun BrandBackdrop(arcY: () -> Float, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val cs = MaterialTheme.colorScheme
     val dark = isDarkSurface()
     val still = reducedMotion()
     val breathe = if (still) null else rememberInfiniteTransition(label = "arc").animateFloat(
         0f, 1f, infiniteRepeatable(tween(7000, easing = LinearEasing), RepeatMode.Reverse), label = "breathe",
-    )
-    val arcY by animateFloatAsState(
-        if (step == SetupStep.WELCOME || step == SetupStep.DONE) -0.36f else -0.44f,
-        spring(stiffness = Spring.StiffnessVeryLow), label = "arcY",
     )
     // On dark surfaces the containers are deep and turn muddy when blended, so
     // the arc glows in the light pastels themselves, kept faint.
@@ -127,7 +137,7 @@ fun SetupBackdrop(step: SetupStep, modifier: Modifier = Modifier, content: @Comp
                     0.9f to band[1],
                     0.96f to band[2],
                     1f to Color.Transparent,
-                    center = Offset(size.width * (0.5f + 0.04f * (b - 0.5f)), size.height * arcY),
+                    center = Offset(size.width * (0.5f + 0.04f * (b - 0.5f)), size.height * arcY()),
                     radius = r,
                 ),
             )
@@ -218,9 +228,9 @@ fun TypewriterGreeting(
     }
 }
 
-/** A single line that types itself with a caret (the completion title), space reserved. */
+/** A single line that types itself with a caret (the completion title, the home greeting), space reserved. */
 @Composable
-fun TypewriterLine(text: String, style: TextStyle, modifier: Modifier = Modifier) {
+fun TypewriterLine(text: String, style: TextStyle, modifier: Modifier = Modifier, caretWhenDone: Boolean = true) {
     val still = reducedMotion()
     var shown by rememberSaveable(text) { mutableIntStateOf(if (still) text.length else 0) }
     LaunchedEffect(text) {
@@ -239,7 +249,7 @@ fun TypewriterLine(text: String, style: TextStyle, modifier: Modifier = Modifier
         Text(
             buildAnnotatedString {
                 withStyle(SpanStyle(color = ink)) { append(text.take(shown)) }
-                appendCaret(caretColor, caret?.value)
+                if (caretWhenDone || shown < text.length) appendCaret(caretColor, caret?.value)
             },
             style = style,
         )
