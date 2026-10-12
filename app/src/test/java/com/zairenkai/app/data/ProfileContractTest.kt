@@ -82,4 +82,38 @@ class ProfileContractTest {
         assertEquals("rejected", ZperfClient.parseModeApply(2, "", "unknown mode 'turbo'").kind)
         assertEquals("engine_unavailable", ZperfClient.parseModeApply(127, "", "").kind)
     }
+
+    @Test
+    fun jsonOutcomeCarriesTheFailureClassAndPerWriteResults() {
+        val blocked = ZperfClient.parseModeApply(4, fixture("zperfd-set-framework-unavailable.json"), "apply blocked")
+        assertFalse(blocked.ok)
+        assertEquals("framework_unavailable", blocked.kind)
+        assertTrue(blocked.error!!.contains("ZKFC unavailable"))
+
+        val ok = ZperfClient.parseModeApply(
+            0,
+            """{"ok":true,"mode":"fast","effective":"fast","applied":["policy0 gov=performance","uclamp.min=40%"],""" +
+                """"skipped":["/sys/kernel/gpu"],"constrained":["policy0=max 2000000 (kernel reports 1800000)"],""" +
+                """"unverified":["input_boost_freq"],"failed":[]}""",
+            "",
+        )
+        assertTrue(ok.ok)
+        assertEquals(2, ok.applied.size)
+        assertEquals(1, ok.constrained.size)
+        assertEquals(1, ok.skipped.size)
+        assertEquals(1, ok.unverified.size)
+
+        val notObserved = ZperfClient.parseModeApply(
+            3,
+            """{"ok":false,"mode":"fast","kind":"not_observed","error":"apply failed: 1 failed, 3 applied, 0 skipped",""" +
+                """"applied":[],"skipped":[],"constrained":[],"unverified":[],""" +
+                """"failed":["vm.swappiness=60: not observable after write (kernel reports '100')"]}""",
+            "",
+        )
+        assertEquals("not_observed", notObserved.kind)
+        assertEquals(1, notObserved.failed.size)
+
+        // A JSON success line with a failing exit status is not applied.
+        assertFalse(ZperfClient.parseModeApply(3, """{"ok":true,"mode":"fast"}""", "").ok)
+    }
 }

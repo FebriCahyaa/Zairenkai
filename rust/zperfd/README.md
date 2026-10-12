@@ -29,12 +29,24 @@ than something the engine pretends it can prevent.
 
 ```
 zperfd probe  [--root R] [--json]          # detected topology / flavor
-zperfd modes  [--profile F]                # list modes in the active profile
-zperfd apply  <mode> [--profile F]
-zperfd reset                               # restore stock-ish limits
+zperfd modes  [--profile F] [--json]       # list modes in the active profile
+zperfd apply  <mode> [--profile F] [--json] # alias: set
+zperfd status [--json]                     # desired/effective mode, hold reason
+zperfd tweak  list [--json] | get ID | set ID VALUE
+zperfd reset                               # restore the boot baseline (mode = stock)
 zperfd daemon [--state DIR] [--interval MS]
 zperfd adaptive [--json]                  # inspect current scene/FAS decision
 ```
+
+Every managed write is read back before the transaction commits. Exact
+nodes (governors, I/O scheduler, sysctl, uclamp percent, schedtune) must
+report the requested value or the whole apply rolls back. Frequency limits,
+`read_ahead_kb` and `nr_requests` may legitimately read back a kernel-adjusted
+value (QoS, thermal caps, page rounding); those are reported as `constrained`,
+and vendor multi-value nodes as `unverified`. `apply --json` prints one line
+with `applied`, `skipped`, `constrained`, `unverified` and `failed`, and on
+failure a `kind` (`framework_unavailable`, `license`, `sentinel`,
+`not_observed`, ...).
 
 The daemon watches `<state>/mode` (default `/data/adb/zperf/mode`) and the
 foreground app, applying per-app overrides from the profile's `[perapp]` table.

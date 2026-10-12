@@ -50,7 +50,7 @@ class ZperfClient(
     /** Ask zperfd to apply and durably commit a requested mode. */
     suspend fun apply(mode: String): ModeApplyResult {
         if (mode !in VALID_MODES) return ModeApplyResult(ok = false, kind = "rejected", error = "mode tidak dikenal: $mode")
-        val r = RootShell.run("${shellQuote(bin)} set ${shellQuote(mode)}", 12_000)
+        val r = RootShell.run("${shellQuote(bin)} --json set ${shellQuote(mode)}", 12_000)
         return parseModeApply(r.exitCode, r.stdout, r.stderr)
     }
 
@@ -149,13 +149,21 @@ class ZperfClient(
         private val INFO_PREFIXES = listOf("thermal envelope:", "thermal guard:", "warning:")
 
         /**
-         * Decode `zperfd set`. Success needs exit 0 and the `mode=` summary
-         * line; anything else is a failure classified by exit status, with
-         * the engine's own reason lines as detail.
+         * Decode `zperfd [--json] set`. The JSON line is preferred; an engine
+         * that predates it is read from its `mode=` summary and exit status.
+         * The exit status stays authoritative: a success line with a non-zero
+         * exit (or the reverse) is never reported as applied.
          */
         fun parseModeApply(exitCode: Int, stdout: String, stderr: String): ModeApplyResult {
+            val reported = firstJsonLine(stdout)?.let {
+                runCatching { parser.decodeFromString<ModeApplyResult>(it) }.getOrNull()
+            }
+            if (reported != null) {
+                if (exitCode == 0 && reported.ok) return reported
+                if (exitCode != 0 && !reported.ok) return reported
+            }
             val summary = stdout.lineSequence().any { it.trimStart().startsWith("mode=") }
-            if (exitCode == 0 && summary) return ModeApplyResult(ok = true)
+            if (exitCode == 0 && summary && reported == null) return ModeApplyResult(ok = true)
             val detail = stderr.lineSequence()
                 .map { it.trim() }
                 .filter { line -> line.isNotEmpty() && INFO_PREFIXES.none { line.startsWith(it) } }

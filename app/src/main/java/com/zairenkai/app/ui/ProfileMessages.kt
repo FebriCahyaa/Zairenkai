@@ -47,16 +47,34 @@ fun holdMessage(reason: String?, savedName: String?): String? = when (reason) {
     else -> "Engine menahan baseline stok ($reason)."
 }
 
+/** What the engine actually did, by outcome class, for a successful apply. */
+fun profileSuccessMessage(name: String, result: ModeApplyResult): String {
+    val parts = mutableListOf("${result.applied.size} terverifikasi")
+    if (result.constrained.isNotEmpty()) parts += "${result.constrained.size} dibatasi kernel"
+    if (result.unverified.isNotEmpty()) parts += "${result.unverified.size} tidak dapat diverifikasi"
+    if (result.skipped.isNotEmpty()) parts += "${result.skipped.size} tidak tersedia di perangkat"
+    return "Profil $name diterapkan: ${parts.joinToString(", ")}."
+}
+
 fun profileFailureMessage(result: ModeApplyResult): String {
     val reason = when (result.kind) {
         "engine_unavailable" -> "zperfd tidak tersedia; profil tidak diterapkan."
+        "framework_unavailable" -> "ZKFC tidak termuat di kernel; profil dikunci."
+        "framework_incompatible" -> "Versi API ZKFC tidak kompatibel dengan engine; profil dikunci."
+        "license" -> "Token API ZKFC belum valid; profil performa dikunci."
         "unauthorized" -> "Operasi ditolak oleh Core Authority."
+        "sentinel" -> "Diblokir Sentinel (keamanan termal/daya/penyimpanan); tidak ada perubahan."
+        "thermal_guard" -> "Guard termal kernel tidak dapat dikonfigurasi; profil tidak diterapkan."
         "blocked" -> "Diblokir oleh kernel (ZKFC/token), Sentinel, atau guard termal; tidak ada perubahan."
         "rejected" -> "Mode tidak tersedia di profil perangkat ini."
+        "not_observed" -> "Kernel tidak mempertahankan nilai yang ditulis; engine melakukan rollback."
         "failed" -> "Penerapan gagal; engine melakukan rollback dan status aktif tidak berubah."
+        "rollback_failed" -> "Penerapan gagal dan rollback tidak tuntas; pemulihan akan dijalankan."
+        "state" -> "State engine tidak dapat dipulihkan; tidak ada perubahan."
         "timeout" -> "Engine tidak merespons tepat waktu; status tidak pasti, muat ulang."
         else -> "Respons engine tidak dikenali; anggap tidak diterapkan."
     }
-    val detail = result.error?.takeIf { it.isNotBlank() }
-    return if (detail != null) "$reason\n$detail" else reason
+    val detail = (listOfNotNull(result.error?.takeIf { it.isNotBlank() }) + result.failed.take(3))
+        .joinToString("\n")
+    return if (detail.isNotEmpty()) "$reason\n$detail" else reason
 }

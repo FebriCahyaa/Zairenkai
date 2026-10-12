@@ -294,7 +294,7 @@ class ProfilesViewModel(private val c: AppContainer) : ViewModel() {
             // display; the engine status read below is the source of truth.
             if (profile.id != ProfileId.AUTO) c.settings.setActiveProfile(profile.id)
             c.settings.setAutoProfile(profile.id == ProfileId.AUTO)
-            _ui.value = _ui.value.copy(applying = null, notice = "Profil ${profile.name} diterapkan.")
+            _ui.value = _ui.value.copy(applying = null, notice = profileSuccessMessage(profile.name, result))
         } else {
             _ui.value = _ui.value.copy(applying = null, error = profileFailureMessage(result))
         }

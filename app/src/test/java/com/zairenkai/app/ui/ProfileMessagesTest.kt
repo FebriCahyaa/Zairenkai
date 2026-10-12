@@ -28,7 +28,11 @@ class ProfileMessagesTest {
     @Test
     fun everyApplyFailureKindHasASpecificMessage() {
         val generic = profileFailureMessage(ModeApplyResult(ok = false, kind = "new-kind"))
-        val kinds = listOf("engine_unavailable", "unauthorized", "blocked", "rejected", "failed", "timeout")
+        val kinds = listOf(
+            "engine_unavailable", "framework_unavailable", "framework_incompatible", "license",
+            "unauthorized", "sentinel", "thermal_guard", "blocked", "rejected", "not_observed",
+            "failed", "rollback_failed", "state", "timeout",
+        )
         val messages = kinds.map { profileFailureMessage(ModeApplyResult(ok = false, kind = it)) }
         messages.forEach { assertNotEquals(generic, it) }
         assertEquals(kinds.size, messages.toSet().size)
@@ -36,6 +40,24 @@ class ProfileMessagesTest {
             profileFailureMessage(ModeApplyResult(false, "blocked", "apply blocked: ZKFC unavailable"))
                 .endsWith("apply blocked: ZKFC unavailable"),
         )
+    }
+
+    @Test
+    fun successNamesEveryOutcomeClassAndFailureListsRejectedWrites() {
+        val ok = ModeApplyResult(
+            ok = true,
+            applied = listOf("a", "b"),
+            constrained = listOf("c"),
+            skipped = listOf("d", "e", "f"),
+        )
+        assertEquals(
+            "Profil Game diterapkan: 2 terverifikasi, 1 dibatasi kernel, 3 tidak tersedia di perangkat.",
+            profileSuccessMessage("Game", ok),
+        )
+        val failed = profileFailureMessage(
+            ModeApplyResult(ok = false, kind = "not_observed", failed = listOf("vm.swappiness=60: not observable")),
+        )
+        assertTrue(failed.contains("vm.swappiness=60"))
     }
 
     @Test

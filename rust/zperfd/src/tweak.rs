@@ -833,7 +833,7 @@ fn write_sys_first(s: &Sysroot, paths: &[&str], value: &str, id: &str) -> Result
 }
 
 /// Tokens of a sysfs choice node, without the `[active]` brackets.
-fn choice_tokens(raw: &str) -> Vec<String> {
+pub(crate) fn choice_tokens(raw: &str) -> Vec<String> {
     raw.split_whitespace()
         .map(|token| token.trim_matches(['[', ']']).to_string())
         .filter(|token| !token.is_empty())
@@ -843,7 +843,7 @@ fn choice_tokens(raw: &str) -> Vec<String> {
 /// The active entry of a choice node. Bracketed lists such as
 /// `[mq-deadline] kyber` report the bracketed token; plain nodes such as
 /// `scaling_governor` report their whole (single-token) content.
-fn active_choice(raw: &str) -> Option<String> {
+pub(crate) fn active_choice(raw: &str) -> Option<String> {
     let raw = raw.trim();
     if let Some(token) = raw
         .split_whitespace()

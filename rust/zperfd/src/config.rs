@@ -354,10 +354,6 @@ impl Mode {
     }
 }
 
-pub fn uclamp_from_pct(pct: u32) -> u32 {
-    ((pct.min(100) as u64 * 1024 + 50) / 100) as u32
-}
-
 /// Resolve a [FreqSpec] against a device's available-frequency table (kHz,
 /// sorted ascending). The result is snapped to a real OPP: for a ceiling we
 /// pick the highest OPP `<=` the request, for a floor the lowest OPP `>=` it.

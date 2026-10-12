@@ -126,11 +126,23 @@ data class ModesResult(
     val modes: List<ModeSummary> = emptyList(),
 )
 
-/** Outcome of `zperfd set <mode>`; [kind] mirrors the engine exit status. */
+/**
+ * Outcome of `zperfd --json set <mode>`. On success every list item was
+ * written: [applied] read back as requested, [constrained] reads back a
+ * kernel-adjusted value (QoS/thermal), [unverified] cannot be compared.
+ * [skipped] controls do not exist on this device. On failure [kind]
+ * classifies why and [failed] names the writes that caused the rollback.
+ */
+@Serializable
 data class ModeApplyResult(
-    val ok: Boolean,
+    val ok: Boolean = false,
     val kind: String? = null,
     val error: String? = null,
+    val applied: List<String> = emptyList(),
+    val skipped: List<String> = emptyList(),
+    val constrained: List<String> = emptyList(),
+    val unverified: List<String> = emptyList(),
+    val failed: List<String> = emptyList(),
 )
 
 @Serializable

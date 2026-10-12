@@ -602,14 +602,64 @@ fn configure_kernel_input_boost(
         .map_err(|e| format!("configure ZKFC input boost: {e}"))
 }
 
+fn json_list(items: &[String]) -> String {
+    items
+        .iter()
+        .map(|v| format!("\"{}\"", json_escape(v)))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn apply_report_json(report: &engine::ApplyReport) -> String {
+    format!(
+        "\"applied\":[{}],\"skipped\":[{}],\"constrained\":[{}],\"unverified\":[{}],\"failed\":[{}]",
+        json_list(&report.applied),
+        json_list(&report.skipped),
+        json_list(&report.constrained),
+        json_list(&report.unverified),
+        json_list(&report.failed),
+    )
+}
+
+/// Report a `set` failure. With `--json` one JSON line goes to stdout so
+/// clients can tell a missing framework, a policy block, a rejected mode and
+/// a write the kernel did not keep apart; the reason always goes to stderr.
+fn mode_fail(
+    args: &Args,
+    code: i32,
+    kind: &str,
+    requested: &str,
+    message: &str,
+    report: Option<&engine::ApplyReport>,
+) -> i32 {
+    if args.json {
+        println!(
+            "{{\"ok\":false,\"mode\":\"{}\",\"kind\":\"{}\",\"error\":\"{}\"{}}}",
+            json_escape(requested),
+            json_escape(kind),
+            json_escape(message),
+            report
+                .map(|r| format!(",{}", apply_report_json(r)))
+                .unwrap_or_default()
+        );
+    }
+    eprintln!("{message}");
+    code
+}
+
 fn apply_transaction(args: &Args, requested: &str) -> i32 {
     if let Err(e) = core_authorize(Operation::ApplyProfile) {
-        eprintln!("{e}");
-        return 1;
+        return mode_fail(args, 1, "unauthorized", requested, &e.to_string(), None);
     }
-    if let Err(e) = kernel_license_ok() {
-        eprintln!("apply blocked: {e}");
-        return 4;
+    if let Err((kind, e)) = kernel_gate() {
+        return mode_fail(
+            args,
+            4,
+            kind,
+            requested,
+            &format!("apply blocked: {e}"),
+            None,
+        );
     }
 
     let s = Sysroot::new(&args.root);
@@ -625,17 +675,29 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     let mut state = StateStore::new(&args.state);
 
     if let Err(e) = state.ensure_boot(&s, &nodes) {
-        eprintln!("state init failed: {e}");
-        return 3;
+        return mode_fail(
+            args,
+            3,
+            "state",
+            requested,
+            &format!("state init failed: {e}"),
+            None,
+        );
     }
     if let Err(e) = state.recover(&s) {
-        eprintln!("state recovery failed: {e}");
-        return 3;
+        return mode_fail(
+            args,
+            3,
+            "state",
+            requested,
+            &format!("state recovery failed: {e}"),
+            None,
+        );
     }
     let sentinel = sentinel_evaluate(args, Operation::ApplyProfile);
     if !sentinel.allowed {
-        eprintln!("apply blocked by Sentinel: {:?}", sentinel.reasons);
-        return 4;
+        let message = format!("apply blocked by Sentinel: {:?}", sentinel.reasons);
+        return mode_fail(args, 4, "sentinel", requested, &message, None);
     }
 
     let profile = match load_profile(
@@ -645,35 +707,38 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     ) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("profile error: {e}");
-            return 2;
+            return mode_fail(
+                args,
+                2,
+                "rejected",
+                requested,
+                &format!("profile error: {e}"),
+                None,
+            );
         }
     };
     let effective = match requested_mode(&profile, &s, requested) {
         Ok(v) => v,
-        Err(e) => {
-            eprintln!("{e}");
-            return 2;
-        }
+        Err(e) => return mode_fail(args, 2, "rejected", requested, &e, None),
     };
 
     if let Err(e) = state.begin(&s, &nodes) {
-        eprintln!("transaction begin failed: {e}");
-        return 3;
+        let message = format!("transaction begin failed: {e}");
+        return mode_fail(args, 3, "state", requested, &message, None);
     }
     if thermal_snapshot.telemetry_complete {
         if let Err(e) = configure_kernel_thermal_guard(args, &thermal_snapshot) {
             let _ = state.rollback(&s);
-            eprintln!("apply blocked: {e}");
-            return 4;
+            let message = format!("apply blocked: {e}");
+            return mode_fail(args, 4, "thermal_guard", requested, &message, None);
         }
     } else {
         eprintln!("thermal guard: runtime trip topology incomplete; keeping performance envelope limited and refusing new guard configuration");
     }
     let Some(mode) = profile.mode(&effective) else {
         let _ = state.rollback(&s);
-        eprintln!("apply failed: validated profile is missing mode '{effective}'");
-        return 3;
+        let message = format!("apply failed: validated profile is missing mode '{effective}'");
+        return mode_fail(args, 3, "failed", requested, &message, None);
     };
     let therm = thermal::envelope(&thermal_snapshot);
     let constrained = thermal::constrain_mode(mode, therm);
@@ -682,21 +747,39 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
         therm.band, therm.boost_permille, therm.max_perf_cap_pct, therm.reason
     );
     let report = engine.apply_mode(&constrained);
-    if !report.failed.is_empty() || report.applied.is_empty() {
-        let rollback = state.rollback(&s);
-        if let Err(e) = rollback {
-            eprintln!("rollback failed: {e}");
+    if !report.failed.is_empty() || !report.wrote_anything() {
+        for failure in &report.failed {
+            eprintln!("  ! {failure}");
         }
-        eprintln!(
+        let summary = format!(
             "apply failed: {} failed, {} applied, {} skipped",
             report.failed.len(),
             report.applied.len(),
             report.skipped.len()
         );
-        for failure in report.failed {
-            eprintln!("  ! {failure}");
-        }
-        return 3;
+        let kind = if report
+            .failed
+            .iter()
+            .any(|f| f.contains("not observable after write"))
+        {
+            "not_observed"
+        } else {
+            "failed"
+        };
+        return match state.rollback(&s) {
+            Ok(()) => mode_fail(args, 3, kind, requested, &summary, Some(&report)),
+            Err(e) => {
+                let message = format!("{summary}; rollback failed: {e}");
+                mode_fail(
+                    args,
+                    3,
+                    "rollback_failed",
+                    requested,
+                    &message,
+                    Some(&report),
+                )
+            }
+        };
     }
 
     if let Err(e) = configure_kernel_input_boost(&topology, Some(mode)) {
@@ -706,13 +789,13 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
     if let Err(e) = state.commit(Some(requested), Some(&effective)) {
         // Commit can fail after the durable commit marker. Recovery completes
         // that publication when possible, or rolls back an uncommitted txn.
-        let recovery = state.recover(&s);
-        if let Err(recovery_error) = recovery {
-            eprintln!("state commit failed: {e}; recovery failed: {recovery_error}");
-        } else {
-            eprintln!("state commit failed: {e}; recovery attempted");
-        }
-        return 3;
+        let message = match state.recover(&s) {
+            Err(recovery_error) => {
+                format!("state commit failed: {e}; recovery failed: {recovery_error}")
+            }
+            Ok(_) => format!("state commit failed: {e}; recovery attempted"),
+        };
+        return mode_fail(args, 3, "state", requested, &message, Some(&report));
     }
     // Record where this choice was validated. If this write fails the next
     // boot simply holds the baseline until the user confirms again.
@@ -722,13 +805,30 @@ fn apply_transaction(args: &Args, requested: &str) -> i32 {
         );
     }
 
+    if args.json {
+        println!(
+            "{{\"ok\":true,\"mode\":\"{}\",\"effective\":\"{}\",{}}}",
+            json_escape(requested),
+            json_escape(&effective),
+            apply_report_json(&report)
+        );
+        return 0;
+    }
     println!(
-        "mode={requested} effective={effective} applied={} skipped={}",
+        "mode={requested} effective={effective} applied={} skipped={} constrained={} unverified={}",
         report.applied.len(),
-        report.skipped.len()
+        report.skipped.len(),
+        report.constrained.len(),
+        report.unverified.len()
     );
     for item in report.applied {
         println!("  + {item}");
+    }
+    for item in report.constrained {
+        println!("  ~ {item}");
+    }
+    for item in report.unverified {
+        println!("  ? {item}");
     }
     for item in report.skipped {
         println!("  - {item}");
@@ -1887,7 +1987,7 @@ fn cmd_daemon(args: &Args) -> i32 {
                             therm.band, therm.boost_permille, therm.max_perf_cap_pct
                         );
                         let report = engine.apply_mode(&constrained);
-                        if report.failed.is_empty() && !report.applied.is_empty() {
+                        if report.failed.is_empty() && report.wrote_anything() {
                             if let Err(e) = configure_kernel_input_boost(&topology, Some(mode)) {
                                 eprintln!("zperfd: input boost fast path unavailable: {e}");
                             }
@@ -1896,10 +1996,12 @@ fn cmd_daemon(args: &Args) -> i32 {
                                     last = effective.clone();
                                     last_observed = Some(runtime_fingerprint(&s, &nodes));
                                     eprintln!(
-                                        "zperfd: {} -> {} applied={} skipped={}",
+                                        "zperfd: {} -> {} applied={} constrained={} unverified={} skipped={}",
                                         desired,
                                         effective,
                                         report.applied.len(),
+                                        report.constrained.len(),
+                                        report.unverified.len(),
                                         report.skipped.len()
                                     );
                                 }

@@ -14,8 +14,17 @@ use crate::topo::Topology;
 
 #[derive(Default, Debug)]
 pub struct ApplyReport {
+    /// Written and read back with the requested value.
     pub applied: Vec<String>,
+    /// Not attempted: the node or backend does not exist on this device.
     pub skipped: Vec<String>,
+    /// Written, but the kernel reports a different effective value (QoS,
+    /// thermal or another floor aggregates frequency limits). Not a failure.
+    pub constrained: Vec<String>,
+    /// Written; the node's format cannot be compared reliably.
+    pub unverified: Vec<String>,
+    /// Rejected by the kernel or not observable after write; the caller
+    /// rolls the transaction back.
     pub failed: Vec<String>,
 }
 
@@ -28,6 +37,67 @@ impl ApplyReport {
     }
     fn fail(&mut self, what: String) {
         self.failed.push(what);
+    }
+
+    /// True when at least one write reached the kernel.
+    pub fn wrote_anything(&self) -> bool {
+        !self.applied.is_empty() || !self.constrained.is_empty() || !self.unverified.is_empty()
+    }
+}
+
+/// How the value read back after a write is compared with the request.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Check {
+    /// Plain value node (sysctl, governor, integer knob): must match exactly.
+    Exact,
+    /// sysfs choice list: the bracketed active entry must be the request.
+    Choice,
+    /// cgroup uclamp percent, printed as "20.00" or "max".
+    Percent,
+    /// Frequency limit. The kernel aggregates QoS, thermal and boost
+    /// requests, so a different effective value is constrained, not failed.
+    Limit,
+    /// Vendor multi-value node whose read format is not reliably comparable.
+    Unverified,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Observation {
+    Matches,
+    Constrained(String),
+    Unverified,
+    Mismatch(String),
+}
+
+fn parse_percent(text: &str) -> Option<f64> {
+    let text = text.trim();
+    if text == "max" {
+        return Some(100.0);
+    }
+    text.parse::<f64>().ok()
+}
+
+fn observe(check: Check, expected: &str, observed: Option<&str>) -> Observation {
+    let Some(observed) = observed.map(str::trim) else {
+        return match check {
+            Check::Limit | Check::Unverified => Observation::Unverified,
+            _ => Observation::Mismatch("<unreadable>".into()),
+        };
+    };
+    let expected = expected.trim();
+    match check {
+        Check::Exact if observed == expected => Observation::Matches,
+        Check::Choice if crate::tweak::active_choice(observed).as_deref() == Some(expected) => {
+            Observation::Matches
+        }
+        Check::Percent => match (parse_percent(expected), parse_percent(observed)) {
+            (Some(want), Some(got)) if (want - got).abs() < 0.01 => Observation::Matches,
+            _ => Observation::Mismatch(observed.to_string()),
+        },
+        Check::Limit if observed == expected => Observation::Matches,
+        Check::Limit => Observation::Constrained(observed.to_string()),
+        Check::Unverified => Observation::Unverified,
+        _ => Observation::Mismatch(observed.to_string()),
     }
 }
 
@@ -150,6 +220,42 @@ impl<'a> Engine<'a> {
         out
     }
 
+    /// Write one node and classify the value the kernel reports afterwards.
+    /// Returns true when the write itself succeeded (even if it was then
+    /// reported as constrained or failed verification).
+    fn write_verified(
+        &self,
+        r: &mut ApplyReport,
+        node: &str,
+        value: &str,
+        label: String,
+        check: Check,
+    ) -> bool {
+        match self.s.write(node, value) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                r.skip(node.to_string());
+                false
+            }
+            Err(e) => {
+                r.fail(format!("{label}: {e}"));
+                false
+            }
+            Ok(()) => {
+                match observe(check, value, self.s.read(node).as_deref()) {
+                    Observation::Matches => r.ok(label),
+                    Observation::Constrained(seen) => r
+                        .constrained
+                        .push(format!("{label} (kernel reports {seen})")),
+                    Observation::Unverified => r.unverified.push(label),
+                    Observation::Mismatch(seen) => r.fail(format!(
+                        "{label}: not observable after write (kernel reports '{seen}')"
+                    )),
+                }
+                true
+            }
+        }
+    }
+
     pub fn apply_mode(&self, m: &Mode) -> ApplyReport {
         let mut r = ApplyReport::default();
         self.apply_cpu(&m.cpu, &mut r);
@@ -196,12 +302,7 @@ impl<'a> Engine<'a> {
             let current_max = self.s.read_u64(&p.rel("scaling_max_freq"));
 
             let mut write_limit = |leaf: &str, value: u64, label: String| {
-                let node = p.rel(leaf);
-                match self.s.write(&node, &value.to_string()) {
-                    Ok(_) => r.ok(label),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                    Err(e) => r.fail(format!("{label}: {e}")),
-                }
+                self.write_verified(r, &p.rel(leaf), &value.to_string(), label, Check::Limit);
             };
 
             match (minf, maxf) {
@@ -234,20 +335,22 @@ impl<'a> Engine<'a> {
         // msm_performance mirror (non-GKI Qualcomm) — "cpuIdx:freq ..." form.
         if self.t.has_msm_perf {
             if let Some(ma) = self.perf_param_str(c, false) {
-                let node = "/sys/module/msm_performance/parameters/cpu_max_freq".to_string();
-                match self.s.write(&node, &ma) {
-                    Ok(()) => r.ok(format!("msm_performance.max={ma}")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                    Err(e) => r.fail(format!("msm_performance.max={ma}: {e}")),
-                }
+                self.write_verified(
+                    r,
+                    "/sys/module/msm_performance/parameters/cpu_max_freq",
+                    &ma,
+                    format!("msm_performance.max={ma}"),
+                    Check::Unverified,
+                );
             }
             if let Some(mi) = self.perf_param_str(c, true) {
-                let node = "/sys/module/msm_performance/parameters/cpu_min_freq".to_string();
-                match self.s.write(&node, &mi) {
-                    Ok(()) => r.ok(format!("msm_performance.min={mi}")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                    Err(e) => r.fail(format!("msm_performance.min={mi}: {e}")),
-                }
+                self.write_verified(
+                    r,
+                    "/sys/module/msm_performance/parameters/cpu_min_freq",
+                    &mi,
+                    format!("msm_performance.min={mi}"),
+                    Check::Unverified,
+                );
             }
         }
 
@@ -308,18 +411,17 @@ impl<'a> Engine<'a> {
             .unwrap_or_default();
         let have: Vec<&str> = avail.split_whitespace().collect();
         for g in pref {
-            if !have.is_empty() && have.contains(&g.as_str()) {
-                let node = p.rel("scaling_governor");
-                match self.s.write(&node, g) {
-                    Ok(()) => {
-                        r.ok(format!("{} gov={g}", p.name));
-                        return;
-                    }
-                    Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-                        r.fail(format!("{node}={g}: {e}"));
-                    }
-                    Err(_) => {}
-                }
+            if !have.is_empty()
+                && have.contains(&g.as_str())
+                && self.write_verified(
+                    r,
+                    &p.rel("scaling_governor"),
+                    g,
+                    format!("{} gov={g}", p.name),
+                    Check::Exact,
+                )
+            {
+                return;
             }
         }
         r.skip(format!("{} governor (none of {:?})", p.name, pref));
@@ -329,23 +431,28 @@ impl<'a> Engine<'a> {
         match self.plan.boost {
             BoostBackend::Uclamp => {
                 if let Some(dir) = &self.t.top_app_uclamp {
+                    // The cgroup interface takes a percentage ("20" or
+                    // "20.00", at most 100). The 0..1024 utilization scale
+                    // belongs to sched_setattr/ZKFC task boosts only.
                     if let Some(min) = c.uclamp_min_pct {
-                        let node = format!("{dir}/cpu.uclamp.min");
-                        let scaled = config::uclamp_from_pct(min);
-                        match self.s.write(&node, &scaled.to_string()) {
-                            Ok(()) => r.ok(format!("uclamp.min={scaled} ({min}%)")),
-                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                            Err(e) => r.fail(format!("uclamp.min={min}: {e}")),
-                        }
+                        let pct = min.min(100);
+                        self.write_verified(
+                            r,
+                            &format!("{dir}/cpu.uclamp.min"),
+                            &pct.to_string(),
+                            format!("uclamp.min={pct}%"),
+                            Check::Percent,
+                        );
                     }
                     if let Some(max) = c.uclamp_max_pct {
-                        let node = format!("{dir}/cpu.uclamp.max");
-                        let scaled = config::uclamp_from_pct(max);
-                        match self.s.write(&node, &scaled.to_string()) {
-                            Ok(()) => r.ok(format!("uclamp.max={scaled} ({max}%)")),
-                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                            Err(e) => r.fail(format!("uclamp.max={max}: {e}")),
-                        }
+                        let pct = max.min(100);
+                        self.write_verified(
+                            r,
+                            &format!("{dir}/cpu.uclamp.max"),
+                            &pct.to_string(),
+                            format!("uclamp.max={pct}%"),
+                            Check::Percent,
+                        );
                     }
                 } else {
                     r.skip("uclamp backend unavailable".into());
@@ -353,12 +460,13 @@ impl<'a> Engine<'a> {
             }
             BoostBackend::SchedTune => {
                 if let (Some(dir), Some(min)) = (&self.t.stune_top, c.uclamp_min_pct) {
-                    let node = format!("{dir}/schedtune.boost");
-                    match self.s.write(&node, &min.to_string()) {
-                        Ok(()) => r.ok(format!("schedtune.boost={min}")),
-                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                        Err(e) => r.fail(format!("schedtune.boost={min}: {e}")),
-                    }
+                    self.write_verified(
+                        r,
+                        &format!("{dir}/schedtune.boost"),
+                        &min.to_string(),
+                        format!("schedtune.boost={min}"),
+                        Check::Exact,
+                    );
                 } else {
                     r.skip("schedtune backend unavailable".into());
                 }
@@ -377,12 +485,13 @@ impl<'a> Engine<'a> {
             None => return,
         };
         if let Some(ms) = c.input_boost_ms {
-            let node = format!("{dir}/input_boost_ms");
-            match self.s.write(&node, &ms.to_string()) {
-                Ok(()) => r.ok(format!("input_boost_ms={ms}")),
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                Err(e) => r.fail(format!("input_boost_ms={ms}: {e}")),
-            }
+            self.write_verified(
+                r,
+                &format!("{dir}/input_boost_ms"),
+                &ms.to_string(),
+                format!("input_boost_ms={ms}"),
+                Check::Exact,
+            );
         }
         if let Some(pct) = c.input_boost_pct {
             let mut parts = Vec::new();
@@ -393,12 +502,13 @@ impl<'a> Engine<'a> {
                 }
             }
             if !parts.is_empty() {
-                let node = format!("{dir}/input_boost_freq");
-                match self.s.write(&node, &parts.join(" ")) {
-                    Ok(()) => r.ok("input_boost_freq".into()),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                    Err(e) => r.fail(format!("input_boost_freq: {e}")),
-                }
+                self.write_verified(
+                    r,
+                    &format!("{dir}/input_boost_freq"),
+                    &parts.join(" "),
+                    "input_boost_freq".into(),
+                    Check::Unverified,
+                );
             }
         }
     }
@@ -428,20 +538,24 @@ impl<'a> Engine<'a> {
             let current_min = self.s.read_u64(&node.rel("min_freq"));
             let current_max = self.s.read_u64(&node.rel("max_freq"));
             let write_min = |value: u64, r: &mut ApplyReport| {
-                let path = node.rel("min_freq");
-                match self.s.write(&path, &value.to_string()) {
-                    Ok(()) => r.ok(format!("gpu min={value}")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
-                    Err(e) => r.fail(format!("gpu min={value}: {e}")),
-                }
+                let label = format!("gpu min={value}");
+                self.write_verified(
+                    r,
+                    &node.rel("min_freq"),
+                    &value.to_string(),
+                    label,
+                    Check::Limit,
+                );
             };
             let write_max = |value: u64, r: &mut ApplyReport| {
-                let path = node.rel("max_freq");
-                match self.s.write(&path, &value.to_string()) {
-                    Ok(()) => r.ok(format!("gpu max={value}")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
-                    Err(e) => r.fail(format!("gpu max={value}: {e}")),
-                }
+                let label = format!("gpu max={value}");
+                self.write_verified(
+                    r,
+                    &node.rel("max_freq"),
+                    &value.to_string(),
+                    label,
+                    Check::Limit,
+                );
             };
             match (min_target, max_target) {
                 (Some(mi), Some(ma)) => {
@@ -468,16 +582,17 @@ impl<'a> Engine<'a> {
                 .read(&node.rel("available_governors"))
                 .unwrap_or_default();
             let have: Vec<&str> = avail.split_whitespace().collect();
-            if !have.is_empty() && have.contains(&gov.as_str()) {
-                let path = node.rel("governor");
-                match self.s.write(&path, gov) {
-                    Ok(()) => {
-                        r.ok(format!("gpu gov={gov}"));
-                        break;
-                    }
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-                    Err(e) => r.fail(format!("gpu gov={gov}: {e}")),
-                }
+            if !have.is_empty()
+                && have.contains(&gov.as_str())
+                && self.write_verified(
+                    r,
+                    &node.rel("governor"),
+                    gov,
+                    format!("gpu gov={gov}"),
+                    Check::Exact,
+                )
+            {
+                break;
             }
         }
     }
@@ -485,11 +600,7 @@ impl<'a> Engine<'a> {
     fn set_proc_vm(&self, leaf: &str, val: Option<String>, r: &mut ApplyReport) {
         if let Some(v) = val {
             let node = format!("/proc/sys/vm/{leaf}");
-            match self.s.write(&node, &v) {
-                Ok(()) => r.ok(format!("vm.{leaf}")),
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(node),
-                Err(e) => r.fail(format!("vm.{leaf}={v}: {e}")),
-            }
+            self.write_verified(r, &node, &v, format!("vm.{leaf}={v}"), Check::Exact);
         }
     }
 
@@ -542,35 +653,42 @@ impl<'a> Engine<'a> {
             }
             if !io.scheduler.is_empty() {
                 let avail = self.s.read(&format!("{q}/scheduler")).unwrap_or_default();
+                // Token match: a substring test would accept "deadline"
+                // against "mq-deadline".
+                let offered = crate::tweak::choice_tokens(&avail);
                 for sched in &io.scheduler {
-                    if avail.contains(sched.as_str()) {
-                        let path = format!("{q}/scheduler");
-                        match self.s.write(&path, sched) {
-                            Ok(()) => {
-                                r.ok(format!("{dev} iosched={sched}"));
-                                break;
-                            }
-                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-                            Err(e) => r.fail(format!("{dev} iosched={sched}: {e}")),
-                        }
+                    if offered.iter().any(|o| o == sched)
+                        && self.write_verified(
+                            r,
+                            &format!("{q}/scheduler"),
+                            sched,
+                            format!("{dev} iosched={sched}"),
+                            Check::Choice,
+                        )
+                    {
+                        break;
                     }
                 }
             }
             if let Some(ra) = io.read_ahead_kb {
-                let path = format!("{q}/read_ahead_kb");
-                match self.s.write(&path, &ra.to_string()) {
-                    Ok(()) => r.ok(format!("{dev} read_ahead_kb={ra}")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
-                    Err(e) => r.fail(format!("{dev} read_ahead_kb={ra}: {e}")),
-                }
+                // Stored in pages: the kernel rounds to the page size.
+                self.write_verified(
+                    r,
+                    &format!("{q}/read_ahead_kb"),
+                    &ra.to_string(),
+                    format!("{dev} read_ahead_kb={ra}"),
+                    Check::Limit,
+                );
             }
             if let Some(nr) = io.nr_requests {
-                let path = format!("{q}/nr_requests");
-                match self.s.write(&path, &nr.to_string()) {
-                    Ok(()) => r.ok(format!("{dev} nr_requests={nr}")),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => r.skip(path),
-                    Err(e) => r.fail(format!("{dev} nr_requests={nr}: {e}")),
-                }
+                // blk-mq raises values below its minimum queue depth.
+                self.write_verified(
+                    r,
+                    &format!("{q}/nr_requests"),
+                    &nr.to_string(),
+                    format!("{dev} nr_requests={nr}"),
+                    Check::Limit,
+                );
             }
         }
     }
@@ -686,6 +804,115 @@ mod tests {
         );
         assert_eq!(s.read("/proc/sys/vm/swappiness").as_deref(), Some("60"));
         assert!(rep.applied.iter().any(|x| x.contains("gov=performance")));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn observation_classifies_exact_choice_percent_limit_and_unverified() {
+        assert_eq!(
+            observe(Check::Exact, "60", Some("60\n")),
+            Observation::Matches
+        );
+        assert_eq!(
+            observe(Check::Exact, "60", Some("100")),
+            Observation::Mismatch("100".into())
+        );
+        assert_eq!(
+            observe(Check::Exact, "60", None),
+            Observation::Mismatch("<unreadable>".into())
+        );
+        assert_eq!(
+            observe(Check::Choice, "kyber", Some("mq-deadline [kyber] none")),
+            Observation::Matches
+        );
+        assert!(matches!(
+            observe(Check::Choice, "kyber", Some("[mq-deadline] kyber")),
+            Observation::Mismatch(_)
+        ));
+        assert_eq!(
+            observe(Check::Percent, "20", Some("20.00")),
+            Observation::Matches
+        );
+        assert_eq!(
+            observe(Check::Percent, "100", Some("max")),
+            Observation::Matches
+        );
+        assert!(matches!(
+            observe(Check::Percent, "20", Some("19.53")),
+            Observation::Mismatch(_)
+        ));
+        // Frequency limits may be aggregated by QoS/thermal: constrained, not failed.
+        assert_eq!(
+            observe(Check::Limit, "1843200", Some("1017600")),
+            Observation::Constrained("1017600".into())
+        );
+        assert_eq!(
+            observe(Check::Limit, "1843200", None),
+            Observation::Unverified
+        );
+        assert_eq!(
+            observe(Check::Unverified, "0:1200000", Some("0:0 1:0")),
+            Observation::Unverified
+        );
+    }
+
+    #[test]
+    fn gki_uclamp_cgroup_receives_a_percentage_and_iosched_matches_tokens() {
+        let root = mkroot();
+        w(
+            &root,
+            "/proc/sys/kernel/osrelease",
+            "6.1.75-android14-11-g0",
+        );
+        let base = "/sys/devices/system/cpu/cpufreq/policy0";
+        w(&root, &format!("{base}/cpuinfo_min_freq"), "300000");
+        w(&root, &format!("{base}/cpuinfo_max_freq"), "2000000");
+        w(
+            &root,
+            &format!("{base}/scaling_available_frequencies"),
+            "300000 2000000",
+        );
+        w(&root, &format!("{base}/scaling_max_freq"), "2000000");
+        w(&root, &format!("{base}/scaling_min_freq"), "300000");
+        w(&root, "/dev/cpuctl/top-app/cpu.uclamp.min", "0.00");
+        // "deadline" must not match "mq-deadline" by substring.
+        w(
+            &root,
+            "/sys/block/sda/queue/scheduler",
+            "[mq-deadline] kyber none",
+        );
+        w(&root, "/sys/block/sda/queue/rotational", "0");
+
+        let s = Sysroot::new(&root);
+        let t = Topology::detect(&s);
+        let prof = Profile::parse(
+            r#"
+            [mode.fast.cpu]
+            uclamp_min_pct = 40
+            [mode.fast.io]
+            scheduler = ["deadline", "kyber"]
+            "#,
+        )
+        .unwrap();
+        let family = crate::family::load(
+            &std::path::PathBuf::from("/dev/null/zairenkai"),
+            t.identity.vendor,
+        );
+        let plan = crate::backends::BackendPlan::resolve(&t.identity, &t, family.as_ref());
+        let rep = Engine::new(&s, &t, &plan).apply_mode(prof.mode("fast").unwrap());
+
+        // 40 %, not the 0..1024 utilization value 410 the cgroup would reject.
+        assert_eq!(
+            s.read("/dev/cpuctl/top-app/cpu.uclamp.min").as_deref(),
+            Some("40")
+        );
+        assert!(rep.applied.iter().any(|x| x == "uclamp.min=40%"), "{rep:?}");
+        assert!(
+            rep.applied.iter().any(|x| x == "sda iosched=kyber"),
+            "{rep:?}"
+        );
+        assert!(rep.failed.is_empty(), "{rep:?}");
+        assert!(rep.wrote_anything());
         let _ = fs::remove_dir_all(&root);
     }
 }
