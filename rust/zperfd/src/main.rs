@@ -11,6 +11,7 @@ mod backends;
 mod catalog;
 mod cgroup;
 mod config;
+mod custom;
 mod engine;
 mod family;
 mod fas;
@@ -112,7 +113,8 @@ fn print_help() {
     eprintln!(
         "zperfd — Zairenkai performance engine\n\n\
   probe [--json]\n\
-  modes\n\
+  modes [--json]\n\
+  custom list [--json] | put <custom-id> <file.toml> | delete <custom-id>\n\
   tweak list|get <id>|set <id> <value>\n\
   apply <mode>\n\
   set <mode|auto>\n\
@@ -151,8 +153,9 @@ fn load_profile(
             GENERIC.into()
         }
     };
-    let profile = Profile::parse(&text)?;
+    let mut profile = Profile::parse(&text)?;
     profile.validate()?;
+    custom::inject(&mut profile, state);
     Ok(profile)
 }
 
@@ -1346,8 +1349,9 @@ fn cmd_adaptive(args: &Args) -> i32 {
         }
     }
 
-    let observe =
-        profile.adaptive.enabled && effective != "powersave" && scene.kind.performance_candidate();
+    let observe = profile.adaptive.enabled
+        && profile.base_of(&effective) != "powersave"
+        && scene.kind.performance_candidate();
     let mut workload_analyzer = workload::WorkloadAnalyzer::new();
     let workload = if observe {
         workload_analyzer.sample_with_gpu(
@@ -1515,7 +1519,7 @@ fn cmd_reset(args: &Args) -> i32 {
 /// What a mode requests, straight from the resolved device profile. Values
 /// are requests: frequency specs are resolved against the live OPP table and
 /// the thermal envelope can still reduce them at apply time.
-fn mode_summary_json(id: &str, mode: &config::Mode) -> String {
+fn mode_summary_json(id: &str, mode: &config::Mode, derived: Option<&config::Derived>) -> String {
     fn freq(spec: &Option<config::FreqSpec>) -> String {
         match spec {
             Some(config::FreqSpec::Khz(khz)) => format!("\"{khz}kHz\""),
@@ -1533,8 +1537,16 @@ fn mode_summary_json(id: &str, mode: &config::Mode) -> String {
             .collect::<Vec<_>>()
             .join(",")
     }
+    let origin = match derived {
+        Some(d) => format!(
+            "\"custom\":true,\"label\":\"{}\",\"base\":\"{}\",",
+            json_escape(&d.label),
+            json_escape(&d.base)
+        ),
+        None => "\"custom\":false,".into(),
+    };
     format!(
-        "{{\"id\":\"{}\",\"cpu\":{{\"min_freq\":{},\"max_freq\":{},\"max_perf_pct\":{},\"governors\":[{}],\"uclamp_min_pct\":{},\"input_boost_pct\":{},\"input_boost_ms\":{}}},\"gpu\":{{\"min_freq\":{},\"max_freq\":{},\"max_perf_pct\":{},\"governors\":[{}]}},\"mem\":{{\"swappiness\":{},\"vfs_cache_pressure\":{}}},\"io\":{{\"schedulers\":[{}],\"read_ahead_kb\":{}}}}}",
+        "{{\"id\":\"{}\",{origin}\"cpu\":{{\"min_freq\":{},\"max_freq\":{},\"max_perf_pct\":{},\"governors\":[{}],\"uclamp_min_pct\":{},\"input_boost_pct\":{},\"input_boost_ms\":{}}},\"gpu\":{{\"min_freq\":{},\"max_freq\":{},\"max_perf_pct\":{},\"governors\":[{}]}},\"mem\":{{\"swappiness\":{},\"vfs_cache_pressure\":{}}},\"io\":{{\"schedulers\":[{}],\"read_ahead_kb\":{}}}}}",
         json_escape(id),
         freq(&mode.cpu.min_freq),
         freq(&mode.cpu.max_freq),
@@ -1565,7 +1577,7 @@ fn cmd_modes(args: &Args) -> i32 {
             let modes = profile
                 .mode
                 .iter()
-                .map(|(id, mode)| mode_summary_json(id, mode))
+                .map(|(id, mode)| mode_summary_json(id, mode, profile.derived.get(id)))
                 .collect::<Vec<_>>()
                 .join(",");
             println!(
@@ -1590,6 +1602,158 @@ fn cmd_modes(args: &Args) -> i32 {
             eprintln!("profile error: {e}");
             2
         }
+    }
+}
+
+fn custom_refusal(id: &str, refusal: custom::Refusal) -> i32 {
+    match refusal {
+        custom::Refusal::Rejected(message) => tweak_fail(2, "rejected", id, &message),
+        custom::Refusal::Limit => tweak_fail(
+            2,
+            "limit",
+            id,
+            &format!("at most {} custom profiles can be stored", custom::MAX),
+        ),
+        custom::Refusal::InUse => tweak_fail(
+            2,
+            "in_use",
+            id,
+            "this custom profile is the selected mode; select another mode first",
+        ),
+        custom::Refusal::NotFound => tweak_fail(2, "not_found", id, "no such custom profile"),
+        custom::Refusal::State(message) => tweak_fail(3, "state", id, &message),
+    }
+}
+
+/// `custom list|put|delete`: the only writer of user-defined modes. Storing
+/// one changes no tunable; it is applied later by `set <id>` through the
+/// usual transaction, so put/delete need authorization but not the kernel
+/// gate. put/delete always answer with one JSON line.
+fn cmd_custom(args: &Args) -> i32 {
+    let sub = args
+        .positional
+        .first()
+        .map(String::as_str)
+        .unwrap_or("list");
+    let state = Path::new(&args.state);
+    let topology = Topology::detect(&Sysroot::new(&args.root));
+    let profile = match load_profile(args.profile.as_deref(), state, &topology.identity) {
+        Ok(profile) => profile,
+        Err(e) => return tweak_fail(2, "profile", "", &format!("profile error: {e}")),
+    };
+    let id = args.positional.get(1).map(String::as_str).unwrap_or("");
+    if sub != "list" {
+        if let Err(e) = core_authorize(Operation::ApplyProfile) {
+            return tweak_fail(4, "unauthorized", id, &e);
+        }
+    }
+    match sub {
+        "list" => {
+            let entries = match custom::list(&profile, state) {
+                Ok(entries) => entries,
+                Err(e) => return tweak_fail(3, "state", "", &e),
+            };
+            if !args.json {
+                for r in &entries {
+                    match &r.mode {
+                        Ok(_) => println!("{}\t{}\tbase={}", r.id, r.custom.label, r.custom.base),
+                        Err(e) => println!(
+                            "{}\t{}\tbase={}\tINVALID: {e}",
+                            r.id, r.custom.label, r.custom.base
+                        ),
+                    }
+                }
+                return 0;
+            }
+            let bases = profile
+                .mode
+                .iter()
+                .filter(|(id, _)| !profile.derived.contains_key(*id))
+                .map(|(id, mode)| {
+                    format!(
+                        "{{\"id\":\"{}\",\"values\":{}}}",
+                        json_escape(id),
+                        custom::mode_json(mode)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",");
+            let profiles = entries
+                .iter()
+                .map(|r| {
+                    let (error, values) = match &r.mode {
+                        Ok(mode) => ("null".to_string(), custom::mode_json(mode)),
+                        Err(e) => (format!("\"{}\"", json_escape(e)), "null".to_string()),
+                    };
+                    format!(
+                        "{{\"id\":\"{}\",\"label\":\"{}\",\"base\":\"{}\",\"valid\":{},\"error\":{},\"overrides\":{},\"values\":{}}}",
+                        json_escape(&r.id),
+                        json_escape(&r.custom.label),
+                        json_escape(&r.custom.base),
+                        r.mode.is_ok(),
+                        error,
+                        custom::mode_json(&r.custom.overrides),
+                        values
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",");
+            println!(
+                "{{\"ok\":true,\"max\":{},\"profile\":\"{}\",\"bases\":[{}],\"profiles\":[{}]}}",
+                custom::MAX,
+                json_escape(&profile.meta.name),
+                bases,
+                profiles
+            );
+            0
+        }
+        "put" => {
+            let Some(file) = args.positional.get(2) else {
+                return tweak_fail(
+                    2,
+                    "rejected",
+                    id,
+                    "usage: custom put <custom-id> <file.toml>",
+                );
+            };
+            let text = match fs::metadata(file) {
+                Ok(meta) if meta.len() > 16 * 1024 => {
+                    return tweak_fail(2, "rejected", id, "definition is larger than 16 KiB")
+                }
+                Ok(_) => match fs::read_to_string(file) {
+                    Ok(text) => text,
+                    Err(e) => return tweak_fail(2, "rejected", id, &format!("read {file}: {e}")),
+                },
+                Err(e) => return tweak_fail(2, "rejected", id, &format!("read {file}: {e}")),
+            };
+            let entry = match custom::parse_entry(&text) {
+                Ok(entry) => entry,
+                Err(e) => return tweak_fail(2, "rejected", id, &e),
+            };
+            match custom::put(&profile, state, id, entry) {
+                Ok(()) => {
+                    println!("{{\"ok\":true,\"id\":\"{}\"}}", json_escape(id));
+                    0
+                }
+                Err(refusal) => custom_refusal(id, refusal),
+            }
+        }
+        "delete" => {
+            let saved = StateStore::new(&args.state).mode();
+            match custom::delete(state, id, saved.as_deref()) {
+                Ok(()) => {
+                    println!("{{\"ok\":true,\"id\":\"{}\"}}", json_escape(id));
+                    0
+                }
+                Err(refusal) => custom_refusal(id, refusal),
+            }
+        }
+        other => tweak_fail(
+            2,
+            "rejected",
+            "",
+            &format!("unknown custom command '{other}'"),
+        ),
     }
 }
 
@@ -1733,7 +1897,7 @@ fn cmd_daemon(args: &Args) -> i32 {
         return 3;
     }
 
-    let profile = match load_profile(
+    let mut profile = match load_profile(
         args.profile.as_deref(),
         Path::new(&args.state),
         &topology.identity,
@@ -1744,6 +1908,7 @@ fn cmd_daemon(args: &Args) -> i32 {
             return 2;
         }
     };
+    let mut custom_stamp = custom::stamp(Path::new(&args.state));
     eprintln!(
         "zperfd: {} backend={} oem={} profile '{}' family={}",
         topology.flavor(),
@@ -1835,6 +2000,22 @@ fn cmd_daemon(args: &Args) -> i32 {
         let desired_raw = state
             .mode()
             .unwrap_or_else(|| profile.meta.default_mode.clone());
+        // `custom put/delete` rewrites custom.toml from another process.
+        // Re-merge on change, and before treating a custom selection as
+        // unknown (it may have been stored just after the last check), so a
+        // freshly saved custom mode is never replaced by the default.
+        let stamp = custom::stamp(Path::new(&args.state));
+        let unknown_custom =
+            desired_raw.starts_with(custom::PREFIX) && !profile.mode.contains_key(&desired_raw);
+        if stamp != custom_stamp || unknown_custom {
+            let was_custom = profile.derived.contains_key(&last);
+            custom::inject(&mut profile, Path::new(&args.state));
+            custom_stamp = stamp;
+            if was_custom || profile.derived.contains_key(&last) {
+                // The active custom mode may have new values under the same name.
+                last.clear();
+            }
+        }
         let desired = if desired_raw == "auto" || profile.mode.contains_key(&desired_raw) {
             desired_raw
         } else {
@@ -1857,7 +2038,7 @@ fn cmd_daemon(args: &Args) -> i32 {
         }
 
         let adaptive_observation = profile.adaptive.enabled
-            && effective != "powersave"
+            && profile.base_of(&effective) != "powersave"
             && scene_snapshot.kind.performance_candidate();
         if adaptive_observation != was_adaptive_observing {
             workload_analyzer.reset();
@@ -2130,6 +2311,7 @@ fn main() {
         "probe" => cmd_probe(&Sysroot::new(&args.root), Path::new(&args.state), args.json),
         "modes" => cmd_modes(&args),
         "tweak" => cmd_tweak(&args),
+        "custom" => cmd_custom(&args),
         "apply" | "set" => args
             .positional
             .first()

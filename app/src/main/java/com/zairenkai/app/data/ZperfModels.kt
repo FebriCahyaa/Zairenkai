@@ -112,6 +112,10 @@ data class ModeIo(
 @Serializable
 data class ModeSummary(
     val id: String = "",
+    /** A user-defined mode (`custom-*`) derived from [base]; see CustomProfiles.kt. */
+    val custom: Boolean = false,
+    val label: String? = null,
+    val base: String? = null,
     val cpu: ModeCpu = ModeCpu(),
     val gpu: ModeGpu = ModeGpu(),
     val mem: ModeMem = ModeMem(),

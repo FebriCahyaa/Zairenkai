@@ -49,7 +49,9 @@ class ZperfClient(
 
     /** Ask zperfd to apply and durably commit a requested mode. */
     suspend fun apply(mode: String): ModeApplyResult {
-        if (mode !in VALID_MODES) return ModeApplyResult(ok = false, kind = "rejected", error = "mode tidak dikenal: $mode")
+        if (mode !in VALID_MODES && !isCustomId(mode)) {
+            return ModeApplyResult(ok = false, kind = "rejected", error = "mode tidak dikenal: $mode")
+        }
         val r = RootShell.run("${shellQuote(bin)} --json set ${shellQuote(mode)}", 12_000)
         return parseModeApply(r.exitCode, r.stdout, r.stderr)
     }
@@ -59,6 +61,31 @@ class ZperfClient(
         val r = RootShell.run("${shellQuote(bin)} --json modes", 6000)
         if (!r.ok) return null
         return parseModes(r.stdout)
+    }
+
+    /** Stored custom profiles, the built-in modes they can derive from, and their values. */
+    suspend fun customs(): CustomListResult? {
+        val r = RootShell.run("${shellQuote(bin)} --json custom list", 6000)
+        if (!r.ok) return null
+        return parseCustomList(r.stdout)
+    }
+
+    /**
+     * Store (create or replace) a custom profile. The definition is staged in
+     * zperfd's root-only state directory, read by `custom put`, and removed
+     * whatever the outcome. Storing changes no tunable; apply it with [apply].
+     */
+    suspend fun putCustom(draft: CustomDraft): CustomWriteResult {
+        draft.validate()?.let { return CustomWriteResult(ok = false, id = draft.id, kind = "rejected", error = it) }
+        val r = RootShell.run(customPutCommand(bin, draft), 8000)
+        return parseCustomWrite(draft.id, r.exitCode, r.stdout, r.stderr)
+    }
+
+    /** Remove a custom profile; zperfd refuses while it is the selected mode. */
+    suspend fun deleteCustom(id: String): CustomWriteResult {
+        if (!isCustomId(id)) return CustomWriteResult(ok = false, id = id, kind = "rejected", error = "ID profil tidak valid")
+        val r = RootShell.run("${shellQuote(bin)} custom delete ${shellQuote(id)}", 6000)
+        return parseCustomWrite(id, r.exitCode, r.stdout, r.stderr)
     }
 
     /** Runtime tweak descriptors from zperfd, the same engine that writes them. */
@@ -104,8 +131,7 @@ class ZperfClient(
         return runCatching { json.decodeFromString<CorePermissionsResult>(line) }.getOrNull()
     }
 
-    private fun shellQuote(value: String): String =
-        "'" + value.replace("'", "'\\''") + "'"
+    private fun shellQuote(value: String): String = quote(value)
 
     companion object {
         private val parser = Json { ignoreUnknownKeys = true }
@@ -138,6 +164,36 @@ class ZperfClient(
                 else -> "protocol"
             }
             return TweakWriteResult(ok = false, id = id, kind = kind, error = detail ?: "exit $exitCode")
+        }
+
+        /** Stage the definition next to the engine, store it, and always remove the staged copy. */
+        internal fun customPutCommand(bin: String, draft: CustomDraft): String {
+            val staged = "${bin.substringBeforeLast('/')}/${draft.id}.pending"
+            return "umask 077; f=${quote(staged)}; printf '%s' ${quote(draft.toToml())} > \"\$f\" && " +
+                "${quote(bin)} custom put ${quote(draft.id)} \"\$f\"; rc=\$?; rm -f \"\$f\"; exit \$rc"
+        }
+
+        private fun quote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
+
+        fun parseCustomList(stdout: String): CustomListResult? {
+            val line = firstJsonLine(stdout) ?: return null
+            return runCatching { parser.decodeFromString<CustomListResult>(line) }.getOrNull()?.takeIf { it.ok }
+        }
+
+        /** Decode `zperfd custom put|delete`; the exit status is authoritative, as for tweak writes. */
+        fun parseCustomWrite(id: String, exitCode: Int, stdout: String, stderr: String): CustomWriteResult {
+            val reported = firstJsonLine(stdout)?.let {
+                runCatching { parser.decodeFromString<CustomWriteResult>(it) }.getOrNull()
+            }
+            if (exitCode == 0 && reported?.ok == true && reported.id == id) return reported
+            if (exitCode != 0 && reported != null && !reported.ok) return reported
+            val detail = stderr.trim().lineSequence().lastOrNull()?.takeIf { it.isNotBlank() }
+            val kind = when (exitCode) {
+                124 -> "timeout"
+                125, 126, 127 -> "engine_unavailable"
+                else -> "protocol"
+            }
+            return CustomWriteResult(ok = false, id = id, kind = kind, error = detail ?: "exit $exitCode")
         }
 
         fun parseModes(stdout: String): ModesResult? {

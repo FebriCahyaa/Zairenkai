@@ -5,11 +5,16 @@
  */
 package com.zairenkai.app.ui
 
+import com.zairenkai.app.data.CustomListResult
+import com.zairenkai.app.data.CustomProfile
+import com.zairenkai.app.data.CustomWriteResult
 import com.zairenkai.app.data.ModeApplyResult
 import com.zairenkai.app.data.ModeCpu
 import com.zairenkai.app.data.ModeGpu
 import com.zairenkai.app.data.ModeMem
 import com.zairenkai.app.data.ModeSummary
+import com.zairenkai.app.data.ZperfStatus
+import com.zairenkai.app.domain.Profiles
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -79,5 +84,39 @@ class ProfileMessagesTest {
         )
         assertEquals("CPU maks 55% · tanpa boost input · GPU maks 55%", modeSummaryLine(powersave))
         assertEquals("Nilai default kernel", modeSummaryLine(ModeSummary(id = "empty")))
+    }
+
+    @Test
+    fun everyCustomWriteRefusalHasASpecificMessage() {
+        val generic = customWriteFailureMessage(CustomWriteResult(ok = false, kind = "new-kind"))
+        val kinds = listOf(
+            "rejected", "limit", "in_use", "not_found", "state", "unauthorized", "profile",
+            "engine_unavailable", "timeout",
+        )
+        val messages = kinds.map { customWriteFailureMessage(CustomWriteResult(ok = false, kind = it)) }
+        messages.forEach { assertNotEquals(generic, it) }
+        assertEquals(kinds.size, messages.toSet().size)
+        assertTrue(
+            customWriteFailureMessage(CustomWriteResult(false, "x", "rejected", "memory value out of safe range"))
+                .endsWith("memory value out of safe range"),
+        )
+    }
+
+    @Test
+    fun aSavedCustomSelectionIsNamedByItsLabelAndIsNotABuiltInProfile() {
+        val customs = CustomListResult(
+            ok = true, max = 8,
+            profiles = listOf(CustomProfile(id = "custom-game", label = "Game dingin", base = "fast", valid = true)),
+        )
+        val ui = ProfilesUi(status = ZperfStatus(ok = true, desired = "custom-game", saved = true), customs = customs)
+        assertNull(ui.selected)
+        assertEquals("custom-game", ui.selectedCustom?.id)
+        assertEquals("Game dingin", ui.selectedName)
+        assertEquals(Profiles.GAME.name, ui.baseName("fast"))
+
+        // Stored but not listed (e.g. list failed): still named, by id.
+        assertEquals("custom-game", ui.copy(customs = null).selectedName)
+        // The engine default is not a selection.
+        assertNull(ui.copy(status = ZperfStatus(ok = true, desired = "custom-game", saved = false)).selectedName)
     }
 }

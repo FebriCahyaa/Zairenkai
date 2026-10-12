@@ -6,7 +6,7 @@
 //!
 //! Copyright (C) 2026 FebriCahyaa
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -22,6 +22,18 @@ pub struct Profile {
     /// overridden per device profile without changing the controller binary.
     #[serde(default)]
     pub adaptive: AdaptiveConfig,
+    /// User-defined modes merged in from the state directory (see
+    /// `custom.rs`), by mode key.
+    #[serde(skip)]
+    pub derived: BTreeMap<String, Derived>,
+}
+
+/// Where a user-defined mode came from.
+#[derive(Debug, Clone, Default)]
+pub struct Derived {
+    /// The built-in mode it overrides.
+    pub base: String,
+    pub label: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -143,65 +155,89 @@ fn default_input_scan_ms() -> u32 {
     20
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct Mode {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub cpu: Cpu,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub gpu: Gpu,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub mem: Mem,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub io: Io,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    *value == T::default()
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct Cpu {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_freq: Option<FreqSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_freq: Option<FreqSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_perf_pct: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_perf_pct: Option<u32>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub governor: Vec<String>,
     /// top-app uclamp (GKI cgroup) or schedtune boost (non-GKI), in percent.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub uclamp_min_pct: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub uclamp_max_pct: Option<u32>,
     /// input boost freq as a percent of each policy max, and its duration.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub input_boost_pct: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub input_boost_ms: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sched_boost: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct Gpu {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_freq: Option<FreqSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_freq: Option<FreqSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_perf_pct: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_perf_pct: Option<u32>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub governor: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct Mem {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub swappiness: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vfs_cache_pressure: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub watermark_scale_factor: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub page_cluster: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_free_kbytes: Option<u32>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct Io {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scheduler: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub read_ahead_kb: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nr_requests: Option<u32>,
 }
 
 /// A frequency value: a raw kHz integer, or a keyword/percentage string
 /// (`"min"`, `"max"`, `"80%"`, `"1.8GHz"`, `"1800MHz"`, `"-300MHz"`).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum FreqSpec {
     Khz(u64),
@@ -215,6 +251,17 @@ impl Profile {
 
     pub fn mode(&self, key: &str) -> Option<&Mode> {
         self.mode.get(key)
+    }
+
+    /// The built-in mode a key stands for: itself, or the base of a
+    /// user-defined mode. Runtime policy that keys off built-in names (the
+    /// adaptive layer skips powersave) uses this so a custom mode derived
+    /// from powersave is still treated as powersave.
+    pub fn base_of<'a>(&'a self, key: &'a str) -> &'a str {
+        self.derived
+            .get(key)
+            .map(|d| d.base.as_str())
+            .unwrap_or(key)
     }
 }
 
@@ -240,6 +287,11 @@ impl Profile {
                     .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
             {
                 return Err(format!("invalid mode name '{name}'"));
+            }
+            if name.starts_with(crate::custom::PREFIX) {
+                return Err(format!(
+                    "mode name '{name}' uses the prefix reserved for user-defined modes"
+                ));
             }
             mode.validate()?;
         }
@@ -368,6 +420,18 @@ pub fn resolve_freq(spec: &FreqSpec, avail_asc: &[u64], is_floor: bool) -> Optio
         FreqSpec::Spec(s) => parse_freq_str(s, lo, hi)?,
     };
     Some(snap(raw, avail_asc, is_floor))
+}
+
+/// Whether a frequency value is well formed (a user-defined mode is checked
+/// before it is stored; the device table is only known at apply time).
+pub fn freq_spec_valid(spec: &FreqSpec) -> bool {
+    const MAX_KHZ: u64 = 10_000_000;
+    match spec {
+        FreqSpec::Khz(khz) => *khz <= MAX_KHZ,
+        FreqSpec::Spec(text) => {
+            text.len() <= 32 && parse_freq_str(text, 1, MAX_KHZ).is_some_and(|v| v <= MAX_KHZ)
+        }
+    }
 }
 
 /// Resolve a percent-of-max into a kHz value then snap.

@@ -67,7 +67,7 @@ fn unhex(value: &str) -> Option<String> {
     String::from_utf8(bytes).ok()
 }
 
-fn atomic_write(path: &Path, data: &str) -> io::Result<()> {
+pub(crate) fn atomic_write(path: &Path, data: &str) -> io::Result<()> {
     let tmp = path.with_extension("tmp");
     {
         let mut file = OpenOptions::new()

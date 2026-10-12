@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui
 
+import com.zairenkai.app.data.CustomWriteResult
 import com.zairenkai.app.data.ModeApplyResult
 import com.zairenkai.app.data.ModeSummary
 
@@ -77,4 +78,22 @@ fun profileFailureMessage(result: ModeApplyResult): String {
     val detail = (listOfNotNull(result.error?.takeIf { it.isNotBlank() }) + result.failed.take(3))
         .joinToString("\n")
     return if (detail.isNotEmpty()) "$reason\n$detail" else reason
+}
+
+/** Why zperfd refused to store or remove a custom profile. */
+fun customWriteFailureMessage(result: CustomWriteResult): String {
+    val reason = when (result.kind) {
+        "rejected" -> "Profil kustom ditolak engine."
+        "limit" -> "Batas jumlah profil kustom tercapai; hapus salah satu dulu."
+        "in_use" -> "Profil ini sedang dipilih. Pilih profil lain sebelum menghapusnya."
+        "not_found" -> "Profil kustom sudah tidak ada."
+        "state" -> "Engine gagal menyimpan profil kustom; tidak ada perubahan."
+        "unauthorized" -> "Operasi ditolak oleh Core Authority."
+        "profile" -> "Profil perangkat engine tidak dapat dimuat."
+        "engine_unavailable" -> "zperfd tidak tersedia; profil kustom tidak disimpan."
+        "timeout" -> "Engine tidak merespons tepat waktu; muat ulang untuk melihat status."
+        else -> "Respons engine tidak dikenali; anggap tidak disimpan."
+    }
+    val detail = result.error?.takeIf { it.isNotBlank() && result.kind != "in_use" }
+    return if (detail != null) "$reason\n$detail" else reason
 }

@@ -105,3 +105,11 @@ PY
 ! grep -R -q 'androidx.compose.material.icons.rounded.\(Shield\|Bolt\|ChevronLeft\)' app/src/main
 grep -q 'isDebuggable = false' app/build.gradle.kts
 grep -q 'useLegacyPackaging.set(true)' app/build.gradle.kts
+
+# Custom profiles: zperfd is the only writer and they stay off Auto/per-app.
+grep -q 'mod custom;' rust/zperfd/src/main.rs
+grep -q 'custom::inject(&mut profile, state)' rust/zperfd/src/main.rs
+grep -q 'uses the prefix reserved for user-defined modes' rust/zperfd/src/config.rs
+grep -q 'profile.base_of(&effective) != "powersave"' rust/zperfd/src/main.rs
+grep -q 'custom put' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
+! grep -q 'custom.toml' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt

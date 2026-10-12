@@ -33,6 +33,7 @@ zperfd modes  [--profile F] [--json]       # list modes in the active profile
 zperfd apply  <mode> [--profile F] [--json] # alias: set
 zperfd status [--json]                     # desired/effective mode, hold reason
 zperfd tweak  list [--json] | get ID | set ID VALUE
+zperfd custom list [--json] | put custom-ID FILE.toml | delete custom-ID
 zperfd reset                               # restore the boot baseline (mode = stock)
 zperfd daemon [--state DIR] [--interval MS]
 zperfd adaptive [--json]                  # inspect current scene/FAS decision
@@ -47,6 +48,37 @@ and vendor multi-value nodes as `unverified`. `apply --json` prints one line
 with `applied`, `skipped`, `constrained`, `unverified` and `failed`, and on
 failure a `kind` (`framework_unavailable`, `license`, `sentinel`,
 `not_observed`, ...).
+
+### Custom profiles
+
+A custom profile is a built-in mode of the resolved device profile plus
+overrides of any mode field (`[cpu]`, `[gpu]`, `[mem]`, `[io]`, same keys as a
+catalog mode). Fields left out follow the base, so catalog updates still
+reach it:
+
+```toml
+label = "Game dingin"
+base = "fast"
+[cpu]
+max_perf_pct = 85
+governor = ["schedutil"]
+[mem]
+swappiness = 60
+```
+
+`custom put` rejects unknown keys, a base that is not a built-in mode of this
+device profile, bad frequency syntax and anything `Mode::validate` rejects for
+catalog modes, then stores the entry atomically in `<state>/custom.toml`
+(at most 8; ids are `custom-` + 1..24 of `a-z 0-9 _ -`, a prefix catalog
+modes may not use). Stored entries are merged into the profile on load, so
+`set custom-ID` goes through the same authorization, kernel gate, Sentinel,
+thermal envelope, transaction and readback as a built-in mode, and `modes
+--json` lists them with `custom`, `label` and `base`. They are manual only:
+`[perapp]` and Auto never resolve to one, and the adaptive layer treats a
+custom mode like its base. `custom delete` refuses the currently selected
+mode (`in_use`); an entry whose base later disappears is skipped and shown as
+invalid by `custom list`. The daemon re-merges when `custom.toml` changes and
+re-applies the active custom mode with its new values.
 
 The daemon watches `<state>/mode` (default `/data/adb/zperf/mode`) and the
 foreground app, applying per-app overrides from the profile's `[perapp]` table.
