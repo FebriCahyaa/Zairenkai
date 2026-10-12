@@ -18,7 +18,8 @@
     <string name="setup_enter_app">Zairenkai を開く</string>
 
     <!-- 1. Welcome -->
-    <string name="setup_welcome_title">Zairenkai へようこそ</string>
+    <string name="setup_greeting_hello">こんにちは</string>
+    <string name="setup_greeting_tagline">あなたらしいパフォーマンスを。</string>
     <string name="setup_welcome_body">root 化デバイス向けのパフォーマンス制御です。ZKFC カーネルフレームワーク上で動作する zperfd エンジンによって実行されます。</string>
     <string name="setup_feature_monitor_title">ライブモニター</string>
     <string name="setup_feature_monitor_body">選択したゲームの FPS、コアごとの CPU 負荷、GPU、バッテリー、温度。</string>

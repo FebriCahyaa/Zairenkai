@@ -137,3 +137,11 @@ for q in values-en values-en-rGB values-ja values-es values-zh-rCN; do test -d "
 grep -q 'android:localeConfig="@xml/locales_config"' app/src/main/AndroidManifest.xml
 tmp_lottie="$(mktemp -d)"; python3 tools/lottie/gen_setup_animations.py --out "$tmp_lottie" >/dev/null
 diff -qr "$tmp_lottie" app/src/main/res/raw >/dev/null
+# The launcher icon and splash mark are reproducible from their generator.
+tmp_icon="$(mktemp -d)"; python3 tools/icon/gen_app_icon.py --out "$tmp_icon" >/dev/null
+for f in ic_launcher_background ic_launcher_foreground ic_launcher_monochrome ic_zk_logo; do
+  diff -q "$tmp_icon/$f.xml" "app/src/main/res/drawable/$f.xml" >/dev/null
+done
+# Typography is Google Sans Flex (OFL), bundled with its licence.
+test -f app/src/main/res/font/google_sans_flex.ttf
+grep -q "Google Sans Flex" LICENSES/OFL-1.1.txt

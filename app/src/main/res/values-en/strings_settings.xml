@@ -44,6 +44,6 @@
     <string name="about_author">Author</string>
     <string name="about_zkfc_api">ZKFC API</string>
     <string name="about_license_title">Licenses &amp; credits</string>
-    <string name="about_license_body">The ZKFC kernel is licensed under GPL-2.0. The app, engine, modules and tools are licensed under Zairenkai Proprietary. Roboto Flex font (OFL-1.1). Ed25519/SHA-512 verifier based on TweetNaCl (public domain).</string>
+    <string name="about_license_body">The ZKFC kernel is licensed under GPL-2.0. The app, engine, modules and tools are licensed under Zairenkai Proprietary. Google Sans Flex font (OFL-1.1). Ed25519/SHA-512 verifier based on TweetNaCl (public domain).</string>
     <string name="about_copyright">© 2026 FebriCahyaa. All rights reserved.</string>
 </resources>

@@ -45,7 +45,7 @@
     <string name="about_author">Pembuat</string>
     <string name="about_zkfc_api">API ZKFC</string>
     <string name="about_license_title">Lisensi &amp; kredit</string>
-    <string name="about_license_body">Kernel ZKFC berlisensi GPL-2.0. Aplikasi, engine, modul, dan tools berlisensi Zairenkai Proprietary. Font Roboto Flex (OFL-1.1). Verifier Ed25519/SHA-512 berbasis TweetNaCl (domain publik).</string>
+    <string name="about_license_body">Kernel ZKFC berlisensi GPL-2.0. Aplikasi, engine, modul, dan tools berlisensi Zairenkai Proprietary. Font Google Sans Flex (OFL-1.1). Verifier Ed25519/SHA-512 berbasis TweetNaCl (domain publik).</string>
     <string name="about_copyright">© 2026 FebriCahyaa. Hak cipta dilindungi.</string>
     <string name="about_tagline" translatable="false">Tweaks Suite • Material 3 Expressive</string>
 </resources>

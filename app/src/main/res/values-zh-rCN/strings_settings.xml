@@ -44,6 +44,6 @@
     <string name="about_author">作者</string>
     <string name="about_zkfc_api">ZKFC API</string>
     <string name="about_license_title">许可与致谢</string>
-    <string name="about_license_body">ZKFC 内核采用 GPL-2.0 许可。应用、引擎、模块和工具采用 Zairenkai Proprietary 许可。字体为 Roboto Flex（OFL-1.1）。Ed25519/SHA-512 校验器基于 TweetNaCl（公有领域）。</string>
+    <string name="about_license_body">ZKFC 内核采用 GPL-2.0 许可。应用、引擎、模块和工具采用 Zairenkai Proprietary 许可。字体为 Google Sans Flex（OFL-1.1）。Ed25519/SHA-512 校验器基于 TweetNaCl（公有领域）。</string>
     <string name="about_copyright">© 2026 FebriCahyaa 保留所有权利。</string>
 </resources>

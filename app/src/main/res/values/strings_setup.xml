@@ -18,7 +18,9 @@
     <string name="setup_enter_app">Masuk ke Zairenkai</string>
 
     <!-- 1. Welcome -->
-    <string name="setup_welcome_title">Selamat datang di Zairenkai</string>
+    <!-- Typed greeting on the first page: "Halo" is typed and erased, then the app name, then this tagline in the brand gradient. -->
+    <string name="setup_greeting_hello">Halo</string>
+    <string name="setup_greeting_tagline">Performa, dengan caramu.</string>
     <string name="setup_welcome_body">Kendali performa untuk perangkat root, dijalankan oleh engine zperfd di atas framework kernel ZKFC.</string>
     <string name="setup_feature_monitor_title">Monitor langsung</string>
     <string name="setup_feature_monitor_body">FPS game yang kamu pilih, beban CPU per core, GPU, baterai, dan suhu.</string>

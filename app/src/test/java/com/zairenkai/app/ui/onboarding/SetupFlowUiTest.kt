@@ -14,7 +14,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -88,7 +90,14 @@ class SetupFlowUiTest {
     @Test
     fun welcomeShowsTheBrandAndStartsTheFlow() {
         show(OnboardingUi())
-        rule.onNodeWithText(str(R.string.setup_welcome_title)).assertIsDisplayed()
+        // The typed greeting exposes its final text to accessibility at once.
+        rule.onNodeWithContentDescription("${str(R.string.app_name)}. ${str(R.string.setup_greeting_tagline)}").assertExists()
+        // Language and device info live at the bottom of the welcome page.
+        rule.onNodeWithContentDescription(str(R.string.setup_language)).assertIsDisplayed()
+        rule.onNodeWithContentDescription(str(R.string.setup_info)).assertIsDisplayed().performClick()
+        assertEquals(listOf("info"), calls)
+        calls.clear()
+        rule.mainClock.advanceTimeBy(4_000)
         shot("1_welcome_light")
         rule.onNodeWithText(str(R.string.setup_start)).assertIsDisplayed().performClick()
         assertEquals(listOf("next"), calls)
@@ -97,6 +106,7 @@ class SetupFlowUiTest {
     @Test
     fun welcomeDark() {
         show(OnboardingUi(), dark = true)
+        rule.mainClock.advanceTimeBy(4_000)
         shot("1_welcome_dark")
     }
 
@@ -104,6 +114,8 @@ class SetupFlowUiTest {
     fun missingModuleIsExplainedAndRecheckRerunsTheProbe() {
         show(OnboardingUi(step = SetupStep.CHECK, probe = missingModule))
         rule.onNodeWithText(str(R.string.setup_zkfc_module_missing)).assertIsDisplayed()
+        // Language and info buttons are only on the welcome page.
+        assertEquals(0, rule.onAllNodesWithContentDescription(str(R.string.setup_language)).fetchSemanticsNodes().size)
         // Raw shell output never reaches the screen.
         assertEquals(0, rule.onAllNodesWithText("inaccessible", substring = true).fetchSemanticsNodes().size)
         shot("2_check_missing_module_light")

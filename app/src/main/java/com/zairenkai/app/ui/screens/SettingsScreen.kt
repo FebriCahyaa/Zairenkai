@@ -5,6 +5,10 @@
  */
 package com.zairenkai.app.ui.screens
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.zairenkai.app.ui.icons.ZkIcons
+import com.zairenkai.app.ui.locale.LanguageSheet
+import com.zairenkai.app.ui.locale.currentLanguageLabel
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -39,6 +43,7 @@ fun SettingsScreen(
     val vm: SettingsViewModel = viewModel(factory = factory)
     val settings by vm.settings.collectAsState(initial = AppSettings())
     val log by vm.log.collectAsState()
+    var showLanguage by rememberSaveable { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         vm.startLog()
@@ -54,6 +59,7 @@ fun SettingsScreen(
             item {
                 SectionCard(stringResource(R.string.settings_section_appearance)) {
                     NavRow(Icons.Rounded.Palette, stringResource(R.string.theme_title), stringResource(R.string.settings_theme_sub), onOpenTheme)
+                    NavRow(ZkIcons.Globe, stringResource(R.string.language_title), currentLanguageLabel()) { showLanguage = true }
                     NavRow(Icons.Rounded.Info, stringResource(R.string.about_title), stringResource(R.string.settings_about_sub), onOpenAbout)
                 }
             }
@@ -104,6 +110,7 @@ fun SettingsScreen(
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
+    if (showLanguage) LanguageSheet(onDismiss = { showLanguage = false })
 }
 
 @Composable

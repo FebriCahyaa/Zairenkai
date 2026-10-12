@@ -18,7 +18,8 @@
     <string name="setup_enter_app">Enter Zairenkai</string>
 
     <!-- 1. Welcome -->
-    <string name="setup_welcome_title">Welcome to Zairenkai</string>
+    <string name="setup_greeting_hello">Hello</string>
+    <string name="setup_greeting_tagline">Performance, your way.</string>
     <string name="setup_welcome_body">Performance control for rooted devices, run by the zperfd engine on top of the ZKFC kernel framework.</string>
     <string name="setup_feature_monitor_title">Live monitor</string>
     <string name="setup_feature_monitor_body">FPS for the games you choose, per-core CPU load, GPU, battery and temperatures.</string>

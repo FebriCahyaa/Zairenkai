@@ -4,10 +4,11 @@
  * depends on (root, ZKFC, zperfd, API token), an optional first profile
  * applied through zperfd, and an honest summary.
  *
- * One continuous visual language carries the whole flow: a luminous
- * backdrop and the flowing thread (SetupVisuals.kt) live outside the step
- * transition, so they never restart; only the step content slides and fades.
- * The header (language, device info, progress) and the action bar stay put.
+ * Character (see SetupVisuals.kt): a pastel backdrop with a breathing arc, a
+ * greeting that types itself, gradient line art (res/raw/setup_*.json) that
+ * bursts, orbits and resolves into the Zairenkai mark, and content that rises
+ * in, in reading order. The language and device-info buttons live at the
+ * bottom of the welcome page only; later, language is in Settings.
  * Insets: the header owns the status bar/cutout, the action bar owns the
  * navigation bar; the backdrop draws edge to edge behind both.
  * Copyright (C) 2026 FebriCahyaa
@@ -16,15 +17,14 @@ package com.zairenkai.app.ui.onboarding
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.res.Resources
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RawRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -34,6 +34,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
@@ -63,21 +64,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.compose.LottieAnimation
@@ -101,7 +102,6 @@ import com.zairenkai.app.ui.icons.Balance
 import com.zairenkai.app.ui.icons.BatterySaver
 import com.zairenkai.app.ui.icons.ContentCopy
 import com.zairenkai.app.ui.icons.DeveloperBoard
-import com.zairenkai.app.ui.icons.Language
 import com.zairenkai.app.ui.icons.Memory
 import com.zairenkai.app.ui.icons.PhoneAndroid
 import com.zairenkai.app.ui.icons.Shield
@@ -111,15 +111,15 @@ import com.zairenkai.app.ui.icons.Storage
 import com.zairenkai.app.ui.icons.Terminal
 import com.zairenkai.app.ui.icons.Timeline
 import com.zairenkai.app.ui.icons.Tune
-import com.zairenkai.app.ui.locale.AppLanguage
-import com.zairenkai.app.ui.locale.AppLocale
-import com.zairenkai.app.ui.locale.findActivity
+import com.zairenkai.app.ui.icons.ZkIcons
+import com.zairenkai.app.ui.locale.LanguageSheet
+import com.zairenkai.app.ui.theme.GreetingStyle
 import com.zairenkai.app.ui.theme.ZkBad
 import com.zairenkai.app.ui.theme.ZkGood
 import com.zairenkai.app.ui.theme.ZkWarn
 
 /** Shared motion: page changes slide a short distance and fade; no bounce. */
-private const val PAGE_MS = 320
+private const val PAGE_MS = 360
 
 @Composable
 fun Onboarding(container: AppContainer, onDone: () -> Unit) {
@@ -172,47 +172,36 @@ internal fun SetupFlow(
 
     SetupBackdrop(ui.step, Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            SetupHeader(
-                step = ui.step,
-                onLanguage = onLanguage,
-                onInfo = onInfo,
-                onSkip = if (ui.step == SetupStep.WELCOME) onSkip else null,
-            )
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                // The thread sits behind the step content and survives step changes.
-                SetupThread(
-                    threadShape(ui.step, settled, ui.choice),
-                    Modifier.fillMaxWidth().height(if (ui.step == SetupStep.WELCOME) 300.dp else 190.dp),
-                    drawKey = ui.step.takeIf { it == SetupStep.DONE },
-                )
-                AnimatedContent(
-                    targetState = ui.step,
-                    transitionSpec = {
-                        val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
-                        (slideInHorizontally(tween(PAGE_MS)) { w -> dir * w / 8 } + fadeIn(tween(PAGE_MS, delayMillis = 60)))
-                            .togetherWith(slideOutHorizontally(tween(PAGE_MS - 80)) { w -> -dir * w / 8 } + fadeOut(tween(160)))
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    label = "setupStep",
-                ) { step ->
-                    Column(
-                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        when (step) {
-                            SetupStep.WELCOME -> WelcomeStep()
-                            SetupStep.CHECK -> CheckStep(ui.probe, checks, onRecheck = onRecheck)
-                            SetupStep.PROFILE -> ProfileStep(ui, checks, ready, onChoose = onChoose)
-                            SetupStep.DONE -> DoneStep(ui, checks)
-                        }
-                        Spacer(Modifier.height(8.dp))
+            SetupHeader(step = ui.step, onSkip = if (ui.step == SetupStep.WELCOME) onSkip else null)
+            AnimatedContent(
+                targetState = ui.step,
+                transitionSpec = {
+                    val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                    (slideInHorizontally(tween(PAGE_MS, easing = EmphasizedDecelerate)) { w -> dir * w / 6 } + fadeIn(tween(PAGE_MS, delayMillis = 60)))
+                        .togetherWith(slideOutHorizontally(tween(PAGE_MS - 100)) { w -> -dir * w / 10 } + fadeOut(tween(150)))
+                },
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                label = "setupStep",
+            ) { step ->
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    when (step) {
+                        SetupStep.WELCOME -> WelcomeStep()
+                        SetupStep.CHECK -> CheckStep(ui.probe, checks, onRecheck = onRecheck)
+                        SetupStep.PROFILE -> ProfileStep(ui, checks, ready, onChoose = onChoose)
+                        SetupStep.DONE -> DoneStep(ui, checks)
                     }
+                    Spacer(Modifier.height(8.dp))
                 }
             }
             SetupActions(
                 ui = ui,
                 checksSettled = settled,
                 profilesReady = ready,
+                onLanguage = onLanguage,
+                onInfo = onInfo,
                 onBack = onBack,
                 onNext = onNext,
                 onApply = onApply,
@@ -224,62 +213,55 @@ internal fun SetupFlow(
 
 /* ---------------- frame ---------------- */
 
+/** Progress (hidden on the welcome page, like a greeting card) and Skip. */
 @Composable
-private fun SetupHeader(step: SetupStep, onLanguage: () -> Unit, onInfo: () -> Unit, onSkip: (() -> Unit)?) {
+private fun SetupHeader(step: SetupStep, onSkip: (() -> Unit)?) {
     val total = SetupStep.entries.size
     val label = stringResource(R.string.setup_step_label, step.ordinal + 1, total, stringResource(step.title))
     Column(
         Modifier.fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-            .padding(start = 20.dp, end = 12.dp, top = 8.dp),
+            .padding(start = 28.dp, end = 16.dp, top = 12.dp)
+            .heightIn(min = 52.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Progress: the current segment stretches, done ones stay filled.
-            Row(
-                Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = label },
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                SetupStep.entries.forEach { s ->
-                    val weight by animateFloatAsState(
-                        if (s == step) 2.6f else 1f, spring(stiffness = Spring.StiffnessMediumLow), label = "segW",
+            AnimatedVisibility(step != SetupStep.WELCOME, Modifier.weight(1f), enter = fadeIn(tween(300)), exit = fadeOut(tween(150))) {
+                Column(Modifier.semantics(mergeDescendants = true) { contentDescription = label }) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SetupStep.entries.forEach { s ->
+                            val weight by animateFloatAsState(
+                                if (s == step) 2.6f else 1f, spring(stiffness = Spring.StiffnessMediumLow), label = "segW",
+                            )
+                            val color by animateColorAsState(
+                                if (s.ordinal <= step.ordinal) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                tween(250), label = "segC",
+                            )
+                            Box(Modifier.weight(weight).height(4.dp).clip(CircleShape).background(color))
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        stringResource(step.title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    val color by animateColorAsState(
-                        if (s.ordinal <= step.ordinal) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                        tween(250), label = "segC",
-                    )
-                    Box(Modifier.weight(weight).height(4.dp).clip(CircleShape).background(color))
                 }
             }
-            Spacer(Modifier.width(12.dp))
-            HeaderButton(Icons.Rounded.Language, stringResource(R.string.setup_language), onLanguage)
-            HeaderButton(Icons.Rounded.Info, stringResource(R.string.setup_info), onInfo)
-        }
-        Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(step.title),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
+            if (step == SetupStep.WELCOME) Spacer(Modifier.weight(1f))
             if (onSkip != null) TextButton(onClick = onSkip) { Text(stringResource(R.string.action_skip)) }
         }
     }
 }
 
-@Composable
-private fun HeaderButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/** Pill actions, OxygenOS-style: a strong inverse primary and a quiet Back. */
+/** Pill actions. Welcome: language and info on the left, a compact start pill on the right. */
 @Composable
 private fun SetupActions(
     ui: OnboardingUi,
     checksSettled: Boolean,
     profilesReady: Boolean,
+    onLanguage: () -> Unit,
+    onInfo: () -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
     onApply: () -> Unit,
@@ -288,9 +270,21 @@ private fun SetupActions(
     Row(
         Modifier.fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+        )
+        if (ui.step == SetupStep.WELCOME) {
+            BottomIcon(ZkIcons.Globe, stringResource(R.string.setup_language), onLanguage)
+            Spacer(Modifier.width(4.dp))
+            BottomIcon(ZkIcons.Info, stringResource(R.string.setup_info), onInfo)
+            Spacer(Modifier.weight(1f))
+            PillButton(stringResource(R.string.setup_start), Modifier.height(56.dp), colors, onClick = onNext)
+            return@Row
+        }
         val showBack = ui.step == SetupStep.CHECK || ui.step == SetupStep.PROFILE
         AnimatedVisibility(
             visible = showBack,
@@ -308,13 +302,9 @@ private fun SetupActions(
                 Spacer(Modifier.width(12.dp))
             }
         }
-        val colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.inverseSurface,
-            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-        )
         val primary = Modifier.weight(1f).height(56.dp)
         when (ui.step) {
-            SetupStep.WELCOME -> PillButton(stringResource(R.string.setup_start), primary, colors, onClick = onNext)
+            SetupStep.WELCOME -> Unit
             SetupStep.CHECK -> PillButton(
                 stringResource(if (checksSettled) R.string.action_next else R.string.setup_checking),
                 primary, colors, enabled = checksSettled, busy = !checksSettled, onClick = onNext,
@@ -338,6 +328,19 @@ private fun SetupActions(
     }
 }
 
+/** Round, quiet button for the welcome page's language and info actions (48 dp target). */
+@Composable
+private fun BottomIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(52.dp),
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+    ) { Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp)) }
+}
+
 @Composable
 private fun PillButton(
     label: String,
@@ -349,35 +352,42 @@ private fun PillButton(
     icon: ImageVector = Icons.AutoMirrored.Rounded.ArrowForward,
     onClick: () -> Unit,
 ) {
-    Button(onClick = onClick, enabled = enabled, shape = CircleShape, colors = colors, modifier = modifier) {
-        // Fixed-size leading slot: a spinner while busy, so the label never jumps.
-        Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
-            if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+    Button(
+        onClick = onClick, enabled = enabled, shape = CircleShape, colors = colors, modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 22.dp),
+    ) {
+        // Fixed-size slots: a spinner while busy, an arrow otherwise, so the label never jumps.
+        if (busy) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+            Spacer(Modifier.width(10.dp))
         }
-        Spacer(Modifier.width(10.dp))
         Text(label, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        Spacer(Modifier.width(10.dp))
-        Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
-            if (arrow && !busy) Icon(icon, null, Modifier.size(20.dp))
+        if (arrow && !busy) {
+            Spacer(Modifier.width(10.dp))
+            Icon(icon, null, Modifier.size(20.dp))
         }
     }
 }
 
 @Composable
-private fun StepTitle(title: String, body: String, large: Boolean = false) {
+private fun StepTitle(title: String, body: String, large: Boolean = false, order: Int = 0) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             title,
-            style = if (large) MaterialTheme.typography.displaySmall.copy(letterSpacing = (-0.8).sp)
-            else MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.4).sp),
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.semantics { heading() },
+            style = if (large) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.semantics { heading() }.reveal(order),
         )
-        Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.reveal(order + 1),
+        )
     }
 }
 
-/* ---------------- emblems (Lottie, coloured from the scheme) ---------------- */
+/* ---------------- line art (Lottie, coloured from the scheme) ---------------- */
 
 /** Colour roles named in the animations (tools/lottie/gen_setup_animations.py) mapped to the active scheme. */
 @Composable
@@ -406,7 +416,11 @@ private fun SetupAnimation(@RawRes res: Int, loop: Boolean, modifier: Modifier =
             rememberLottieDynamicProperty(LottieProperty.STROKE_COLOR, color.toArgb(), "**", role),
         )
     }
-    val dynamic = rememberLottieDynamicProperties(*properties.toTypedArray())
+    val gradient = brandGradient(isDarkSurface()).map { it.toArgb() }.toTypedArray()
+    val dynamic = rememberLottieDynamicProperties(
+        *properties.toTypedArray(),
+        rememberLottieDynamicProperty(LottieProperty.GRADIENT_COLOR, gradient, "**", "brandGradient"),
+    )
     LottieAnimation(
         composition = composition,
         // Reduced motion: a representative still frame (the settled end of one-shots).
@@ -416,20 +430,12 @@ private fun SetupAnimation(@RawRes res: Int, loop: Boolean, modifier: Modifier =
     )
 }
 
-/** A small emblem resting on the thread: a soft disc with the step's animation. */
+/** Line art floating on the backdrop (no disc), cross-fading when the state changes. */
 @Composable
-private fun Emblem(@RawRes res: Int, loop: Boolean, size: Int = 112) {
-    Box(Modifier.fillMaxWidth().height(170.dp), contentAlignment = Alignment.Center) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-            tonalElevation = 2.dp,
-            shadowElevation = 0.dp,
-            modifier = Modifier.size(size.dp),
-        ) {
-            Crossfade(targetState = res to loop, animationSpec = tween(300), label = "emblem") { (r, l) ->
-                SetupAnimation(r, l, Modifier.fillMaxSize().padding(10.dp))
-            }
+private fun Emblem(@RawRes res: Int, loop: Boolean, size: Int = 180) {
+    Box(Modifier.fillMaxWidth().padding(top = 8.dp).height((size + 8).dp), contentAlignment = Alignment.Center) {
+        Crossfade(targetState = res to loop, animationSpec = tween(350), label = "emblem") { (r, l) ->
+            SetupAnimation(r, l, Modifier.size(size.dp))
         }
     }
 }
@@ -438,37 +444,46 @@ private fun Emblem(@RawRes res: Int, loop: Boolean, size: Int = 112) {
 
 @Composable
 private fun WelcomeStep() {
-    // The thread owns the upper part of the page; the words sit below it.
-    Spacer(Modifier.height(250.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        SetupAnimation(R.raw.setup_welcome, loop = true, modifier = Modifier.size(44.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-    }
-    StepTitle(stringResource(R.string.setup_welcome_title), stringResource(R.string.setup_welcome_body), large = true)
+    var greeted by rememberSaveable { mutableStateOf(false) }
+    Spacer(Modifier.height(56.dp))
+    SetupAnimation(R.raw.setup_welcome, loop = true, modifier = Modifier.size(64.dp).reveal(0))
+    TypewriterGreeting(
+        hello = stringResource(R.string.setup_greeting_hello),
+        brand = stringResource(R.string.app_name),
+        tagline = stringResource(R.string.setup_greeting_tagline),
+        style = GreetingStyle,
+        onFinished = { greeted = true },
+    )
+    Text(
+        stringResource(R.string.setup_welcome_body),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.reveal(0, start = greeted),
+    )
     Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(top = 4.dp)) {
-        Feature(Icons.Rounded.Timeline, R.string.setup_feature_monitor_title, R.string.setup_feature_monitor_body)
-        Feature(Icons.Rounded.Tune, R.string.setup_feature_verified_title, R.string.setup_feature_verified_body)
-        Feature(Icons.Rounded.Shield, R.string.setup_feature_safety_title, R.string.setup_feature_safety_body)
+        Feature(Icons.Rounded.Timeline, R.string.setup_feature_monitor_title, R.string.setup_feature_monitor_body, Modifier.reveal(1, start = greeted))
+        Feature(Icons.Rounded.Tune, R.string.setup_feature_verified_title, R.string.setup_feature_verified_body, Modifier.reveal(2, start = greeted))
+        Feature(Icons.Rounded.Shield, R.string.setup_feature_safety_title, R.string.setup_feature_safety_body, Modifier.reveal(3, start = greeted))
     }
     Text(
         stringResource(R.string.setup_welcome_note),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.reveal(4, start = greeted),
     )
 }
 
 /** A light row (no card): icon chip, title, one line of detail. */
 @Composable
-private fun Feature(icon: ImageVector, title: Int, body: Int) {
-    Row(verticalAlignment = Alignment.Top) {
+private fun Feature(icon: ImageVector, title: Int, body: Int, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.Top) {
         Box(
             Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
         ) { Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary) }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(stringResource(title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -496,7 +511,12 @@ private fun CheckStep(probe: SetupProbe, checks: List<SetupCheck>, onRecheck: ()
         loop = !settled,
     )
     StepTitle(stringResource(R.string.setup_check_title), stringResource(R.string.setup_check_body))
-    Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.92f)) {
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.94f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.reveal(2),
+    ) {
         Column(Modifier.padding(vertical = 6.dp)) {
             checks.forEachIndexed { i, c ->
                 CheckRow(c, Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
@@ -588,7 +608,7 @@ internal fun CheckRow(check: SetupCheck, modifier: Modifier = Modifier) {
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f).animateContentSize(tween(250)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             check.fix?.let { Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface) }
         }
@@ -599,25 +619,26 @@ internal fun CheckRow(check: SetupCheck, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ProfileStep(ui: OnboardingUi, checks: List<SetupCheck>, ready: Boolean, onChoose: (ProfileId?) -> Unit) {
-    Emblem(R.raw.setup_tune, loop = true, size = 96)
+    Emblem(R.raw.setup_tune, loop = true, size = 150)
     StepTitle(stringResource(R.string.setup_profile_title), stringResource(R.string.setup_profile_body))
     if (!ready) {
         val blockers = checks.filterNot { it.allowsProfiles() }.map { stringResource(it.id.title) }
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.reveal(2),
+        ) {
             Row(Modifier.fillMaxWidth().padding(16.dp)) {
-                Icon(Icons.Rounded.Info, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                Icon(Icons.Rounded.Info, null)
                 Spacer(Modifier.width(12.dp))
-                Text(
-                    stringResource(R.string.setup_profile_blocked, blockers.joinToString(", ")),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+                Text(stringResource(R.string.setup_profile_blocked, blockers.joinToString(", ")), style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
     Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Profiles.all.forEach { p ->
-            ProfileOption(p, selected = ui.choice == p.id, enabled = ready && !ui.applying) {
+        Profiles.all.forEachIndexed { i, p ->
+            ProfileOption(p, selected = ui.choice == p.id, enabled = ready && !ui.applying, modifier = Modifier.reveal(3 + i)) {
                 onChoose(if (ui.choice == p.id) null else p.id)
             }
         }
@@ -641,31 +662,31 @@ private fun profileIcon(p: Profile): ImageVector = when (p.id) {
 }
 
 @Composable
-private fun ProfileOption(profile: Profile, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun ProfileOption(profile: Profile, selected: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val border by animateColorAsState(if (selected) cs.primary else cs.outlineVariant.copy(alpha = 0.6f), tween(200), label = "profileBorder")
     val container by animateColorAsState(
-        if (selected) cs.primaryContainer else cs.surfaceContainerLow.copy(alpha = 0.92f), tween(200), label = "profileBg",
+        if (selected) cs.primaryContainer else cs.surfaceContainerLow.copy(alpha = 0.94f), tween(200), label = "profileBg",
     )
+    val content = if (!enabled) cs.outline else if (selected) cs.onPrimaryContainer else cs.onSurface
+    val scale by animateFloatAsState(if (selected) 1.0f else 0.985f, spring(stiffness = Spring.StiffnessMedium), label = "profileScale")
     val shape = RoundedCornerShape(22.dp)
     Surface(
         shape = shape,
         color = container,
-        modifier = Modifier
+        contentColor = content,
+        modifier = modifier
             .fillMaxWidth()
+            .graphicsLayerScale(scale)
             .clip(shape)
             .border(if (selected) 2.dp else 1.dp, border, shape)
             .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
     ) {
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            val tint = if (enabled) (if (selected) cs.onPrimaryContainer else cs.primary) else cs.outline
-            Icon(profileIcon(profile), null, Modifier.size(24.dp), tint = tint)
+            Icon(profileIcon(profile), null, Modifier.size(24.dp), tint = if (enabled && !selected) cs.primary else content)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(profile.nameRes), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
-                    color = if (!enabled) cs.outline else if (selected) cs.onPrimaryContainer else cs.onSurface,
-                )
+                Text(stringResource(profile.nameRes), style = MaterialTheme.typography.titleSmall)
                 Text(
                     stringResource(profile.taglineRes), style = MaterialTheme.typography.bodySmall,
                     color = if (selected) cs.onPrimaryContainer.copy(alpha = 0.8f) else cs.onSurfaceVariant,
@@ -676,26 +697,35 @@ private fun ProfileOption(profile: Profile, selected: Boolean, enabled: Boolean,
     }
 }
 
+private fun Modifier.graphicsLayerScale(s: Float): Modifier = graphicsLayer { scaleX = s; scaleY = s }
+
 /* ---------------- 4. done ---------------- */
 
 @Composable
 private fun DoneStep(ui: OnboardingUi, checks: List<SetupCheck>) {
     val allOk = checks.all { it.state == CheckState.OK }
-    val accent = if (allOk) ZkGood else ZkWarn
-    Box(Modifier.fillMaxWidth().height(170.dp), contentAlignment = Alignment.Center) {
-        CompletionRing(accent, Modifier.size(132.dp))
-        SetupAnimation(if (allOk) R.raw.setup_success else R.raw.setup_attention, loop = false, modifier = Modifier.size(104.dp))
-    }
-    StepTitle(
+    // The signature sequence (burst, bundle, orbit, coil, mark) or, with work left, the attention mark.
+    Emblem(if (allOk) R.raw.setup_success else R.raw.setup_attention, loop = false, size = 200)
+    TypewriterLine(
         stringResource(if (allOk) R.string.setup_done_ready_title else R.string.setup_done_partial_title),
+        MaterialTheme.typography.displaySmall,
+    )
+    Text(
         when {
             ui.applied != null -> ui.applyMessage?.asString() ?: stringResource(R.string.setup_done_applied, ui.applied.asString())
             allOk -> stringResource(R.string.setup_done_ready_body)
             else -> stringResource(R.string.setup_done_partial_body)
         },
-        large = true,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.reveal(1),
     )
-    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.92f)) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.94f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.reveal(2),
+    ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             checks.forEach { c ->
                 val l = look(c.state)
@@ -713,66 +743,11 @@ private fun DoneStep(ui: OnboardingUi, checks: List<SetupCheck>) {
     }
     val todo = checks.mapNotNull { it.fix }
     if (todo.isNotEmpty()) {
-        Text(stringResource(R.string.setup_next_steps), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        todo.forEach {
-            Text("• " + it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-/* ---------------- language sheet ---------------- */
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LanguageSheet(onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val current = remember { AppLocale.current(context) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconTile(Icons.Rounded.Language, MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text(stringResource(R.string.language_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text(stringResource(R.string.language_body), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+        Column(Modifier.reveal(3), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.setup_next_steps), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            todo.forEach {
+                Text("• " + it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(Modifier.height(4.dp))
-            AppLanguage.entries.forEach { lang ->
-                val title = lang.endonym ?: stringResource(R.string.language_system)
-                val subtitle = if (lang == AppLanguage.SYSTEM) {
-                    val system = Resources.getSystem().configuration.locales[0]
-                    stringResource(R.string.language_system_current, system.getDisplayName(system))
-                } else null
-                LanguageOption(title, subtitle, selected = lang == current) {
-                    onDismiss()
-                    if (lang != current) context.findActivity()?.let { AppLocale.apply(it, lang) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LanguageOption(title: String, subtitle: String?, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(if (selected) 28.dp else 18.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(if (selected) 28.dp else 18.dp))
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
-    ) {
-        Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                subtitle?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            if (selected) Icon(Icons.Rounded.Check, null, tint = MaterialTheme.colorScheme.primary)
         }
     }
 }

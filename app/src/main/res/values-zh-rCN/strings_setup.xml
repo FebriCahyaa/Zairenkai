@@ -18,7 +18,8 @@
     <string name="setup_enter_app">进入 Zairenkai</string>
 
     <!-- 1. Welcome -->
-    <string name="setup_welcome_title">欢迎使用 Zairenkai</string>
+    <string name="setup_greeting_hello">你好</string>
+    <string name="setup_greeting_tagline">性能，随你所想。</string>
     <string name="setup_welcome_body">面向 root 设备的性能控制，由运行在 ZKFC 内核框架之上的 zperfd 引擎驱动。</string>
     <string name="setup_feature_monitor_title">实时监控</string>
     <string name="setup_feature_monitor_body">所选游戏的 FPS、每核心 CPU 负载、GPU、电池以及温度。</string>

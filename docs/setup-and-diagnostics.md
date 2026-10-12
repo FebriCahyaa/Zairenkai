@@ -103,29 +103,67 @@ through zperfd and reported as applied only when zperfd commits it), and done.
 The screen is the stateless `SetupFlow(ui, callbacks)`. The ViewModel drives
 it in the app; the tests drive it directly.
 
-Design:
+Design (the setup's character):
 
-- **Backdrop**: the surface colour with two faint primary/tertiary glows
-  that glide between steps.
-- **Thread**: one flowing line, drawn on a Canvas from a closed-form curve.
-  It lives outside the step transition, so it never restarts. Its shape
-  comes from real state only (`threadShape`): curls on welcome; lively while
-  the check runs and calm once it settles; energy following the chosen
-  profile; drawing itself in on done. Every phase term is an integer
-  multiple of one cycle, so the infinite animation wraps without a visible
-  reset. Animated values are read in the draw phase only, so motion never
-  recomposes the screen, and the Path is reused.
-- **Emblems**: the existing Lottie files, coloured from the scheme: brand
-  mark (welcome), scan / success / attention (check), tune (profile), and
-  success or attention inside a one-shot completion ring (done).
-- **Motion**: steps slide 1/8 of the width and fade (320 ms, no bounce).
-  State badges cross-fade (250 ms). The progress bar springs. Reduced motion
-  (animator scale 0) shows still frames.
-- **Actions**: a pill-shaped inverse primary action and a quiet Back. The
-  primary keeps a fixed leading slot for its spinner, so the label never
-  jumps. Step changes within 280 ms are ignored, so a double tap cannot skip
-  a step. An apply cannot start twice, and Back is disabled while applying.
+- **Backdrop**: the surface colour with a luminous pastel arc across the
+  top (scheme containers blended with peach, pink and lavender) that breathes
+  slowly and moves per step, plus a soft glow at the bottom.
+- **Greeting**: the welcome page types "Halo", erases it, types the app
+  name, then types the tagline in the brand gradient (blue → violet → pink →
+  amber, tuned separately for light and dark), followed by a blinking caret.
+  Space for the final text is reserved, so nothing jumps while it types.
+  Screen readers get the final text at once. The script is a pure function
+  (`greetingFrames`, tested). The completion title types itself the same way.
+- **Line art** (Lottie, `tools/lottie/gen_setup_animations.py`): gradient
+  strokes named `brandGradient`, recoloured at runtime.
+  - welcome: the Zairenkai mark, a four-petal pinwheel that turns slowly
+  - check: orbit rings while checking; success or a pulse line when settled
+  - profile: a bundle of waves
+  - done: the signature sequence (particles gather, burst into rays, a line
+    bundle opens, orbit rings turn in, a coil draws through, and the mark
+    resolves; the last frame is the still)
+- **Reveal**: content rises in, in reading order (70 ms apart, emphasized
+  decelerate). On the welcome page it starts once the greeting has typed.
+- **Language and device info**: our own icons (`ZkIcons.Globe`,
+  `ZkIcons.Info`), shown only at the bottom of the welcome page, next to a
+  compact start pill. After setup, the language is changed in
+  **Settings → App language** (`LanguageSheet`, shared).
+- **Actions**: a pill-shaped inverse primary action and a quiet Back. A
+  spinner shows while busy, without the label jumping. Step changes within
+  280 ms are ignored, an apply cannot start twice, and Back is disabled
+  while applying.
 - **System Back** follows the on-screen Back (check and profile steps only).
+- **Reduced motion** (animator scale 0): the final text and still frames
+  show at once.
+
+## Typography and colour
+
+- **Typeface**: Google Sans Flex, the Material 3 Expressive variable face
+  (OFL-1.1, `LICENSES/OFL-1.1.txt`).
+  - Bundled as a subset: Latin, Latin Extended, Greek, Cyrillic, symbols.
+    Japanese and Chinese use the system font.
+  - Axes: GRAD and slnt pinned to 0, wdth limited to 75–125, wght to 100–900.
+    The subset is about 1.2 MB, smaller than the Roboto Flex it replaces.
+  - Each role sets weight, optical size and roundness (ROND): display text is
+    fully rounded, headlines mostly rounded, body text crisp.
+- **Contrast**: `ContrastTest` checks every accent in light and dark.
+  - Body, secondary and primary-coloured text reach 4.5:1 on surface and
+    containers.
+  - White on primary and the inverse pill reach 4.5:1.
+  - Each gradient stop of the large greeting reaches 3:1.
+  - Light accents that were too bright are darkened along their own hue
+    (`readableOn`).
+
+## App icon
+
+`tools/icon/gen_app_icon.py` generates the adaptive icon from the same mark
+geometry. Never edit the generated files by hand; the foundation check
+compares them with the generator output.
+
+- **Background**: a luminous diagonal gradient with a soft highlight.
+- **Foreground**: the white pinwheel mark, inside the 66 dp safe zone.
+- **Monochrome**: a layer for Android 13+ themed icons.
+- **Splash**: a gradient disc with the mark.
 
 ## System bars and insets
 
@@ -165,6 +203,7 @@ screens (CPU & GPU, Battery, FPS, FPS session).
 ./gradlew :app:testStandardDebugUnitTest
 ```
 
+- **Visual review:** `SetupArtRenderTest` renders every animation as a filmstrip (light and dark), the custom icons, and the app icon in several masks.
 - **Logic:**
   - `InstallFactsTest`: probe parsing, root/zkfctl classification, read-only script.
   - `SetupChecksTest`: every install state's reason, no raw output, report contents.

@@ -44,6 +44,6 @@
     <string name="about_author">Autor</string>
     <string name="about_zkfc_api">API de ZKFC</string>
     <string name="about_license_title">Licencias y créditos</string>
-    <string name="about_license_body">El kernel ZKFC tiene licencia GPL-2.0. La app, el motor, el módulo y las herramientas tienen licencia Zairenkai Proprietary. Fuente Roboto Flex (OFL-1.1). Verificador Ed25519/SHA-512 basado en TweetNaCl (dominio público).</string>
+    <string name="about_license_body">El kernel ZKFC tiene licencia GPL-2.0. La app, el motor, el módulo y las herramientas tienen licencia Zairenkai Proprietary. Fuente Google Sans Flex (OFL-1.1). Verificador Ed25519/SHA-512 basado en TweetNaCl (dominio público).</string>
     <string name="about_copyright">© 2026 FebriCahyaa. Todos los derechos reservados.</string>
 </resources>

@@ -44,6 +44,6 @@
     <string name="about_author">作成者</string>
     <string name="about_zkfc_api">ZKFC API</string>
     <string name="about_license_title">ライセンス &amp; クレジット</string>
-    <string name="about_license_body">ZKFC カーネルは GPL-2.0 でライセンスされています。アプリ、エンジン、モジュール、ツールは Zairenkai Proprietary でライセンスされています。フォントは Roboto Flex（OFL-1.1）。Ed25519/SHA-512 検証機能は TweetNaCl（パブリックドメイン）に基づいています。</string>
+    <string name="about_license_body">ZKFC カーネルは GPL-2.0 でライセンスされています。アプリ、エンジン、モジュール、ツールは Zairenkai Proprietary でライセンスされています。フォントは Google Sans Flex（OFL-1.1）。Ed25519/SHA-512 検証機能は TweetNaCl（パブリックドメイン）に基づいています。</string>
     <string name="about_copyright">© 2026 FebriCahyaa. All rights reserved.</string>
 </resources>

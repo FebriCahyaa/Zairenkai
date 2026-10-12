@@ -22,9 +22,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 
-private fun schemeFor(accent: Accent, dark: Boolean) = if (dark) {
+internal fun schemeFor(accent: Accent, dark: Boolean) = if (dark) {
     val p = accent.dark
     darkColorScheme(
         primary = p,
@@ -32,12 +33,33 @@ private fun schemeFor(accent: Accent, dark: Boolean) = if (dark) {
         tertiary = lerp(p, Color(0xFFFFD08A), 0.4f),
     )
 } else {
-    val p = accent.light
+    // Light accents can be too bright for primary-coloured text and for white
+    // text on a primary button. Darken along the accent's own hue until both
+    // reach 4.5:1 against the brightest container (checked by ContrastTest).
+    val base = lightColorScheme()
+    val p = readableOn(accent.light, base.surfaceContainerHigh, Color.White)
     lightColorScheme(
         primary = p,
-        secondary = lerp(p, Color(0xFF009E96), 0.35f),
-        tertiary = lerp(p, Color(0xFFB9791B), 0.4f),
+        secondary = readableOn(lerp(p, Color(0xFF009E96), 0.35f), base.surfaceContainerHigh, Color.White),
+        tertiary = readableOn(lerp(p, Color(0xFFB9791B), 0.4f), base.surfaceContainerHigh, Color.White),
     )
+}
+
+private fun contrast(a: Color, b: Color): Float {
+    val la = a.luminance() + 0.05f
+    val lb = b.luminance() + 0.05f
+    return maxOf(la, lb) / minOf(la, lb)
+}
+
+/** [c] darkened just enough to read (4.5:1) on [surface] and under [onColor]. */
+internal fun readableOn(c: Color, surface: Color, onColor: Color, min: Float = 4.5f): Color {
+    var out = c
+    var t = 0f
+    while ((contrast(out, surface) < min || contrast(onColor, out) < min) && t < 1f) {
+        t += 0.04f
+        out = lerp(c, Color.Black, t)
+    }
+    return out
 }
 
 @Composable

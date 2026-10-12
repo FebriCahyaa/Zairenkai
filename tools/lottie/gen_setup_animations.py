@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 """Generate the setup-wizard Lottie animations (app/src/main/res/raw/setup_*.json).
 
-The animations follow the Material 3 Expressive vocabulary: soft "cookie",
-"clover" and "sunny" shapes that morph into each other, emphasized and
-overshooting easing, and colour roles instead of fixed colours. Every fill or
+The animations use the setup's line language: thin gradient strokes that
+burst, bundle, orbit and coil and resolve into the Zairenkai mark (a
+four-petal pinwheel), with emphasized and overshooting easing and colour roles
+instead of fixed colours. Every fill or
 stroke is named after the Material colour role it stands for (primary,
 primaryContainer, secondary, tertiary, onPrimary, ...); the app replaces those
 colours at runtime with the active colour scheme, so dynamic colour and dark
-theme apply. The colours below are only fallbacks.
+theme apply. Gradient strokes are named "brandGradient" and recoloured the
+same way. The colours below are only fallbacks.
 
 Shapes that morph share one vertex count, sampled from a polar radius
 function and smoothed with Catmull-Rom tangents, so Lottie can interpolate
@@ -117,7 +119,9 @@ def animated(keys: list[tuple[float, object]], ease=EMPHASIZED) -> dict:
     return {"a": 1, "k": out}
 
 
-def transform(p=(C, C), s=100, r=0, o=100, a=(0, 0)) -> dict:
+def transform(p=(0, 0), s=100, r=0, o=100, a=(0, 0)) -> dict:
+    # Shapes are drawn in absolute canvas coordinates; layers that scale or
+    # turn around the centre pass p=(C, C), a=(C, C).
     def wrap(v, dims):
         if isinstance(v, dict):
             return v
@@ -155,7 +159,7 @@ def path_item(ks) -> dict:
 
 def ellipse(size, pos=(0, 0)) -> dict:
     return {"ty": "el", "nm": "Ellipse", "p": static(list(pos)),
-            "s": size if isinstance(size, dict) else static([size, size])}
+            "s": size if isinstance(size, dict) else static(list(size) if isinstance(size, (list, tuple)) else [size, size])}
 
 
 def rect(w, h, roundness, pos=(0, 0)) -> dict:
@@ -199,127 +203,182 @@ def loop_keys(frames: int, values: list) -> list:
     return [(round(frames * i / (len(vals) - 1)), v) for i, v in enumerate(vals)]
 
 
+# ---------------------------------------------------------------- gradient line language
+#
+# The setup's character: thin gradient strokes (blue -> violet -> pink ->
+# amber) that burst, bundle, orbit and coil, and resolve into the Zairenkai
+# mark, a four-petal pinwheel. The gradient is named "brandGradient"; the app
+# replaces its colours at runtime with a light- or dark-tuned version.
+
+GRADIENT = [(0x4C, 0x6E, 0xF5), (0x8B, 0x5C, 0xF6), (0xE6, 0x49, 0x80), (0xFF, 0xA9, 0x4D)]
+
+
+def gstroke(width, opacity=100, start=(20, 120), end=(220, 120)) -> dict:
+    stops = []
+    for i, (r, g, b) in enumerate(GRADIENT):
+        stops += [round(i / (len(GRADIENT) - 1), 3), round(r / 255, 4), round(g / 255, 4), round(b / 255, 4)]
+    return {"ty": "gs", "nm": "brandGradient", "o": opacity if isinstance(opacity, dict) else static(opacity),
+            "w": width if isinstance(width, dict) else static(width),
+            "g": {"p": len(GRADIENT), "k": static(stops)},
+            "s": static(list(start)), "e": static(list(end)), "t": 1, "lc": 2, "lj": 2, "ml": 4}
+
+
+def smooth_open(points: list[tuple[float, float]]) -> dict:
+    """Open Catmull-Rom curve through the points."""
+    n = len(points)
+    vs, ins, outs = [], [], []
+    for i in range(n):
+        p0 = points[max(i - 1, 0)]
+        p2 = points[min(i + 1, n - 1)]
+        tx, ty = (p2[0] - p0[0]) / 6, (p2[1] - p0[1]) / 6
+        vs.append([round(points[i][0], 3), round(points[i][1], 3)])
+        ins.append([round(-tx, 3), round(-ty, 3)])
+        outs.append([round(tx, 3), round(ty, 3)])
+    return {"c": False, "v": vs, "i": ins, "o": outs}
+
+
+def petal(angle_deg: float, length=78.0, bend=0.55) -> dict:
+    """One pinwheel petal: a comma-shaped curve from the centre outward."""
+    a = math.radians(angle_deg)
+    pts = []
+    for k in range(9):
+        t = k / 8
+        r = length * t
+        sweep = a + bend * math.sin(math.pi * t) * (1 - 0.3 * t)
+        pts.append((C + r * math.cos(sweep), C + r * math.sin(sweep)))
+    return smooth_open(pts)
+
+
+def mark_layer(comp, name, ks, width=9.0, extra=None):
+    """The Zairenkai mark: four petals and a centre dot."""
+    items = [group(f"petal{i}", [path_item(petal(i * 90 - 45)), gstroke(width, start=(40, 40), end=(200, 200))] + (extra or []))
+             for i in range(4)]
+    items.append(group("core", [ellipse(14, (C, C)), fill("primary")]))
+    comp.layer(name, items, ks)
+
+
+def wave(y: float, amp: float, phase: float, cycles=2.0, x0=20.0, x1=220.0) -> dict:
+    pts = [(x0 + (x1 - x0) * k / 16, y + amp * math.sin(2 * math.pi * (cycles * k / 16) + phase)) for k in range(17)]
+    return smooth_open(pts)
+
+
+def coil(cy: float, loops=5, r=22.0, x0=20.0, x1=220.0) -> dict:
+    """A spring seen from the side: loops travelling along a line."""
+    pts = []
+    steps = loops * 10
+    for k in range(steps + 1):
+        t = k / steps
+        th = 2 * math.pi * loops * t
+        pts.append((x0 + (x1 - x0) * t - r * 0.9 * math.sin(th), cy - r * math.cos(th) + r))
+    return smooth_open(pts)
+
+
 # ---------------------------------------------------------------- animations
 
 
 def welcome() -> dict:
-    n = 4 * FPS
+    """The mark, turning slowly and breathing; four-fold symmetry makes 90 degrees a seamless loop."""
+    n = 6 * FPS
     comp = Comp("setup_welcome", n)
-    # Soft 9-lobe cookie behind the logo, breathing and turning one lobe per loop.
-    shapes = [polar(cookie(92, 9, 0.07)), polar(cookie(96, 9, 0.11)), polar(cookie(90, 9, 0.05))]
-    comp.layer("cookie", [group("cookie", [path_item(animated(loop_keys(n, shapes), SINE)), fill("primaryContainer")])],
-               transform(r=animated([(0, 0), (n, 40)], LINEAR)))
-    # Two orbiting accents.
-    for idx, (role, radius, size, start) in enumerate([("secondary", 104, 16, 0), ("tertiary", 104, 11, 180)]):
-        comp.layer(f"orbit{idx}", [group("dot", [ellipse(animated(loop_keys(n, [[size, size], [size * 1.35, size * 1.35]]), SINE),
-                                                         pos=(0, -radius)), fill(role)])],
-                   transform(r=animated([(0, start), (n, start + 360)], LINEAR)))
-    # The brand hexagon, floating.
-    def hexpts(pts):
-        return [(120 + (x - 54) * 1.45, 120 + (y - 54) * 1.45) for x, y in pts]
-    outer = hexpts([(54, 22), (80, 37), (80, 71), (54, 86), (28, 71), (28, 37)])
-    inner = hexpts([(54, 34), (69, 43), (69, 61), (54, 70), (39, 61), (39, 43)])
-    float_p = animated(loop_keys(n, [[0, 0, 0], [0, -6, 0]]), SINE)
-    comp.layer("logo", [
-        group("dot", [ellipse(animated(loop_keys(n, [[20.3, 20.3], [23, 23]]), SINE), pos=(120, 120 + (45 - 54) * 1.45)),
-                      fill("brandDot")]),
-        group("inner", [path_item(polygon_path(inner)), fill("brandInner")]),
-        group("outer", [path_item(polygon_path(outer)), fill("brandOuter")]),
-    ], transform(p=float_p, a=(0, 0)))
+    comp.layer("halo", [group("halo", [ellipse(animated(loop_keys(n, [[170, 170], [186, 186]]), SINE), (C, C)),
+                                       gstroke(2, 35, start=(40, 40), end=(200, 200))])])
+    mark_layer(comp, "mark", transform(p=(C, C), a=(C, C), r=animated([(0, 0), (n, 90)], LINEAR),
+                                       s=animated(loop_keys(n, [[100, 100, 100], [106, 106, 100]]), SINE)))
     return comp.json()
 
 
 def scan() -> dict:
-    n = int(2.4 * FPS)
+    """Orbit rings: tilted ellipses breathing in sequence while the set turns."""
+    n = 3 * FPS
     comp = Comp("setup_scan", n)
-
-    def ring_keys(phase: float):
-        # scale 60 -> 140 and fade, wrapping while invisible.
-        def at(f):
-            return round(f * n)
-        if phase == 0:
-            scale = [(0, 60), (at(1.0), 140)]
-            op = [(0, 0), (at(0.12), 55), (at(1.0), 0)]
-        else:
-            scale = [(0, 100), (at(0.5), 140), (at(0.5) + 1, 60), (n, 100)]
-            op = [(0, 30), (at(0.5), 0), (at(0.62), 55), (n, 30)]
-        return scale, op
-    for idx, phase in enumerate((0.0, 0.5)):
-        scale, op = ring_keys(phase)
-        comp.layer(f"ring{idx}", [group("ring", [ellipse(150), stroke("primary", 4)])],
-                   transform(s=animated([(f, [v, v, 100]) for f, v in scale], LINEAR),
-                             o=animated(op, LINEAR)))
-    # Radar sweep: a quarter arc travelling round.
-    comp.layer("sweep", [group("arc", [ellipse(188), stroke("tertiary", 8), trim(0, 22, animated([(0, 0), (n, 360)], LINEAR))])])
-    # Clover centre morphing between 4 and 6 lobes, turning a quarter per loop.
-    shapes = [polar(cookie(46, 4, 0.16)), polar(cookie(48, 6, 0.10))]
-    comp.layer("clover", [group("clover", [path_item(animated(loop_keys(n, shapes), SINE)), fill("primary")])],
-               transform(r=animated([(0, 0), (n, 90)], LINEAR)))
-    comp.layer("core", [group("core", [ellipse(animated(loop_keys(n, [[18, 18], [26, 26]]), SINE)), fill("onPrimary")])])
+    for i in range(6):
+        w = 176 - i * 6
+        hs = [36 + 18 * math.sin(2 * math.pi * (j / 4) + i * 0.7) + 40 for j in range(4)]
+        comp.layer(f"ring{i}", [group("ring", [ellipse(animated(loop_keys(n, [[w, h] for h in hs]), SINE), (C, C - 30 + i * 12)),
+                                               gstroke(2.4, 90 - i * 8)])])
+    comp.layers[-1]["ks"] = transform()
+    root = {"r": animated([(0, -8), (n // 2, 8), (n, -8)], SINE)}
+    for layer in comp.layers:
+        layer["ks"] = transform(p=(C, C), a=(C, C), r=root["r"])
+    comp.layer("core", [group("core", [ellipse(animated(loop_keys(n, [[12, 12], [18, 18]]), SINE), (C, C)), fill("primary")])])
     return comp.json()
 
 
 def tune() -> dict:
+    """A bundle of waves, each a little behind the next, like strings being tuned."""
     n = 3 * FPS
     comp = Comp("setup_tune", n)
-    xs = (72, 120, 168)
-    roles = ("primary", "secondary", "tertiary")
-    # Knob travel per slider: three staggered positions per loop.
-    paths = ([-40, 30, -10], [20, -45, 35], [-25, 15, -50])
-    for x, role, travel in zip(xs, roles, paths):
-        comp.layer(f"track{x}", [group("track", [rect(14, 150, 7, (x, 120)), fill("outline", 35)])], transform(p=(0, 0)))
-        comp.layer(f"knob{x}", [group("knob", [
-            # Squircle <-> circle while travelling.
-            rect(44, 44, animated(loop_keys(n, [22, 13, 22]), SINE), (0, 0)),
-            fill(role),
-        ])], transform(p=animated(loop_keys(n, [[x, 120 + t, 0] for t in travel]), EMPHASIZED)))
-    return comp.json()
-
-
-def success() -> dict:
-    n = 2 * FPS
-    comp = Comp("setup_success", n)
-    # Confetti: alternating circles and rounded squares flying out, then fading.
-    for i in range(10):
-        ang = math.radians(i * 36 + 12)
-        start = (C + 38 * math.cos(ang), C + 38 * math.sin(ang))
-        end = (C + 108 * math.cos(ang), C + 108 * math.sin(ang))
-        role = ("primary", "secondary", "tertiary")[i % 3]
-        shape = ellipse(12) if i % 2 == 0 else rect(12, 12, 3)
-        comp.layer(f"confetti{i}", [group("piece", [shape, fill(role)])], transform(
-            p=animated([(18, [*start, 0]), (60, [*end, 0])], EMPHASIZED),
-            s=animated([(18, [0, 0, 100]), (30, [110, 110, 100]), (40, [100, 100, 100])], STANDARD),
-            r=animated([(18, 0), (96, 200 if i % 2 else -160)], STANDARD),
-            o=animated([(18, 100), (70, 100), (96, 0)], STANDARD),
-        ))
-    # Expanding ring.
-    comp.layer("burst", [group("ring", [ellipse(120), stroke("primary", animated([(16, 10), (60, 0)], EMPHASIZED))])],
-               transform(s=animated([(16, [80, 80, 100]), (60, [190, 190, 100])], EMPHASIZED),
-                         o=animated([(15, 0), (16, 80), (60, 0)], STANDARD)))
-    # Sunny 12-lobe badge popping in and settling into a circle.
-    sunny = polar(cookie(66, 12, 0.07))
-    circle = polar(circle_fn(64))
-    comp.layer("badge", [group("badge", [path_item(animated([(0, sunny), (30, sunny), (54, circle)], EMPHASIZED)),
-                                         fill("primary")])],
-               transform(s=animated([(0, [0, 0, 100]), (22, [116, 116, 100]), (34, [96, 96, 100]), (44, [100, 100, 100])], STANDARD),
-                         r=animated([(0, -30), (54, 0)], EMPHASIZED)))
-    check = open_path([(C - 26, C + 2), (C - 8, C + 20), (C + 28, C - 18)])
-    comp.layer("check", [group("check", [path_item(check), stroke("onPrimary", 13),
-                                         trim(0, animated([(28, 0), (56, 100)], EMPHASIZED))])],
-               transform(p=(0, 0)))
+    for i in range(6):
+        y = 80 + i * 16
+        shapes = [wave(y, 14 - i * 1.2, i * 0.6 + j * math.pi / 2) for j in range(4)]
+        comp.layer(f"wave{i}", [group("wave", [path_item(animated(loop_keys(n, shapes), SINE)), gstroke(2.6, 95 - i * 9)])])
     return comp.json()
 
 
 def attention() -> dict:
-    n = int(1.6 * FPS)
+    """A pulse line draws across (something needs a look), then a dot settles on it."""
+    n = int(1.8 * FPS)
     comp = Comp("setup_attention", n)
-    comp.layer("badge", [group("badge", [path_item(polar(cookie(64, 5, 0.08))), fill("tertiary")])],
-               transform(s=animated([(0, [0, 0, 100]), (20, [112, 112, 100]), (32, [97, 97, 100]), (42, [100, 100, 100])], STANDARD),
-                         r=animated([(0, -18), (22, 8), (36, -3), (48, 0)], STANDARD)))
-    comp.layer("glyph", [
-        group("dot", [ellipse(15, (C, C - 24)), fill("onTertiary")]),
-        group("stem", [rect(13, 40, 6.5, (C, C + 10)), fill("onTertiary")]),
-    ], transform(p=(C, C), a=(C, C), s=animated([(18, [0, 0, 100]), (34, [110, 110, 100]), (44, [100, 100, 100])], STANDARD)))
+    pulse = open_path([(24, 128), (84, 128), (100, 92), (120, 158), (136, 108), (148, 128), (216, 128)])
+    comp.layer("pulse", [group("pulse", [path_item(pulse), gstroke(6, start=(24, 128), end=(216, 128)),
+                                         trim(0, animated([(0, 0), (40, 100)], EMPHASIZED))])])
+    comp.layer("echo", [group("echo", [path_item(pulse), gstroke(2, 35, start=(24, 128), end=(216, 128)),
+                                       trim(0, animated([(6, 0), (50, 100)], EMPHASIZED))])],
+               transform(p=(0, 14)))
+    comp.layer("dot", [group("dot", [ellipse(18, (C, 72)), fill("tertiary")])],
+               transform(p=(C, 72), a=(C, 72), s=animated([(38, [0, 0, 100]), (52, [130, 130, 100]), (64, [100, 100, 100])], STANDARD)))
+    return comp.json()
+
+
+def success() -> dict:
+    """The signature sequence: particles gather, burst into lines, bundle,
+    orbit, coil, and resolve into the mark (the last frame is the still)."""
+    n = int(3.6 * FPS)
+    comp = Comp("setup_success", n)
+
+    # 1. particles gather (0-28)
+    for i in range(9):
+        ang = math.radians(i * 40 + 10)
+        far = (C + 84 * math.cos(ang), C + 70 * math.sin(ang))
+        comp.layer(f"p{i}", [group("p", [ellipse(7 + (i % 3) * 3, (0, 0)), fill(("primary", "secondary", "tertiary")[i % 3])])],
+                   transform(p=animated([(0, [*far, 0]), (26, [C, C, 0])], EMPHASIZED),
+                             o=animated([(0, 0), (6, 100), (24, 100), (28, 0)], STANDARD)))
+
+    # 2. burst lines with tipped dots (26-62)
+    for i in range(10):
+        ang = math.radians(i * 36 + 8)
+        length = 70 + (i % 3) * 14
+        tip = (C + length * math.cos(ang), C + length * math.sin(ang))
+        comp.layer(f"ray{i}", [
+            group("ray", [path_item(open_path([(C, C), tip])), gstroke(2, start=(C, C), end=tip),
+                          trim(0, animated([(26, 0), (40, 100)], EMPHASIZED))]),
+            group("tip", [ellipse(6 + (i % 2) * 4, tip), fill("primary")]),
+        ], transform(o=animated([(25, 0), (27, 100), (54, 100), (62, 0)], STANDARD)))
+
+    # 3. line bundle opening from the centre (58-96)
+    for i in range(6):
+        y = C - 25 + i * 10
+        comp.layer(f"bundle{i}", [group("line", [path_item(wave(y, 4 + i, i * 0.5, 1.0)), gstroke(2.2)])],
+                   transform(p=(C, C), a=(C, C), s=animated([(58, [0, 100, 100]), (76, [100, 100, 100])], EMPHASIZED),
+                             o=animated([(57, 0), (59, 100), (88, 100), (96, 0)], STANDARD)))
+
+    # 4. orbit rings turning in (92-140)
+    for i in range(6):
+        comp.layer(f"orbit{i}", [group("ring", [ellipse([150 - i * 10, 150 - i * 10], (C, C)), gstroke(2.2, 90 - i * 6)])],
+                   transform(p=(C, C), a=(C, C),
+                             s=animated([(92, [40, 20, 100]), (114, [100, 70 - i * 4, 100])], EMPHASIZED),
+                             r=animated([(92, -40 + i * 6), (132, 10 + i * 6)], STANDARD),
+                             o=animated([(91, 0), (93, 100), (130, 100), (140, 0)], STANDARD)))
+
+    # 5. coil drawn in and out (136-176)
+    comp.layer("coil", [group("coil", [path_item(coil(C - 10)), gstroke(2.6),
+                                       trim(animated([(150, 0), (176, 100)], STANDARD), animated([(136, 0), (160, 100)], EMPHASIZED))])])
+
+    # 6. the mark resolves and stays (168-end)
+    mark_layer(comp, "mark", transform(p=(C, C), a=(C, C),
+                                       s=animated([(168, [0, 0, 100]), (186, [112, 112, 100]), (198, [96, 96, 100]), (208, [100, 100, 100])], STANDARD),
+                                       r=animated([(168, -60), (208, 0)], EMPHASIZED)),
+               width=9.0)
     return comp.json()
 
 
@@ -338,7 +397,7 @@ ROLES = sorted(FALLBACK)
 def roles_used(node) -> set[str]:
     found = set()
     if isinstance(node, dict):
-        if node.get("ty") in ("fl", "st"):
+        if node.get("ty") in ("fl", "st", "gs"):
             found.add(node["nm"])
         for v in node.values():
             found |= roles_used(v)
@@ -356,7 +415,7 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     for name, build in ANIMATIONS.items():
         data = build()
-        unknown = roles_used(data) - set(FALLBACK) - set(BRAND)
+        unknown = roles_used(data) - set(FALLBACK) - set(BRAND) - {"brandGradient"}
         if unknown:
             raise SystemExit(f"{name}: unknown colour roles {sorted(unknown)}")
         (out / f"{name}.json").write_text(json.dumps(data, separators=(",", ":")) + "\n")
