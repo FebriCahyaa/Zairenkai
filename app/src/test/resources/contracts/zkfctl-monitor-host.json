@@ -1,0 +1,1 @@
+{"ok":true,"interval_ms":100,"cpu":[{"cpu":0,"online":true,"load_pct":0,"cur_khz":-1},{"cpu":1,"online":true,"load_pct":17,"cur_khz":-1},{"cpu":2,"online":true,"load_pct":0,"cur_khz":-1},{"cpu":3,"online":true,"load_pct":0,"cur_khz":-1}],"gpu":{"busy_pct":-1},"thermal":[]}

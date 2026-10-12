@@ -527,22 +527,24 @@ static int cmd_monitor(struct zkfc *z, struct zk_json *j, int argc, char **argv)
 	}
 	zj_arr_close(j);
 
-	/* GPU */
+	/* GPU: busy_pct (-1 = not reported) and cur_freq in Hz when a devfreq
+	 * node exists, independently, so Adreno reports both.
+	 */
 	zj_obj_open(j, "gpu");
-	if (!zk_read("/sys/class/kgsl/kgsl-3d0/gpubusy", buf, sizeof(buf)) && buf[0]) {
-		unsigned long long busy = 0, total = 0;
-
-		sscanf(buf, "%llu %llu", &busy, &total);
-		zj_int(j, "busy_pct", total ? (int)(busy * 100 / total) : -1);
-	} else {
-		char *p = NULL;
+	{
 		const char *cand[] = {
 			"/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq",
 			"/sys/class/devfreq/13000000.mali/cur_freq", NULL };
-		(void)p;
-		zj_int(j, "busy_pct", -1);
 		const char *fp = zk_first_existing(cand);
+		int busy_pct = -1;
 
+		if (!zk_read("/sys/class/kgsl/kgsl-3d0/gpubusy", buf, sizeof(buf)) && buf[0]) {
+			unsigned long long busy = 0, total = 0;
+
+			if (sscanf(buf, "%llu %llu", &busy, &total) == 2 && total && busy <= total)
+				busy_pct = (int)(busy * 100 / total);
+		}
+		zj_int(j, "busy_pct", busy_pct);
 		if (fp)
 			zj_int(j, "cur_freq", zk_read_ll(fp, -1));
 	}

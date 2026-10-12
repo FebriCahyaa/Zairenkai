@@ -7,7 +7,7 @@
 - Distinguish an unavailable sensor from a measured `0%` value.
 - Make CPU/GPU glanceable in a two-column layout, while keeping detailed per-core data collapsible.
 - Make thermal availability and ZKFC runtime state explicit instead of treating missing data as a visual failure.
-- Use Material 3 Expressive theme tokens and expressive motion, while respecting the selected/dynamic color scheme and the existing glass preference.
+- Use Material 3 theme tokens and motion, while respecting the selected/dynamic color scheme and the existing glass preference.
 
 ## Layout
 
@@ -20,16 +20,26 @@
 
 ## Data correctness
 
-`MonitorViewModel` now appends CPU, GPU, and thermal points only after a valid sample is received. Missing CPU/GPU/thermal sensors are no longer converted into zero-valued time-series points, avoiding misleading flat-line graphs. Starting a new monitor session clears the headline sample while preserving rolling history, so old data is not labeled as a fresh live result.
+Sources, units, cadence and unavailable states for every metric are listed in
+[`monitor-metrics.md`](monitor-metrics.md). `MonitorViewModel` appends CPU, GPU
+and thermal points only after a valid sample, so a missing sensor never becomes
+a zero-valued flatline. A failed sample clears the headline, shows the reason
+with a "TIDAK TERSEDIA" state and backs off (1/2/4/8 s) instead of re-spawning
+`su` in a tight loop. Starting a new monitor session keeps rolling history but
+waits for a fresh sample before showing LIVE.
 
 ## FPS source boundary
 
-The existing app-layer sampler uses `Choreographer` callbacks from the Monitor UI. The visible metric is therefore labeled **FPS UI Monitor** and must not be interpreted as a foreground game's FPS. The daemon already owns the lower-overhead frame-analysis path; exposing those readings to the Android UI requires a bounded, read-only telemetry contract and is intentionally not simulated by this presentation-only change.
+The app-layer sampler uses `Choreographer` callbacks from the Monitor UI. The
+visible metric is therefore labeled **FPS UI Monitor** and must not be
+interpreted as a foreground game's FPS. The daemon owns the lower-overhead
+frame-analysis path; exposing those readings to the Android UI requires a
+bounded, read-only telemetry contract and is intentionally not simulated here.
 
-## Material 3 Expressive
+## Theme
 
-`ZairenkaiTheme` uses `MaterialExpressiveTheme` with `MotionScheme.expressive()`. The Monitor uses large/increased rounded shapes, emphasized headline type, tonal containers, semantic accent colors, compact icon actions, and visibility/content-size transitions. Dynamic color remains supported.
-
-## Validation notes
-
-The project Gradle wrapper could not download its pinned Gradle distribution in the execution environment because external DNS/network access was unavailable. Source-level review and repository diff checks are performed, but an Android/Kotlin compile result cannot be claimed from this environment. Compile the debug variant in CI or a connected development environment before release.
+`ZairenkaiTheme` uses the stable `MaterialTheme` (the Expressive theme and
+motion scheme are internal in the Compose material3 release the app pins). The
+Monitor uses large rounded shapes, emphasized headline type, tonal containers,
+semantic accent colors and visibility/content-size transitions. Dynamic color
+remains supported.

@@ -17,10 +17,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.FiberManualRecord
-import androidx.compose.material.icons.rounded.Stop
+import com.zairenkai.app.ui.icons.ChevronLeft
+import com.zairenkai.app.ui.icons.DeleteSweep
+import com.zairenkai.app.ui.icons.FiberManualRecord
+import com.zairenkai.app.ui.icons.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment

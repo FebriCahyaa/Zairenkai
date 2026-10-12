@@ -17,7 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
+import com.zairenkai.app.ui.icons.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.data.CpuSample
 import com.zairenkai.app.data.ThermalSample
 import com.zairenkai.app.ui.MonitorViewModel
+import com.zairenkai.app.ui.PLAUSIBLE_CELSIUS
 import com.zairenkai.app.ui.VmFactory
 import com.zairenkai.app.ui.components.FpsGraph
 import com.zairenkai.app.ui.components.LineChart
@@ -71,7 +72,7 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
     val cpuNow = if (cpuHasData) validCores.sumOf { it.loadPct } / validCores.size else null
     val gpuNow = ui.latest?.gpu?.busyPct?.takeIf { it in 0..100 }
     val gpuFreqMhz = ui.latest?.gpu?.curFreq?.takeIf { it > 0 }?.div(1_000_000L)
-    val thermalZones = ui.latest?.thermal.orEmpty().filter { it.celsius in 1f..150f }
+    val thermalZones = ui.latest?.thermal.orEmpty().filter { it.celsius in PLAUSIBLE_CELSIUS }
     val hottest = thermalZones.maxOfOrNull { it.celsius }
 
     Column(
@@ -85,9 +86,26 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
         MonitorHeader(
             isRunning = ui.running,
             hasSample = ui.latest != null,
+            unavailable = ui.error != null,
             refreshHz = refreshHz,
             onOpenHistory = onOpenHistory,
         )
+
+        ui.error?.let { error ->
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "Telemetri CPU, GPU dan termal tidak tersedia: $error\n" +
+                        "Mencoba lagi otomatis (percobaan ${ui.failures}). FPS di bawah tetap diukur dari UI.",
+                    modifier = Modifier.padding(14.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        }
 
         FpsHeroCard(
             frame = frame,
@@ -105,7 +123,8 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
                 value = cpuNow?.let { "$it%" } ?: "—",
                 detail = when {
                     cpuNow != null -> "${validCores.size} core terbaca"
-                    ui.latest == null -> "Menunggu data zperfd"
+                    ui.error != null -> "Tidak tersedia"
+                    ui.latest == null -> "Menunggu sampel pertama"
                     else -> "Sensor belum terbaca"
                 },
                 icon = Icons.Rounded.Memory,
@@ -120,7 +139,8 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
                 detail = when {
                     gpuFreqMhz != null -> "$gpuFreqMhz MHz"
                     gpuNow != null -> "Utilisasi terbaca"
-                    ui.latest == null -> "Menunggu data zperfd"
+                    ui.error != null -> "Tidak tersedia"
+                    ui.latest == null -> "Menunggu sampel pertama"
                     else -> "Sensor tidak tersedia"
                 },
                 icon = Icons.Rounded.DeveloperBoard,
@@ -223,6 +243,7 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
 private fun MonitorHeader(
     isRunning: Boolean,
     hasSample: Boolean,
+    unavailable: Boolean,
     refreshHz: Float,
     onOpenHistory: () -> Unit,
 ) {
@@ -249,16 +270,19 @@ private fun MonitorHeader(
                     label = when {
                         !isRunning -> "PAUSED"
                         hasSample -> "LIVE"
+                        unavailable -> "TIDAK TERSEDIA"
                         else -> "MENGHUBUNGKAN"
                     },
                     dotColor = when {
                         !isRunning -> MaterialTheme.colorScheme.outline
                         hasSample -> ZkGood
+                        unavailable -> MaterialTheme.colorScheme.error
                         else -> ZkWarn
                     },
                     containerColor = when {
                         !isRunning -> MaterialTheme.colorScheme.surfaceContainerHigh
                         hasSample -> ZkGood.copy(alpha = 0.13f)
+                        unavailable -> MaterialTheme.colorScheme.errorContainer
                         else -> ZkWarn.copy(alpha = 0.13f)
                     },
                 )

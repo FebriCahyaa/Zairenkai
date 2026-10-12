@@ -96,3 +96,12 @@ runtime = registry["principals"]["runtime"]["capabilities"]
 assert "read.properties" in runtime, runtime
 print("property authority boundary aligned")
 PY
+
+# APK size: the full material-icons-extended set must not come back (it made the
+# unminified debug APK ~64 MB); needed icons are vendored in ui/icons. The
+# sideloadable preview stays R8-optimized, i.e. not debuggable.
+! grep -q 'material.icons.extended' app/build.gradle.kts
+! grep -q 'material-icons-extended' gradle/libs.versions.toml
+! grep -R -q 'androidx.compose.material.icons.rounded.\(Shield\|Bolt\|ChevronLeft\)' app/src/main
+grep -q 'isDebuggable = false' app/build.gradle.kts
+grep -q 'useLegacyPackaging.set(true)' app/build.gradle.kts

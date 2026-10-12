@@ -17,6 +17,7 @@ engine's output that the app does not understand fails the unit tests.
 | `zperfd-modes.json` | `zperfd --root <fixture> --state <tmp> --json modes` (built-in generic profile) |
 | `zperfd-core.json` | `zperfd core --json` |
 | `zkfctl-tweak-list.json` | `zkfctl tweak list` (host build, `userspace/build.sh host`) |
+| `zkfctl-monitor-host.json` | `zkfctl monitor 100` (host build; reads the host's `/proc/stat`, so no cpufreq, GPU or thermal nodes: every "not reported" encoding at once) |
 
 The `<fixture>` sysroot is synthetic: two cpufreq policies (`policy0` offers
 `schedutil performance powersave`, `policy4` offers `schedutil performance`),

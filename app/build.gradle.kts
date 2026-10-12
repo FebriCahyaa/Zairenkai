@@ -106,16 +106,18 @@ android {
             isDebuggable = true
             // Debug is auto-signed by Android's debug keystore; no release key needed.
         }
-        // A small, installable build: minified + resource-shrunk like release
-        // (tree-shakes material-icons-extended etc., cutting the APK from ~64 MB
-        // to a few MB), but signed with the debug key so it needs no release
-        // keystore. Use this to sideload for testing on real devices.
+        // The build to sideload on real devices: R8-optimized and resource-shrunk
+        // exactly like release (~4 MB, and it runs like release), but signed
+        // with the debug key so it needs no release keystore. Not debuggable:
+        // a debuggable build is not optimized by R8, runs Compose noticeably
+        // slower on ART, and lets any adb user `run-as` into the app's private
+        // files, including the ZKFC token copy.
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".debug"
             isMinifyEnabled = true
             isShrinkResources = true
-            isDebuggable = true
+            isDebuggable = false
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += "release"
             // Not the official signer -> self-check reports "unknown", not "modified".
@@ -130,6 +132,16 @@ android {
     buildFeatures { compose = true; buildConfig = true }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    }
+}
+
+// Debug dex is unminified (~30 MB). With minSdk >= 28 AGP stores dex
+// uncompressed, which only helps a store-delivered release; for a debug APK
+// that is copied around as a CI artifact it doubles the file and the room
+// for transfer corruption ("Bad file CRC" installs). Compress it there only.
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.packaging.dex.useLegacyPackaging.set(true)
     }
 }
 
@@ -152,7 +164,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
+    // Core only: the extended Rounded icons the app draws are vendored in
+    // ui/icons/MaterialIcons.kt (the full set bloated unminified builds).
+    implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.androidx.datastore.preferences)

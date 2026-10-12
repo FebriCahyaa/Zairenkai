@@ -9,9 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
+import com.zairenkai.app.ui.icons.ChevronRight
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Palette
+import com.zairenkai.app.ui.icons.Palette
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*

@@ -46,6 +46,7 @@ fun rememberFrameStats(refreshHz: Float, cap: Int = 60): FrameStats {
     DisposableEffect(refreshHz) {
         val ch = Choreographer.getInstance()
         var lastNs = 0L
+        var lastPublishNs = 0L
         val fpsList = ArrayList<Float>()
         val dropList = ArrayList<Boolean>()
         var jank = 0
@@ -109,7 +110,14 @@ fun rememberFrameStats(refreshHz: Float, cap: Int = 60): FrameStats {
                     val bucket = fps.roundToInt().coerceIn(0, hist.size - 1)
                     hist[bucket]++
 
-                    stats = summarize()
+                    // Every frame is measured, but the summary is published at
+                    // most every PUBLISH_NS: publishing per frame recomposed the
+                    // card 60-120 times a second, which is itself the jank it
+                    // was measuring (worst in unoptimized debug builds).
+                    if (frameTimeNanos - lastPublishNs >= PUBLISH_NS) {
+                        lastPublishNs = frameTimeNanos
+                        stats = summarize()
+                    }
                 }
                 lastNs = frameTimeNanos
                 ch.postFrameCallback(this)
@@ -120,3 +128,5 @@ fun rememberFrameStats(refreshHz: Float, cap: Int = 60): FrameStats {
     }
     return stats
 }
+
+private const val PUBLISH_NS = 250_000_000L
