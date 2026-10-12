@@ -37,18 +37,7 @@ fun SessionDetailScreen(factory: VmFactory, sessionId: String, onBack: () -> Uni
     val ui by vm.ui.collectAsState()
     val session = remember(ui.sessions, sessionId) { ui.sessions.firstOrNull { it.id == sessionId } }
 
-    Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.usage_detail_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back)) }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-            )
-        },
-    ) { inner ->
+    CollapsingScaffold(stringResource(R.string.usage_detail_title), onBack = onBack) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),

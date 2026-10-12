@@ -17,7 +17,7 @@
     <!-- Missing Zairenkai module (no root telemetry) -->
     <string name="mon_needs_module">需要 Zairenkai 模块</string>
     <string name="mon_needs_module_detail">CPU、GPU 和温控数据需通过 root 读取。电池和内存数据无需模块即可显示。</string>
-    <string name="mon_banner_module">CPU、GPU 和温控需要 Zairenkai 模块。电池、内存和 FPS 仍会继续监控。</string>
+    <string name="mon_banner_module">CPU、GPU、温控和 FPS 录制器需要 Zairenkai 模块。电池和内存仍会通过 Android 继续监控。</string>
     <string name="mon_banner_dismiss">关闭</string>
 
     <!-- Generic -->
@@ -152,8 +152,8 @@
     <string name="mon_charger_phase">充电阶段</string>
     <string name="mon_charger_not_reported">此设备不报告充电器的电压和电流。</string>
     <string name="mon_charger_needs_module">充电器的功率、电压和电流需通过 Zairenkai 模块读取。</string>
-    <string name="mon_health_title">电池健康</string>
-    <string name="mon_health_sub">当前满电容量与设计容量之比</string>
+    <string name="mon_health_title">电池健康（估算）</string>
+    <string name="mon_health_sub">电量计估算的满电容量与设计容量之比</string>
     <!-- %1$d full-charge mAh, %2$d design mAh -->
     <string name="mon_health_capacity">%1$d mAh / 设计容量 %2$d mAh</string>
     <plurals name="mon_health_cycles_label">
@@ -163,6 +163,10 @@
     <string name="mon_health_needs_module">满电容量与设计容量需通过 Zairenkai 模块读取。</string>
     <string name="mon_health_status">状态</string>
     <string name="mon_health_cycles">循环次数</string>
+    <string name="mon_cycles_source_android">来源：Android（BatteryManager）。该数值来自厂商的电池 HAL；部分厂商的循环计数方式有所不同。</string>
+    <string name="mon_cycles_source_kernel">来源：内核（power_supply cycle_count）。</string>
+    <!-- %1$d: cycle count reported by the kernel node -->
+    <string name="mon_cycles_kernel_differs" tools:ignore="PluralsCandidate">内核报告的数值不同：%1$d。</string>
     <string name="mon_health_tech">技术</string>
     <string name="mon_health_good">良好</string>
     <string name="mon_health_overheat">过热</string>

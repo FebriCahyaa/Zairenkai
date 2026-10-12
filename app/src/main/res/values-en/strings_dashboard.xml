@@ -53,4 +53,15 @@
     <string name="dashboard_thermal_mitigating">Mitigating</string>
     <string name="dashboard_thermal_normal">Normal</string>
     <string name="dashboard_reset_boosts">Reset performance</string>
+
+    <!-- System status (dashboard) -->
+    <string name="dashboard_system_status">System status</string>
+    <string name="dashboard_not_available">Not available</string>
+    <string name="dashboard_needs_zkfc">Requires the ZKFC framework</string>
+    <string name="dashboard_zkfc_fields_unavailable">Hook architecture, API and ZKFC build appear once the ZKFC framework is active.</string>
+    <string name="dashboard_boost_unavailable">Boost status is read from the ZKFC framework and isn\'t available yet.</string>
+    <string name="dashboard_without_module">Without the module, Monitor still shows battery and RAM from Android. CPU, GPU, thermal, the FPS recorder, profiles and tweaks need the Zairenkai module.</string>
+    <string name="dashboard_details_show">Technical details</string>
+    <string name="dashboard_details_hide">Hide details</string>
+    <string name="dashboard_copy_diagnostics">Copy diagnostics</string>
 </resources>

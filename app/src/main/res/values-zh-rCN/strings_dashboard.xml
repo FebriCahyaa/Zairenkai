@@ -53,4 +53,15 @@
     <string name="dashboard_thermal_mitigating">正在温控限频</string>
     <string name="dashboard_thermal_normal">正常</string>
     <string name="dashboard_reset_boosts">重置性能</string>
+
+    <!-- System status (dashboard) -->
+    <string name="dashboard_system_status">系统状态</string>
+    <string name="dashboard_not_available">不可用</string>
+    <string name="dashboard_needs_zkfc">需要 ZKFC 内核框架</string>
+    <string name="dashboard_zkfc_fields_unavailable">ZKFC 内核框架启用后，将显示 hook 架构、API 和 ZKFC 构建信息。</string>
+    <string name="dashboard_boost_unavailable">加速状态需从 ZKFC 内核框架读取，目前尚不可用。</string>
+    <string name="dashboard_without_module">没有模块时，监控页仍会显示来自 Android 的电池和内存数据。CPU、GPU、温控、FPS 录制器、配置和调校需要 Zairenkai 模块。</string>
+    <string name="dashboard_details_show">技术详情</string>
+    <string name="dashboard_details_hide">隐藏详情</string>
+    <string name="dashboard_copy_diagnostics">复制诊断信息</string>
 </resources>

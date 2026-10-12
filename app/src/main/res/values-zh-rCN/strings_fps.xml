@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
-    <string name="fps_drop_hitch">%1$s · 瞬间卡顿：一帧卡住了 %2$d ms。通常发生在游戏加载资源、编译着色器或清理内存时。</string>
-    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 降至 %3$d，持续 %4$d 秒，此时电池温度较会话开始时升高了 %5$s °C。设备可能因发热而降低频率（温控降频）。</string>
-    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 降至 %3$d，持续 %4$d 秒（最长帧 %5$d ms）。长时间的高负载场景：CPU 或 GPU 已达到极限。</string>
+    <string name="fps_drop_hitch">%1$s · 瞬间卡顿：一帧卡住了 %2$d ms。常见原因是加载资源、编译着色器或清理内存，但仅凭帧数据无法确定。</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 降至 %3$d，持续 %4$d 秒，同时电池温度较会话开始时升高了 %5$s °C。发热可能是原因之一（例如温控降频），但这些数据只能表明两者同时发生。</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 降至 %3$d，持续 %4$d 秒（最长帧 %5$d ms）。可能是重负载场景给 CPU 或 GPU 带来了较大压力。</string>
     <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 短暂降至 %3$d，持续 %4$d 秒（最长帧 %5$d ms），随后恢复。</string>
 
     <!-- Session insights -->
@@ -15,7 +15,7 @@
     <string name="fps_insight_capped" tools:ignore="PluralsCandidate">FPS 似乎被锁定在 %1$d，而屏幕刷新率为 %2$d Hz。如果游戏提供更高帧率选项，开启后即可用满刷新率。</string>
     <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low 仅 %1$d FPS，而平均为 %2$d：即使平均帧率很高，仍能感觉到偶发卡顿。</string>
     <string name="fps_insight_pacing">帧间隔不均：帧间隔在平均 %2$s ms 上下波动 ±%1$s ms，表现为微卡顿。</string>
-    <string name="fps_insight_thermal_decline">会话最后三分之一时段 FPS 下降了 %1$d%%，同时电池温度升高 %2$s °C：表明出现温控降频。</string>
+    <string name="fps_insight_thermal_decline">会话最后三分之一时段 FPS 下降了 %1$d%%，同时电池温度升高了 %2$s °C。发热可能是原因之一（温控降频），但无法仅凭这些数据确定确切原因。</string>
     <string name="fps_insight_decline">会话最后三分之一时段 FPS 比开头下降了 %1$d%%，且温度无明显上升：可能是场景负载更重。</string>
     <plurals name="fps_insight_stutters">
         <item quantity="other">出现 %1$d 次超过 100 ms 的肉眼可见卡顿（最长 %2$d ms）。</item>
@@ -32,12 +32,18 @@
     <!-- %1$s: app name -->
     <string name="fps_notif_recording">正在录制 %1$s</string>
     <string name="fps_notif_stop">停止</string>
+    <string name="fps_notif_blocked_root">已暂停：root 权限不可用</string>
+    <string name="fps_notif_blocked_engine">已暂停：zperfd 引擎尚未安装</string>
+    <string name="fps_notif_blocked_stream">已暂停：zperfd 未发送帧数据</string>
     <!-- FPS screen -->
     <string name="fps_screen_title">FPS 监控</string>
     <string name="fps_auto_title">自动录制</string>
     <string name="fps_auto_off">开启后，每次打开受监控的应用都会自动录制 FPS。</string>
     <string name="fps_auto_no_apps">请在下方至少添加一个应用以开始录制。</string>
     <string name="fps_auto_connecting">正在连接 zperfd（需要 Zairenkai 模块和 root 权限）…</string>
+    <string name="fps_auto_blocked_root">无法录制：root 权限不可用。请在 root 管理器中允许 Zairenkai；录制器会自动重试。</string>
+    <string name="fps_auto_blocked_engine">无法录制：Zairenkai 模块中的 zperfd 引擎尚未安装。游戏 FPS 需通过 zperfd 读取，请安装模块后重启。</string>
+    <string name="fps_auto_blocked_stream">zperfd 正在运行，但未发送帧数据（引擎版本过旧？）。请更新 Zairenkai 模块；录制器会自动重试。</string>
     <string name="fps_auto_waiting">等待打开受监控的应用。</string>
     <string name="fps_auto_recording">正在录制。应用关闭后会话将被保存。</string>
     <plurals name="fps_frames_recorded">
@@ -108,7 +114,7 @@
     <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d 次事件及其原因</string>
     <string name="fps_drops_none">本次会话未出现明显的 FPS 下降。</string>
     <string name="fps_cause_hitch">卡顿</string>
-    <string name="fps_cause_thermal">温控</string>
+    <string name="fps_cause_thermal">温度上升</string>
     <string name="fps_cause_sustained">高负载</string>
     <string name="fps_cause_brief">短暂</string>
     <string name="fps_frametime_title">帧时间</string>

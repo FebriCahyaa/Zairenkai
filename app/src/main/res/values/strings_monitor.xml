@@ -17,7 +17,7 @@
     <!-- Missing Zairenkai module (no root telemetry) -->
     <string name="mon_needs_module">Butuh modul Zairenkai</string>
     <string name="mon_needs_module_detail">Data CPU, GPU dan termal dibaca lewat root. Baterai dan RAM tetap tampil tanpa modul.</string>
-    <string name="mon_banner_module">CPU, GPU dan termal butuh modul Zairenkai. Baterai, RAM dan FPS tetap dipantau.</string>
+    <string name="mon_banner_module">CPU, GPU, termal, dan perekam FPS butuh modul Zairenkai. Baterai dan RAM tetap dipantau dari Android.</string>
     <string name="mon_banner_dismiss">Tutup</string>
 
     <!-- Generic -->
@@ -152,8 +152,8 @@
     <string name="mon_charger_phase">Fase pengisian</string>
     <string name="mon_charger_not_reported">Perangkat ini tidak melaporkan tegangan dan arus dari charger.</string>
     <string name="mon_charger_needs_module">Daya, tegangan dan arus dari charger dibaca lewat modul Zairenkai.</string>
-    <string name="mon_health_title">Kesehatan baterai</string>
-    <string name="mon_health_sub">Kapasitas penuh saat ini dibanding kapasitas desain</string>
+    <string name="mon_health_title">Kesehatan baterai (estimasi)</string>
+    <string name="mon_health_sub">Kapasitas penuh yang diperkirakan fuel gauge dibanding kapasitas desain</string>
     <!-- %1$d full-charge mAh, %2$d design mAh -->
     <string name="mon_health_capacity">%1$d mAh dari %2$d mAh kapasitas desain</string>
     <plurals name="mon_health_cycles_label">
@@ -163,6 +163,10 @@
     <string name="mon_health_needs_module">Kapasitas penuh dan desain dibaca lewat modul Zairenkai.</string>
     <string name="mon_health_status">Status</string>
     <string name="mon_health_cycles">Jumlah siklus</string>
+    <string name="mon_cycles_source_android">Sumber: Android (BatteryManager). Angka ini dari HAL baterai vendor; sebagian vendor menghitung siklus dengan cara berbeda.</string>
+    <string name="mon_cycles_source_kernel">Sumber: kernel (power_supply cycle_count).</string>
+    <!-- %1$d: cycle count reported by the kernel node -->
+    <string name="mon_cycles_kernel_differs" tools:ignore="PluralsCandidate">Kernel melaporkan angka berbeda: %1$d.</string>
     <string name="mon_health_tech">Teknologi</string>
     <string name="mon_health_good">Baik</string>
     <string name="mon_health_overheat">Terlalu panas</string>

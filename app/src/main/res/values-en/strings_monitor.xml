@@ -17,7 +17,7 @@
     <!-- Missing Zairenkai module (no root telemetry) -->
     <string name="mon_needs_module">Requires the Zairenkai module</string>
     <string name="mon_needs_module_detail">CPU, GPU and thermal data are read through root. Battery and RAM still show without the module.</string>
-    <string name="mon_banner_module">CPU, GPU and thermal need the Zairenkai module. Battery, RAM and FPS are still monitored.</string>
+    <string name="mon_banner_module">CPU, GPU, thermal and the FPS recorder need the Zairenkai module. Battery and RAM are still monitored through Android.</string>
     <string name="mon_banner_dismiss">Dismiss</string>
 
     <!-- Generic -->
@@ -159,8 +159,8 @@
     <string name="mon_charger_phase">Charging phase</string>
     <string name="mon_charger_not_reported">This device does not report charger voltage and current.</string>
     <string name="mon_charger_needs_module">Charger power, voltage and current are read through the Zairenkai module.</string>
-    <string name="mon_health_title">Battery health</string>
-    <string name="mon_health_sub">Current full capacity compared with design capacity</string>
+    <string name="mon_health_title">Battery health (estimate)</string>
+    <string name="mon_health_sub">Full capacity estimated by the fuel gauge compared with design capacity</string>
     <!-- %1$d full-charge mAh, %2$d design mAh -->
     <string name="mon_health_capacity">%1$d mAh of %2$d mAh design capacity</string>
     <plurals name="mon_health_cycles_label">
@@ -171,6 +171,10 @@
     <string name="mon_health_needs_module">Full and design capacity are read through the Zairenkai module.</string>
     <string name="mon_health_status">Status</string>
     <string name="mon_health_cycles">Cycle count</string>
+    <string name="mon_cycles_source_android">Source: Android (BatteryManager). This number comes from the vendor\'s battery HAL; some vendors count cycles differently.</string>
+    <string name="mon_cycles_source_kernel">Source: kernel (power_supply cycle_count).</string>
+    <!-- %1$d: cycle count reported by the kernel node -->
+    <string name="mon_cycles_kernel_differs" tools:ignore="PluralsCandidate">The kernel reports a different number: %1$d.</string>
     <string name="mon_health_tech">Technology</string>
     <string name="mon_health_good">Good</string>
     <string name="mon_health_overheat">Overheated</string>

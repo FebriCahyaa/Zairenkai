@@ -27,6 +27,7 @@ import com.zairenkai.app.R
 import com.zairenkai.app.data.power.BatteryHealth
 import com.zairenkai.app.data.power.BatteryReading
 import com.zairenkai.app.data.power.ChargeStatus
+import com.zairenkai.app.data.power.CycleSource
 import com.zairenkai.app.data.power.PlugType
 import com.zairenkai.app.ui.MonitorViewModel
 import com.zairenkai.app.ui.VmFactory
@@ -237,6 +238,20 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 InfoLine(stringResource(R.string.mon_health_status), healthLabel(b?.health), if (b?.health == BatteryHealth.GOOD) ZkGood else null)
                 InfoLine(stringResource(R.string.mon_health_cycles), b?.cycleCount?.toString() ?: "—")
+                b?.cycleSource?.let {
+                    Text(
+                        stringResource(if (it == CycleSource.ANDROID) R.string.mon_cycles_source_android else R.string.mon_cycles_source_kernel),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                b?.kernelCycleCount?.let {
+                    Text(
+                        stringResource(R.string.mon_cycles_kernel_differs, it),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 b?.technology?.let { InfoLine(stringResource(R.string.mon_health_tech), it) }
             }
         }

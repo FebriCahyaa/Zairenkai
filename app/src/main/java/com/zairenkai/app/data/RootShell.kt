@@ -11,6 +11,8 @@
  */
 package com.zairenkai.app.data
 
+import com.zairenkai.app.data.diag.RootState
+import com.zairenkai.app.data.diag.classifyRoot
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +28,7 @@ import java.util.concurrent.TimeUnit
 
 private const val DEFAULT_TIMEOUT_MS = 10_000L
 private const val MAX_CAPTURE_BYTES = 2 * 1024 * 1024
+private const val ROOT_PROMPT_TIMEOUT_MS = 15_000L
 
 data class ShellResult(
     val exitCode: Int,
@@ -39,14 +42,20 @@ object RootShell {
     @Volatile
     private var cachedAvailable: Boolean? = null
 
-    suspend fun isRootAvailable(): Boolean = withContext(Dispatchers.IO) {
-        if (cachedAvailable == true) return@withContext true
-        val result = run("id -u", 4000)
-        val available = result.ok && result.stdout.trim() == "0"
+    suspend fun isRootAvailable(): Boolean = rootState() == RootState.GRANTED
+
+    /**
+     * Ask for root and say why it is not available. The timeout leaves the
+     * root manager's grant prompt time to be answered before reporting
+     * [RootState.TIMEOUT].
+     */
+    suspend fun rootState(): RootState = withContext(Dispatchers.IO) {
+        if (cachedAvailable == true) return@withContext RootState.GRANTED
+        val state = classifyRoot(run("id -u", ROOT_PROMPT_TIMEOUT_MS))
         // Cache only a positive root result. A denied/unavailable su can become
         // available later after the user grants root or a root manager starts.
-        if (available) cachedAvailable = true
-        available
+        if (state == RootState.GRANTED) cachedAvailable = true
+        state
     }
 
     fun invalidate() {

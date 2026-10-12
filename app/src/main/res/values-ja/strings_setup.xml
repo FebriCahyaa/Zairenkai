@@ -12,6 +12,8 @@
     <string name="setup_start">セットアップを開始</string>
     <string name="setup_checking">確認中…</string>
     <string name="setup_apply_profile">%1$s を適用</string>
+    <!-- %1$s: profile name -->
+    <string name="setup_applying">%1$s を適用中…</string>
     <string name="setup_skip_for_now">今はスキップ</string>
     <string name="setup_enter_app">Zairenkai を開く</string>
 
@@ -19,7 +21,7 @@
     <string name="setup_welcome_title">Zairenkai へようこそ</string>
     <string name="setup_welcome_body">root 化デバイス向けのパフォーマンス制御です。ZKFC カーネルフレームワーク上で動作する zperfd エンジンによって実行されます。</string>
     <string name="setup_feature_monitor_title">ライブモニター</string>
-    <string name="setup_feature_monitor_body">UI の FPS、コアごとの CPU 負荷、GPU、サーマルゾーンの温度。</string>
+    <string name="setup_feature_monitor_body">選択したゲームの FPS、コアごとの CPU 負荷、GPU、バッテリー、温度。</string>
     <string name="setup_feature_verified_title">検証済みのプロファイル &amp; チューニング</string>
     <string name="setup_feature_verified_body">すべての変更は zperfd が適用し、カーネルから読み戻して確認します。失敗した場合は自動的に元に戻ります。</string>
     <string name="setup_feature_safety_title">多層の安全機構</string>
@@ -38,22 +40,47 @@
     <string name="setup_root_ok">root 権限が許可されました。</string>
     <string name="setup_root_missing">root 権限が拒否されたか、root マネージャーが見つかりません。</string>
     <string name="setup_root_fix">Magisk、KernelSU、または APatch で Zairenkai を許可してから、再確認してください。</string>
+    <string name="setup_root_no_su">このデバイスで root マネージャー（su）が見つかりません。</string>
+    <string name="setup_root_no_su_fix">Magisk、KernelSU、または APatch をインストールしてから、再確認してください。</string>
+    <string name="setup_root_timeout">root 権限の要求にまだ応答がありません。</string>
+    <string name="setup_root_timeout_fix">root マネージャーの許可ダイアログに応答してから、「再確認」をタップしてください。</string>
     <string name="setup_zkfc_checking">/dev/zkfc を読み取り中…</string>
     <string name="setup_zkfc_missing">読み込まれていません。</string>
-    <string name="setup_zkfc_missing_detail">読み込まれていません: %1$s</string>
     <string name="setup_zkfc_fix">このカーネルに対応する ZKFC カーネルモジュールを含む Zairenkai モジュールをインストールし、再起動してください。</string>
+    <string name="setup_zkfc_module_missing">Zairenkai モジュールがインストールされていません（zkfctl が見つかりません）。</string>
+    <string name="setup_zkfc_reboot_pending">Zairenkai モジュールはインストールされたばかりで、まだ有効になっていません。</string>
+    <string name="setup_zkfc_reboot_pending_fix">デバイスを再起動してモジュールを有効にしてから、再確認してください。</string>
+    <string name="setup_zkfc_module_disabled">Zairenkai モジュールが root マネージャーで無効になっています。</string>
+    <string name="setup_zkfc_module_disabled_fix">Magisk/KernelSU/APatch でモジュールを有効にし、再起動してから再確認してください。</string>
+    <string name="setup_zkfc_module_removing">Zairenkai モジュールは再起動時に削除されるよう設定されています。</string>
+    <string name="setup_zkfc_module_removing_fix">引き続き使用する場合は、root マネージャーで削除を取り消してください。</string>
+    <!-- %1$s: device ABI, e.g. arm64-v8a -->
+    <string name="setup_zkfc_tool_missing">モジュールはインストールされていますが、zkfctl がありません。パッケージに ABI %1$s 用のバイナリが含まれていない可能性があります。</string>
+    <string name="setup_zkfc_tool_not_executable">zkfctl は存在しますが、実行できません（ファイルのパーミッション）。</string>
+    <string name="setup_reinstall_module_fix">このデバイスに対応する Zairenkai モジュールを再インストールし、再起動してください。</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_ko_failed">カーネル %1$s で zkfc.ko の読み込みに失敗しました（/dev/zkfc がありません）。</string>
+    <string name="setup_zkfc_ko_failed_fix">カーネルモジュールがこのカーネルの KMI と一致しません。このカーネル向けにビルドされたパッケージを使用してください。</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_not_in_kernel">カーネル %1$s は ZKFC フレームワークを提供しておらず（/dev/zkfc がありません）、パッケージにもこのカーネル用の zkfc.ko が含まれていません。</string>
+    <string name="setup_zkfc_timeout">zkfctl が制限時間内に応答しませんでした。</string>
+    <string name="setup_zkfc_timeout_fix">再確認してください。繰り返し発生する場合は、デバイスを再起動してください。</string>
+    <string name="setup_zkfc_malformed">zkfctl が認識できない形式で応答しました（バージョンの不一致？）。</string>
     <string name="setup_zkfc_outdated">%1$s（古いバージョン）</string>
     <string name="setup_zkfc_outdated_fix">ZKFC カーネルモジュールを更新してください。古い API では新機能が無効になります。</string>
     <string name="setup_engine_checking">zperfd に接続中…</string>
     <string name="setup_engine_missing">/data/adb/zperf にインストールされていません。</string>
     <string name="setup_engine_missing_fix">Zairenkai モジュールをインストールしてください。プロファイルとチューニングを適用できるのは zperfd だけです。</string>
+    <string name="setup_engine_not_executable">zperfd は /data/adb/zperf にありますが、実行できません。</string>
     <string name="setup_engine_silent">インストールされていますが、応答がありません。</string>
+    <string name="setup_engine_not_running">インストールされていますが、サービスが動作していません。</string>
     <string name="setup_engine_silent_fix">再起動してモジュールのサービスに zperfd を起動させてから、再確認してください。</string>
     <string name="setup_engine_safe_mode">有効 · SAFE MODE（ストックのベースラインを維持）</string>
     <string name="setup_engine_saved">有効 · 保存済みのプロファイル: %1$s</string>
     <string name="setup_engine_default">有効 · エンジンのデフォルト: %1$s</string>
     <string name="setup_token_checking">ライセンスの状態を読み取り中…</string>
     <string name="setup_token_needs_zkfc">ZKFC カーネルフレームワークが必要です。</string>
+    <string name="setup_token_stored_waiting">トークンは保存されていますが、ZKFC フレームワークが有効になるまで検証できません。</string>
     <string name="setup_token_ok">トークンは有効です。パフォーマンス機能が利用できます。</string>
     <string name="setup_token_missing">未インストール: パフォーマンスプロファイルとチューニングはロックされたままです。</string>
     <string name="setup_token_missing_fix">システムタブでトークンをインストールしてください。モニターはトークンなしでも使えます。</string>

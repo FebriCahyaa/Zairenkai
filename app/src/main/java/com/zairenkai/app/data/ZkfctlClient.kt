@@ -2,47 +2,53 @@
 /*
  * Thin client over the zkfctl binary: run a subcommand as root and decode the
  * JSON result. The binary is installed by the Zairenkai module; we probe the
- * common locations and fall back to PATH.
+ * locations module/customize.sh uses and fall back to PATH.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.data
 
+import com.zairenkai.app.data.diag.InstallProbe
+import com.zairenkai.app.data.diag.commandFailureKind
 import kotlinx.serialization.json.Json
 
 class ZkfctlClient {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     @Volatile private var binPath: String? = null
+    /** When the last lookup found no zkfctl; a miss is re-checked after [MISS_TTL_MS]. */
+    @Volatile private var missAt: Long = 0
 
-    private val candidates = listOf(
-        "/data/adb/zkfc/zkfctl",
-        "/data/adb/modules/zairenkai/zkfctl",
-        "/system/bin/zkfctl",
-        "zkfctl",
-    )
-
-    private suspend fun resolveBin(): String {
+    private suspend fun resolveBin(): String? {
         binPath?.let { return it }
-        for (c in candidates) {
-            val probe = if (c.startsWith("/")) "test -x $c && echo yes" else "command -v $c >/dev/null && echo yes"
-            if (RootShell.run(probe, 3000).stdout.trim() == "yes") {
-                binPath = c
-                return c
-            }
-        }
-        return candidates.last().also { binPath = it }
+        if (missAt != 0L && System.currentTimeMillis() - missAt < MISS_TTL_MS) return null
+        // One root shell for every candidate; prints the first executable one.
+        val paths = InstallProbe.ZKFCTL_PATHS.joinToString(" ")
+        val r = RootShell.run("for p in $paths; do [ -x \"\$p\" ] && { echo \"\$p\"; exit 0; }; done; command -v zkfctl", 3000)
+        val found = r.stdout.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("/") }
+        // Only a found binary is cached; a miss is retried so installing the
+        // module (or Retry, which calls invalidate()) is picked up.
+        if (found != null) binPath = found else missAt = System.currentTimeMillis()
+        return found
     }
 
-    fun invalidate() { binPath = null }
+    fun invalidate() {
+        binPath = null
+        missAt = 0
+    }
 
     private suspend fun raw(args: String, lite: Boolean, timeoutMs: Long): String {
         val bin = resolveBin()
+            ?: return """{"ok":false,"kind":"not_found","error":"zkfctl is not installed"}"""
         val lflag = if (lite) "--lite " else ""
-        val res = RootShell.run("$bin $lflag$args", timeoutMs)
-        // zkfctl prints JSON even on handled errors; pass stdout through.
-        return res.stdout.ifBlank {
-            """{"ok":false,"error":${jsonStr(res.stderr.ifBlank { "no output (exit ${res.exitCode})" })},"errno":${res.exitCode}}"""
-        }
+        val res = RootShell.run("${shellQuote(bin)} $lflag$args", timeoutMs)
+        // zkfctl prints JSON even on handled errors; pass that through. Anything
+        // else is reported with a kind the UI can explain, never parsed as data.
+        val body = res.stdout.trim()
+        if (body.startsWith("{")) return body
+        val kind = if (body.isEmpty()) commandFailureKind(res) else "malformed"
+        val detail = res.stderr.ifBlank { body.ifBlank { "no output (exit ${res.exitCode})" } }.take(300)
+        if (kind == "not_found" || kind == "not_executable") invalidate()
+        return """{"ok":false,"kind":"$kind","error":${jsonStr(detail)},"errno":${res.exitCode}}"""
     }
 
     private fun jsonStr(s: String) = buildString {
@@ -128,4 +134,8 @@ class ZkfctlClient {
         json.decodeFromString(raw("safe clear", false, 5000))
 
     private fun shellQuote(s: String) = "'" + s.replace("'", "'\\''") + "'"
+
+    private companion object {
+        const val MISS_TTL_MS = 15_000L
+    }
 }

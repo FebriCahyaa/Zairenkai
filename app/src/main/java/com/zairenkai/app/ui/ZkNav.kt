@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import com.zairenkai.app.ui.icons.*
@@ -52,8 +54,12 @@ fun ZairenkaiRoot(container: AppContainer) {
     val factory = remember(container) { VmFactory(container) }
 
     val glass = com.zairenkai.app.ui.theme.LocalGlass.current
+    // Inset ownership: this scaffold handles only the bottom (its navigation
+    // bar draws behind the system navigation bar). Each screen owns the top —
+    // its top app bar draws behind the status bar — so it is never padded twice.
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentWindowInsets = WindowInsets(0),
         bottomBar = {
             val backStack by nav.currentBackStackEntryAsState()
             val current = backStack?.destination
@@ -95,7 +101,7 @@ fun ZairenkaiRoot(container: AppContainer) {
         NavHost(
             navController = nav,
             startDestination = Dest.DASHBOARD.route,
-            modifier = Modifier.padding(inner),
+            modifier = Modifier.padding(inner).consumeWindowInsets(inner),
             // Smooth, springy cross-fade + subtle zoom between tabs.
             enterTransition = {
                 fadeIn(spring(stiffness = 600f)) + scaleIn(spring(stiffness = 500f), initialScale = 0.96f)

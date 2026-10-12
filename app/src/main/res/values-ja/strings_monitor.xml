@@ -17,7 +17,7 @@
     <!-- Missing Zairenkai module (no root telemetry) -->
     <string name="mon_needs_module">Zairenkai モジュールが必要です</string>
     <string name="mon_needs_module_detail">CPU、GPU、サーマルのデータは root 経由で読み取ります。バッテリーと RAM はモジュールなしでも表示されます。</string>
-    <string name="mon_banner_module">CPU、GPU、サーマルには Zairenkai モジュールが必要です。バッテリー、RAM、FPS は引き続き監視されます。</string>
+    <string name="mon_banner_module">CPU、GPU、サーマル、FPS レコーダーには Zairenkai モジュールが必要です。バッテリーと RAM は引き続き Android から監視されます。</string>
     <string name="mon_banner_dismiss">閉じる</string>
 
     <!-- Generic -->
@@ -152,8 +152,8 @@
     <string name="mon_charger_phase">充電フェーズ</string>
     <string name="mon_charger_not_reported">このデバイスは充電器の電圧と電流を報告しません。</string>
     <string name="mon_charger_needs_module">充電器の電力、電圧、電流は Zairenkai モジュール経由で読み取ります。</string>
-    <string name="mon_health_title">バッテリーの健全性</string>
-    <string name="mon_health_sub">現在の満充電容量と設計容量の比較</string>
+    <string name="mon_health_title">バッテリーの健全性（推定）</string>
+    <string name="mon_health_sub">フューエルゲージが推定した満充電容量と設計容量の比較</string>
     <!-- %1$d full-charge mAh, %2$d design mAh -->
     <string name="mon_health_capacity">設計容量 %2$d mAh のうち %1$d mAh</string>
     <plurals name="mon_health_cycles_label">
@@ -163,6 +163,10 @@
     <string name="mon_health_needs_module">満充電容量と設計容量は Zairenkai モジュール経由で読み取ります。</string>
     <string name="mon_health_status">ステータス</string>
     <string name="mon_health_cycles">サイクル数</string>
+    <string name="mon_cycles_source_android">ソース: Android（BatteryManager）。この値はベンダーのバッテリー HAL から取得したもので、ベンダーによってはサイクル数の数え方が異なります。</string>
+    <string name="mon_cycles_source_kernel">ソース: カーネル（power_supply cycle_count）。</string>
+    <!-- %1$d: cycle count reported by the kernel node -->
+    <string name="mon_cycles_kernel_differs" tools:ignore="PluralsCandidate">カーネルは異なる値を報告しています: %1$d。</string>
     <string name="mon_health_tech">種類</string>
     <string name="mon_health_good">良好</string>
     <string name="mon_health_overheat">過熱</string>

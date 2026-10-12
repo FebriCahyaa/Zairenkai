@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
-    <string name="fps_drop_hitch">%1$s · Patah sesaat: satu frame tertahan %2$d ms. Biasanya terjadi saat game memuat aset, mengompilasi shader, atau membersihkan memori.</string>
-    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS turun dari %2$d ke %3$d selama %4$d detik, saat suhu baterai naik %5$s °C dari awal sesi. Kemungkinan perangkat menurunkan frekuensi karena panas (throttling termal).</string>
-    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS turun dari %2$d ke %3$d selama %4$d detik (frame terlama %5$d ms). Adegan berat yang berlangsung lama: CPU atau GPU bekerja di batasnya.</string>
+    <string name="fps_drop_hitch">%1$s · Patah sesaat: satu frame tertahan %2$d ms. Penyebab umumnya pemuatan aset, kompilasi shader, atau pembersihan memori, tetapi data frame saja tidak bisa memastikannya.</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS turun dari %2$d ke %3$d selama %4$d detik, bersamaan dengan kenaikan suhu baterai %5$s °C sejak awal sesi. Panas bisa ikut berperan (misalnya throttling termal), tetapi data ini hanya menunjukkan keduanya terjadi bersamaan.</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS turun dari %2$d ke %3$d selama %4$d detik (frame terlama %5$d ms). Kemungkinan adegan berat yang membebani CPU atau GPU.</string>
     <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · Penurunan singkat dari %2$d ke %3$d FPS selama %4$d detik (frame terlama %5$d ms), lalu pulih.</string>
 
     <!-- Session insights -->
@@ -15,7 +15,7 @@
     <string name="fps_insight_capped" tools:ignore="PluralsCandidate">FPS tampak dikunci di %1$d sementara layar berjalan %2$d Hz. Jika game menyediakan opsi frame rate lebih tinggi, aktifkan untuk memakai refresh penuh.</string>
     <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low hanya %1$d FPS dibanding rata-rata %2$d: ada patah-patah sesekali yang terasa meski rata-rata tinggi.</string>
     <string name="fps_insight_pacing">Frame pacing tidak rata: jarak antar frame bervariasi ±%1$s ms dari rata-rata %2$s ms, terasa sebagai mikro-stutter.</string>
-    <string name="fps_insight_thermal_decline">FPS turun %1$d%% di sepertiga akhir sesi sementara suhu baterai naik %2$s °C: indikasi throttling termal.</string>
+    <string name="fps_insight_thermal_decline">FPS turun %1$d%% di sepertiga akhir sesi, bersamaan dengan kenaikan suhu baterai %2$s °C. Panas mungkin ikut berperan (throttling termal), tetapi penyebab pastinya tidak bisa dipastikan dari data ini.</string>
     <string name="fps_insight_decline">FPS turun %1$d%% di sepertiga akhir sesi dibanding awal, tanpa kenaikan suhu yang berarti: kemungkinan adegan yang lebih berat.</string>
     <plurals name="fps_insight_stutters">
         <item quantity="other">%1$d kali patah lebih dari 100 ms (terlama %2$d ms) yang terlihat oleh mata.</item>
@@ -32,12 +32,18 @@
     <!-- %1$s: app name -->
     <string name="fps_notif_recording">Merekam %1$s</string>
     <string name="fps_notif_stop">Hentikan</string>
+    <string name="fps_notif_blocked_root">Terhenti: izin root tidak tersedia</string>
+    <string name="fps_notif_blocked_engine">Terhenti: engine zperfd belum terpasang</string>
+    <string name="fps_notif_blocked_stream">Terhenti: zperfd tidak mengirim data frame</string>
     <!-- FPS screen -->
     <string name="fps_screen_title">Monitor FPS</string>
     <string name="fps_auto_title">Perekam otomatis</string>
     <string name="fps_auto_off">Nyalakan agar FPS direkam otomatis setiap kali aplikasi yang dipantau dibuka.</string>
     <string name="fps_auto_no_apps">Tambahkan minimal satu aplikasi di bawah untuk mulai merekam.</string>
     <string name="fps_auto_connecting">Menghubungkan ke zperfd (butuh modul Zairenkai dan akses root)…</string>
+    <string name="fps_auto_blocked_root">Tidak bisa merekam: izin root tidak tersedia. Izinkan Zairenkai di pengelola root; perekam mencoba lagi otomatis.</string>
+    <string name="fps_auto_blocked_engine">Tidak bisa merekam: engine zperfd dari modul Zairenkai belum terpasang. FPS game dibaca lewat zperfd, jadi pasang modulnya lalu reboot.</string>
+    <string name="fps_auto_blocked_stream">zperfd berjalan tetapi tidak mengirim data frame (versi engine lama?). Perbarui modul Zairenkai; perekam mencoba lagi otomatis.</string>
     <string name="fps_auto_waiting">Menunggu aplikasi yang dipantau dibuka.</string>
     <string name="fps_auto_recording">Sedang merekam. Sesi disimpan saat aplikasi ditutup.</string>
     <plurals name="fps_frames_recorded">
@@ -108,7 +114,7 @@
     <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d kejadian, dengan penjelasannya</string>
     <string name="fps_drops_none">Tidak ada penurunan FPS berarti di sesi ini.</string>
     <string name="fps_cause_hitch">PATAH</string>
-    <string name="fps_cause_thermal">TERMAL</string>
+    <string name="fps_cause_thermal">SUHU NAIK</string>
     <string name="fps_cause_sustained">BERAT</string>
     <string name="fps_cause_brief">SINGKAT</string>
     <string name="fps_frametime_title">Waktu frame</string>

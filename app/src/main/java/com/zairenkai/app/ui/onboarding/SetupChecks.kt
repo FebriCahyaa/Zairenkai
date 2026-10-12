@@ -14,6 +14,10 @@ import com.zairenkai.app.core.text.UiText
 import com.zairenkai.app.core.text.uiText
 import com.zairenkai.app.data.InfoResult
 import com.zairenkai.app.data.ZperfStatus
+import com.zairenkai.app.data.diag.BinState
+import com.zairenkai.app.data.diag.InstallFacts
+import com.zairenkai.app.data.diag.ModuleState
+import com.zairenkai.app.data.diag.RootState
 import com.zairenkai.app.domain.Profiles
 
 enum class CheckState { CHECKING, OK, WARN, MISSING }
@@ -39,6 +43,10 @@ data class SetupCheck(
  */
 data class SetupProbe(
     val root: Boolean? = null,
+    /** Why root is unavailable; refines [root] == false. */
+    val rootState: RootState? = null,
+    /** Installed components (one root shell); null when not read. */
+    val facts: InstallFacts? = null,
     val info: InfoResult? = null,
     val infoDone: Boolean = false,
     val engineInstalled: Boolean? = null,
@@ -79,22 +87,29 @@ fun setupChecks(p: SetupProbe): List<SetupCheck> {
     val root = when (p.root) {
         null -> SetupCheck(CheckId.ROOT, CheckState.CHECKING, uiText(R.string.setup_root_checking))
         true -> SetupCheck(CheckId.ROOT, CheckState.OK, uiText(R.string.setup_root_ok))
-        false -> SetupCheck(
-            CheckId.ROOT, CheckState.MISSING, uiText(R.string.setup_root_missing),
-            fix = uiText(R.string.setup_root_fix),
-        )
+        false -> when (p.rootState) {
+            RootState.NO_SU -> SetupCheck(
+                CheckId.ROOT, CheckState.MISSING, uiText(R.string.setup_root_no_su),
+                fix = uiText(R.string.setup_root_no_su_fix),
+            )
+            RootState.TIMEOUT -> SetupCheck(
+                CheckId.ROOT, CheckState.MISSING, uiText(R.string.setup_root_timeout),
+                fix = uiText(R.string.setup_root_timeout_fix),
+            )
+            else -> SetupCheck(
+                CheckId.ROOT, CheckState.MISSING, uiText(R.string.setup_root_missing),
+                fix = uiText(R.string.setup_root_fix),
+            )
+        }
     }
 
     val info = p.info
     val zkfc = when {
         p.root == false -> SetupCheck(CheckId.ZKFC, CheckState.MISSING, needRoot)
         !p.infoDone -> SetupCheck(CheckId.ZKFC, CheckState.CHECKING, uiText(R.string.setup_zkfc_checking))
-        info == null || !info.ok -> SetupCheck(
-            CheckId.ZKFC, CheckState.MISSING,
-            info?.error?.takeIf { it.isNotBlank() }?.let { uiText(R.string.setup_zkfc_missing_detail, it) }
-                ?: uiText(R.string.setup_zkfc_missing),
-            fix = uiText(R.string.setup_zkfc_fix),
-        )
+        info == null || !info.ok -> zkfcIssue(info, p.facts).let { issue ->
+            SetupCheck(CheckId.ZKFC, CheckState.MISSING, issue.first, fix = issue.second)
+        }
         info.api.outdated -> SetupCheck(
             CheckId.ZKFC, CheckState.WARN, uiText(R.string.setup_zkfc_outdated, kernelSummary(info)),
             fix = uiText(R.string.setup_zkfc_outdated_fix),
@@ -106,12 +121,20 @@ fun setupChecks(p: SetupProbe): List<SetupCheck> {
     val engine = when {
         p.root == false -> SetupCheck(CheckId.ENGINE, CheckState.MISSING, needRoot)
         !p.engineDone -> SetupCheck(CheckId.ENGINE, CheckState.CHECKING, uiText(R.string.setup_engine_checking))
+        p.facts?.engine == BinState.NOT_EXECUTABLE -> SetupCheck(
+            CheckId.ENGINE, CheckState.MISSING, uiText(R.string.setup_engine_not_executable),
+            fix = uiText(R.string.setup_reinstall_module_fix),
+        )
         p.engineInstalled != true -> SetupCheck(
             CheckId.ENGINE, CheckState.MISSING, uiText(R.string.setup_engine_missing),
-            fix = uiText(R.string.setup_engine_missing_fix),
+            fix = uiText(
+                if (p.facts?.module == ModuleState.INSTALLED) R.string.setup_reinstall_module_fix
+                else R.string.setup_engine_missing_fix,
+            ),
         )
         status == null || !status.ok -> SetupCheck(
-            CheckId.ENGINE, CheckState.WARN, uiText(R.string.setup_engine_silent),
+            CheckId.ENGINE, CheckState.WARN,
+            uiText(if (p.facts != null && !p.facts.engineRunning) R.string.setup_engine_not_running else R.string.setup_engine_silent),
             fix = uiText(R.string.setup_engine_silent_fix),
         )
         else -> {
@@ -128,7 +151,10 @@ fun setupChecks(p: SetupProbe): List<SetupCheck> {
     val token = when {
         p.root == false -> SetupCheck(CheckId.TOKEN, CheckState.MISSING, needRoot)
         !p.infoDone -> SetupCheck(CheckId.TOKEN, CheckState.CHECKING, uiText(R.string.setup_token_checking))
-        info == null || !info.ok -> SetupCheck(CheckId.TOKEN, CheckState.MISSING, uiText(R.string.setup_token_needs_zkfc))
+        info == null || !info.ok -> SetupCheck(
+            CheckId.TOKEN, CheckState.MISSING,
+            uiText(if (p.facts?.tokenFile == true) R.string.setup_token_stored_waiting else R.string.setup_token_needs_zkfc),
+        )
         info.licenseState == "valid" -> SetupCheck(CheckId.TOKEN, CheckState.OK, uiText(R.string.setup_token_ok))
         info.licenseState == "missing" -> SetupCheck(
             CheckId.TOKEN, CheckState.WARN, uiText(R.string.setup_token_missing),
@@ -140,6 +166,74 @@ fun setupChecks(p: SetupProbe): List<SetupCheck> {
         )
     }
     return listOf(root, zkfc, engine, token)
+}
+
+/**
+ * Why `zkfctl info` gave no answer, from what is installed. Raw shell output
+ * never becomes the user-facing reason; it goes to [diagnosticsReport].
+ */
+internal fun zkfcIssue(info: InfoResult?, facts: InstallFacts?): Pair<UiText, UiText?> {
+    val reinstall = uiText(R.string.setup_reinstall_module_fix)
+    if (facts != null) {
+        when (facts.module) {
+            ModuleState.REMOVING -> return uiText(R.string.setup_zkfc_module_removing) to uiText(R.string.setup_zkfc_module_removing_fix)
+            ModuleState.DISABLED -> return uiText(R.string.setup_zkfc_module_disabled) to uiText(R.string.setup_zkfc_module_disabled_fix)
+            ModuleState.UPDATE_PENDING -> return uiText(R.string.setup_zkfc_reboot_pending) to uiText(R.string.setup_zkfc_reboot_pending_fix)
+            else -> Unit
+        }
+        when (facts.zkfctl) {
+            BinState.MISSING -> return if (facts.module == ModuleState.MISSING) {
+                uiText(R.string.setup_zkfc_module_missing) to uiText(R.string.setup_zkfc_fix)
+            } else {
+                uiText(R.string.setup_zkfc_tool_missing, facts.abi.ifBlank { "?" }) to reinstall
+            }
+            BinState.NOT_EXECUTABLE -> return uiText(R.string.setup_zkfc_tool_not_executable) to reinstall
+            BinState.OK -> if (!facts.devNode) {
+                return if (facts.bundledKo) {
+                    uiText(R.string.setup_zkfc_ko_failed, facts.kernel) to uiText(R.string.setup_zkfc_ko_failed_fix)
+                } else {
+                    uiText(R.string.setup_zkfc_not_in_kernel, facts.kernel) to uiText(R.string.setup_zkfc_fix)
+                }
+            }
+        }
+    }
+    return when (info?.kind) {
+        "timeout" -> uiText(R.string.setup_zkfc_timeout) to uiText(R.string.setup_zkfc_timeout_fix)
+        "malformed" -> uiText(R.string.setup_zkfc_malformed) to reinstall
+        "not_found" -> uiText(R.string.setup_zkfc_module_missing) to uiText(R.string.setup_zkfc_fix)
+        "not_executable" -> uiText(R.string.setup_zkfc_tool_not_executable) to reinstall
+        else -> uiText(R.string.setup_zkfc_missing) to uiText(R.string.setup_zkfc_fix)
+    }
+}
+
+/**
+ * Plain-text report for support: component states, versions and the raw
+ * reason each probe gave. Holds no token contents or key material.
+ */
+fun diagnosticsReport(p: SetupProbe, appVersion: String): String = buildString {
+    appendLine("Zairenkai diagnostics")
+    appendLine("app: $appVersion")
+    appendLine("root: ${p.rootState ?: p.root ?: "pending"}")
+    p.facts?.let { f ->
+        appendLine("kernel: ${f.kernel.ifBlank { "?" }} abi: ${f.abi.ifBlank { "?" }}")
+        appendLine("module: ${f.module}")
+        appendLine("zkfctl: ${f.zkfctl}${f.zkfctlPath?.let { " ($it)" } ?: ""}")
+        appendLine("/dev/zkfc: ${if (f.devNode) "present" else "absent"}; kernel module: ${if (f.kernelModule) "loaded" else "not listed"}; bundled zkfc.ko: ${f.bundledKo}")
+        appendLine("zperfd: ${f.engine}; running: ${f.engineRunning}")
+        appendLine("token file: ${if (f.tokenFile) "present" else "absent"}")
+    } ?: appendLine("install facts: not read")
+    val info = p.info
+    when {
+        !p.infoDone -> appendLine("zkfctl info: not run")
+        info == null -> appendLine("zkfctl info: no result")
+        info.ok -> appendLine("zkfctl info: ok api=${info.api.major}.${info.api.minor}.${info.api.patch} outdated=${info.api.outdated} arch=${info.arch} type=${info.kernelType} hook=${info.hookMode} license=${info.licenseState}")
+        else -> appendLine("zkfctl info: failed kind=${info.kind ?: "reported"} reason=${info.error?.replace('\n', ' ')?.take(200) ?: "-"}")
+    }
+    when {
+        !p.engineDone -> appendLine("zperfd status: not run")
+        p.engineStatus == null -> appendLine("zperfd status: no answer (installed=${p.engineInstalled})")
+        else -> p.engineStatus.let { appendLine("zperfd status: ok=${it.ok} desired=${it.desired} effective=${it.effective} hold=${it.hold ?: "-"} safe_mode=${it.safeMode}") }
+    }
 }
 
 /** Every probe has answered. */

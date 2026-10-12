@@ -12,6 +12,8 @@
     <string name="setup_start">Mulai penyiapan</string>
     <string name="setup_checking">Memeriksa…</string>
     <string name="setup_apply_profile">Terapkan %1$s</string>
+    <!-- %1$s: profile name -->
+    <string name="setup_applying">Menerapkan %1$s…</string>
     <string name="setup_skip_for_now">Lewati untuk sekarang</string>
     <string name="setup_enter_app">Masuk ke Zairenkai</string>
 
@@ -19,7 +21,7 @@
     <string name="setup_welcome_title">Selamat datang di Zairenkai</string>
     <string name="setup_welcome_body">Kendali performa untuk perangkat root, dijalankan oleh engine zperfd di atas framework kernel ZKFC.</string>
     <string name="setup_feature_monitor_title">Monitor langsung</string>
-    <string name="setup_feature_monitor_body">FPS UI, beban CPU per core, GPU, dan suhu zona termal.</string>
+    <string name="setup_feature_monitor_body">FPS game yang kamu pilih, beban CPU per core, GPU, baterai, dan suhu.</string>
     <string name="setup_feature_verified_title">Profil &amp; tweak terverifikasi</string>
     <string name="setup_feature_verified_body">Setiap perubahan diterapkan zperfd, dibaca balik dari kernel, dan dibatalkan otomatis bila gagal.</string>
     <string name="setup_feature_safety_title">Berlapis pengaman</string>
@@ -38,22 +40,47 @@
     <string name="setup_root_ok">Izin root diberikan.</string>
     <string name="setup_root_missing">Izin root ditolak atau pengelola root tidak ditemukan.</string>
     <string name="setup_root_fix">Izinkan Zairenkai di Magisk, KernelSU, atau APatch, lalu periksa ulang.</string>
+    <string name="setup_root_no_su">Pengelola root (su) tidak ditemukan di perangkat ini.</string>
+    <string name="setup_root_no_su_fix">Pasang Magisk, KernelSU, atau APatch, lalu periksa ulang.</string>
+    <string name="setup_root_timeout">Permintaan izin root belum dijawab.</string>
+    <string name="setup_root_timeout_fix">Jawab dialog izin di pengelola root, lalu ketuk Periksa ulang.</string>
     <string name="setup_zkfc_checking">Membaca /dev/zkfc…</string>
     <string name="setup_zkfc_missing">Tidak termuat.</string>
-    <string name="setup_zkfc_missing_detail">Tidak termuat: %1$s</string>
     <string name="setup_zkfc_fix">Pasang modul Zairenkai dengan modul kernel ZKFC yang cocok untuk kernel ini, lalu reboot.</string>
+    <string name="setup_zkfc_module_missing">Modul Zairenkai belum terpasang (zkfctl tidak ditemukan).</string>
+    <string name="setup_zkfc_reboot_pending">Modul Zairenkai baru dipasang dan belum aktif.</string>
+    <string name="setup_zkfc_reboot_pending_fix">Reboot perangkat untuk mengaktifkan modul, lalu periksa ulang.</string>
+    <string name="setup_zkfc_module_disabled">Modul Zairenkai dinonaktifkan di pengelola root.</string>
+    <string name="setup_zkfc_module_disabled_fix">Aktifkan modul di Magisk/KernelSU/APatch, reboot, lalu periksa ulang.</string>
+    <string name="setup_zkfc_module_removing">Modul Zairenkai ditandai untuk dihapus saat reboot.</string>
+    <string name="setup_zkfc_module_removing_fix">Batalkan penghapusan di pengelola root jika masih ingin memakainya.</string>
+    <!-- %1$s: device ABI, e.g. arm64-v8a -->
+    <string name="setup_zkfc_tool_missing">Modul terpasang, tetapi zkfctl tidak ada. Paket mungkin tidak membawa biner untuk ABI %1$s.</string>
+    <string name="setup_zkfc_tool_not_executable">zkfctl ada, tetapi tidak bisa dijalankan (izin berkas).</string>
+    <string name="setup_reinstall_module_fix">Pasang ulang modul Zairenkai yang sesuai untuk perangkat ini, lalu reboot.</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_ko_failed">zkfc.ko gagal dimuat pada kernel %1$s (/dev/zkfc tidak ada).</string>
+    <string name="setup_zkfc_ko_failed_fix">Modul kernel tidak cocok dengan KMI kernel ini. Pakai paket yang dibangun untuk kernel ini.</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_not_in_kernel">Kernel %1$s tidak menyediakan framework ZKFC (/dev/zkfc tidak ada) dan paket tidak membawa zkfc.ko untuknya.</string>
+    <string name="setup_zkfc_timeout">zkfctl tidak menjawab dalam batas waktu.</string>
+    <string name="setup_zkfc_timeout_fix">Periksa ulang. Jika berulang, reboot perangkat.</string>
+    <string name="setup_zkfc_malformed">zkfctl menjawab dengan format yang tidak dikenali (versi tidak cocok?).</string>
     <string name="setup_zkfc_outdated">%1$s (usang)</string>
     <string name="setup_zkfc_outdated_fix">Perbarui modul kernel ZKFC; fitur baru dinonaktifkan pada API lama.</string>
     <string name="setup_engine_checking">Menghubungi zperfd…</string>
     <string name="setup_engine_missing">Belum terpasang di /data/adb/zperf.</string>
     <string name="setup_engine_missing_fix">Pasang modul Zairenkai; zperfd adalah satu-satunya jalur yang menerapkan profil dan tweak.</string>
+    <string name="setup_engine_not_executable">zperfd ada di /data/adb/zperf, tetapi tidak bisa dijalankan.</string>
     <string name="setup_engine_silent">Terpasang, tetapi tidak merespons.</string>
+    <string name="setup_engine_not_running">Terpasang, tetapi layanannya tidak berjalan.</string>
     <string name="setup_engine_silent_fix">Reboot agar layanan modul memulai zperfd, lalu periksa ulang.</string>
     <string name="setup_engine_safe_mode">Aktif · SAFE MODE (baseline stok ditahan)</string>
     <string name="setup_engine_saved">Aktif · profil tersimpan: %1$s</string>
     <string name="setup_engine_default">Aktif · default engine: %1$s</string>
     <string name="setup_token_checking">Membaca status lisensi…</string>
     <string name="setup_token_needs_zkfc">Membutuhkan framework kernel ZKFC.</string>
+    <string name="setup_token_stored_waiting">Token tersimpan, tetapi baru bisa diverifikasi setelah framework ZKFC aktif.</string>
     <string name="setup_token_ok">Token valid; fitur performa terbuka.</string>
     <string name="setup_token_missing">Belum dipasang: profil performa dan tweak tetap terkunci.</string>
     <string name="setup_token_missing_fix">Pasang token di tab Sistem. Monitor tetap bisa dipakai tanpa token.</string>

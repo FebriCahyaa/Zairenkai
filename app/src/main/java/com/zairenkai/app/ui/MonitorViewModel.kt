@@ -69,6 +69,17 @@ internal fun monitorRetryDelayMs(failures: Int): Long =
     if (failures <= 0) 0L else 1000L shl (failures - 1).coerceAtMost(3)
 
 /**
+ * Like [monitorRetryDelayMs], but when zkfctl is known to be absent or not
+ * executable a retry cannot succeed until the module is installed, so ask
+ * once a minute instead of every 8 s.
+ */
+internal fun monitorNextDelayMs(failures: Int, failureKind: String?): Long =
+    if (failures > 0 && (failureKind == "not_found" || failureKind == "not_executable")) MISSING_DEPENDENCY_RETRY_MS
+    else monitorRetryDelayMs(failures)
+
+internal const val MISSING_DEPENDENCY_RETRY_MS = 60_000L
+
+/**
  * Thin view of the shared [com.zairenkai.app.data.monitor.LiveMonitor]: the
  * hub and every detail screen read the same state, so the graphs carry over
  * when the user opens a card.

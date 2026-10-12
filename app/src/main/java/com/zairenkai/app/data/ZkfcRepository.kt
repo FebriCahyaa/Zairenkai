@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.data
 
+import com.zairenkai.app.data.diag.InstallProbe
 
 class ZkfcRepository(
     val client: ZkfctlClient = ZkfctlClient(),
@@ -13,6 +14,11 @@ class ZkfcRepository(
 ) {
 
     suspend fun rootAvailable() = RootShell.isRootAvailable()
+    suspend fun rootState() = RootShell.rootState()
+
+    /** Installed components, read in one root shell; null when the shell did not run. */
+    suspend fun installFacts() = InstallProbe.parse(RootShell.run(InstallProbe.SCRIPT, 6000))
+    suspend fun safeClear() = client.safeClear()
     suspend fun core() = zperf.core()
     suspend fun corePermissions() = zperf.corePermissions()
 

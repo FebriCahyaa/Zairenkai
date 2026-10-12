@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
-    <string name="fps_drop_hitch">%1$s · Tirón momentáneo: un fotograma se retuvo %2$d ms. Suele ocurrir cuando el juego carga recursos, compila shaders o libera memoria.</string>
-    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · Los FPS bajaron de %2$d a %3$d durante %4$d s, mientras la temperatura de la batería subía %5$s °C desde el inicio de la sesión. Probablemente el dispositivo redujo la frecuencia por el calor (estrangulamiento térmico).</string>
-    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · Los FPS bajaron de %2$d a %3$d durante %4$d s (fotograma más largo: %5$d ms). Escena exigente y prolongada: la CPU o la GPU trabajan al límite.</string>
+    <string name="fps_drop_hitch">%1$s · Tirón momentáneo: un fotograma se retuvo %2$d ms. Suele deberse a la carga de recursos, la compilación de shaders o la liberación de memoria, pero los datos de fotogramas por sí solos no permiten confirmarlo.</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · Los FPS bajaron de %2$d a %3$d durante %4$d s, a la vez que la temperatura de la batería subía %5$s °C desde el inicio de la sesión. El calor puede influir (por ejemplo, por estrangulamiento térmico), pero estos datos solo muestran que ambas cosas ocurrieron a la vez.</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · Los FPS bajaron de %2$d a %3$d durante %4$d s (fotograma más largo: %5$d ms). Posiblemente una escena exigente que sobrecarga la CPU o la GPU.</string>
     <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · Caída breve de %2$d a %3$d FPS durante %4$d s (fotograma más largo: %5$d ms), luego se recuperó.</string>
 
     <!-- Session insights -->
@@ -15,7 +15,7 @@
     <string name="fps_insight_capped" tools:ignore="PluralsCandidate">Los FPS parecen limitados a %1$d mientras la pantalla funciona a %2$d Hz. Si el juego ofrece una opción de frame rate más alta, actívala para aprovechar toda la frecuencia de actualización.</string>
     <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">El 1%% low es de solo %1$d FPS frente a una media de %2$d: hay tirones ocasionales que se notan aunque la media sea alta.</string>
     <string name="fps_insight_pacing">Frame pacing irregular: el intervalo entre fotogramas varía ±%1$s ms respecto a la media de %2$s ms, y se percibe como microtirones.</string>
-    <string name="fps_insight_thermal_decline">Los FPS bajaron un %1$d%% en el último tercio de la sesión mientras la temperatura de la batería subía %2$s °C: indicio de estrangulamiento térmico.</string>
+    <string name="fps_insight_thermal_decline">Los FPS bajaron un %1$d%% en el último tercio de la sesión, a la vez que la temperatura de la batería subía %2$s °C. El calor puede influir (estrangulamiento térmico), pero estos datos no permiten confirmar la causa exacta.</string>
     <string name="fps_insight_decline">Los FPS bajaron un %1$d%% en el último tercio de la sesión respecto al inicio, sin un aumento notable de temperatura: probablemente escenas más exigentes.</string>
     <plurals name="fps_insight_stutters">
         <item quantity="one">%1$d tirón de más de 100 ms (%2$d ms), visible a simple vista.</item>
@@ -34,12 +34,18 @@
     <!-- %1$s: app name -->
     <string name="fps_notif_recording">Grabando %1$s</string>
     <string name="fps_notif_stop">Detener</string>
+    <string name="fps_notif_blocked_root">Detenido: el permiso de root no está disponible</string>
+    <string name="fps_notif_blocked_engine">Detenido: el motor zperfd no está instalado</string>
+    <string name="fps_notif_blocked_stream">Detenido: zperfd no envía datos de fotogramas</string>
     <!-- FPS screen -->
     <string name="fps_screen_title">Monitor de FPS</string>
     <string name="fps_auto_title">Grabación automática</string>
     <string name="fps_auto_off">Actívala para grabar los FPS automáticamente cada vez que se abra una app monitorizada.</string>
     <string name="fps_auto_no_apps">Añade al menos una app abajo para empezar a grabar.</string>
     <string name="fps_auto_connecting">Conectando con zperfd (requiere el módulo Zairenkai y acceso root)…</string>
+    <string name="fps_auto_blocked_root">No se puede grabar: el permiso de root no está disponible. Permite Zairenkai en el gestor de root; la grabación se reintentará automáticamente.</string>
+    <string name="fps_auto_blocked_engine">No se puede grabar: el motor zperfd del módulo Zairenkai no está instalado. Los FPS del juego se leen a través de zperfd, así que instala el módulo y reinicia.</string>
+    <string name="fps_auto_blocked_stream">zperfd está en ejecución, pero no envía datos de fotogramas (¿versión antigua del motor?). Actualiza el módulo Zairenkai; la grabación se reintentará automáticamente.</string>
     <string name="fps_auto_waiting">Esperando a que se abra una app monitorizada.</string>
     <string name="fps_auto_recording">Grabando. La sesión se guarda al cerrar la app.</string>
     <plurals name="fps_frames_recorded">
@@ -114,7 +120,7 @@
     <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d eventos, con su explicación</string>
     <string name="fps_drops_none">No hubo caídas de FPS relevantes en esta sesión.</string>
     <string name="fps_cause_hitch">TIRÓN</string>
-    <string name="fps_cause_thermal">TÉRMICO</string>
+    <string name="fps_cause_thermal">SUBE TEMP.</string>
     <string name="fps_cause_sustained">EXIGENTE</string>
     <string name="fps_cause_brief">BREVE</string>
     <string name="fps_frametime_title">Tiempo de fotograma</string>

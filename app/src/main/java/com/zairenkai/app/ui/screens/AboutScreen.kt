@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -43,19 +44,7 @@ import kotlin.math.sin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.about_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back))
-                    }
-                },
-            )
-        },
-    ) { inner ->
+    CollapsingScaffold(stringResource(R.string.about_title), onBack = onBack) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -48,19 +49,7 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
     val vm: SettingsViewModel = viewModel(factory = factory)
     val s by vm.settings.collectAsState(initial = AppSettings())
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.theme_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back))
-                    }
-                },
-            )
-        },
-    ) { inner ->
+    CollapsingScaffold(stringResource(R.string.theme_title), onBack = onBack) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

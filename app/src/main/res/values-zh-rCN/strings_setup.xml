@@ -12,6 +12,8 @@
     <string name="setup_start">开始设置</string>
     <string name="setup_checking">正在检查…</string>
     <string name="setup_apply_profile">应用%1$s</string>
+    <!-- %1$s: profile name -->
+    <string name="setup_applying">正在应用%1$s…</string>
     <string name="setup_skip_for_now">暂时跳过</string>
     <string name="setup_enter_app">进入 Zairenkai</string>
 
@@ -19,7 +21,7 @@
     <string name="setup_welcome_title">欢迎使用 Zairenkai</string>
     <string name="setup_welcome_body">面向 root 设备的性能控制，由运行在 ZKFC 内核框架之上的 zperfd 引擎驱动。</string>
     <string name="setup_feature_monitor_title">实时监控</string>
-    <string name="setup_feature_monitor_body">UI FPS、每核心 CPU 负载、GPU 以及温控区温度。</string>
+    <string name="setup_feature_monitor_body">所选游戏的 FPS、每核心 CPU 负载、GPU、电池以及温度。</string>
     <string name="setup_feature_verified_title">经验证的配置与调校</string>
     <string name="setup_feature_verified_body">每项更改都由 zperfd 应用，并从内核回读；失败时自动回滚。</string>
     <string name="setup_feature_safety_title">多层安全防护</string>
@@ -38,22 +40,47 @@
     <string name="setup_root_ok">已授予 root 权限。</string>
     <string name="setup_root_missing">root 权限被拒绝，或未找到 root 管理器。</string>
     <string name="setup_root_fix">请在 Magisk、KernelSU 或 APatch 中允许 Zairenkai，然后重新检查。</string>
+    <string name="setup_root_no_su">此设备上未找到 root 管理器（su）。</string>
+    <string name="setup_root_no_su_fix">请安装 Magisk、KernelSU 或 APatch，然后重新检查。</string>
+    <string name="setup_root_timeout">root 权限请求尚未得到响应。</string>
+    <string name="setup_root_timeout_fix">请在 root 管理器中响应授权对话框，然后点按“重新检查”。</string>
     <string name="setup_zkfc_checking">正在读取 /dev/zkfc…</string>
     <string name="setup_zkfc_missing">未加载。</string>
-    <string name="setup_zkfc_missing_detail">未加载：%1$s</string>
     <string name="setup_zkfc_fix">安装 Zairenkai 模块及与此内核匹配的 ZKFC 内核模块，然后重启。</string>
+    <string name="setup_zkfc_module_missing">Zairenkai 模块尚未安装（未找到 zkfctl）。</string>
+    <string name="setup_zkfc_reboot_pending">Zairenkai 模块刚安装，尚未生效。</string>
+    <string name="setup_zkfc_reboot_pending_fix">请重启设备以启用模块，然后重新检查。</string>
+    <string name="setup_zkfc_module_disabled">Zairenkai 模块已在 root 管理器中被禁用。</string>
+    <string name="setup_zkfc_module_disabled_fix">请在 Magisk/KernelSU/APatch 中启用模块，重启后重新检查。</string>
+    <string name="setup_zkfc_module_removing">Zairenkai 模块已被标记为在重启时移除。</string>
+    <string name="setup_zkfc_module_removing_fix">如果仍想继续使用，请在 root 管理器中取消移除。</string>
+    <!-- %1$s: device ABI, e.g. arm64-v8a -->
+    <string name="setup_zkfc_tool_missing">模块已安装，但缺少 zkfctl。安装包可能未包含适用于 ABI %1$s 的二进制文件。</string>
+    <string name="setup_zkfc_tool_not_executable">zkfctl 存在，但无法运行（文件权限问题）。</string>
+    <string name="setup_reinstall_module_fix">请重新安装适用于此设备的 Zairenkai 模块，然后重启。</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_ko_failed">zkfc.ko 无法在内核 %1$s 上加载（/dev/zkfc 不存在）。</string>
+    <string name="setup_zkfc_ko_failed_fix">内核模块与此内核的 KMI 不匹配。请使用为此内核构建的安装包。</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_not_in_kernel">内核 %1$s 未提供 ZKFC 内核框架（/dev/zkfc 不存在），且安装包中没有适用于它的 zkfc.ko。</string>
+    <string name="setup_zkfc_timeout">zkfctl 未在时限内响应。</string>
+    <string name="setup_zkfc_timeout_fix">请重新检查。如果问题反复出现，请重启设备。</string>
+    <string name="setup_zkfc_malformed">zkfctl 返回了无法识别的格式（版本不匹配？）。</string>
     <string name="setup_zkfc_outdated">%1$s（过旧）</string>
     <string name="setup_zkfc_outdated_fix">请更新 ZKFC 内核模块；旧版 API 下新功能将被禁用。</string>
     <string name="setup_engine_checking">正在连接 zperfd…</string>
     <string name="setup_engine_missing">尚未安装到 /data/adb/zperf。</string>
     <string name="setup_engine_missing_fix">请安装 Zairenkai 模块；zperfd 是应用配置与调校的唯一途径。</string>
+    <string name="setup_engine_not_executable">zperfd 位于 /data/adb/zperf，但无法运行。</string>
     <string name="setup_engine_silent">已安装，但无响应。</string>
+    <string name="setup_engine_not_running">已安装，但其服务未运行。</string>
     <string name="setup_engine_silent_fix">请重启，让模块服务启动 zperfd，然后重新检查。</string>
     <string name="setup_engine_safe_mode">运行中 · SAFE MODE（保持原厂基线）</string>
     <string name="setup_engine_saved">运行中 · 已保存的配置：%1$s</string>
     <string name="setup_engine_default">运行中 · 引擎默认：%1$s</string>
     <string name="setup_token_checking">正在读取许可状态…</string>
     <string name="setup_token_needs_zkfc">需要 ZKFC 内核框架。</string>
+    <string name="setup_token_stored_waiting">令牌已保存，但需等 ZKFC 内核框架启用后才能验证。</string>
     <string name="setup_token_ok">令牌有效；性能功能已解锁。</string>
     <string name="setup_token_missing">尚未安装：性能配置与调校仍处于锁定状态。</string>
     <string name="setup_token_missing_fix">请在“系统”标签页中安装令牌。无令牌时仍可使用监控。</string>

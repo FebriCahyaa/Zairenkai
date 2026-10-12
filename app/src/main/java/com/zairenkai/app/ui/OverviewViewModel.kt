@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * Dashboard overview: root, ZKFC info, license, boost and thermal state.
+ * Dashboard overview: the system check (root, installed components, ZKFC,
+ * engine, token) plus the ZKFC, license, boost and thermal state. A result
+ * that did not come back `ok` is dropped, so its defaults (API 0.0.0, hook
+ * "none", zero boosts) are never shown as device data.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui
@@ -10,66 +13,91 @@ import androidx.lifecycle.viewModelScope
 import com.zairenkai.app.AppContainer
 import com.zairenkai.app.core.text.UiText
 import com.zairenkai.app.data.*
+import com.zairenkai.app.data.diag.BinState
+import com.zairenkai.app.ui.onboarding.SetupCheck
+import com.zairenkai.app.ui.onboarding.SetupProbe
+import com.zairenkai.app.ui.onboarding.SetupProber
+import com.zairenkai.app.ui.onboarding.setupChecks
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class OverviewState(
     val loading: Boolean = true,
-    val rootAvailable: Boolean = false,
+    val probe: SetupProbe = SetupProbe(),
+    /** Only an `ok` answer is kept; null means not available. */
     val info: InfoResult? = null,
     val license: LicenseResult? = null,
     val boost: BoostStatus? = null,
     val thermal: ThermalStatus? = null,
     val safeMode: Boolean = false,
     val message: UiText? = null,
-)
+) {
+    val rootAvailable: Boolean get() = probe.root == true
+    val checks: List<SetupCheck> get() = setupChecks(probe)
+}
 
 class OverviewViewModel(private val c: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(OverviewState())
     val state: StateFlow<OverviewState> = _state.asStateFlow()
+    private var job: Job? = null
+    private var confirmJob: Job? = null
 
     init { refresh() }
 
     fun refresh() {
-        _state.value = _state.value.copy(loading = true)
-        viewModelScope.launch {
-            val root = c.repository.rootAvailable()
-            if (!root) {
-                _state.value = OverviewState(loading = false, rootAvailable = false)
+        job?.cancel()
+        confirmJob?.cancel()
+        _state.value = OverviewState(loading = true)
+        job = viewModelScope.launch {
+            SetupProber(c).run { f -> _state.update { it.copy(probe = f(it.probe)) } }
+            val p = _state.value.probe
+            if (p.root != true) {
+                _state.update { it.copy(loading = false) }
                 return@launch
             }
-            val safe = runCatching { c.repository.safeStatus() }.getOrNull()
-            val info = runCatching { c.repository.info() }.getOrNull()
-            val lic = runCatching { c.repository.license() }.getOrNull()
-            val boost = runCatching { c.repository.boostStatus() }.getOrNull()
-            val thermal = runCatching { c.zperf.thermal() }.getOrNull()
-            viewModelScope.launch {
-                kotlinx.coroutines.delay(15_000)
-                val engineHealthy = runCatching { c.zperf.status()?.ok == true }.getOrDefault(false)
-                val probeHealthy = runCatching { c.zperf.probe() != null }.getOrDefault(false)
-                // A missing license is a normal state, not a boot-health failure.
-                // Boot confirmation only proves the engine/probe path is stable.
-                if (info != null && engineHealthy && probeHealthy && (safe?.safeMode != true)) {
-                    runCatching { c.repository.safeConfirm() }
-                }
+            val info = p.info?.takeIf { it.ok }
+            val tool = p.facts?.zkfctl?.let { it == BinState.OK } ?: (info != null)
+            // Safe-mode status needs zkfctl but not /dev/zkfc.
+            val safe = if (tool) runCatching { c.repository.safeStatus() }.getOrNull()?.takeIf { it.ok } else null
+            val lic = if (info != null) runCatching { c.repository.license() }.getOrNull()?.takeIf { it.ok } else null
+            val boost = if (info != null) runCatching { c.repository.boostStatus() }.getOrNull()?.takeIf { it.ok } else null
+            val thermal = if (p.engineInstalled == true) runCatching { c.zperf.thermal() }.getOrNull() else null
+            _state.update {
+                it.copy(
+                    loading = false, info = info, license = lic, boost = boost, thermal = thermal,
+                    safeMode = safe?.safeMode == true,
+                )
             }
-            _state.value = OverviewState(
-                loading = false, rootAvailable = true, info = info, license = lic,
-                boost = boost, thermal = thermal, safeMode = safe?.safeMode == true,
-            )
+            if (info != null && safe?.safeMode != true) scheduleBootConfirm()
+        }
+    }
+
+    /**
+     * Fifteen seconds after a healthy load, confirm the boot so the next one
+     * is not counted as a crash. Only when ZKFC answered, the engine and its
+     * probe answer again now, and safe mode is off.
+     */
+    private fun scheduleBootConfirm() {
+        confirmJob = viewModelScope.launch {
+            delay(15_000)
+            val engineHealthy = runCatching { c.zperf.status()?.ok == true }.getOrDefault(false)
+            val probeHealthy = runCatching { c.zperf.probe() != null }.getOrDefault(false)
+            if (engineHealthy && probeHealthy) runCatching { c.repository.safeConfirm() }
         }
     }
 
     fun resetBoosts() = viewModelScope.launch {
-        val b = runCatching { c.repository.boostReset() }.getOrNull()
-        _state.value = _state.value.copy(boost = b)
+        val b = runCatching { c.repository.boostReset() }.getOrNull()?.takeIf { it.ok }
+        _state.update { it.copy(boost = b) }
     }
 
     fun clearSafeMode() = viewModelScope.launch {
-        runCatching { ZkfctlClient().safeClear() }
+        runCatching { c.repository.safeClear() }
         refresh()
     }
 }

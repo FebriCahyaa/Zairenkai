@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.R
+import com.zairenkai.app.data.fps.FpsBlock
 import com.zairenkai.app.data.fps.FpsMonitorService
 import com.zairenkai.app.data.fps.FpsRecording
 import com.zairenkai.app.ui.FpsViewModel
@@ -83,6 +84,9 @@ fun FpsScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (String) ->
                                 when {
                                     !live.running -> R.string.fps_auto_off
                                     watch.isEmpty() -> R.string.fps_auto_no_apps
+                                    live.blocked == FpsBlock.NO_ROOT -> R.string.fps_auto_blocked_root
+                                    live.blocked == FpsBlock.ENGINE_MISSING -> R.string.fps_auto_blocked_engine
+                                    live.blocked == FpsBlock.STREAM_FAILED -> R.string.fps_auto_blocked_stream
                                     !live.streaming -> R.string.fps_auto_connecting
                                     live.recording != null -> R.string.fps_auto_recording
                                     else -> R.string.fps_auto_waiting

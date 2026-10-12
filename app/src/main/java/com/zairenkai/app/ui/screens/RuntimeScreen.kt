@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,15 +63,10 @@ fun RuntimeScreen(factory: VmFactory, onBack: () -> Unit = {}) {
     val ui by vm.ui.collectAsState()
     val snap = ui.snapshot
 
-    Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.runtime_title)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back)) } },
-                actions = { IconButton(onClick = vm::refresh) { Icon(Icons.Rounded.Refresh, stringResource(R.string.action_reload)) } },
-            )
-        },
+    CollapsingScaffold(
+        stringResource(R.string.runtime_title),
+        onBack = onBack,
+        actions = { IconButton(onClick = vm::refresh) { Icon(Icons.Rounded.Refresh, stringResource(R.string.action_reload)) } },
     ) { inner ->
         when {
             ui.loading && snap == null -> Column(Modifier.fillMaxSize().padding(inner), verticalArrangement = Arrangement.Center) {

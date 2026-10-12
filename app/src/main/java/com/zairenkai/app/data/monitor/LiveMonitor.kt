@@ -24,7 +24,7 @@ import com.zairenkai.app.data.power.AndroidBatteryReader
 import com.zairenkai.app.data.power.BatteryMath
 import com.zairenkai.app.data.power.BatteryReading
 import com.zairenkai.app.ui.MonitorUi
-import com.zairenkai.app.ui.monitorRetryDelayMs
+import com.zairenkai.app.ui.monitorNextDelayMs
 import com.zairenkai.app.ui.withResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -150,7 +150,7 @@ class LiveMonitor(
             val m = runCatching { repository.monitor(SAMPLE_WINDOW_MS) }.getOrNull()
             currentCoroutineContext().ensureActive()
             _state.update { it.withMonitor(m) }
-            delay(monitorRetryDelayMs(_state.value.monitor.failures))
+            delay(monitorNextDelayMs(_state.value.monitor.failures, m?.kind))
         }
     }
 

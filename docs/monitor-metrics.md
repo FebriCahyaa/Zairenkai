@@ -32,8 +32,10 @@ missing root grant only empties what needs root:
 Starting again keeps the chart history but waits for a fresh sample before
 it shows **LIVE**. When root telemetry fails and nothing has come in since,
 the hub shows **DATA DASAR** and a small dismissable banner; CPU, GPU and
-thermal cards show "Butuh modul Zairenkai" while battery, RAM and FPS keep
-working.
+thermal cards show "Butuh modul Zairenkai" while battery and RAM keep working.
+The FPS recorder also needs the module (zperfd), and says so. When zkfctl is
+known to be missing, the monitor loop retries once a minute instead of every
+8 s; see [setup-and-diagnostics.md](setup-and-diagnostics.md).
 
 Charts hold the last **90 valid points** (CPU, GPU, per core, per cluster,
 temperature, memory) and **1800** battery readings (30 minutes at 1 s). Only
@@ -98,8 +100,8 @@ supplies typed `USB*`, `Mains` or `Wireless`).
 | Power | voltage × current, signed like the current | W | "—" |
 | Remaining charge | `BATTERY_PROPERTY_CHARGE_COUNTER`, else zperfd `charge_counter` | µAh → mAh | "—" |
 | Time to full | `computeChargeTimeRemaining()`, else zperfd `time_to_full_now`; only while charging | min | hidden |
-| Cycle count | `EXTRA_CYCLE_COUNT` (Android 14+), else zperfd `cycle_count` | count | "—" |
-| Health % (wear) | zperfd `charge_full / charge_full_design`, kept only within 30–120 % | % | "not reported" / "needs module" note |
+| Cycle count | `EXTRA_CYCLE_COUNT` (Android 14+, from the vendor battery HAL), else zperfd `cycle_count`. The source is shown under the number; when both report and disagree, the kernel's value is shown too. Vendors count cycles differently, so neither is presented as the only truth | count | "—" |
+| Health % (wear, **estimate**) | zperfd `charge_full / charge_full_design`, kept only within 30–120 %. `charge_full` is the fuel gauge's learned capacity, so the screen labels it an estimate | % | "not reported" / "needs module" note |
 | Charger input | zperfd online charger: `voltage_now`, `current_now` (or `input_current_now`), type from `real_type`/`usb_type`/`type` | V, A, W | "—" with a note |
 | Charge phase | zperfd `charge_type` (Fast, Taper, Trickle...) | text | hidden |
 
@@ -152,7 +154,10 @@ timestamps:
 merged when under 2 s apart. Each is classified: *hitch* (one long frame),
 *thermal* (battery temperature at least 4 °C above the session start; a
 relative rise, not a fixed limit), *sustained* (5 s or longer) or *brief*,
-and explained with the numbers of that event. **Insights** are generated per
+and explained with the numbers of that event. A thermal event is worded as a
+correlation (the temperature rose while FPS fell; heat *may* contribute), never
+as a proven cause. Hitch and sustained events name common causes as
+possibilities only. **Insights** are generated per
 session from the same data (stability, a frame-rate cap below the panel
 refresh, low 1 % lows, uneven pacing, decline in the last third with or
 without a temperature rise, stutters, jank rate, average power), so the text

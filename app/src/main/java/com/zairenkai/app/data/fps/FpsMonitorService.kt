@@ -41,9 +41,21 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+/** Why the recorder cannot receive frames right now. */
+enum class FpsBlock {
+    /** Root is not granted. */
+    NO_ROOT,
+    /** zperfd is not installed (or not executable) at /data/adb/zperf/zperfd. */
+    ENGINE_MISSING,
+    /** zperfd started but ended without a single line (older engine without `frames`, or it crashed). */
+    STREAM_FAILED,
+}
+
 /** What the FPS screen shows while the recorder runs. */
 data class FpsLive(
     val running: Boolean = false,
+    /** Set when the recorder is on but blocked; it keeps retrying with a backoff. */
+    val blocked: FpsBlock? = null,
     /** True once zperfd answered; false when the stream could not start. */
     val streaming: Boolean = false,
     val foreground: String? = null,
@@ -78,13 +90,30 @@ class FpsMonitorService : Service() {
             val labels = AppLabels(this@FpsMonitorService)
             container.settings.settings.map { it.fpsWatch }.distinctUntilChanged().collectLatest { watch ->
                 val builder = FpsSessionBuilder()
+                var misses = 0
                 try {
                     while (isActive) {
                         if (watch.isEmpty()) {
                             _live.value = FpsLive(running = true)
                             delay(Long.MAX_VALUE)
                         }
+                        // Check the dependencies first so a missing engine is
+                        // reported (and retried slowly) instead of spawning a
+                        // stream that can only fail.
+                        val block = when {
+                            !container.repository.rootAvailable() -> FpsBlock.NO_ROOT
+                            !container.zperf.available() -> FpsBlock.ENGINE_MISSING
+                            else -> null
+                        }
+                        if (block != null) {
+                            setBlocked(block)
+                            delay(fpsRetryDelayMs(++misses))
+                            continue
+                        }
+                        var lines = 0
                         container.zperf.frames(watch.toList(), INTERVAL_MS).collect { b ->
+                            lines++
+                            misses = 0
                             val a = battery.read()
                             val current = BatteryMath.currentMa(a.currentRaw, a.status)
                             val power = BatteryMath.powerW(a.voltageV, current)?.let { abs(it) }
@@ -107,11 +136,12 @@ class FpsMonitorService : Service() {
                                 )
                             }
                         }
-                        // The stream ended (zperfd missing, root revoked): keep what was
-                        // recorded and retry later.
+                        // The stream ended (engine stopped, root revoked): keep what
+                        // was recorded and retry with a backoff.
                         builder.finish(labels::label)?.let { container.fpsStore.add(it) }
-                        _live.value = _live.value.copy(streaming = false, recording = null, recordingLabel = null, fps = null)
-                        delay(RETRY_MS)
+                        if (lines == 0) setBlocked(FpsBlock.STREAM_FAILED)
+                        else _live.value = _live.value.copy(streaming = false, recording = null, recordingLabel = null, fps = null)
+                        delay(fpsRetryDelayMs(++misses))
                     }
                 } finally {
                     builder.finish(labels::label)?.let { scope.launch { container.fpsStore.add(it) } }
@@ -119,6 +149,21 @@ class FpsMonitorService : Service() {
             }
         }
         return START_STICKY
+    }
+
+    private fun setBlocked(block: FpsBlock) {
+        if (_live.value.blocked != block) {
+            notify(
+                getString(
+                    when (block) {
+                        FpsBlock.NO_ROOT -> R.string.fps_notif_blocked_root
+                        FpsBlock.ENGINE_MISSING -> R.string.fps_notif_blocked_engine
+                        FpsBlock.STREAM_FAILED -> R.string.fps_notif_blocked_stream
+                    },
+                ),
+            )
+        }
+        _live.value = FpsLive(running = true, blocked = block)
     }
 
     private fun stopRecording() {
@@ -178,8 +223,10 @@ class FpsMonitorService : Service() {
         private const val CHANNEL = "zk_fps"
         private const val NOTIF_ID = 43
         private const val INTERVAL_MS = 1000
-        private const val RETRY_MS = 10_000L
         const val ACTION_STOP = "com.zairenkai.app.FPS_STOP"
+
+        /** 10 s, 20 s, 40 s ... capped at 5 min while a dependency is missing. */
+        fun fpsRetryDelayMs(misses: Int): Long = (10_000L shl (misses - 1).coerceIn(0, 5)).coerceAtMost(300_000L)
 
         private val _live = MutableStateFlow(FpsLive())
         val live: StateFlow<FpsLive> = _live.asStateFlow()

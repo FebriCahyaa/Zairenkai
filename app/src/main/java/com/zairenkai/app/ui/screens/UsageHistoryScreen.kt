@@ -53,23 +53,15 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
         ActivityResultContracts.RequestPermission(),
     ) { ZkMonitorService.start(context) }
 
-    Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.usage_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back)) }
-                },
-                actions = {
-                    if (ui.sessions.isNotEmpty()) {
-                        IconButton(onClick = { vm.clearAll() }) {
-                            Icon(Icons.Rounded.DeleteSweep, stringResource(R.string.usage_clear_all))
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-            )
+    CollapsingScaffold(
+        stringResource(R.string.usage_title),
+        onBack = onBack,
+        actions = {
+            if (ui.sessions.isNotEmpty()) {
+                IconButton(onClick = { vm.clearAll() }) {
+                    Icon(Icons.Rounded.DeleteSweep, stringResource(R.string.usage_clear_all))
+                }
+            }
         },
     ) { inner ->
         LazyColumn(

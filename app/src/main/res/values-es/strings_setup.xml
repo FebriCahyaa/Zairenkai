@@ -12,6 +12,8 @@
     <string name="setup_start">Iniciar configuración</string>
     <string name="setup_checking">Comprobando…</string>
     <string name="setup_apply_profile">Aplicar %1$s</string>
+    <!-- %1$s: profile name -->
+    <string name="setup_applying">Aplicando %1$s…</string>
     <string name="setup_skip_for_now">Omitir por ahora</string>
     <string name="setup_enter_app">Entrar en Zairenkai</string>
 
@@ -19,7 +21,7 @@
     <string name="setup_welcome_title">Te damos la bienvenida a Zairenkai</string>
     <string name="setup_welcome_body">Control de rendimiento para dispositivos con root, gestionado por el motor zperfd sobre el framework de kernel ZKFC.</string>
     <string name="setup_feature_monitor_title">Monitor en vivo</string>
-    <string name="setup_feature_monitor_body">FPS de la UI, carga de CPU por núcleo, GPU y temperatura de las zonas térmicas.</string>
+    <string name="setup_feature_monitor_body">FPS del juego que elijas, carga de CPU por núcleo, GPU, batería y temperatura.</string>
     <string name="setup_feature_verified_title">Perfiles y ajustes verificados</string>
     <string name="setup_feature_verified_body">zperfd aplica cada cambio, que se relee desde el kernel y se revierte automáticamente si falla.</string>
     <string name="setup_feature_safety_title">Varias capas de seguridad</string>
@@ -38,22 +40,47 @@
     <string name="setup_root_ok">Permiso de root concedido.</string>
     <string name="setup_root_missing">Permiso de root denegado o no se encontró un gestor de root.</string>
     <string name="setup_root_fix">Permite Zairenkai en Magisk, KernelSU o APatch y vuelve a comprobar.</string>
+    <string name="setup_root_no_su">No se encontró ningún gestor de root (su) en este dispositivo.</string>
+    <string name="setup_root_no_su_fix">Instala Magisk, KernelSU o APatch y vuelve a comprobar.</string>
+    <string name="setup_root_timeout">La solicitud de permiso de root aún no se ha respondido.</string>
+    <string name="setup_root_timeout_fix">Responde al diálogo de permiso en el gestor de root y toca Volver a comprobar.</string>
     <string name="setup_zkfc_checking">Leyendo /dev/zkfc…</string>
     <string name="setup_zkfc_missing">No cargado.</string>
-    <string name="setup_zkfc_missing_detail">No cargado: %1$s</string>
     <string name="setup_zkfc_fix">Instala el módulo Zairenkai con el módulo de kernel ZKFC adecuado para este kernel y reinicia.</string>
+    <string name="setup_zkfc_module_missing">El módulo Zairenkai no está instalado (no se encontró zkfctl).</string>
+    <string name="setup_zkfc_reboot_pending">El módulo Zairenkai se acaba de instalar y aún no está activo.</string>
+    <string name="setup_zkfc_reboot_pending_fix">Reinicia el dispositivo para activar el módulo y vuelve a comprobar.</string>
+    <string name="setup_zkfc_module_disabled">El módulo Zairenkai está desactivado en el gestor de root.</string>
+    <string name="setup_zkfc_module_disabled_fix">Activa el módulo en Magisk/KernelSU/APatch, reinicia y vuelve a comprobar.</string>
+    <string name="setup_zkfc_module_removing">El módulo Zairenkai está marcado para eliminarse al reiniciar.</string>
+    <string name="setup_zkfc_module_removing_fix">Cancela la eliminación en el gestor de root si aún quieres usarlo.</string>
+    <!-- %1$s: device ABI, e.g. arm64-v8a -->
+    <string name="setup_zkfc_tool_missing">El módulo está instalado, pero falta zkfctl. Es posible que el paquete no incluya el binario para la ABI %1$s.</string>
+    <string name="setup_zkfc_tool_not_executable">zkfctl existe, pero no se puede ejecutar (permisos de archivo).</string>
+    <string name="setup_reinstall_module_fix">Reinstala el módulo Zairenkai adecuado para este dispositivo y reinicia.</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_ko_failed">zkfc.ko no se pudo cargar en el kernel %1$s (/dev/zkfc no existe).</string>
+    <string name="setup_zkfc_ko_failed_fix">El módulo de kernel no coincide con la KMI de este kernel. Usa el paquete compilado para este kernel.</string>
+    <!-- %1$s: kernel release -->
+    <string name="setup_zkfc_not_in_kernel">El kernel %1$s no ofrece el framework ZKFC (/dev/zkfc no existe) y el paquete no incluye zkfc.ko para él.</string>
+    <string name="setup_zkfc_timeout">zkfctl no respondió dentro del tiempo límite.</string>
+    <string name="setup_zkfc_timeout_fix">Vuelve a comprobar. Si se repite, reinicia el dispositivo.</string>
+    <string name="setup_zkfc_malformed">zkfctl respondió con un formato no reconocido (¿versiones incompatibles?).</string>
     <string name="setup_zkfc_outdated">%1$s (obsoleto)</string>
     <string name="setup_zkfc_outdated_fix">Actualiza el módulo de kernel ZKFC; las funciones nuevas están desactivadas con la API antigua.</string>
     <string name="setup_engine_checking">Contactando con zperfd…</string>
     <string name="setup_engine_missing">Aún no está instalado en /data/adb/zperf.</string>
     <string name="setup_engine_missing_fix">Instala el módulo Zairenkai; zperfd es la única vía que aplica perfiles y ajustes.</string>
+    <string name="setup_engine_not_executable">zperfd está en /data/adb/zperf, pero no se puede ejecutar.</string>
     <string name="setup_engine_silent">Instalado, pero no responde.</string>
+    <string name="setup_engine_not_running">Instalado, pero el servicio no está en ejecución.</string>
     <string name="setup_engine_silent_fix">Reinicia para que el servicio del módulo inicie zperfd y vuelve a comprobar.</string>
     <string name="setup_engine_safe_mode">Activo · SAFE MODE (se mantiene la base de fábrica)</string>
     <string name="setup_engine_saved">Activo · perfil guardado: %1$s</string>
     <string name="setup_engine_default">Activo · predeterminado del motor: %1$s</string>
     <string name="setup_token_checking">Leyendo el estado de la licencia…</string>
     <string name="setup_token_needs_zkfc">Requiere el framework de kernel ZKFC.</string>
+    <string name="setup_token_stored_waiting">Token guardado, pero solo podrá verificarse cuando el framework ZKFC esté activo.</string>
     <string name="setup_token_ok">Token válido; funciones de rendimiento desbloqueadas.</string>
     <string name="setup_token_missing">Sin instalar: los perfiles de rendimiento y los ajustes siguen bloqueados.</string>
     <string name="setup_token_missing_fix">Instala el token en la pestaña Sistema. El monitor se puede usar sin token.</string>

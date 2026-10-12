@@ -7,10 +7,10 @@ package com.zairenkai.app
 
 import android.os.Bundle
 import android.content.Context
+import android.content.res.Configuration
 import androidx.activity.ComponentActivity
 import com.zairenkai.app.ui.locale.AppLocale
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -25,6 +25,7 @@ import com.zairenkai.app.ui.onboarding.Onboarding
 import com.zairenkai.app.ui.theme.GlassBackdrop
 import com.zairenkai.app.ui.theme.GlassConfig
 import com.zairenkai.app.ui.theme.ZairenkaiTheme
+import com.zairenkai.app.ui.theme.applySystemBars
 
 class MainActivity : ComponentActivity() {
     // Android 12 per-app language (Android 13+ is handled by the framework).
@@ -34,7 +35,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
-        enableEdgeToEdge()
+        // Until settings load (splash), follow the system; ZairenkaiTheme then
+        // re-applies the same policy with the app's own light/dark choice.
+        applySystemBars(dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
         super.onCreate(savedInstanceState)
         val container = (application as ZairenkaiApp).container
 

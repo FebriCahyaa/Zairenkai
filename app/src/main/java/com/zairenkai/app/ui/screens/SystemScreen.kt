@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.components.CollapsingScaffold
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -66,7 +67,7 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
         }
     }
 
-    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text(stringResource(R.string.system_title)) }) }) { inner ->
+    CollapsingScaffold(stringResource(R.string.system_title), onBack = null) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

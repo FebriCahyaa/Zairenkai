@@ -20,6 +20,8 @@ data class ApiVersion(
 data class InfoResult(
     val ok: Boolean = false,
     val error: String? = null,
+    /** Why there is no answer when the app synthesized this result: not_found, not_executable, timeout, malformed, no_output. */
+    val kind: String? = null,
     @SerialName("zkfctl_version") val zkfctlVersion: String = "",
     val api: ApiVersion = ApiVersion(),
     val arch: String = "unknown",
@@ -44,6 +46,8 @@ data class TokenInfo(
 data class LicenseResult(
     val ok: Boolean = false,
     val error: String? = null,
+    /** Why there is no answer when the app synthesized this result: not_found, not_executable, timeout, malformed, no_output. */
+    val kind: String? = null,
     val state: String = "missing",
     @SerialName("has_token") val hasToken: Boolean = false,
     @SerialName("owner_key_provisioned") val ownerKeyProvisioned: Boolean = false,
@@ -150,6 +154,8 @@ data class ZkfcPerf(
 data class MonitorResult(
     val ok: Boolean = false,
     val error: String? = null,
+    /** Why there is no answer when the app synthesized this result: not_found, not_executable, timeout, malformed, no_output. */
+    val kind: String? = null,
     @SerialName("interval_ms") val intervalMs: Int = 0,
     val cpu: List<CpuSample> = emptyList(),
     val gpu: GpuSample = GpuSample(),
@@ -215,6 +221,9 @@ data class PolicyResult(
 @Serializable
 data class SafeStatus(
     val ok: Boolean = false,
+    val error: String? = null,
+    /** Set when the app synthesized this result (see InfoResult.kind). */
+    val kind: String? = null,
     @SerialName("safe_mode") val safeMode: Boolean = false,
     val pending: Long = 0,
 )
@@ -223,6 +232,8 @@ data class SafeStatus(
 data class BoostStatus(
     val ok: Boolean = false,
     val error: String? = null,
+    /** Why there is no answer when the app synthesized this result: not_found, not_executable, timeout, malformed, no_output. */
+    val kind: String? = null,
     @SerialName("input_boost_enabled") val inputBoostEnabled: Boolean = false,
     @SerialName("input_boost_active") val inputBoostActive: Boolean = false,
     @SerialName("boosted_tasks") val boostedTasks: Int = 0,

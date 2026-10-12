@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zairenkai.app.R
+import com.zairenkai.app.ui.components.CollapsingScaffold
 import com.zairenkai.app.ui.icons.ChevronLeft
 import com.zairenkai.app.ui.icons.SensorsOff
 import com.zairenkai.app.ui.theme.LocalGlass
@@ -42,7 +43,7 @@ internal val HeroShape = RoundedCornerShape(36.dp, 36.dp, 36.dp, 16.dp)
 internal val CardShape = RoundedCornerShape(28.dp, 28.dp, 28.dp, 14.dp)
 internal val TileShape = RoundedCornerShape(20.dp)
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Detail page: collapsing large title over a lazy list (see CollapsingScaffold). */
 @Composable
 internal fun MonitorDetailScaffold(
     title: String,
@@ -50,22 +51,14 @@ internal fun MonitorDetailScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(title, fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back)) }
-                },
-                actions = actions,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-            )
-        },
-    ) { inner ->
+    CollapsingScaffold(title, onBack = onBack, actions = actions) { inner ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(inner),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 28.dp),
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp, end = 16.dp,
+                top = inner.calculateTopPadding() + 4.dp,
+                bottom = inner.calculateBottomPadding() + 28.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             content = content,
         )

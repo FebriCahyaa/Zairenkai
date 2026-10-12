@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
-    <string name="fps_drop_hitch">%1$s · 一瞬のカクつき: 1 フレームが %2$d ms 止まりました。ゲームがアセットの読み込み、シェーダーのコンパイル、メモリの解放を行うときによく起こります。</string>
-    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS が %4$d 秒間 %2$d から %3$d に低下し、その間バッテリー温度はセッション開始時から %5$s °C 上昇しました。発熱によりデバイスが周波数を下げた（サーマルスロットリング）可能性があります。</string>
-    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS が %4$d 秒間 %2$d から %3$d に低下しました（最長フレーム %5$d ms）。重いシーンが長く続き、CPU または GPU が限界まで動作しています。</string>
+    <string name="fps_drop_hitch">%1$s · 一瞬のカクつき: 1 フレームが %2$d ms 止まりました。よくある原因はアセットの読み込み、シェーダーのコンパイル、メモリの解放ですが、フレームデータだけでは原因を断定できません。</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS が %4$d 秒間 %2$d から %3$d に低下し、同時にバッテリー温度がセッション開始時から %5$s °C 上昇しました。発熱が影響している可能性があります（サーマルスロットリングなど）が、このデータが示しているのは両者が同時に起きたことだけです。</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS が %4$d 秒間 %2$d から %3$d に低下しました（最長フレーム %5$d ms）。CPU または GPU に負荷をかける重いシーンだった可能性があります。</string>
     <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · %4$d 秒間 %2$d から %3$d FPS に一時的に低下し（最長フレーム %5$d ms）、その後回復しました。</string>
 
     <!-- Session insights -->
@@ -15,7 +15,7 @@
     <string name="fps_insight_capped" tools:ignore="PluralsCandidate">画面は %2$d Hz で動作していますが、FPS は %1$d に制限されているようです。ゲームにより高いフレームレートの設定があれば、有効にしてリフレッシュレートを最大限に活用しましょう。</string>
     <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low は平均 %2$d に対して %1$d FPS しかありません。平均が高くても、ときどき体感できるカクつきがあります。</string>
     <string name="fps_insight_pacing">フレームペーシングが不均一です: フレーム間隔が平均 %2$s ms に対して ±%1$s ms ばらつき、マイクロスタッターとして感じられます。</string>
-    <string name="fps_insight_thermal_decline">セッションの最後の 3 分の 1 で FPS が %1$d%% 低下し、バッテリー温度が %2$s °C 上昇しました: サーマルスロットリングの兆候です。</string>
+    <string name="fps_insight_thermal_decline">セッションの最後の 3 分の 1 で FPS が %1$d%% 低下し、同時にバッテリー温度が %2$s °C 上昇しました。発熱が影響している可能性があります（サーマルスロットリング）が、このデータから正確な原因を特定することはできません。</string>
     <string name="fps_insight_decline">セッションの最後の 3 分の 1 で FPS が序盤より %1$d%% 低下しましたが、目立った温度上昇はありません: より重いシーンによる可能性があります。</string>
     <plurals name="fps_insight_stutters">
         <item quantity="other">目で見てわかる 100 ms 超のカクつきが %1$d 回ありました（最長 %2$d ms）。</item>
@@ -32,12 +32,18 @@
     <!-- %1$s: app name -->
     <string name="fps_notif_recording">%1$s を記録中</string>
     <string name="fps_notif_stop">停止</string>
+    <string name="fps_notif_blocked_root">停止中: root 権限を利用できません</string>
+    <string name="fps_notif_blocked_engine">停止中: zperfd エンジンがインストールされていません</string>
+    <string name="fps_notif_blocked_stream">停止中: zperfd がフレームデータを送信していません</string>
     <!-- FPS screen -->
     <string name="fps_screen_title">FPS モニター</string>
     <string name="fps_auto_title">自動記録</string>
     <string name="fps_auto_off">オンにすると、監視対象アプリを開くたびに FPS を自動で記録します。</string>
     <string name="fps_auto_no_apps">記録を始めるには、下でアプリを 1 つ以上追加してください。</string>
     <string name="fps_auto_connecting">zperfd に接続中（Zairenkai モジュールと root アクセスが必要）…</string>
+    <string name="fps_auto_blocked_root">記録できません: root 権限を利用できません。root マネージャーで Zairenkai を許可してください。レコーダーは自動的に再試行します。</string>
+    <string name="fps_auto_blocked_engine">記録できません: Zairenkai モジュールの zperfd エンジンがインストールされていません。ゲームの FPS は zperfd 経由で読み取るため、モジュールをインストールしてから再起動してください。</string>
+    <string name="fps_auto_blocked_stream">zperfd は動作していますが、フレームデータを送信していません（エンジンのバージョンが古い可能性があります）。Zairenkai モジュールを更新してください。レコーダーは自動的に再試行します。</string>
     <string name="fps_auto_waiting">監視対象アプリの起動を待機しています。</string>
     <string name="fps_auto_recording">記録中です。アプリを閉じるとセッションが保存されます。</string>
     <plurals name="fps_frames_recorded">
@@ -108,7 +114,7 @@
     <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d 件の発生とその説明</string>
     <string name="fps_drops_none">このセッションでは目立った FPS の低下はありませんでした。</string>
     <string name="fps_cause_hitch">カクつき</string>
-    <string name="fps_cause_thermal">サーマル</string>
+    <string name="fps_cause_thermal">温度上昇</string>
     <string name="fps_cause_sustained">高負荷</string>
     <string name="fps_cause_brief">短時間</string>
     <string name="fps_frametime_title">フレームタイム</string>

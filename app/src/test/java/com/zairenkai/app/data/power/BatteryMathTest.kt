@@ -40,6 +40,8 @@ class BatteryMathTest {
         assertEquals(1850f, r.currentMa)
         assertEquals(7.79f, r.powerW!!, 0.01f)
         assertEquals(312, r.cycleCount)
+        assertEquals(CycleSource.KERNEL, r.cycleSource)
+        assertNull(r.kernelCycleCount)
         assertEquals(82f, r.healthPct!!, 0.01f)
         assertEquals(4100, r.fullMah)
         assertEquals(5000, r.designMah)
@@ -55,5 +57,32 @@ class BatteryMathTest {
         assertNull(plain.healthPct)
         assertNull(plain.chargerType)
         assertEquals(1850f, plain.currentMa)
+    }
+
+    @Test
+    fun cycleCountKeepsItsSourceAndADisagreeingKernelValue() {
+        val z = ZperfClient.parseBattery(javaClass.classLoader!!.getResource("contracts/zperfd-battery.json")!!.readText())
+        // Android 14+ reports its own count (the recording showed 1444); it is
+        // shown as Android's, and the kernel's different number is kept too.
+        val android = AndroidBattery(levelPct = 50, status = ChargeStatus.DISCHARGING, cycleCount = 1444)
+        val r = BatteryMath.merge(1L, android, z)
+        assertEquals(1444, r.cycleCount)
+        assertEquals(CycleSource.ANDROID, r.cycleSource)
+        assertEquals(312, r.kernelCycleCount)
+        // Agreeing sources need no second number.
+        assertNull(BatteryMath.merge(1L, android.copy(cycleCount = 312), z).kernelCycleCount)
+        // No source: no number and no source label.
+        val none = BatteryMath.merge(1L, android.copy(cycleCount = null), null)
+        assertNull(none.cycleCount)
+        assertNull(none.cycleSource)
+    }
+
+    @Test
+    fun healthNeedsBothCapacitiesAndAPlausibleRatio() {
+        assertNull(BatteryMath.healthPct(null, null))
+        assertNull(BatteryMath.healthPct(0, 5_000_000))
+        // A learned capacity above 120 % of design is a broken gauge, not a healthy battery.
+        assertNull(BatteryMath.healthPct(7_000_000, 5_000_000))
+        assertEquals(100f, BatteryMath.healthPct(5_000_000, 5_000_000)!!, 0.01f)
     }
 }

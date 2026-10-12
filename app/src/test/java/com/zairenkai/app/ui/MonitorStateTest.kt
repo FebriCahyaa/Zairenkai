@@ -90,4 +90,13 @@ class MonitorStateTest {
         assertEquals(60, ui.cpuHistory.size)
         assertEquals(69, ui.cpuHistory.last())
     }
+
+    @Test
+    fun aMissingZkfctlIsRetriedRarely() {
+        assertEquals(MISSING_DEPENDENCY_RETRY_MS, monitorNextDelayMs(1, "not_found"))
+        assertEquals(MISSING_DEPENDENCY_RETRY_MS, monitorNextDelayMs(3, "not_executable"))
+        // Other failures keep the short backoff; a good sample continues at once.
+        assertEquals(2000L, monitorNextDelayMs(2, "timeout"))
+        assertEquals(0L, monitorNextDelayMs(0, null))
+    }
 }

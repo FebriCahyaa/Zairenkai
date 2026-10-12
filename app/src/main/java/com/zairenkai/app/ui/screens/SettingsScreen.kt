@@ -5,6 +5,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,7 +45,7 @@ fun SettingsScreen(
         onDispose { vm.stopLog() }
     }
 
-    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }) { inner ->
+    CollapsingScaffold(stringResource(R.string.settings_title), onBack = null) { inner ->
         LazyColumn(
             Modifier.fillMaxSize().padding(inner),
             contentPadding = PaddingValues(16.dp),

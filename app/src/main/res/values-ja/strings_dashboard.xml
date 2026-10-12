@@ -53,4 +53,15 @@
     <string name="dashboard_thermal_mitigating">緩和中</string>
     <string name="dashboard_thermal_normal">正常</string>
     <string name="dashboard_reset_boosts">パフォーマンスをリセット</string>
+
+    <!-- System status (dashboard) -->
+    <string name="dashboard_system_status">システムステータス</string>
+    <string name="dashboard_not_available">利用不可</string>
+    <string name="dashboard_needs_zkfc">ZKFCフレームワークが必要</string>
+    <string name="dashboard_zkfc_fields_unavailable">フックアーキテクチャ、API、ZKFCのビルドは、ZKFCフレームワークが有効になると表示されます。</string>
+    <string name="dashboard_boost_unavailable">ブーストの状態はZKFCフレームワークから読み取るため、まだ利用できません。</string>
+    <string name="dashboard_without_module">モジュールがなくても、モニターにはAndroidから取得したバッテリーとRAMが表示されます。CPU、GPU、サーマル、FPSレコーダー、プロファイル、チューニングにはZairenkaiモジュールが必要です。</string>
+    <string name="dashboard_details_show">技術的な詳細</string>
+    <string name="dashboard_details_hide">詳細を隠す</string>
+    <string name="dashboard_copy_diagnostics">診断情報をコピー</string>
 </resources>

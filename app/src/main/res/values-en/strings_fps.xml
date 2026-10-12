@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
-    <string name="fps_drop_hitch">%1$s · Brief hitch: one frame was held for %2$d ms. This usually happens while the game loads assets, compiles shaders or frees memory.</string>
-    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS fell from %2$d to %3$d for %4$d s while battery temperature had risen %5$s °C since the session started. The device likely lowered its clocks because of heat (thermal throttling).</string>
-    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS fell from %2$d to %3$d for %4$d s (longest frame %5$d ms). A long, heavy scene: the CPU or GPU was working at its limit.</string>
+    <string name="fps_drop_hitch">%1$s · Brief hitch: one frame was held for %2$d ms. Common causes are asset loading, shader compilation or memory cleanup, but frame data alone can\'t confirm which.</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS fell from %2$d to %3$d for %4$d s, at the same time as battery temperature had risen %5$s °C since the session started. Heat may play a part (for example, thermal throttling), but this data only shows that the two happened together.</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS fell from %2$d to %3$d for %4$d s (longest frame %5$d ms). Likely a heavy scene putting load on the CPU or GPU.</string>
     <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · Short dip from %2$d to %3$d FPS for %4$d s (longest frame %5$d ms), then recovered.</string>
 
     <!-- Session insights -->
@@ -15,7 +15,7 @@
     <string name="fps_insight_capped" tools:ignore="PluralsCandidate">FPS appears capped at %1$d while the display runs at %2$d Hz. If the game offers a higher frame rate option, turn it on to use the full refresh rate.</string>
     <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low is only %1$d FPS versus a %2$d average: occasional hitches you can feel even though the average is high.</string>
     <string name="fps_insight_pacing">Uneven frame pacing: frame intervals vary by ±%1$s ms around a %2$s ms average, which feels like micro-stutter.</string>
-    <string name="fps_insight_thermal_decline">FPS dropped %1$d%% in the last third of the session while battery temperature rose %2$s °C: a sign of thermal throttling.</string>
+    <string name="fps_insight_thermal_decline">FPS dropped %1$d%% in the last third of the session, at the same time as battery temperature rose %2$s °C. Heat may play a part (thermal throttling), but the exact cause can\'t be confirmed from this data.</string>
     <string name="fps_insight_decline">FPS dropped %1$d%% in the last third of the session compared with the start, with no significant temperature rise: likely heavier scenes.</string>
     <plurals name="fps_insight_stutters">
         <item quantity="one">%1$d visible hitch over 100 ms (%2$d ms).</item>
@@ -33,12 +33,18 @@
     <!-- %1$s: app name -->
     <string name="fps_notif_recording">Recording %1$s</string>
     <string name="fps_notif_stop">Stop</string>
+    <string name="fps_notif_blocked_root">Stopped: root permission unavailable</string>
+    <string name="fps_notif_blocked_engine">Stopped: zperfd engine not installed</string>
+    <string name="fps_notif_blocked_stream">Stopped: zperfd isn\'t sending frame data</string>
     <!-- FPS screen -->
     <string name="fps_screen_title">FPS monitor</string>
     <string name="fps_auto_title">Auto recorder</string>
     <string name="fps_auto_off">Turn on to record FPS automatically every time a watched app opens.</string>
     <string name="fps_auto_no_apps">Add at least one app below to start recording.</string>
     <string name="fps_auto_connecting">Connecting to zperfd (requires the Zairenkai module and root access)…</string>
+    <string name="fps_auto_blocked_root">Can\'t record: root permission unavailable. Allow Zairenkai in your root manager; the recorder retries automatically.</string>
+    <string name="fps_auto_blocked_engine">Can\'t record: the zperfd engine from the Zairenkai module isn\'t installed. Game FPS is read through zperfd, so install the module, then reboot.</string>
+    <string name="fps_auto_blocked_stream">zperfd is running but isn\'t sending frame data (old engine version?). Update the Zairenkai module; the recorder retries automatically.</string>
     <string name="fps_auto_waiting">Waiting for a watched app to open.</string>
     <string name="fps_auto_recording">Recording. The session is saved when the app closes.</string>
     <plurals name="fps_frames_recorded">
@@ -111,7 +117,7 @@
     <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d events, with explanations</string>
     <string name="fps_drops_none">No significant FPS drops in this session.</string>
     <string name="fps_cause_hitch">HITCH</string>
-    <string name="fps_cause_thermal">THERMAL</string>
+    <string name="fps_cause_thermal">TEMP RISE</string>
     <string name="fps_cause_sustained">HEAVY</string>
     <string name="fps_cause_brief">BRIEF</string>
     <string name="fps_frametime_title">Frame time</string>

@@ -9,4 +9,5 @@
 
     <!-- Language sheet -->
     <string name="language_body">Applies to the whole app. You can change it again at any time.</string>
+    <string name="setup_zkfc_malformed">zkfctl responded in an unrecognised format (version mismatch?).</string>
 </resources>

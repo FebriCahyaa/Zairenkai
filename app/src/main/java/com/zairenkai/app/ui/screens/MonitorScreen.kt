@@ -62,6 +62,9 @@ fun MonitorScreen(
     Column(
         Modifier
             .fillMaxSize()
+            // No top app bar here: this screen owns the status bar inset itself,
+            // outside the scroll so content never slides under the status icons.
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
             .padding(top = 18.dp, bottom = 28.dp),

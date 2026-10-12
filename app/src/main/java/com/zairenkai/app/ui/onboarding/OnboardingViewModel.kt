@@ -27,6 +27,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** Minimum time between step changes; shorter than the page transition so normal use never notices. */
+internal const val STEP_DEBOUNCE_MS = 280L
+
+internal fun stepChangeAllowed(lastMs: Long, nowMs: Long): Boolean = lastMs == 0L || nowMs - lastMs >= STEP_DEBOUNCE_MS
+
 enum class SetupStep(@StringRes val title: Int) {
     WELCOME(R.string.setup_step_welcome),
     CHECK(R.string.setup_step_check),
@@ -55,31 +60,22 @@ class OnboardingViewModel(private val c: AppContainer) : ViewModel() {
     /** (Re)run every probe. Root is asked first; the rest run in parallel. */
     fun runChecks() {
         checking?.cancel()
-        c.repository.invalidate()
         _ui.value = _ui.value.copy(probe = SetupProbe())
-        checking = viewModelScope.launch {
-            val root = runCatching { c.repository.rootAvailable() }.getOrDefault(false)
-            update { it.copy(root = root) }
-            if (!root) return@launch
-            coroutineScope {
-                launch {
-                    val info = runCatching { c.repository.info() }.getOrNull()
-                    update { it.copy(info = info, infoDone = true) }
-                }
-                launch {
-                    val installed = runCatching { c.zperf.available() }.getOrDefault(false)
-                    val status = if (installed) runCatching { c.zperf.status() }.getOrNull() else null
-                    update { it.copy(engineInstalled = installed, engineStatus = status, engineDone = true) }
-                }
-            }
-        }
+        checking = viewModelScope.launch { SetupProber(c).run(::update) }
     }
 
     private fun update(f: (SetupProbe) -> SetupProbe) {
         _ui.value = _ui.value.copy(probe = f(_ui.value.probe))
     }
 
+    private var lastStepChangeMs = 0L
+
     fun goTo(step: SetupStep) {
+        // A second tap during the page transition must not skip a step.
+        val now = android.os.SystemClock.uptimeMillis()
+        if (step != _ui.value.step && !stepChangeAllowed(lastStepChangeMs, now)) return
+        if (_ui.value.applying) return
+        lastStepChangeMs = now
         _ui.value = _ui.value.copy(step = step)
         if (step == SetupStep.CHECK && _ui.value.probe == SetupProbe()) runChecks()
     }
@@ -93,6 +89,7 @@ class OnboardingViewModel(private val c: AppContainer) : ViewModel() {
 
     /** Apply the chosen profile through zperfd, then move on only if it was committed. */
     fun applyChoice(profile: Profile) = viewModelScope.launch {
+        if (_ui.value.applying) return@launch
         _ui.value = _ui.value.copy(applying = true, applyMessage = null, applyFailed = false)
         val result = runCatching { c.zperf.apply(profile.mode) }.getOrElse {
             ModeApplyResult(ok = false, kind = "protocol", error = it.message)

@@ -60,6 +60,7 @@ fun ZairenkaiTheme(
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         else -> schemeFor(accentById(accentId), dark)
     }
+    SystemBarsEffect(dark)
     MaterialTheme(
         colorScheme = colorScheme,
         typography = ZkTypography,

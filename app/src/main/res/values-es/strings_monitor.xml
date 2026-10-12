@@ -17,7 +17,7 @@
     <!-- Missing Zairenkai module (no root telemetry) -->
     <string name="mon_needs_module">Requiere el módulo Zairenkai</string>
     <string name="mon_needs_module_detail">Los datos de CPU, GPU y temperatura se leen con root. La batería y la RAM se muestran sin el módulo.</string>
-    <string name="mon_banner_module">CPU, GPU y temperatura requieren el módulo Zairenkai. La batería, la RAM y los FPS se siguen monitorizando.</string>
+    <string name="mon_banner_module">CPU, GPU, temperatura y la grabación de FPS requieren el módulo Zairenkai. La batería y la RAM se siguen monitorizando desde Android.</string>
     <string name="mon_banner_dismiss">Cerrar</string>
 
     <!-- Generic -->
@@ -166,8 +166,8 @@
     <string name="mon_charger_phase">Fase de carga</string>
     <string name="mon_charger_not_reported">Este dispositivo no informa del voltaje ni la corriente del cargador.</string>
     <string name="mon_charger_needs_module">La potencia, el voltaje y la corriente del cargador se leen con el módulo Zairenkai.</string>
-    <string name="mon_health_title">Salud de la batería</string>
-    <string name="mon_health_sub">Capacidad completa actual frente a la capacidad de diseño</string>
+    <string name="mon_health_title">Salud de la batería (estimación)</string>
+    <string name="mon_health_sub">Capacidad completa estimada por el medidor de carga (fuel gauge) frente a la capacidad de diseño</string>
     <!-- %1$d full-charge mAh, %2$d design mAh -->
     <string name="mon_health_capacity">%1$d mAh de %2$d mAh de capacidad de diseño</string>
     <plurals name="mon_health_cycles_label">
@@ -179,6 +179,10 @@
     <string name="mon_health_needs_module">La capacidad completa y la de diseño se leen con el módulo Zairenkai.</string>
     <string name="mon_health_status">Estado</string>
     <string name="mon_health_cycles">Número de ciclos</string>
+    <string name="mon_cycles_source_android">Fuente: Android (BatteryManager). Este valor procede del HAL de batería del fabricante; algunos fabricantes cuentan los ciclos de forma distinta.</string>
+    <string name="mon_cycles_source_kernel">Fuente: kernel (power_supply cycle_count).</string>
+    <!-- %1$d: cycle count reported by the kernel node -->
+    <string name="mon_cycles_kernel_differs" tools:ignore="PluralsCandidate">El kernel informa un valor distinto: %1$d.</string>
     <string name="mon_health_tech">Tecnología</string>
     <string name="mon_health_good">Buena</string>
     <string name="mon_health_overheat">Sobrecalentada</string>

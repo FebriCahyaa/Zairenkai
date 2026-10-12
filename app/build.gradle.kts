@@ -130,6 +130,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true; buildConfig = true }
+
+    // Robolectric UI tests read the merged resources; Roborazzi writes the
+    // screenshots it captures to build/outputs/roborazzi for review.
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                it.systemProperty("roborazzi.test.record", "true")
+                it.systemProperty("roborazzi.output.dir", layout.buildDirectory.dir("outputs/roborazzi").get().asFile.path)
+            }
+        }
+    }
     // The in-app language picker needs every language in the install;
     // Play language splits would drop the ones not in the device settings.
     bundle {
@@ -183,4 +195,30 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)
+    // JVM UI tests (Robolectric) for the setup flow, system bars and
+    // collapsing titles; Roborazzi captures screenshots for visual review.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// Robolectric needs an Android framework jar at test time. Resolve it through
+// Gradle (same repositories, proxy and cache as every other dependency) and
+// run Robolectric offline against it, instead of letting it download on its own.
+val robolectricRuntime: Configuration by configurations.creating
+dependencies {
+    robolectricRuntime(libs.robolectric.android.all)
+}
+val robolectricJars = layout.buildDirectory.dir("robolectric-jars")
+val copyRobolectricJars by tasks.registering(Copy::class) {
+    from(robolectricRuntime)
+    into(robolectricJars)
+}
+tasks.withType<Test>().configureEach {
+    dependsOn(copyRobolectricJars)
+    systemProperty("robolectric.offline", "true")
+    systemProperty("robolectric.dependency.dir", robolectricJars.get().asFile.path)
 }

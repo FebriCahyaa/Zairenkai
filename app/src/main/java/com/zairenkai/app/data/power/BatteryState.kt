@@ -19,6 +19,9 @@ enum class ChargeStatus { CHARGING, DISCHARGING, FULL, NOT_CHARGING, UNKNOWN }
 
 enum class PlugType { NONE, AC, USB, WIRELESS, DOCK }
 
+/** Android's BatteryManager (health HAL) or the kernel's power_supply cycle_count node. */
+enum class CycleSource { ANDROID, KERNEL }
+
 enum class BatteryHealth { GOOD, OVERHEAT, DEAD, OVER_VOLTAGE, COLD, FAILURE, UNKNOWN }
 
 /** What Android reports without root. Null fields were not reported. */
@@ -50,6 +53,10 @@ data class BatteryReading(
     val currentMa: Float?,
     val powerW: Float?,
     val cycleCount: Int?,
+    /** Where [cycleCount] came from. */
+    val cycleSource: CycleSource?,
+    /** The kernel's count when Android also reports one and the two differ. */
+    val kernelCycleCount: Int?,
     /** Full-charge capacity as a share of design capacity (battery wear). */
     val healthPct: Float?,
     val fullMah: Int?,
@@ -123,7 +130,16 @@ object BatteryMath {
             voltageV = voltage,
             currentMa = current,
             powerW = powerW(voltage, current),
-            cycleCount = a.cycleCount ?: b?.cycleCount,
+            // Android first (it is what Settings shows); the kernel node is a
+            // fallback, and kept alongside when the two disagree so neither is
+            // silently presented as the only truth.
+            cycleCount = a.cycleCount ?: b?.cycleCount?.takeIf { it >= 0 },
+            cycleSource = when {
+                a.cycleCount != null -> CycleSource.ANDROID
+                b?.cycleCount?.let { it >= 0 } == true -> CycleSource.KERNEL
+                else -> null
+            },
+            kernelCycleCount = b?.cycleCount?.takeIf { a.cycleCount != null && it >= 0 && it != a.cycleCount },
             healthPct = healthPct(fullUah, designUah),
             fullMah = fullUah?.takeIf { it > 0 }?.let { (it / 1000).toInt() },
             designMah = designUah?.takeIf { it > 0 }?.let { (it / 1000).toInt() },

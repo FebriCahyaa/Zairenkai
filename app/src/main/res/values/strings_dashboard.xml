@@ -54,4 +54,15 @@
     <string name="dashboard_thermal_mitigating">Mitigasi aktif</string>
     <string name="dashboard_thermal_normal">Normal</string>
     <string name="dashboard_reset_boosts">Reset performa</string>
+
+    <!-- System status (dashboard) -->
+    <string name="dashboard_system_status">Status sistem</string>
+    <string name="dashboard_not_available">Tidak tersedia</string>
+    <string name="dashboard_needs_zkfc">Butuh framework ZKFC</string>
+    <string name="dashboard_zkfc_fields_unavailable">Arsitektur hook, API, dan build ZKFC tampil setelah framework ZKFC aktif.</string>
+    <string name="dashboard_boost_unavailable">Status boost dibaca dari framework ZKFC dan belum tersedia.</string>
+    <string name="dashboard_without_module">Tanpa modul, Monitor tetap menampilkan baterai dan RAM dari Android. CPU, GPU, termal, perekam FPS, profil, dan tweak butuh modul Zairenkai.</string>
+    <string name="dashboard_details_show">Detail teknis</string>
+    <string name="dashboard_details_hide">Sembunyikan detail</string>
+    <string name="dashboard_copy_diagnostics">Salin diagnostik</string>
 </resources>

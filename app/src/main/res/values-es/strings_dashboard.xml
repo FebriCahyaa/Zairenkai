@@ -53,4 +53,14 @@
     <string name="dashboard_thermal_mitigating">Mitigación activa</string>
     <string name="dashboard_thermal_normal">Normal</string>
     <string name="dashboard_reset_boosts">Restablecer rendimiento</string>
+    <!-- System status (dashboard) -->
+    <string name="dashboard_system_status">Estado del sistema</string>
+    <string name="dashboard_not_available">No disponible</string>
+    <string name="dashboard_needs_zkfc">Requiere el framework ZKFC</string>
+    <string name="dashboard_zkfc_fields_unavailable">La arquitectura de hooks, la API y la compilación de ZKFC se muestran cuando el framework ZKFC está activo.</string>
+    <string name="dashboard_boost_unavailable">El estado del boost se lee del framework ZKFC y aún no está disponible.</string>
+    <string name="dashboard_without_module">Sin el módulo, Monitor sigue mostrando la batería y la RAM desde Android. CPU, GPU, temperatura, grabación de FPS, perfiles y ajustes requieren el módulo Zairenkai.</string>
+    <string name="dashboard_details_show">Detalles técnicos</string>
+    <string name="dashboard_details_hide">Ocultar detalles</string>
+    <string name="dashboard_copy_diagnostics">Copiar diagnóstico</string>
 </resources>
