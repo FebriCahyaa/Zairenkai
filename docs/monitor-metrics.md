@@ -83,15 +83,16 @@ the app or in `ZkMonitorService`:
 | Voltage | `EXTRA_VOLTAGE` | mV → V | `0` |
 | Current | `BATTERY_PROPERTY_CURRENT_NOW`, read as µA. The sign is whatever the device reports | mA | `0` |
 | Power | `abs(V × I)` | W | `0` (derived) |
-| Battery temperature | `EXTRA_TEMPERATURE` | 0.1 °C → °C | `0` |
+| Battery temperature | `EXTRA_TEMPERATURE` | 0.1 °C → °C | extra absent → `tempKnown = false` |
 | Remaining energy | `ENERGY_COUNTER` (nWh), else `CHARGE_COUNTER` (µAh) × V | Wh | `0` |
 
-Known limitations:
+Known limitation: some devices report `CURRENT_NOW` in mA. Power is then
+about 1000× too small, which is obvious from the W value.
 
-- Some devices report `CURRENT_NOW` in mA. Power is then about 1000× too
-  small, which is obvious from the W value.
-- Temperature is averaged even when it reads `0` (not reported), which pulls
-  that session's average temperature down.
+An unreported battery temperature is left out of the session and per-app
+averages and maxima (`UsageAccumulator`, tested in `UsageAccumulatorTest`);
+the curve holds the last reported value for that point. A session with no
+reported temperature at all shows 0 °C.
 
 ## Dashboard
 

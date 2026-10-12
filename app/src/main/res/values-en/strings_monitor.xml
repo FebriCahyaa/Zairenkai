@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Sampling state (MonitorViewModel) -->
+    <string name="monitor_error_no_response">zkfctl is not responding</string>
+
+    <!-- Header -->
+    <string name="monitor_title">Monitor</string>
+    <string name="monitor_subtitle">Device performance, live</string>
+    <string name="monitor_status_paused">PAUSED</string>
+    <string name="monitor_status_live">LIVE</string>
+    <string name="monitor_status_unavailable">UNAVAILABLE</string>
+    <string name="monitor_status_connecting">CONNECTING</string>
+    <!-- %1$s: display refresh rate, e.g. "120 Hz" -->
+    <string name="monitor_display_refresh">%1$s DISPLAY</string>
+    <string name="monitor_open_history">Usage history</string>
+
+    <!-- %1$s: engine detail, %2$d: attempt number -->
+    <string name="monitor_telemetry_unavailable">CPU, GPU and thermal telemetry unavailable: %1$s\nRetrying automatically (attempt %2$d). FPS below is still measured from the UI.</string>
+
+    <!-- FPS card -->
+    <string name="monitor_fps_title">UI FPS MONITOR</string>
+    <!-- %1$s: panel refresh rate, e.g. "120 Hz" -->
+    <string name="monitor_panel_refresh">Panel refresh %1$s</string>
+    <string name="monitor_samples_stable">Samples stable</string>
+    <string name="monitor_samples_collecting">Collecting samples</string>
+    <string name="monitor_waiting_frames">Waiting for frame samples</string>
+    <string name="monitor_chart_after_data">The chart appears once data is available</string>
+    <string name="monitor_fps_avg">AVERAGE</string>
+    <!-- No format args: getString() returns it verbatim, so the % is literal. -->
+    <string name="monitor_fps_low5" formatted="false">5% LOW</string>
+    <string name="monitor_fps_jank">JANK</string>
+
+    <!-- CPU / GPU metric cards -->
+    <string name="monitor_value_na">n/a</string>
+    <plurals name="monitor_cores_read">
+        <item quantity="one">%1$d core read</item>
+        <item quantity="other">%1$d cores read</item>
+    </plurals>
+    <string name="monitor_unavailable">Unavailable</string>
+    <string name="monitor_waiting_first_sample">Waiting for the first sample</string>
+    <string name="monitor_sensor_not_read">Sensor not read yet</string>
+    <string name="monitor_gpu_util_read">Utilization read</string>
+    <string name="monitor_sensor_unavailable">Sensor unavailable</string>
+    <string name="monitor_chart_initial">Initial samples</string>
+    <string name="monitor_chart_unavailable">Not available yet</string>
+
+    <!-- Per-core activity -->
+    <string name="monitor_cores_title">Per-core activity</string>
+    <!-- %1$d: online cores, %2$d: detected cores -->
+    <string name="monitor_cores_count" tools:ignore="PluralsCandidate">%1$d online · %2$d detected</string>
+    <string name="monitor_cores_collapse">Collapse</string>
+    <string name="monitor_cores_expand">Show details</string>
+    <string name="monitor_core_off">OFF</string>
+    <string name="monitor_core_freq_na">Frequency n/a</string>
+
+    <!-- Thermal -->
+    <string name="monitor_thermal_title">Thermal</string>
+    <string name="monitor_thermal_subtitle">Device temperature sensors</string>
+    <string name="monitor_thermal_empty_title">No readings yet</string>
+    <string name="monitor_thermal_empty_detail">The kernel or vendor has not exposed a valid thermal zone yet.</string>
+    <string name="monitor_thermal_zone_fallback">Thermal zone</string>
+
+    <!-- ZKFC runtime -->
+    <string name="monitor_zkfc_title">ZKFC runtime</string>
+    <string name="monitor_zkfc_thermal_tripped">Thermal guard is limiting performance</string>
+    <string name="monitor_zkfc_input_boost">Input boost active</string>
+    <string name="monitor_zkfc_normal">Kernel control running normally</string>
+</resources>

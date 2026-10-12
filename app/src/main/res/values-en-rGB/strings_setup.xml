@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- 2. System check -->
+    <string name="setup_token_checking">Reading licence status…</string>
+
+    <!-- 4. Done -->
+    <string name="setup_done_ready_body">Choose a profile at any time in the Profiles tab, or create a custom profile from a built-in mode.</string>
+
+    <!-- Language sheet -->
+    <string name="language_body">Applies to the whole app. You can change it again at any time.</string>
+</resources>

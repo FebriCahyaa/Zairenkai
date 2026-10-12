@@ -13,8 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.zairenkai.app.R
 
 @Composable
 fun LabeledRow(label: String, value: String, valueColor: Color? = null) {
@@ -41,16 +43,15 @@ fun RootUnavailable(modifier: Modifier = Modifier, onRetry: () -> Unit) {
     ) {
         Icon(Icons.Rounded.Shield, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(16.dp))
-        Text("Akses root diperlukan", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.system_root_required_title), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Zairenkai memerlukan root (Magisk / KernelSU / APatch) dan modul ZKFC terpasang. " +
-                "Pasang modul lalu coba lagi.",
+            stringResource(R.string.system_root_required_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(20.dp))
-        Button(onClick = onRetry) { Text("Coba lagi") }
+        Button(onClick = onRetry) { Text(stringResource(R.string.system_action_retry)) }
     }
 }
 

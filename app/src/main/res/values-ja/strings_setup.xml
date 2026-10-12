@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Wizard frame -->
+    <string name="setup_step_welcome">ようこそ</string>
+    <string name="setup_step_check">システムチェック</string>
+    <string name="setup_step_profile">最初のプロファイル</string>
+    <string name="setup_step_done">完了</string>
+    <string name="setup_step_label">ステップ %1$d/%2$d · %3$s</string>
+    <string name="setup_language">言語</string>
+    <string name="setup_info">アプリ &amp; デバイス情報</string>
+    <string name="setup_start">セットアップを開始</string>
+    <string name="setup_checking">確認中…</string>
+    <string name="setup_apply_profile">%1$s を適用</string>
+    <string name="setup_skip_for_now">今はスキップ</string>
+    <string name="setup_enter_app">Zairenkai を開く</string>
+
+    <!-- 1. Welcome -->
+    <string name="setup_welcome_title">Zairenkai へようこそ</string>
+    <string name="setup_welcome_body">root 化デバイス向けのパフォーマンス制御です。ZKFC カーネルフレームワーク上で動作する zperfd エンジンによって実行されます。</string>
+    <string name="setup_feature_monitor_title">ライブモニター</string>
+    <string name="setup_feature_monitor_body">UI の FPS、コアごとの CPU 負荷、GPU、サーマルゾーンの温度。</string>
+    <string name="setup_feature_verified_title">検証済みのプロファイル &amp; チューニング</string>
+    <string name="setup_feature_verified_body">すべての変更は zperfd が適用し、カーネルから読み戻して確認します。失敗した場合は自動的に元に戻ります。</string>
+    <string name="setup_feature_safety_title">多層の安全機構</string>
+    <string name="setup_feature_safety_body">カーネルのサーマルガード、Sentinel、起動失敗後の SAFE MODE。パフォーマンス機能は APIトークンで有効になります。</string>
+    <string name="setup_welcome_note">セットアップではシステムの確認のみを行います。プロファイルを自分で選択するまで、設定は変更されません。</string>
+
+    <!-- 2. System check -->
+    <string name="setup_check_title">システムチェック</string>
+    <string name="setup_check_body">Zairenkai は、root アクセス、ZKFC カーネルフレームワーク、zperfd エンジン、APIトークンの順に階層的に動作します。</string>
+    <string name="setup_check_root">root アクセス</string>
+    <string name="setup_check_zkfc">ZKFC カーネルフレームワーク</string>
+    <string name="setup_check_engine">zperfd エンジン</string>
+    <string name="setup_check_token">APIトークン</string>
+    <string name="setup_needs_root">root アクセスが必要です。</string>
+    <string name="setup_root_checking">root 権限を要求中…</string>
+    <string name="setup_root_ok">root 権限が許可されました。</string>
+    <string name="setup_root_missing">root 権限が拒否されたか、root マネージャーが見つかりません。</string>
+    <string name="setup_root_fix">Magisk、KernelSU、または APatch で Zairenkai を許可してから、再確認してください。</string>
+    <string name="setup_zkfc_checking">/dev/zkfc を読み取り中…</string>
+    <string name="setup_zkfc_missing">読み込まれていません。</string>
+    <string name="setup_zkfc_missing_detail">読み込まれていません: %1$s</string>
+    <string name="setup_zkfc_fix">このカーネルに対応する ZKFC カーネルモジュールを含む Zairenkai モジュールをインストールし、再起動してください。</string>
+    <string name="setup_zkfc_outdated">%1$s（古いバージョン）</string>
+    <string name="setup_zkfc_outdated_fix">ZKFC カーネルモジュールを更新してください。古い API では新機能が無効になります。</string>
+    <string name="setup_engine_checking">zperfd に接続中…</string>
+    <string name="setup_engine_missing">/data/adb/zperf にインストールされていません。</string>
+    <string name="setup_engine_missing_fix">Zairenkai モジュールをインストールしてください。プロファイルとチューニングを適用できるのは zperfd だけです。</string>
+    <string name="setup_engine_silent">インストールされていますが、応答がありません。</string>
+    <string name="setup_engine_silent_fix">再起動してモジュールのサービスに zperfd を起動させてから、再確認してください。</string>
+    <string name="setup_engine_safe_mode">有効 · SAFE MODE（ストックのベースラインを維持）</string>
+    <string name="setup_engine_saved">有効 · 保存済みのプロファイル: %1$s</string>
+    <string name="setup_engine_default">有効 · エンジンのデフォルト: %1$s</string>
+    <string name="setup_token_checking">ライセンスの状態を読み取り中…</string>
+    <string name="setup_token_needs_zkfc">ZKFC カーネルフレームワークが必要です。</string>
+    <string name="setup_token_ok">トークンは有効です。パフォーマンス機能が利用できます。</string>
+    <string name="setup_token_missing">未インストール: パフォーマンスプロファイルとチューニングはロックされたままです。</string>
+    <string name="setup_token_missing_fix">システムタブでトークンをインストールしてください。モニターはトークンなしでも使えます。</string>
+    <string name="setup_token_bad">トークン: %1$s。</string>
+    <string name="setup_token_bad_fix">このデバイスとカーネル向けに発行されたトークンを、システムタブでインストールしてください。</string>
+    <string name="setup_check_all_ok">すべてのコンポーネントの準備ができています。</string>
+    <string name="setup_check_ready_with_notes">使用できますが、上記の注意事項があります。</string>
+    <string name="setup_check_not_ready">一部のコンポーネントの準備ができていません。このまま続行できますが、それらを必要とする機能は問題が解決するまでロックされます。</string>
+    <string name="setup_recheck">再確認</string>
+    <string name="setup_state_checking">確認中</string>
+    <string name="setup_state_ok">準備完了</string>
+    <string name="setup_state_warn">要確認</string>
+    <string name="setup_state_missing">未準備</string>
+    <string name="setup_check_a11y">%1$s: %2$s。%3$s</string>
+    <string name="setup_check_summary_row">%1$s: %2$s</string>
+
+    <!-- License states, as "Token <state>." -->
+    <string name="license_state_valid">有効</string>
+    <string name="license_state_missing">未インストール</string>
+    <string name="license_state_expired">期限切れ</string>
+    <string name="license_state_bad_signature">署名が無効</string>
+    <string name="license_state_wrong_binding">別のデバイス/カーネルに紐付け</string>
+    <string name="license_state_api_outdated">古い API 向け</string>
+    <string name="license_state_api_incompatible">ZKFC API と互換性なし</string>
+    <string name="license_state_malformed">破損</string>
+    <string name="license_state_no_owner_key">オーナーキーがカーネルにプロビジョニングされていません</string>
+    <string name="license_state_revoked">失効</string>
+
+    <!-- 3. First profile -->
+    <string name="setup_profile_title">最初のプロファイルを選択</string>
+    <string name="setup_profile_body">任意です。プロファイルは zperfd のモードです。値はデバイスの周波数テーブルに合わせて調整され、引き続き熱エンベロープによって制限されます。</string>
+    <string name="setup_profile_blocked">%1$s の準備ができるとプロファイルを適用できます。後からプロファイルタブで選択することもできます。</string>
+
+    <!-- 4. Done -->
+    <string name="setup_done_ready_title">準備完了</string>
+    <string name="setup_done_partial_title">セットアップ完了</string>
+    <string name="setup_done_applied">プロファイル %1$s を適用しました。</string>
+    <string name="setup_done_ready_body">プロファイルタブでいつでもプロファイルを選択したり、組み込みモードからカスタムプロファイルを作成したりできます。</string>
+    <string name="setup_done_partial_body">Zairenkai を開けるようになりました。準備ができていないコンポーネントを必要とする機能はロックされたままです。</string>
+    <string name="setup_next_steps">次のステップ</string>
+
+    <!-- Language sheet -->
+    <string name="language_title">アプリの言語</string>
+    <string name="language_body">アプリ全体に適用されます。いつでも変更できます。</string>
+    <string name="language_system">システムのデフォルト</string>
+    <string name="language_system_current">現在: %1$s</string>
+
+    <!-- Info sheet -->
+    <string name="info_title">アプリ &amp; デバイス情報</string>
+    <string name="info_app_version">アプリのバージョン</string>
+    <string name="info_app_version_value">%1$s（ビルド %2$d）· %3$s</string>
+    <string name="info_device">デバイス</string>
+    <string name="info_android">Android</string>
+    <string name="info_android_value">Android %1$s · API %2$d · セキュリティパッチ %3$s</string>
+    <string name="info_soc">SoC</string>
+    <plurals name="info_soc_value">
+        <item quantity="other">%1$s · %2$dコア · %3$s</item>
+    </plurals>
+    <string name="info_ram">RAM</string>
+    <string name="info_ram_value">合計 %1$s · 利用可能 %2$s</string>
+    <string name="info_storage">内部ストレージ</string>
+    <string name="info_storage_value">合計 %1$s · 空き %2$s</string>
+    <string name="info_kernel">カーネル</string>
+    <string name="info_copy">コピー</string>
+    <string name="info_copied">クリップボードにコピーしました</string>
+</resources>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="tweaks_title">调校</string>
+    <string name="tweaks_retry">重试</string>
+
+    <!-- List loading -->
+    <string name="tweaks_load_no_root">root 权限不可用。</string>
+    <string name="tweaks_load_failed">无法读取调校列表。</string>
+    <!-- %1$s: exception detail, or tweaks_load_error_generic -->
+    <string name="tweaks_load_failed_detail">无法读取调校列表：%1$s</string>
+    <string name="tweaks_load_error_generic">错误</string>
+
+    <!-- Banners -->
+    <string name="tweaks_readonly_banner">zperfd 未运行，数值仅供查看。更改需经由引擎，以通过许可、Sentinel、事务与验证流程。</string>
+    <string name="tweaks_lite_banner">精简模式已启用，部分重度调校项已隐藏。</string>
+    <string name="tweaks_empty">此设备上没有可读取的可调参数。</string>
+
+    <!-- Rows. %1$s: tweak title, %2$s: value, %3$s: engine lock reason -->
+    <string name="tweaks_a11y_row">%1$s，数值 %2$s</string>
+    <string name="tweaks_a11y_row_locked">%1$s，数值 %2$s，已锁定：%3$s</string>
+    <string name="tweaks_a11y_value_unread">未读取</string>
+    <string name="tweaks_locked">已锁定：%1$s</string>
+
+    <!-- Editor dialog -->
+    <string name="tweaks_current">当前：%1$s</string>
+    <string name="tweaks_value">数值</string>
+    <string name="tweaks_value_range">数值（%1$d–%2$d）</string>
+    <string name="tweaks_heavy_warning">重度调校：应用后请留意温度与稳定性。</string>
+    <string name="tweaks_error_no_choices">设备未提供此调校项的可选值列表。</string>
+    <string name="tweaks_error_pick_supported">请选择设备支持的数值之一。</string>
+    <string name="tweaks_error_integer">请输入整数。</string>
+    <string name="tweaks_error_out_of_range">超出安全范围 %1$d–%2$d。</string>
+    <string name="tweaks_error_empty">数值不能为空。</string>
+
+    <!-- Write outcomes. %1$s: tweak id, %2$s: value, %3$d: number of targets -->
+    <string name="tweaks_success">%1$s = %2$s 已应用并验证。</string>
+    <plurals name="tweaks_success_targets">
+        <item quantity="other">%1$s = %2$s 已在 %3$d 个目标上应用并验证。</item>
+    </plurals>
+    <string name="tweaks_fail_engine_unavailable">zperfd 不可用；未做任何更改。</string>
+    <string name="tweaks_fail_framework_unavailable">内核未加载 ZKFC；调校已锁定。</string>
+    <string name="tweaks_fail_framework_incompatible">ZKFC API 版本与引擎不兼容；调校已锁定。</string>
+    <string name="tweaks_fail_license">ZKFC API 令牌尚未生效；性能调校已锁定。</string>
+    <string name="tweaks_fail_unauthorized">操作被 Core Authority 拒绝。</string>
+    <string name="tweaks_fail_sentinel">已被 Sentinel 拦截（温控/电源/存储安全）。</string>
+    <string name="tweaks_fail_lite">此调校项在精简模式下已禁用。</string>
+    <string name="tweaks_fail_unknown_tweak">引擎无法识别此调校项。</string>
+    <string name="tweaks_fail_rejected">数值被拒绝；更改已撤销。</string>
+    <string name="tweaks_fail_not_observed">内核未保留该数值；更改已撤销。</string>
+    <string name="tweaks_fail_rollback_failed">应用失败且回滚未完成；将执行恢复。</string>
+    <string name="tweaks_fail_state">无法恢复引擎状态；未做任何更改。</string>
+    <string name="tweaks_fail_timeout">引擎未及时响应；状态不确定，请重新加载。</string>
+    <string name="tweaks_fail_generic">无法识别引擎响应；视为未应用。</string>
+</resources>

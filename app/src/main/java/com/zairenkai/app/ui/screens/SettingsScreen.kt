@@ -16,9 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.R
 import com.zairenkai.app.data.AppSettings
 import com.zairenkai.app.ui.SettingsViewModel
 import com.zairenkai.app.ui.VmFactory
@@ -42,31 +44,31 @@ fun SettingsScreen(
         onDispose { vm.stopLog() }
     }
 
-    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text("Pengaturan") }) }) { inner ->
+    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }) { inner ->
         LazyColumn(
             Modifier.fillMaxSize().padding(inner),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                SectionCard("Tampilan") {
-                    NavRow(Icons.Rounded.Palette, "Tema", "Mode, aksen, warna dinamis & Glass UI", onOpenTheme)
-                    NavRow(Icons.Rounded.Info, "Tentang", "Versi, lisensi & kredit", onOpenAbout)
+                SectionCard(stringResource(R.string.settings_section_appearance)) {
+                    NavRow(Icons.Rounded.Palette, stringResource(R.string.theme_title), stringResource(R.string.settings_theme_sub), onOpenTheme)
+                    NavRow(Icons.Rounded.Info, stringResource(R.string.about_title), stringResource(R.string.settings_about_sub), onOpenAbout)
                 }
             }
             item {
-                SectionCard("Umum") {
-                    ToggleRow("Mode Lite", "Sembunyikan tweak berat, kurangi overhead.",
+                SectionCard(stringResource(R.string.settings_section_general)) {
+                    ToggleRow(stringResource(R.string.settings_lite_title), stringResource(R.string.settings_lite_sub),
                         settings.liteMode) { vm.setLite(it) }
-                    ToggleRow("Mitigasi perangkat", "Batasi boost untuk perangkat panas/SoC lawas.",
+                    ToggleRow(stringResource(R.string.settings_mitigation_title), stringResource(R.string.settings_mitigation_sub),
                         settings.deviceMitigation) { vm.setMitigation(it) }
-                    ToggleRow("Warna dinamis (Material You)", "Ikuti wallpaper (Android 12+).",
+                    ToggleRow(stringResource(R.string.settings_dynamic_color_title), stringResource(R.string.settings_dynamic_color_sub),
                         settings.dynamicColor) { vm.setDynamicColor(it) }
                 }
             }
             item {
-                SectionCard("Log level") {
-                    Text("Level log ZKFC yang direkam kernel.", style = MaterialTheme.typography.bodySmall,
+                SectionCard(stringResource(R.string.settings_log_level_title)) {
+                    Text(stringResource(R.string.settings_log_level_desc), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(10.dp))
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -82,10 +84,10 @@ fun SettingsScreen(
                 }
             }
             item {
-                Text("Live log", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.settings_live_log), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
             }
             if (log.isEmpty()) item {
-                Text("Belum ada log. Pastikan modul ZKFC termuat.",
+                Text(stringResource(R.string.settings_log_empty),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(log.reversed(), key = { it.seq }) { rec ->

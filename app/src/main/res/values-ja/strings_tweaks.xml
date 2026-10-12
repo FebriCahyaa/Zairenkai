@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="tweaks_title">チューニング</string>
+    <string name="tweaks_retry">再試行</string>
+
+    <!-- List loading -->
+    <string name="tweaks_load_no_root">root アクセスを利用できません。</string>
+    <string name="tweaks_load_failed">チューニング一覧を読み取れません。</string>
+    <!-- %1$s: exception detail, or tweaks_load_error_generic -->
+    <string name="tweaks_load_failed_detail">チューニング一覧を読み取れません: %1$s</string>
+    <string name="tweaks_load_error_generic">エラー</string>
+
+    <!-- Banners -->
+    <string name="tweaks_readonly_banner">zperfd が動作していません — 値は表示のみです。変更をライセンス、Sentinel、トランザクション、検証に通すには、エンジンが必要です。</string>
+    <string name="tweaks_lite_banner">ライトモード有効 — 負荷の大きいチューニングの一部を非表示にしています。</string>
+    <string name="tweaks_empty">このデバイスで読み取れる調整項目がありません。</string>
+
+    <!-- Rows. %1$s: tweak title, %2$s: value, %3$s: engine lock reason -->
+    <string name="tweaks_a11y_row">%1$s、値 %2$s</string>
+    <string name="tweaks_a11y_row_locked">%1$s、値 %2$s、ロック中: %3$s</string>
+    <string name="tweaks_a11y_value_unread">未読み取り</string>
+    <string name="tweaks_locked">ロック中: %1$s</string>
+
+    <!-- Editor dialog -->
+    <string name="tweaks_current">現在: %1$s</string>
+    <string name="tweaks_value">値</string>
+    <string name="tweaks_value_range">値（%1$d–%2$d）</string>
+    <string name="tweaks_heavy_warning">負荷の大きいチューニングです。適用後は温度と安定性を確認してください。</string>
+    <string name="tweaks_error_no_choices">このデバイスはこのチューニングの選択肢を提供していません。</string>
+    <string name="tweaks_error_pick_supported">デバイスが対応している値のいずれかを選択してください。</string>
+    <string name="tweaks_error_integer">整数を入力してください。</string>
+    <string name="tweaks_error_out_of_range">安全な範囲 %1$d–%2$d を超えています。</string>
+    <string name="tweaks_error_empty">値を空にすることはできません。</string>
+
+    <!-- Write outcomes. %1$s: tweak id, %2$s: value, %3$d: number of targets -->
+    <string name="tweaks_success">%1$s = %2$s を適用し、検証済みです。</string>
+    <plurals name="tweaks_success_targets">
+        <item quantity="other">%1$s = %2$s を %3$d 個のターゲットに適用し、検証済みです。</item>
+    </plurals>
+    <string name="tweaks_fail_engine_unavailable">zperfd を利用できません。変更はありません。</string>
+    <string name="tweaks_fail_framework_unavailable">ZKFC がカーネルに読み込まれていないため、チューニングはロックされています。</string>
+    <string name="tweaks_fail_framework_incompatible">ZKFC の API バージョンがエンジンと互換性がないため、チューニングはロックされています。</string>
+    <string name="tweaks_fail_license">ZKFC の APIトークンがまだ有効でないため、パフォーマンスチューニングはロックされています。</string>
+    <string name="tweaks_fail_unauthorized">Core Authority により操作が拒否されました。</string>
+    <string name="tweaks_fail_sentinel">Sentinel（サーマル/電源/ストレージの安全機構）によりブロックされました。</string>
+    <string name="tweaks_fail_lite">このチューニングはライトモードでは無効です。</string>
+    <string name="tweaks_fail_unknown_tweak">エンジンが認識できないチューニングです。</string>
+    <string name="tweaks_fail_rejected">値が拒否されたため、変更は取り消されました。</string>
+    <string name="tweaks_fail_not_observed">カーネルが値を保持しなかったため、変更は取り消されました。</string>
+    <string name="tweaks_fail_rollback_failed">適用に失敗し、ロールバックも完了しませんでした。復旧処理を実行します。</string>
+    <string name="tweaks_fail_state">エンジンの状態を復元できません。変更はありません。</string>
+    <string name="tweaks_fail_timeout">エンジンが時間内に応答しませんでした。状態が不確定のため、再読み込みしてください。</string>
+    <string name="tweaks_fail_generic">エンジンの応答を認識できません。適用されていないものとみなしてください。</string>
+</resources>

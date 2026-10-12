@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Usage history list -->
+    <string name="usage_title">Historial de uso</string>
+    <string name="usage_clear_all">Borrar todo</string>
+    <string name="usage_recording_title">Grabando…</string>
+    <string name="usage_background_title">Grabación en segundo plano</string>
+    <string name="usage_recording_body">Zairenkai está registrando la energía y las apps activas. Detén la grabación para guardar la sesión.</string>
+    <string name="usage_idle_body">Registra en segundo plano el historial de energía y el uso de apps, y revísalo por sesión.</string>
+    <string name="usage_stop_save">Detener y guardar</string>
+    <string name="usage_start">Empezar a grabar</string>
+    <string name="usage_access_hint">Concede el permiso \"Acceso a datos de uso\" para detectar con precisión la app activa (sin él, la detección usa root si está disponible).</string>
+    <string name="usage_open_access_settings">Abrir ajustes de acceso</string>
+    <string name="usage_empty">Aún no hay sesiones. Empieza a grabar para ver el historial aquí.</string>
+    <!-- %1$d: start level %, %2$d: end level %, %3$d: level drop %. Quoted to keep the double spaces. -->
+    <string name="usage_session_levels">"%1$d%% → %2$d%%  •  bajó %3$d%%"</string>
+
+    <!-- Session detail (power statistics) -->
+    <string name="usage_detail_title">Estadísticas de energía</string>
+    <string name="usage_session_not_found">No se encontró la sesión.</string>
+    <!-- %1$d: level drop %. Quoted to keep the double spaces. -->
+    <string name="usage_detail_process">"Evolución del uso  •  %1$d%%"</string>
+    <string name="usage_detail_discharge">Descarga</string>
+    <string name="usage_detail_avg_power">Potencia media</string>
+    <string name="usage_detail_used">Consumido</string>
+    <string name="usage_detail_estimate">Estimación</string>
+    <string name="usage_detail_scenarios">Escenarios de uso</string>
+    <string name="usage_detail_no_scenarios">No hay datos de escenarios.</string>
+    <!-- %1$s: average power (W, 2 decimals), %2$s: max temperature (°C, no decimals). Quoted to keep the spacing. -->
+    <string name="usage_detail_scenario_stats">"PROM. %1$sW   MÁX. %2$s°C"</string>
+    <!-- %1$s: game / app label. Quoted to keep the double spaces. -->
+    <string name="usage_detail_fps_title">"FPS  •  %1$s"</string>
+    <string name="usage_stat_max">MÁX.</string>
+    <string name="usage_stat_min">MÍN.</string>
+    <string name="usage_stat_avg">PROM.</string>
+    <string name="usage_stat_variance">VARIANZA</string>
+    <!-- No format args: getString() returns it verbatim, so the % is literal. -->
+    <string name="usage_stat_low5" formatted="false">5% bajo</string>
+    <string name="usage_stat_max_temp">MÁX. °C</string>
+    <string name="usage_stat_avg_power">PROM. W</string>
+    <string name="usage_detail_frame_time">Tiempo de fotograma (ms)</string>
+
+    <!-- Background recording service notification -->
+    <string name="usage_notif_channel_name">Monitor de uso</string>
+    <string name="usage_notif_channel_desc">Registra el historial de energía y el uso de apps</string>
+    <string name="usage_notif_recording">Grabando el historial de uso…</string>
+</resources>

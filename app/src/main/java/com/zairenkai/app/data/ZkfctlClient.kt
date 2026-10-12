@@ -68,7 +68,7 @@ class ZkfctlClient {
             4000,
         )
         if (!stage.ok) {
-            return LicenseResult(ok = false, state = "storage_error", error = "Gagal menyiapkan token secara persisten.")
+            return LicenseResult(ok = false, state = "storage_error", error = "could not stage the token under /data/adb/zkfc")
         }
         val result: LicenseResult = json.decodeFromString(
             raw("license install '/data/adb/zkfc/token.pending'", false, 8000),
@@ -78,7 +78,7 @@ class ZkfctlClient {
         // canonical token a second time. Remove the staging copy instead.
         val cleanup = RootShell.run("rm -f /data/adb/zkfc/token.pending", 2000)
         if (result.state == "valid" && !cleanup.ok) {
-            return result.copy(ok = false, state = "storage_error", error = "Token diterima, tetapi file staging gagal dibersihkan.")
+            return result.copy(ok = false, state = "storage_error", error = "token accepted, but the staged copy could not be removed")
         }
         return result
     }

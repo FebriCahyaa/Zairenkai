@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- System & security screen -->
+    <string name="system_title">Sistema y seguridad</string>
+    <string name="system_yes">Sí</string>
+    <string name="system_no">No</string>
+    <string name="system_label_status">Estado</string>
+
+    <!-- App integrity (SignatureGuard) -->
+    <string name="system_integrity_title">Integridad de la app</string>
+    <string name="system_sig_official">Oficial (la firma coincide)</string>
+    <string name="system_sig_modified">Modificada / reempaquetada</string>
+    <string name="system_sig_unknown">Sin verificar (debug/falsificada)</string>
+    <string name="system_label_signature_fingerprint">Huella de la firma</string>
+
+    <!-- Runtime architecture entry -->
+    <string name="system_runtime_title">Arquitectura del runtime</string>
+    <string name="system_runtime_desc">La identidad, las capacidades del runtime, la autoridad térmica y el registro de subsistemas se proyectan desde el límite de observación de Zairenkai.</string>
+    <string name="system_runtime_open">Abrir Zairenkai Runtime</string>
+
+    <!-- ZKFC API license -->
+    <string name="system_license_title">Licencia de API (ZKFC)</string>
+    <string name="system_label_token_installed">Token instalado</string>
+    <string name="system_label_owner_key">Clave de propietario</string>
+    <string name="system_owner_key_installed">Instalada</string>
+    <string name="system_owner_key_missing">No instalada</string>
+    <string name="system_label_key_fingerprint">Huella de la clave</string>
+    <string name="system_label_kernel_binding">Vinculación al kernel</string>
+    <string name="system_label_licensee">Titular de la licencia</string>
+    <string name="system_install_token">Instalar token (.zkl)</string>
+    <string name="system_license_note">Los tokens de API solo los emite el propietario de Zairenkai bajo solicitud. Consulta docs/security/API_TOKENS.md.</string>
+    <string name="system_token_read_failed">No se pudo leer el archivo del token.</string>
+    <!-- %1$s: licensee name from the token, or system_token_this_device -->
+    <string name="system_token_installed">Token instalado para %1$s.</string>
+    <string name="system_token_this_device">el dispositivo</string>
+    <!-- %1$s: raw license state reported by the engine -->
+    <string name="system_token_rejected">Rechazado: %1$s</string>
+
+    <!-- Caller identity -->
+    <string name="system_caller_title">Identidad del llamador</string>
+    <string name="system_label_zkfc_caps">Capacidades de ZKFC</string>
+
+    <!-- System security -->
+    <string name="system_security_title">Seguridad del sistema</string>
+    <string name="system_present">Presente</string>
+    <string name="system_label_module_signing">Firma de módulos</string>
+    <string name="system_enforced">Obligatoria</string>
+    <string name="system_label_lockdown">Lockdown del kernel</string>
+    <string name="system_label_taint">Taint</string>
+    <string name="system_taint_clean">Limpio</string>
+    <string name="system_label_config_digest">Digest de configuración</string>
+
+    <!-- Device -->
+    <string name="system_device_title">Dispositivo</string>
+    <string name="system_label_model">Modelo</string>
+    <string name="system_label_compatible">Compatible</string>
+    <string name="system_label_kernel_tag">Etiqueta del kernel</string>
+    <string name="system_empty">(vacío)</string>
+    <string name="system_label_cpu_count">Número de CPU</string>
+
+    <!-- Performance engine (zperfd) -->
+    <string name="system_zperf_title">Motor de rendimiento (zperfd)</string>
+    <string name="system_label_kernel">Kernel</string>
+    <string name="system_label_release">Versión</string>
+    <string name="system_label_boost">Boost</string>
+
+    <!-- Access policy -->
+    <string name="system_policy_title">Política de acceso (UID/GID/Grupo)</string>
+    <!-- %1$s: entry type (uid/gid/group), %2$d: numeric id -->
+    <string name="system_policy_entry_builtin">%1$s:%2$d (integrado)</string>
+
+    <!-- Root required (shared screen piece) -->
+    <string name="system_root_required_title">Se requiere acceso root</string>
+    <string name="system_root_required_body">Zairenkai requiere root (Magisk / KernelSU / APatch) y el módulo ZKFC instalado. Instala el módulo y vuelve a intentarlo.</string>
+    <string name="system_action_retry">Reintentar</string>
+
+    <!-- Zairenkai Runtime screen -->
+    <string name="runtime_identity_title">Identidad de Zairenkai</string>
+    <string name="runtime_label_product">Producto</string>
+    <string name="runtime_label_app_id">ID de la app</string>
+    <string name="runtime_label_core_id">ID de Core</string>
+    <string name="runtime_label_core_api">API de Core</string>
+    <string name="runtime_label_platform">Plataforma</string>
+    <string name="runtime_kernel_unidentified">Kernel no identificado</string>
+    <string name="runtime_platform_unidentified">Dispositivo no identificado</string>
+    <string name="runtime_thermal_title">Autoridad térmica</string>
+    <string name="runtime_label_envelope">Envolvente</string>
+    <string name="runtime_label_headroom">Margen</string>
+    <string name="runtime_label_control_zone">Zona de control</string>
+    <string name="runtime_label_critical_trip">Umbral crítico</string>
+    <string name="runtime_label_telemetry">Telemetría</string>
+    <string name="runtime_telemetry_complete">Completa</string>
+    <string name="runtime_telemetry_incomplete">Incompleta</string>
+    <string name="runtime_unknown">Desconocido</string>
+    <!-- %1$s: capability category name -->
+    <string name="runtime_capability_section">Capacidades · %1$s</string>
+    <string name="runtime_cap_ready">LISTO</string>
+    <string name="runtime_cap_unavailable">NO DISPONIBLE</string>
+    <string name="runtime_cap_unobserved">SIN OBSERVAR</string>
+    <string name="runtime_subsystem_title">Registro de subsistemas</string>
+    <string name="runtime_observe_failed">Error al observar el runtime.</string>
+
+    <!-- Capability categories -->
+    <string name="capability_category_runtime">Runtime</string>
+    <string name="capability_category_thermal">Térmica</string>
+    <string name="capability_category_memory">Memoria</string>
+    <string name="capability_category_storage">Almacenamiento</string>
+    <string name="capability_category_network">Red</string>
+    <string name="capability_category_system">Sistema</string>
+
+    <!-- Capability titles -->
+    <string name="capability_root">Autoridad root</string>
+    <string name="capability_zkfc">Autoridad de kernel ZKFC</string>
+    <string name="capability_zperfd">Motor de runtime zperfd</string>
+    <string name="capability_thermal_telemetry">Telemetría térmica</string>
+    <string name="capability_thermal_trips">Topología de umbrales del runtime</string>
+    <string name="capability_thermal_headroom">Margen térmico</string>
+    <string name="capability_cpu_cpufreq">Política de frecuencia de CPU</string>
+    <string name="capability_cpu_uclamp">uclamp de CPU</string>
+    <string name="capability_cpu_schedtune">schedtune de CPU</string>
+    <string name="capability_input_boost">Input boost</string>
+    <string name="capability_gpu_devfreq">devfreq de GPU</string>
+    <string name="capability_memory">Telemetría de memoria</string>
+    <string name="capability_storage">Topología de almacenamiento</string>
+    <string name="capability_network">Control de red</string>
+    <string name="capability_properties">Bróker de propiedades de Zairenkai</string>
+
+    <!-- Subsystem roles (display names are product names and stay in code) -->
+    <string name="subsystem_role_atlas">inteligencia del dispositivo</string>
+    <string name="subsystem_role_sentinel">protección y seguridad</string>
+    <string name="subsystem_role_thermoguard">seguridad térmica</string>
+    <string name="subsystem_role_zperfd">orquestación del runtime</string>
+    <string name="subsystem_role_zkfc">autoridad del kernel</string>
+</resources>

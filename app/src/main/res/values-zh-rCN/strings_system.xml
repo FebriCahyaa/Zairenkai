@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- System & security screen -->
+    <string name="system_title">系统与安全</string>
+    <string name="system_yes">是</string>
+    <string name="system_no">否</string>
+    <string name="system_label_status">状态</string>
+
+    <!-- App integrity (SignatureGuard) -->
+    <string name="system_integrity_title">应用完整性</string>
+    <string name="system_sig_official">官方（签名匹配）</string>
+    <string name="system_sig_modified">已修改/重新打包</string>
+    <string name="system_sig_unknown">未验证（调试版/伪造）</string>
+    <string name="system_label_signature_fingerprint">签名指纹</string>
+
+    <!-- Runtime architecture entry -->
+    <string name="system_runtime_title">运行时架构</string>
+    <string name="system_runtime_desc">身份、运行时能力、温控权威与子系统注册表，均由 Zairenkai 观测边界投射而来。</string>
+    <string name="system_runtime_open">打开 Zairenkai Runtime</string>
+
+    <!-- ZKFC API license -->
+    <string name="system_license_title">API 许可证（ZKFC）</string>
+    <string name="system_label_token_installed">已安装令牌</string>
+    <string name="system_label_owner_key">所有者密钥</string>
+    <string name="system_owner_key_installed">已安装</string>
+    <string name="system_owner_key_missing">未安装</string>
+    <string name="system_label_key_fingerprint">密钥指纹</string>
+    <string name="system_label_kernel_binding">内核绑定</string>
+    <string name="system_label_licensee">被许可人</string>
+    <string name="system_install_token">安装令牌（.zkl）</string>
+    <string name="system_license_note">API 令牌仅由 Zairenkai 所有者应请求签发。详见 docs/security/API_TOKENS.md。</string>
+    <string name="system_token_read_failed">读取令牌文件失败。</string>
+    <!-- %1$s: licensee name from the token, or system_token_this_device -->
+    <string name="system_token_installed">已为 %1$s 安装令牌。</string>
+    <string name="system_token_this_device">本设备</string>
+    <!-- %1$s: raw license state reported by the engine -->
+    <string name="system_token_rejected">已拒绝：%1$s</string>
+
+    <!-- Caller identity -->
+    <string name="system_caller_title">调用方身份</string>
+    <string name="system_label_zkfc_caps">ZKFC 能力</string>
+
+    <!-- System security -->
+    <string name="system_security_title">系统安全</string>
+    <string name="system_present">存在</string>
+    <string name="system_label_module_signing">模块签名</string>
+    <string name="system_enforced">强制</string>
+    <string name="system_label_lockdown">内核锁定</string>
+    <string name="system_label_taint">Taint</string>
+    <string name="system_taint_clean">干净</string>
+    <string name="system_label_config_digest">配置摘要</string>
+
+    <!-- Device -->
+    <string name="system_device_title">设备</string>
+    <string name="system_label_model">型号</string>
+    <string name="system_label_compatible">兼容</string>
+    <string name="system_label_kernel_tag">内核标签</string>
+    <string name="system_empty">（空）</string>
+    <string name="system_label_cpu_count">CPU 数量</string>
+
+    <!-- Performance engine (zperfd) -->
+    <string name="system_zperf_title">性能引擎（zperfd）</string>
+    <string name="system_label_kernel">内核</string>
+    <string name="system_label_release">发行版本</string>
+    <string name="system_label_boost">加速</string>
+
+    <!-- Access policy -->
+    <string name="system_policy_title">访问策略（UID/GID/组）</string>
+    <!-- %1$s: entry type (uid/gid/group), %2$d: numeric id -->
+    <string name="system_policy_entry_builtin">%1$s:%2$d（内置）</string>
+
+    <!-- Root required (shared screen piece) -->
+    <string name="system_root_required_title">需要 root 权限</string>
+    <string name="system_root_required_body">Zairenkai 需要 root（Magisk / KernelSU / APatch）并已安装 ZKFC 模块。请安装模块后重试。</string>
+    <string name="system_action_retry">重试</string>
+
+    <!-- Zairenkai Runtime screen -->
+    <string name="runtime_identity_title">Zairenkai 身份</string>
+    <string name="runtime_label_product">产品</string>
+    <string name="runtime_label_app_id">应用 ID</string>
+    <string name="runtime_label_core_id">Core ID</string>
+    <string name="runtime_label_core_api">Core API</string>
+    <string name="runtime_label_platform">平台</string>
+    <string name="runtime_kernel_unidentified">未识别的内核</string>
+    <string name="runtime_platform_unidentified">未识别的设备</string>
+    <string name="runtime_thermal_title">温控权威</string>
+    <string name="runtime_label_envelope">包络</string>
+    <string name="runtime_label_headroom">余量</string>
+    <string name="runtime_label_control_zone">控制区间</string>
+    <string name="runtime_label_critical_trip">临界触发点</string>
+    <string name="runtime_label_telemetry">遥测</string>
+    <string name="runtime_telemetry_complete">完整</string>
+    <string name="runtime_telemetry_incomplete">不完整</string>
+    <string name="runtime_unknown">未知</string>
+    <!-- %1$s: capability category name -->
+    <string name="runtime_capability_section">能力 · %1$s</string>
+    <string name="runtime_cap_ready">就绪</string>
+    <string name="runtime_cap_unavailable">不可用</string>
+    <string name="runtime_cap_unobserved">未观测</string>
+    <string name="runtime_subsystem_title">子系统注册表</string>
+    <string name="runtime_observe_failed">运行时观测失败。</string>
+
+    <!-- Capability categories -->
+    <string name="capability_category_runtime">运行时</string>
+    <string name="capability_category_thermal">温控</string>
+    <string name="capability_category_memory">内存</string>
+    <string name="capability_category_storage">存储</string>
+    <string name="capability_category_network">网络</string>
+    <string name="capability_category_system">系统</string>
+
+    <!-- Capability titles -->
+    <string name="capability_root">root 权限</string>
+    <string name="capability_zkfc">ZKFC 内核权限</string>
+    <string name="capability_zperfd">zperfd 运行时引擎</string>
+    <string name="capability_thermal_telemetry">温控遥测</string>
+    <string name="capability_thermal_trips">运行时触发点拓扑</string>
+    <string name="capability_thermal_headroom">温控余量</string>
+    <string name="capability_cpu_cpufreq">CPU 频率策略</string>
+    <string name="capability_cpu_uclamp">CPU uclamp</string>
+    <string name="capability_cpu_schedtune">CPU schedtune</string>
+    <string name="capability_input_boost">输入加速</string>
+    <string name="capability_gpu_devfreq">GPU devfreq</string>
+    <string name="capability_memory">内存遥测</string>
+    <string name="capability_storage">存储拓扑</string>
+    <string name="capability_network">网络控制</string>
+    <string name="capability_properties">Zairenkai 属性代理</string>
+
+    <!-- Subsystem roles (display names are product names and stay in code) -->
+    <string name="subsystem_role_atlas">设备智能</string>
+    <string name="subsystem_role_sentinel">安全与防护</string>
+    <string name="subsystem_role_thermoguard">温控安全</string>
+    <string name="subsystem_role_zperfd">运行时编排</string>
+    <string name="subsystem_role_zkfc">内核权限</string>
+</resources>

@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import com.zairenkai.app.ui.icons.*
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -27,14 +29,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.zairenkai.app.AppContainer
+import com.zairenkai.app.R
 import com.zairenkai.app.ui.screens.*
 
-enum class Dest(val route: String, val label: String, val icon: ImageVector) {
-    DASHBOARD("dashboard", "Beranda", Icons.Rounded.Dashboard),
-    MONITOR("monitor", "Monitor", Icons.Rounded.Timeline),
-    TWEAKS("tweaks", "Tweaks", Icons.Rounded.Tune),
-    PROFILES("profiles", "Profil", Icons.Rounded.ViewCarousel),
-    SYSTEM("system", "Sistem", Icons.Rounded.Security),
+enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVector) {
+    DASHBOARD("dashboard", R.string.nav_dashboard, Icons.Rounded.Dashboard),
+    MONITOR("monitor", R.string.nav_monitor, Icons.Rounded.Timeline),
+    TWEAKS("tweaks", R.string.nav_tweaks, Icons.Rounded.Tune),
+    PROFILES("profiles", R.string.nav_profiles, Icons.Rounded.ViewCarousel),
+    SYSTEM("system", R.string.nav_system, Icons.Rounded.Security),
 }
 
 private val bottomDests = listOf(Dest.DASHBOARD, Dest.MONITOR, Dest.TWEAKS, Dest.PROFILES, Dest.SYSTEM)
@@ -68,8 +71,8 @@ fun ZairenkaiRoot(container: AppContainer) {
                                 restoreState = true
                             }
                         },
-                        icon = { Icon(dest.icon, contentDescription = dest.label) },
-                        label = { Text(dest.label) },
+                        icon = { Icon(dest.icon, contentDescription = stringResource(dest.label)) },
+                        label = { Text(stringResource(dest.label)) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             selectedTextColor = MaterialTheme.colorScheme.onSurface,

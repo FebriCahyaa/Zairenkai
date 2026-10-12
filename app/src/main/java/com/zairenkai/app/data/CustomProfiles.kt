@@ -9,6 +9,10 @@
  */
 package com.zairenkai.app.data
 
+import androidx.annotation.StringRes
+import com.zairenkai.app.R
+import com.zairenkai.app.core.text.UiText
+import com.zairenkai.app.core.text.uiText
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -66,50 +70,56 @@ enum class FieldKind { INT, FREQ, LIST }
 
 data class CustomField(
     val key: String,
-    val title: String,
+    @StringRes val title: Int,
     val kind: FieldKind,
     val range: LongRange? = null,
-    val hint: String? = null,
 ) {
+    /** Input hint for the field kind; null for plain numbers. */
+    @get:StringRes val hint: Int?
+        get() = when (kind) {
+            FieldKind.FREQ -> R.string.custom_hint_freq
+            FieldKind.LIST -> R.string.custom_hint_list
+            FieldKind.INT -> null
+        }
+
     val section: String get() = key.substringBefore('.')
     val name: String get() = key.substringAfter('.')
 }
 
 object CustomFields {
-    private const val FREQ_HINT = "min, max, 80%, 1.8GHz, 1800MHz, -300MHz atau kHz"
-    private const val LIST_HINT = "urut prioritas, pisahkan dengan koma"
     private val U32 = 0L..4_294_967_295L
     private val I32 = Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()
 
     /** Every field of a zperfd mode, with the engine's validation range where it has one. */
     val all: List<CustomField> = listOf(
-        CustomField("cpu.min_freq", "Frekuensi minimum CPU", FieldKind.FREQ, hint = FREQ_HINT),
-        CustomField("cpu.max_freq", "Frekuensi maksimum CPU", FieldKind.FREQ, hint = FREQ_HINT),
-        CustomField("cpu.min_perf_pct", "Lantai performa CPU (%)", FieldKind.INT, 0L..100L),
-        CustomField("cpu.max_perf_pct", "Batas performa CPU (%)", FieldKind.INT, 0L..100L),
-        CustomField("cpu.governor", "Governor CPU", FieldKind.LIST, hint = LIST_HINT),
-        CustomField("cpu.uclamp_min_pct", "uclamp minimum (%)", FieldKind.INT, 0L..100L),
-        CustomField("cpu.uclamp_max_pct", "uclamp maksimum (%)", FieldKind.INT, 0L..100L),
-        CustomField("cpu.input_boost_pct", "Boost input (% frekuensi maks)", FieldKind.INT, 0L..100L),
-        CustomField("cpu.input_boost_ms", "Durasi boost input (ms)", FieldKind.INT, 0L..10_000L),
-        CustomField("cpu.sched_boost", "sched_boost", FieldKind.INT, -100L..100L),
-        CustomField("gpu.min_freq", "Frekuensi minimum GPU", FieldKind.FREQ, hint = FREQ_HINT),
-        CustomField("gpu.max_freq", "Frekuensi maksimum GPU", FieldKind.FREQ, hint = FREQ_HINT),
-        CustomField("gpu.min_perf_pct", "Lantai performa GPU (%)", FieldKind.INT, 0L..100L),
-        CustomField("gpu.max_perf_pct", "Batas performa GPU (%)", FieldKind.INT, 0L..100L),
-        CustomField("gpu.governor", "Governor GPU", FieldKind.LIST, hint = LIST_HINT),
-        CustomField("mem.swappiness", "Swappiness", FieldKind.INT, 0L..200L),
-        CustomField("mem.vfs_cache_pressure", "vfs_cache_pressure", FieldKind.INT, 0L..1000L),
-        CustomField("mem.watermark_scale_factor", "watermark_scale_factor", FieldKind.INT, U32),
-        CustomField("mem.page_cluster", "page-cluster", FieldKind.INT, I32),
-        CustomField("mem.extra_free_kbytes", "extra_free_kbytes", FieldKind.INT, U32),
-        CustomField("io.scheduler", "Scheduler I/O", FieldKind.LIST, hint = LIST_HINT),
-        CustomField("io.read_ahead_kb", "read_ahead_kb", FieldKind.INT, 0L..4096L),
-        CustomField("io.nr_requests", "nr_requests", FieldKind.INT, 1L..4096L),
+        CustomField("cpu.min_freq", R.string.custom_field_cpu_min_freq, FieldKind.FREQ),
+        CustomField("cpu.max_freq", R.string.custom_field_cpu_max_freq, FieldKind.FREQ),
+        CustomField("cpu.min_perf_pct", R.string.custom_field_cpu_min_perf_pct, FieldKind.INT, 0L..100L),
+        CustomField("cpu.max_perf_pct", R.string.custom_field_cpu_max_perf_pct, FieldKind.INT, 0L..100L),
+        CustomField("cpu.governor", R.string.custom_field_cpu_governor, FieldKind.LIST),
+        CustomField("cpu.uclamp_min_pct", R.string.custom_field_cpu_uclamp_min, FieldKind.INT, 0L..100L),
+        CustomField("cpu.uclamp_max_pct", R.string.custom_field_cpu_uclamp_max, FieldKind.INT, 0L..100L),
+        CustomField("cpu.input_boost_pct", R.string.custom_field_cpu_input_boost_pct, FieldKind.INT, 0L..100L),
+        CustomField("cpu.input_boost_ms", R.string.custom_field_cpu_input_boost_ms, FieldKind.INT, 0L..10_000L),
+        CustomField("cpu.sched_boost", R.string.custom_field_cpu_sched_boost, FieldKind.INT, -100L..100L),
+        CustomField("gpu.min_freq", R.string.custom_field_gpu_min_freq, FieldKind.FREQ),
+        CustomField("gpu.max_freq", R.string.custom_field_gpu_max_freq, FieldKind.FREQ),
+        CustomField("gpu.min_perf_pct", R.string.custom_field_gpu_min_perf_pct, FieldKind.INT, 0L..100L),
+        CustomField("gpu.max_perf_pct", R.string.custom_field_gpu_max_perf_pct, FieldKind.INT, 0L..100L),
+        CustomField("gpu.governor", R.string.custom_field_gpu_governor, FieldKind.LIST),
+        CustomField("mem.swappiness", R.string.custom_field_mem_swappiness, FieldKind.INT, 0L..200L),
+        CustomField("mem.vfs_cache_pressure", R.string.custom_field_mem_vfs_cache_pressure, FieldKind.INT, 0L..1000L),
+        CustomField("mem.watermark_scale_factor", R.string.custom_field_mem_watermark_scale_factor, FieldKind.INT, U32),
+        CustomField("mem.page_cluster", R.string.custom_field_mem_page_cluster, FieldKind.INT, I32),
+        CustomField("mem.extra_free_kbytes", R.string.custom_field_mem_extra_free_kbytes, FieldKind.INT, U32),
+        CustomField("io.scheduler", R.string.custom_field_io_scheduler, FieldKind.LIST),
+        CustomField("io.read_ahead_kb", R.string.custom_field_io_read_ahead_kb, FieldKind.INT, 0L..4096L),
+        CustomField("io.nr_requests", R.string.custom_field_io_nr_requests, FieldKind.INT, 1L..4096L),
     )
 
-    val sections: List<Pair<String, String>> = listOf(
-        "cpu" to "CPU", "gpu" to "GPU", "mem" to "Memori", "io" to "I/O",
+    val sections: List<Pair<String, Int>> = listOf(
+        "cpu" to R.string.custom_section_cpu, "gpu" to R.string.custom_section_gpu,
+        "mem" to R.string.custom_section_mem, "io" to R.string.custom_section_io,
     )
 
     fun byKey(key: String): CustomField? = all.firstOrNull { it.key == key }
@@ -151,31 +161,32 @@ data class CustomDraft(
     val overrideCount: Int get() = overrides.size
 
     /** The first problem a user can fix, or null. zperfd re-validates everything. */
-    fun validate(): String? {
-        if (!isCustomId(id)) return "ID profil tidak valid."
+    fun validate(): UiText? {
+        if (!isCustomId(id)) return uiText(R.string.custom_err_id)
         val n = label.trim().length
-        if (n == 0 || label.length > 32 || label.any { it.isISOControl() }) return "Nama profil harus 1–32 karakter."
-        if (base.isBlank()) return "Pilih mode dasar."
+        if (n == 0 || label.length > 32 || label.any { it.isISOControl() }) return uiText(R.string.custom_err_label)
+        if (base.isBlank()) return uiText(R.string.custom_err_base)
         for ((f, text) in overrides) {
+            val title = uiText(f.title)
             when (f.kind) {
                 FieldKind.INT -> {
-                    val v = text.toLongOrNull() ?: return "${f.title}: harus angka bulat."
+                    val v = text.toLongOrNull() ?: return uiText(R.string.custom_err_integer, title)
                     val r = f.range
-                    if (r != null && v !in r) return "${f.title}: harus ${r.first}–${r.last}."
+                    if (r != null && v !in r) return uiText(R.string.custom_err_range, title, r.first, r.last)
                 }
                 FieldKind.FREQ ->
-                    if (text.length > 32 || !FREQ.matches(text)) return "${f.title}: format frekuensi tidak dikenali."
+                    if (text.length > 32 || !FREQ.matches(text)) return uiText(R.string.custom_err_freq, title)
                 FieldKind.LIST -> {
                     val items = listItems(text)
                     if (items.isEmpty() || items.size > 16 || items.any { it.length > 64 || '/' in it || '\\' in it }) {
-                        return "${f.title}: daftar tidak valid."
+                        return uiText(R.string.custom_err_list, title)
                     }
                 }
             }
         }
         val uMin = values["cpu.uclamp_min_pct"]?.trim()?.toLongOrNull()
         val uMax = values["cpu.uclamp_max_pct"]?.trim()?.toLongOrNull()
-        if (uMin != null && uMax != null && uMin > uMax) return "uclamp minimum tidak boleh melebihi maksimum."
+        if (uMin != null && uMax != null && uMin > uMax) return uiText(R.string.custom_err_uclamp)
         return null
     }
 

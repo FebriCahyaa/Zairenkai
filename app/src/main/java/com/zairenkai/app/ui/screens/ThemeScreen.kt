@@ -31,9 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.R
 import com.zairenkai.app.data.AppSettings
 import com.zairenkai.app.ui.SettingsViewModel
 import com.zairenkai.app.ui.VmFactory
@@ -50,10 +52,10 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Tema") },
+                title = { Text(stringResource(R.string.theme_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ChevronLeft, "Kembali")
+                        Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back))
                     }
                 },
             )
@@ -67,16 +69,16 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
 
             Card(shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(18.dp)) {
-                    Text("Mode", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(10.dp))
-                    val modes = listOf("system" to "Sistem", "light" to "Terang", "dark" to "Gelap")
+                    val modes = listOf("system" to R.string.theme_mode_system, "light" to R.string.theme_mode_light, "dark" to R.string.theme_mode_dark)
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                         modes.forEachIndexed { i, (id, label) ->
                             SegmentedButton(
                                 selected = s.themeMode == id,
                                 onClick = { vm.setThemeMode(id) },
                                 shape = SegmentedButtonDefaults.itemShape(i, modes.size),
-                                label = { Text(label) },
+                                label = { Text(stringResource(label)) },
                             )
                         }
                     }
@@ -88,15 +90,15 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
                     // minSdk 31: dynamic color (Android 12) is always available.
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Warna dinamis", style = MaterialTheme.typography.titleMedium)
-                            Text("Ikuti wallpaper (Material You)",
+                            Text(stringResource(R.string.theme_dynamic_color), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.theme_dynamic_color_sub),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(checked = s.dynamicColor, onCheckedChange = { vm.setDynamicColor(it) })
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text("Aksen", style = MaterialTheme.typography.titleMedium,
+                    Text(stringResource(R.string.theme_accent), style = MaterialTheme.typography.titleMedium,
                         color = if (s.dynamicColor) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -119,7 +121,7 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
                     }
                     if (s.dynamicColor) {
                         Spacer(Modifier.height(8.dp))
-                        Text("Matikan warna dinamis untuk memilih aksen.",
+                        Text(stringResource(R.string.theme_accent_disabled_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -131,8 +133,8 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
                 Column(Modifier.padding(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Glass UI", style = MaterialTheme.typography.titleMedium)
-                            Text("Kartu transparan dengan latar warna lembut",
+                            Text(stringResource(R.string.theme_glass), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.theme_glass_sub),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -144,9 +146,9 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
                         exit = shrinkVertically() + fadeOut(),
                     ) {
                         Column(Modifier.padding(top = 14.dp)) {
-                            SliderRow("Transparansi", s.glassOpacity, 0.35f..0.95f) { vm.setGlassOpacity(it) }
-                            SliderRow("Blur latar", s.glassBlur, 0f..40f) { vm.setGlassBlur(it) }
-                            SliderRow("Tint aksen", s.glassTint, 0f..0.4f) { vm.setGlassTint(it) }
+                            SliderRow(stringResource(R.string.theme_glass_opacity), s.glassOpacity, 0.35f..0.95f) { vm.setGlassOpacity(it) }
+                            SliderRow(stringResource(R.string.theme_glass_blur), s.glassBlur, 0f..40f) { vm.setGlassBlur(it) }
+                            SliderRow(stringResource(R.string.theme_glass_tint), s.glassTint, 0f..0.4f) { vm.setGlassTint(it) }
                         }
                     }
                 }
@@ -201,7 +203,7 @@ private fun ThemePreview(s: AppSettings) {
                 Column {
                     Text("Zairenkai", color = Color.White, fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium)
-                    Text(if (s.glass) "Glass UI aktif" else "Pratinjau tema",
+                    Text(stringResource(if (s.glass) R.string.theme_preview_glass_active else R.string.theme_preview),
                         color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
                 }
             }

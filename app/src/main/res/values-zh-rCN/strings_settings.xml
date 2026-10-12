@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Settings screen -->
+    <string name="settings_title">设置</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_theme_sub">模式、强调色、动态取色与 Glass UI</string>
+    <string name="settings_about_sub">版本、许可与致谢</string>
+    <string name="settings_section_general">常规</string>
+    <string name="settings_lite_title">精简模式</string>
+    <string name="settings_lite_sub">隐藏重度调校项，降低开销。</string>
+    <string name="settings_mitigation_title">设备缓解</string>
+    <string name="settings_mitigation_sub">为易发热设备/老旧 SoC 限制加速。</string>
+    <string name="settings_dynamic_color_title">动态取色（Material You）</string>
+    <string name="settings_dynamic_color_sub">跟随壁纸（Android 12+）。</string>
+    <string name="settings_log_level_title">日志级别</string>
+    <string name="settings_log_level_desc">内核记录的 ZKFC 日志级别。</string>
+    <string name="settings_live_log">实时日志</string>
+    <string name="settings_log_empty">暂无日志。请确认 ZKFC 模块已加载。</string>
+
+    <!-- Theme screen -->
+    <string name="theme_title">主题</string>
+    <string name="theme_mode">模式</string>
+    <string name="theme_mode_system">跟随系统</string>
+    <string name="theme_mode_light">浅色</string>
+    <string name="theme_mode_dark">深色</string>
+    <string name="theme_dynamic_color">动态取色</string>
+    <string name="theme_dynamic_color_sub">跟随壁纸（Material You）</string>
+    <string name="theme_accent">强调色</string>
+    <string name="theme_accent_disabled_hint">关闭动态取色后即可选择强调色。</string>
+    <string name="theme_glass_sub">半透明卡片，搭配柔和的彩色背景</string>
+    <string name="theme_glass_opacity">透明度</string>
+    <string name="theme_glass_blur">背景模糊</string>
+    <string name="theme_glass_tint">强调色着色</string>
+    <string name="theme_preview_glass_active">Glass UI 已启用</string>
+    <string name="theme_preview">主题预览</string>
+
+    <!-- About screen -->
+    <string name="about_title">关于</string>
+    <string name="about_version">版本</string>
+    <string name="about_package">包名</string>
+    <string name="about_product_id">产品 ID</string>
+    <string name="about_core_id">Core ID</string>
+    <string name="about_author">作者</string>
+    <string name="about_zkfc_api">ZKFC API</string>
+    <string name="about_license_title">许可与致谢</string>
+    <string name="about_license_body">ZKFC 内核采用 GPL-2.0 许可。应用、引擎、模块和工具采用 Zairenkai Proprietary 许可。字体为 Roboto Flex（OFL-1.1）。Ed25519/SHA-512 校验器基于 TweetNaCl（公有领域）。</string>
+    <string name="about_copyright">© 2026 FebriCahyaa 保留所有权利。</string>
+</resources>

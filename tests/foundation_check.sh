@@ -35,7 +35,7 @@ grep -q 'tools/profile_validate.py database' .github/workflows/native.yml
 grep -q 'diff -qr database module/zperf/database' .github/workflows/native.yml
 # Lite mode must reach the engine on every tweak write: ViewModel -> repository
 # -> ZperfClient -> `zperfd --lite`.
-grep -q 'c.repository.setTweak(id, value, lite)' app/src/main/java/com/zairenkai/app/ui/Vm.kt
+grep -q 'c.repository.setTweak(id, value, lite)' app/src/main/java/com/zairenkai/app/ui/TweaksViewModel.kt
 grep -q 'zperf.setTweak(id, value, lite)' app/src/main/java/com/zairenkai/app/data/ZkfcRepository.kt
 grep -q 'if (lite) "--lite " else ""' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
 grep -q 'MAX_JOURNAL_BYTES' rust/zperfd/src/state.rs
@@ -113,3 +113,16 @@ grep -q 'uses the prefix reserved for user-defined modes' rust/zperfd/src/config
 grep -q 'profile.base_of(&effective) != "powersave"' rust/zperfd/src/main.rs
 grep -q 'custom put' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
 ! grep -q 'custom.toml' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
+
+# Setup wizard: the system check is read-only and probes each layer; a first
+# profile is applied through zperfd only (never a direct write).
+grep -q 'fun setupChecks' app/src/main/java/com/zairenkai/app/ui/onboarding/SetupChecks.kt
+grep -q 'c.zperf.apply(profile.mode)' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
+! grep -q 'RootShell.run' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
+
+# Languages: every shipped locale has resources, the list matches
+# locales_config.xml, and the setup animations are reproducible from the generator.
+for q in values-en values-en-rGB values-ja values-es values-zh-rCN; do test -d "app/src/main/res/$q"; done
+grep -q 'android:localeConfig="@xml/locales_config"' app/src/main/AndroidManifest.xml
+tmp_lottie="$(mktemp -d)"; python3 tools/lottie/gen_setup_animations.py --out "$tmp_lottie" >/dev/null
+diff -qr "$tmp_lottie" app/src/main/res/raw >/dev/null

@@ -27,7 +27,7 @@ class ProfileContractTest {
         val profileModes = Profiles.all.map { it.mode }
         assertEquals("profiles must map 1:1 to modes", profileModes.size, profileModes.toSet().size)
         Profiles.all.filter { it.id != ProfileId.AUTO }.forEach {
-            assertTrue("${it.name} -> ${it.mode} missing from engine profile", it.mode in engineModes)
+            assertTrue("${it.id} -> ${it.mode} missing from engine profile", it.mode in engineModes)
         }
         // Every engine mode is reachable from a profile (performance used to be unreachable).
         assertTrue(engineModes.all { mode -> Profiles.byMode(mode) != null })

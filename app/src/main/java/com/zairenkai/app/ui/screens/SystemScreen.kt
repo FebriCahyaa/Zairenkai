@@ -16,8 +16,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.R
+import com.zairenkai.app.core.text.UiText
+import com.zairenkai.app.core.text.asString
+import com.zairenkai.app.core.text.uiText
 import com.zairenkai.app.data.SignatureGuard
 import com.zairenkai.app.data.SignatureState
 import com.zairenkai.app.ui.SystemViewModel
@@ -39,12 +44,12 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
     val ui by vm.ui.collectAsState()
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var tokenMsg by remember { mutableStateOf<String?>(null) }
+    var tokenMsg by remember { mutableStateOf<UiText?>(null) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val path = withContext(Dispatchers.IO) { copyToCache(ctx, uri) }
-            if (path == null) { tokenMsg = "Gagal membaca file token."; return@launch }
+            if (path == null) { tokenMsg = uiText(R.string.system_token_read_failed); return@launch }
             val res = try {
                 vm.installToken(path)
             } finally {
@@ -52,62 +57,64 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
                 // material behind in the app cache.
                 withContext(NonCancellable + Dispatchers.IO) { File(path).delete() }
             }
-            tokenMsg = if (res.state == "valid") "Token terpasang untuk ${res.token?.licensee ?: "perangkat"}."
-            else "Ditolak: ${res.state}"
+            tokenMsg = if (res.state == "valid") {
+                uiText(R.string.system_token_installed, res.token?.licensee ?: uiText(R.string.system_token_this_device))
+            } else {
+                uiText(R.string.system_token_rejected, res.state)
+            }
             vm.refresh()
         }
     }
 
-    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text("Sistem & Keamanan") }) }) { inner ->
+    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, topBar = { TopAppBar(title = { Text(stringResource(R.string.system_title)) }) }) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val sig = remember { SignatureGuard.check(ctx) }
-            SectionCard("Integritas aplikasi") {
+            SectionCard(stringResource(R.string.system_integrity_title)) {
                 val (txt, col) = when (sig) {
-                    SignatureState.OFFICIAL -> "Resmi (tanda tangan cocok)" to ZkGood
-                    SignatureState.MODIFIED -> "Termodifikasi / dikemas ulang" to ZkBad
-                    SignatureState.UNKNOWN -> "Tidak diverifikasi (debug/spoofed)" to ZkWarn
+                    SignatureState.OFFICIAL -> stringResource(R.string.system_sig_official) to ZkGood
+                    SignatureState.MODIFIED -> stringResource(R.string.system_sig_modified) to ZkBad
+                    SignatureState.UNKNOWN -> stringResource(R.string.system_sig_unknown) to ZkWarn
                 }
-                LabeledRow("Status", txt, col)
+                LabeledRow(stringResource(R.string.system_label_status), txt, col)
                 SignatureGuard.currentSha256(ctx)?.let {
-                    LabeledRow("Sidik tanda tangan", it.take(16) + "…")
+                    LabeledRow(stringResource(R.string.system_label_signature_fingerprint), it.take(16) + "…")
                 }
             }
 
-            SectionCard("Arsitektur runtime") {
+            SectionCard(stringResource(R.string.system_runtime_title)) {
                 Text(
-                    "Identitas, capability runtime, thermal authority, dan subsystem registry diproyeksikan dari observation boundary Zairenkai.",
+                    stringResource(R.string.system_runtime_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(10.dp))
-                OutlinedButton(onClick = onOpenRuntime) { Text("Buka Zairenkai Runtime") }
+                OutlinedButton(onClick = onOpenRuntime) { Text(stringResource(R.string.system_runtime_open)) }
             }
 
             val lic = ui.license
-            SectionCard("Lisensi API (ZKFC)") {
-                LabeledRow("Status", lic?.state ?: "—",
+            SectionCard(stringResource(R.string.system_license_title)) {
+                LabeledRow(stringResource(R.string.system_label_status), lic?.state ?: "—",
                     if (lic?.state == "valid") ZkGood else ZkWarn)
-                LabeledRow("Token terpasang", if (lic?.hasToken == true) "Ya" else "Tidak")
-                LabeledRow("Kunci owner", if (lic?.ownerKeyProvisioned == true) "Terpasang" else "Belum")
+                LabeledRow(stringResource(R.string.system_label_token_installed), stringResource(if (lic?.hasToken == true) R.string.system_yes else R.string.system_no))
+                LabeledRow(stringResource(R.string.system_label_owner_key), stringResource(if (lic?.ownerKeyProvisioned == true) R.string.system_owner_key_installed else R.string.system_owner_key_missing))
                 lic?.ownerKeyFingerprint?.takeIf { it.isNotBlank() }?.let {
-                    LabeledRow("Sidik kunci", it.take(16) + "…")
+                    LabeledRow(stringResource(R.string.system_label_key_fingerprint), it.take(16) + "…")
                 }
                 lic?.kernelBinding?.takeIf { it.isNotBlank() }?.let {
-                    LabeledRow("Binding kernel", it.take(16) + "…")
+                    LabeledRow(stringResource(R.string.system_label_kernel_binding), it.take(16) + "…")
                 }
-                lic?.token?.let { LabeledRow("Licensee", it.licensee) }
+                lic?.token?.let { LabeledRow(stringResource(R.string.system_label_licensee), it.licensee) }
                 Spacer(Modifier.height(10.dp))
-                Button(onClick = { picker.launch(arrayOf("*/*")) }) { Text("Pasang token (.zkl)") }
+                Button(onClick = { picker.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.system_install_token)) }
                 tokenMsg?.let {
                     Spacer(Modifier.height(8.dp))
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
                 Text(
-                    "Token API hanya diterbitkan oleh pemilik Zairenkai atas permintaan. " +
-                        "Lihat docs/security/API_TOKENS.md.",
+                    stringResource(R.string.system_license_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp),
@@ -115,42 +122,43 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
             }
 
             ui.security?.user?.let { u ->
-                SectionCard("Identitas pemanggil") {
+                SectionCard(stringResource(R.string.system_caller_title)) {
                     LabeledRow("UID", u.uid.toString())
                     LabeledRow("EUID", u.euid.toString())
                     LabeledRow("GID", u.gid.toString())
                     LabeledRow("EGID", u.egid.toString())
-                    LabeledRow("CAP_SYS_ADMIN", if (u.capSysAdmin) "Ya" else "Tidak")
-                    LabeledRow("Kapabilitas ZKFC", "0x%x".format(u.caps))
+                    LabeledRow("CAP_SYS_ADMIN", stringResource(if (u.capSysAdmin) R.string.system_yes else R.string.system_no))
+                    LabeledRow(stringResource(R.string.system_label_zkfc_caps), "0x%x".format(u.caps))
                 }
             }
 
             ui.security?.system?.let { s ->
-                SectionCard("Keamanan sistem") {
-                    LabeledRow("SELinux", if (s.selinux) "Ada" else "Tidak",
+                SectionCard(stringResource(R.string.system_security_title)) {
+                    LabeledRow("SELinux", stringResource(if (s.selinux) R.string.system_present else R.string.system_no),
                         if (s.selinux) ZkGood else ZkWarn)
-                    LabeledRow("Module signing", if (s.moduleSigEnforced) "Dipaksa" else "Tidak")
-                    LabeledRow("Kernel lockdown", if (s.lockdown) "Aktif" else "Tidak")
-                    LabeledRow("Taint", if (s.taintMask == 0L) "Bersih" else "0x%x".format(s.taintMask),
+                    LabeledRow(stringResource(R.string.system_label_module_signing), stringResource(if (s.moduleSigEnforced) R.string.system_enforced else R.string.system_no))
+                    LabeledRow(stringResource(R.string.system_label_lockdown), stringResource(if (s.lockdown) R.string.state_active else R.string.system_no))
+                    LabeledRow(stringResource(R.string.system_label_taint), if (s.taintMask == 0L) stringResource(R.string.system_taint_clean) else "0x%x".format(s.taintMask),
                         if (s.taintMask == 0L) ZkGood else ZkWarn)
-                    LabeledRow("Config digest", s.configDigest.take(16) + "…")
+                    LabeledRow(stringResource(R.string.system_label_config_digest), s.configDigest.take(16) + "…")
                 }
             }
 
             ui.security?.device?.let { d ->
-                SectionCard("Perangkat") {
-                    LabeledRow("Model", d.model.ifBlank { "—" })
-                    LabeledRow("Compatible", d.compatible.ifBlank { "—" })
-                    LabeledRow("Tag kernel", d.licenseeTag.ifBlank { "(kosong)" })
-                    LabeledRow("Jumlah CPU", d.cpuCount.toString())
+                SectionCard(stringResource(R.string.system_device_title)) {
+                    LabeledRow(stringResource(R.string.system_label_model), d.model.ifBlank { "—" })
+                    LabeledRow(stringResource(R.string.system_label_compatible), d.compatible.ifBlank { "—" })
+                    val empty = stringResource(R.string.system_empty)
+                    LabeledRow(stringResource(R.string.system_label_kernel_tag), d.licenseeTag.ifBlank { empty })
+                    LabeledRow(stringResource(R.string.system_label_cpu_count), d.cpuCount.toString())
                 }
             }
 
             ui.zperf?.let { z ->
-                SectionCard("Mesin performa (zperfd)") {
-                    LabeledRow("Kernel", z.flavor, if (z.gki) ZkGood else ZkWarn)
-                    if (z.release.isNotBlank()) LabeledRow("Rilis", z.release)
-                    LabeledRow("Boost",
+                SectionCard(stringResource(R.string.system_zperf_title)) {
+                    LabeledRow(stringResource(R.string.system_label_kernel), z.flavor, if (z.gki) ZkGood else ZkWarn)
+                    if (z.release.isNotBlank()) LabeledRow(stringResource(R.string.system_label_release), z.release)
+                    LabeledRow(stringResource(R.string.system_label_boost),
                         buildList {
                             if (z.boost.uclamp) add("uclamp")
                             if (z.boost.schedtune) add("schedtune")
@@ -170,12 +178,12 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
             }
 
             ui.policy?.let { pol ->
-                SectionCard("Policy akses (UID/GID/Grup)") {
+                SectionCard(stringResource(R.string.system_policy_title)) {
                     if (pol.entries.isEmpty())
                         Text("—", style = MaterialTheme.typography.bodySmall)
                     pol.entries.forEach { e ->
                         LabeledRow(
-                            "${e.type}:${e.id}${if (e.builtin) " (builtin)" else ""}",
+                            if (e.builtin) stringResource(R.string.system_policy_entry_builtin, e.type, e.id) else "${e.type}:${e.id}",
                             "${if (e.deny) "deny " else ""}0x%x".format(e.caps),
                             if (e.deny) ZkBad else ZkGood,
                         )

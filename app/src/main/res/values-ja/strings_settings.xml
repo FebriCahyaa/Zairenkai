@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Settings screen -->
+    <string name="settings_title">設定</string>
+    <string name="settings_section_appearance">外観</string>
+    <string name="settings_theme_sub">モード、アクセント、ダイナミックカラー &amp; Glass UI</string>
+    <string name="settings_about_sub">バージョン、ライセンス &amp; クレジット</string>
+    <string name="settings_section_general">一般</string>
+    <string name="settings_lite_title">ライトモード</string>
+    <string name="settings_lite_sub">負荷の大きいチューニングを非表示にし、オーバーヘッドを減らします。</string>
+    <string name="settings_mitigation_title">デバイスの緩和策</string>
+    <string name="settings_mitigation_sub">発熱しやすいデバイスや古い SoC ではブーストを制限します。</string>
+    <string name="settings_dynamic_color_title">ダイナミックカラー（Material You）</string>
+    <string name="settings_dynamic_color_sub">壁紙に合わせます（Android 12 以降）。</string>
+    <string name="settings_log_level_title">ログレベル</string>
+    <string name="settings_log_level_desc">カーネルが記録する ZKFC のログレベルです。</string>
+    <string name="settings_live_log">ライブログ</string>
+    <string name="settings_log_empty">ログはまだありません。ZKFC モジュールが読み込まれていることを確認してください。</string>
+
+    <!-- Theme screen -->
+    <string name="theme_title">テーマ</string>
+    <string name="theme_mode">モード</string>
+    <string name="theme_mode_system">システム</string>
+    <string name="theme_mode_light">ライト</string>
+    <string name="theme_mode_dark">ダーク</string>
+    <string name="theme_dynamic_color">ダイナミックカラー</string>
+    <string name="theme_dynamic_color_sub">壁紙に合わせる（Material You）</string>
+    <string name="theme_accent">アクセント</string>
+    <string name="theme_accent_disabled_hint">アクセントを選ぶには、ダイナミックカラーをオフにしてください。</string>
+    <string name="theme_glass_sub">やわらかい色の背景に半透明のカード</string>
+    <string name="theme_glass_opacity">透明度</string>
+    <string name="theme_glass_blur">背景のぼかし</string>
+    <string name="theme_glass_tint">アクセントの色合い</string>
+    <string name="theme_preview_glass_active">Glass UI 有効</string>
+    <string name="theme_preview">テーマのプレビュー</string>
+
+    <!-- About screen -->
+    <string name="about_title">アプリについて</string>
+    <string name="about_version">バージョン</string>
+    <string name="about_package">パッケージ</string>
+    <string name="about_product_id">製品 ID</string>
+    <string name="about_core_id">Core ID</string>
+    <string name="about_author">作成者</string>
+    <string name="about_zkfc_api">ZKFC API</string>
+    <string name="about_license_title">ライセンス &amp; クレジット</string>
+    <string name="about_license_body">ZKFC カーネルは GPL-2.0 でライセンスされています。アプリ、エンジン、モジュール、ツールは Zairenkai Proprietary でライセンスされています。フォントは Roboto Flex（OFL-1.1）。Ed25519/SHA-512 検証機能は TweetNaCl（パブリックドメイン）に基づいています。</string>
+    <string name="about_copyright">© 2026 FebriCahyaa. All rights reserved.</string>
+</resources>

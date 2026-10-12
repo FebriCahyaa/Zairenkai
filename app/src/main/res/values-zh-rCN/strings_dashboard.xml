@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="dashboard_settings">设置</string>
+
+    <!-- Safe mode banner -->
+    <string name="dashboard_safe_mode_title">安全模式已启用</string>
+    <string name="dashboard_safe_mode_body">上次启动失败或意外重启，因此性能配置已恢复为基线。请先排查原因，再退出安全模式。</string>
+    <string name="dashboard_safe_mode_exit">退出安全模式</string>
+
+    <!-- API banner -->
+    <string name="dashboard_api_outdated_title">ZKFC API 过旧</string>
+    <string name="dashboard_api_outdated_body">内核使用的是旧版 ZKFC API。请将内核/ZKFC 更新到最新版本，以完整使用性能功能。</string>
+
+    <!-- Stat tiles -->
+    <string name="dashboard_zkfc_status">ZKFC 状态</string>
+    <!-- %1$s: hook mode reported by ZKFC -->
+    <string name="dashboard_hook_sub">Hook：%1$s</string>
+    <string name="dashboard_license">API 许可证</string>
+
+    <!-- License states -->
+    <string name="dashboard_license_valid">有效</string>
+    <string name="dashboard_license_missing">未安装</string>
+    <string name="dashboard_license_api_outdated">API 过旧</string>
+    <string name="dashboard_license_expired">已过期</string>
+    <string name="dashboard_license_no_owner_key">无密钥</string>
+    <string name="dashboard_license_revoked">已吊销</string>
+
+    <!-- Device section -->
+    <string name="dashboard_device">设备</string>
+    <string name="dashboard_arch">架构</string>
+    <string name="dashboard_kernel_type">内核类型</string>
+    <string name="dashboard_kernel">内核</string>
+    <string name="dashboard_hook_mode">Hook 模式</string>
+    <string name="dashboard_build">构建版本</string>
+
+    <!-- Thermal section -->
+    <string name="dashboard_thermal_envelope">温控包络</string>
+    <string name="dashboard_envelope">包络</string>
+    <string name="dashboard_headroom">余量</string>
+    <string name="dashboard_control_zone">控制区间</string>
+    <string name="dashboard_critical_trip">临界触发点</string>
+    <string name="dashboard_unknown">未知</string>
+    <string name="dashboard_thermal_no_evidence">温控仲裁尚未提供足够的依据。</string>
+
+    <!-- Active performance section -->
+    <string name="dashboard_active_performance">当前性能</string>
+    <string name="dashboard_input_boost">输入加速</string>
+    <string name="dashboard_idle">空闲</string>
+    <string name="dashboard_boosted_tasks">已加速任务</string>
+    <string name="dashboard_cpufreq_requests">cpufreq 请求</string>
+    <string name="dashboard_thermal">温控</string>
+    <string name="dashboard_thermal_mitigating">正在温控限频</string>
+    <string name="dashboard_thermal_normal">正常</string>
+    <string name="dashboard_reset_boosts">重置性能</string>
+</resources>

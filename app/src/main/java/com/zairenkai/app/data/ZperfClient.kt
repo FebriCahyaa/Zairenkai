@@ -50,7 +50,7 @@ class ZperfClient(
     /** Ask zperfd to apply and durably commit a requested mode. */
     suspend fun apply(mode: String): ModeApplyResult {
         if (mode !in VALID_MODES && !isCustomId(mode)) {
-            return ModeApplyResult(ok = false, kind = "rejected", error = "mode tidak dikenal: $mode")
+            return ModeApplyResult(ok = false, kind = "rejected", error = "unknown mode: $mode")
         }
         val r = RootShell.run("${shellQuote(bin)} --json set ${shellQuote(mode)}", 12_000)
         return parseModeApply(r.exitCode, r.stdout, r.stderr)
@@ -76,14 +76,16 @@ class ZperfClient(
      * whatever the outcome. Storing changes no tunable; apply it with [apply].
      */
     suspend fun putCustom(draft: CustomDraft): CustomWriteResult {
-        draft.validate()?.let { return CustomWriteResult(ok = false, id = draft.id, kind = "rejected", error = it) }
+        if (draft.validate() != null) {
+            return CustomWriteResult(ok = false, id = draft.id, kind = "rejected", error = "draft failed client-side validation")
+        }
         val r = RootShell.run(customPutCommand(bin, draft), 8000)
         return parseCustomWrite(draft.id, r.exitCode, r.stdout, r.stderr)
     }
 
     /** Remove a custom profile; zperfd refuses while it is the selected mode. */
     suspend fun deleteCustom(id: String): CustomWriteResult {
-        if (!isCustomId(id)) return CustomWriteResult(ok = false, id = id, kind = "rejected", error = "ID profil tidak valid")
+        if (!isCustomId(id)) return CustomWriteResult(ok = false, id = id, kind = "rejected", error = "invalid custom profile id")
         val r = RootShell.run("${shellQuote(bin)} custom delete ${shellQuote(id)}", 6000)
         return parseCustomWrite(id, r.exitCode, r.stdout, r.stderr)
     }
@@ -102,7 +104,7 @@ class ZperfClient(
      */
     suspend fun setTweak(id: String, value: String, lite: Boolean = false): TweakWriteResult {
         if (id.isBlank() || value.isBlank() || value.length > 4096) {
-            return TweakWriteResult(ok = false, id = id, kind = "rejected", error = "nilai kosong atau terlalu panjang")
+            return TweakWriteResult(ok = false, id = id, kind = "rejected", error = "empty or oversized value")
         }
         val lflag = if (lite) "--lite " else ""
         val r = RootShell.run(

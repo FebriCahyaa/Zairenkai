@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -32,6 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.domain.Profile
 import com.zairenkai.app.domain.ProfileId
 import com.zairenkai.app.domain.Profiles
+import com.zairenkai.app.R
+import com.zairenkai.app.core.text.asString
 import com.zairenkai.app.data.CustomDraft
 import com.zairenkai.app.data.CustomFields
 import com.zairenkai.app.data.CustomProfile
@@ -51,7 +55,7 @@ fun ProfilesScreen(factory: VmFactory) {
     val busy = ui.busy
     val status = ui.status
 
-    Scaffold(containerColor = Color.Transparent, topBar = { TopAppBar(title = { Text("Profil") }) }) { inner ->
+    Scaffold(containerColor = Color.Transparent, topBar = { TopAppBar(title = { Text(stringResource(R.string.profiles_title)) }) }) { inner ->
         if (ui.loading) {
             Box(Modifier.fillMaxSize().padding(inner), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -63,33 +67,35 @@ fun ProfilesScreen(factory: VmFactory) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (!ui.engineAvailable) {
-                val cached = ui.cachedProfile?.let { Profiles.byId(it).name }
+                val cached = ui.cachedProfile?.let { stringResource(Profiles.byId(it).nameRes) }
                 ProfileBanner(
-                    "zperfd tidak aktif — status profil tidak dapat diverifikasi." +
-                        (cached?.let { "\nTerakhir dipilih di aplikasi: $it (tidak terverifikasi)." } ?: ""),
+                    stringResource(R.string.profiles_engine_down) +
+                        (cached?.let { "\n" + stringResource(R.string.profiles_engine_down_cached, it) } ?: ""),
                     MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer,
-                    action = "Muat ulang" to fun() { vm.refresh() },
+                    action = stringResource(R.string.action_reload) to fun() { vm.refresh() },
                 )
             }
             holdMessage(status?.hold, ui.selectedName)?.let { message ->
                 val confirm = status?.revalidationRequired == true && (ui.selected != null || ui.selectedCustom != null)
                 ProfileBanner(
-                    message,
+                    message.asString(),
                     MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer,
-                    action = if (confirm) "Konfirmasi & terapkan ${ui.selectedName}" to vm::confirmSaved else null,
+                    action = if (confirm) {
+                        stringResource(R.string.profiles_confirm_apply, ui.selectedName?.asString().orEmpty()) to vm::confirmSaved
+                    } else null,
                     enabled = !busy,
                 )
             }
             ui.error?.let {
-                ProfileBanner(it, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer,
-                    action = "Tutup" to vm::dismissMessages)
+                ProfileBanner(it.asString(), MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer,
+                    action = stringResource(R.string.action_close) to vm::dismissMessages)
             }
             ui.notice?.let {
-                ProfileBanner(it, MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer,
-                    action = "Tutup" to vm::dismissMessages)
+                ProfileBanner(it.asString(), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer,
+                    action = stringResource(R.string.action_close) to vm::dismissMessages)
             }
             if (status != null && status.hold == null) {
-                EngineStateRow(selectedName = ui.selectedName, desired = status.desired, effective = status.effective,
+                EngineStateRow(selectedName = ui.selectedName?.asString(), desired = status.desired, effective = status.effective,
                     effectiveName = ui.modes[status.effective]?.label)
             }
 
@@ -98,9 +104,9 @@ fun ProfilesScreen(factory: VmFactory) {
                     Icon(Icons.Rounded.AutoMode, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(Profiles.AUTO.name, style = MaterialTheme.typography.titleMedium,
+                        Text(stringResource(Profiles.AUTO.nameRes), style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text(Profiles.AUTO.tagline, style = MaterialTheme.typography.bodySmall,
+                        Text(stringResource(Profiles.AUTO.taglineRes), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     if (ui.applying == ProfileId.AUTO) {
@@ -116,7 +122,7 @@ fun ProfilesScreen(factory: VmFactory) {
                 val unsupported = ui.unsupported(p)
                 ProfileCard(
                     profile = p,
-                    summary = ui.modes[p.mode]?.let(::modeSummaryLine),
+                    summary = ui.modes[p.mode]?.let(::modeSummaryLine)?.asString(),
                     active = ui.selected?.id == p.id,
                     applying = ui.applying == p.id,
                     unsupported = unsupported,
@@ -125,8 +131,7 @@ fun ProfilesScreen(factory: VmFactory) {
                 )
             }
             Text(
-                "Nilai di atas adalah permintaan profil perangkat; frekuensi diselaraskan ke tabel OPP " +
-                    "dan dapat dikurangi oleh envelope termal saat diterapkan.",
+                stringResource(R.string.profiles_values_note),
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
@@ -149,13 +154,13 @@ fun ProfilesScreen(factory: VmFactory) {
 
 @Composable
 private fun EngineStateRow(selectedName: String?, desired: String, effective: String, effectiveName: String?) {
-    val selectedText = selectedName ?: "Belum dipilih (default engine: $desired)"
-    val effectiveProfile = Profiles.byMode(effective)?.name ?: effectiveName ?: effective
+    val selectedText = selectedName ?: stringResource(R.string.profiles_none_selected, desired)
+    val effectiveProfile = Profiles.byMode(effective)?.let { stringResource(it.nameRes) } ?: effectiveName ?: effective
     Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("Dipilih: $selectedText", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.profiles_selected, selectedText), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             if (effective != desired) {
-                Text("Berjalan sebagai: $effectiveProfile (dipilih oleh Otomatis/aturan per-aplikasi)",
+                Text(stringResource(R.string.profiles_running_as, effectiveProfile),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -193,12 +198,14 @@ private fun ProfileCard(
     onApply: () -> Unit,
 ) {
     val container = if (active) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer
+    val name = stringResource(profile.nameRes)
+    val activeSuffix = stringResource(R.string.a11y_suffix_active)
+    val unsupportedSuffix = stringResource(R.string.a11y_suffix_unsupported)
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = container,
         modifier = Modifier.semantics {
-            contentDescription = profile.name + (if (active) ", aktif" else "") +
-                (if (unsupported) ", tidak tersedia di perangkat ini" else "")
+            contentDescription = name + (if (active) activeSuffix else "") + (if (unsupported) unsupportedSuffix else "")
         },
     ) {
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -206,16 +213,16 @@ private fun ProfileCard(
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(profile.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     if (active) {
                         Spacer(Modifier.width(8.dp))
-                        StatusPill("Aktif", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
+                        StatusPill(stringResource(R.string.state_active), MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
                     }
                 }
-                Text(profile.tagline, style = MaterialTheme.typography.bodySmall,
+                Text(stringResource(profile.taglineRes), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 when {
-                    unsupported -> Text("Tidak tersedia di profil perangkat ini (mode ${profile.mode}).",
+                    unsupported -> Text(stringResource(R.string.profiles_unsupported, profile.mode),
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                     summary != null -> Text(summary, style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -223,7 +230,7 @@ private fun ProfileCard(
             }
             Spacer(Modifier.width(10.dp))
             if (applying) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-            else FilledTonalButton(onClick = onApply, enabled = enabled) { Text("Terapkan") }
+            else FilledTonalButton(onClick = onApply, enabled = enabled) { Text(stringResource(R.string.action_apply)) }
         }
     }
 }
@@ -246,19 +253,18 @@ private fun CustomProfilesSection(ui: ProfilesUi, vm: ProfilesViewModel, busy: B
     Spacer(Modifier.height(4.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("Profil kustom", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.custom_section_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
-                if (customs == null) "Daftar profil kustom tidak dapat dibaca dari zperfd."
-                else "Turunan mode bawaan dengan nilai Anda sendiri (${profiles.size}/${customs.max}).",
+                if (customs == null) stringResource(R.string.custom_list_unavailable)
+                else stringResource(R.string.custom_section_subtitle, profiles.size, customs.max),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        FilledTonalButton(onClick = vm::newCustom, enabled = canCreate && !busy) { Text("Buat") }
+        FilledTonalButton(onClick = vm::newCustom, enabled = canCreate && !busy) { Text(stringResource(R.string.action_create)) }
     }
     if (customs != null && profiles.isEmpty()) {
         Text(
-            "Belum ada profil kustom. Pilih mode dasar, lalu ubah hanya nilai yang perlu; " +
-                "sisanya mengikuti mode dasar.",
+            stringResource(R.string.custom_empty),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -276,7 +282,7 @@ private fun CustomProfilesSection(ui: ProfilesUi, vm: ProfilesViewModel, busy: B
     }
     if (profiles.isNotEmpty()) {
         Text(
-            "Profil kustom hanya diterapkan manual; Otomatis dan aturan per-aplikasi tetap memakai mode bawaan.",
+            stringResource(R.string.custom_manual_only),
             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -284,12 +290,12 @@ private fun CustomProfilesSection(ui: ProfilesUi, vm: ProfilesViewModel, busy: B
     pendingDelete?.let { p ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Hapus ${p.label}?") },
-            text = { Text("Profil kustom ini dihapus dari engine. Profil yang sedang dipilih tidak bisa dihapus.") },
+            title = { Text(stringResource(R.string.custom_delete_title, p.label)) },
+            text = { Text(stringResource(R.string.custom_delete_body)) },
             confirmButton = {
-                TextButton(onClick = { pendingDelete = null; vm.deleteCustom(p) }) { Text("Hapus") }
+                TextButton(onClick = { pendingDelete = null; vm.deleteCustom(p) }) { Text(stringResource(R.string.action_delete)) }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Batal") } },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -307,12 +313,13 @@ private fun CustomProfileCard(
 ) {
     val container = if (active) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer
     val changes = CustomDraft.fromProfile(profile).overrideCount
+    val activeSuffix = stringResource(R.string.a11y_suffix_active)
+    val invalidSuffix = stringResource(R.string.a11y_suffix_invalid)
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = container,
         modifier = Modifier.semantics {
-            contentDescription = profile.label + (if (active) ", aktif" else "") +
-                (if (!profile.valid) ", tidak valid" else "")
+            contentDescription = profile.label + (if (active) activeSuffix else "") + (if (!profile.valid) invalidSuffix else "")
         },
     ) {
         Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 6.dp)) {
@@ -324,19 +331,19 @@ private fun CustomProfileCard(
                         Text(profile.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         if (active) {
                             Spacer(Modifier.width(8.dp))
-                            StatusPill("Aktif", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
+                            StatusPill(stringResource(R.string.state_active), MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                     Text(
-                        "Turunan ${ui.baseName(profile.base)} · $changes perubahan",
+                        pluralStringResource(R.plurals.custom_card_subtitle, changes, ui.baseName(profile.base).asString(), changes),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     when {
                         !profile.valid -> Text(
-                            "Tidak dapat diterapkan: ${profile.error ?: "tidak valid"}",
+                            stringResource(R.string.custom_card_invalid, profile.error ?: stringResource(R.string.custom_invalid)),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error,
                         )
-                        else -> ui.modes[profile.id]?.let(::modeSummaryLine)?.let {
+                        else -> ui.modes[profile.id]?.let(::modeSummaryLine)?.asString()?.let {
                             Text(it, style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -344,13 +351,13 @@ private fun CustomProfileCard(
                 }
                 Spacer(Modifier.width(8.dp))
                 if (applying) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                else FilledTonalButton(onClick = onApply, enabled = enabled && profile.valid) { Text("Terapkan") }
+                else FilledTonalButton(onClick = onApply, enabled = enabled && profile.valid) { Text(stringResource(R.string.action_apply)) }
             }
             Row(Modifier.align(Alignment.End)) {
                 TextButton(onClick = onEdit, enabled = enabled && profile.base in ui.customs?.bases.orEmpty().map { it.id }) {
-                    Text("Ubah")
+                    Text(stringResource(R.string.action_edit))
                 }
-                TextButton(onClick = onDelete, enabled = enabled && !active) { Text("Hapus") }
+                TextButton(onClick = onDelete, enabled = enabled && !active) { Text(stringResource(R.string.action_delete)) }
             }
         }
     }
@@ -373,43 +380,43 @@ private fun CustomProfileEditor(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                if (draft.isNew) "Profil kustom baru" else "Ubah ${draft.label}",
+                if (draft.isNew) stringResource(R.string.custom_editor_new) else stringResource(R.string.custom_editor_edit, draft.label),
                 style = MaterialTheme.typography.titleLarge,
             )
             OutlinedTextField(
                 value = draft.label,
                 onValueChange = { onChange(draft.copy(label = it.take(32))) },
-                label = { Text("Nama") },
+                label = { Text(stringResource(R.string.custom_editor_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text("Mode dasar", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.custom_editor_base), style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ui.customs?.bases.orEmpty().forEach { base ->
                     FilterChip(
                         selected = draft.base == base.id,
                         onClick = { onChange(draft.copy(base = base.id)) },
-                        label = { Text(ui.baseName(base.id)) },
+                        label = { Text(ui.baseName(base.id).asString()) },
                     )
                 }
             }
             Text(
-                "Kosongkan kolom untuk mengikuti mode dasar. Nilai diselaraskan ke tabel OPP, divalidasi zperfd, " +
-                    "dan tetap dibatasi Sentinel serta envelope termal saat diterapkan.",
+                stringResource(R.string.custom_editor_note),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             CustomFields.sections.forEach { (section, title) ->
-                Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 CustomFields.all.filter { it.section == section }.forEach { field ->
-                    val inherited = baseValues.text(field.key) ?: "default kernel"
+                    val inherited = baseValues.text(field.key) ?: stringResource(R.string.custom_editor_kernel_default)
                     val range = field.range?.takeIf { it.last < Int.MAX_VALUE }?.let { " · ${it.first}–${it.last}" }.orEmpty()
                     OutlinedTextField(
                         value = draft.value(field.key),
                         onValueChange = { onChange(draft.with(field.key, it.take(128))) },
-                        label = { Text(field.title) },
+                        label = { Text(stringResource(field.title)) },
                         placeholder = { Text(inherited) },
                         supportingText = {
-                            Text("Dasar: $inherited$range" + (field.hint?.let { " · $it" } ?: ""))
+                            val hint = field.hint?.let { " · " + stringResource(it) }.orEmpty()
+                            Text(stringResource(R.string.custom_editor_base_value, inherited) + range + hint)
                         },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
@@ -422,14 +429,14 @@ private fun CustomProfileEditor(
                 }
             }
             ui.editorError?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss, enabled = !ui.saving) { Text("Batal") }
+                TextButton(onClick = onDismiss, enabled = !ui.saving) { Text(stringResource(R.string.action_cancel)) }
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = onSave, enabled = !ui.saving) {
                     if (ui.saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text("Simpan")
+                    else Text(stringResource(R.string.action_save))
                 }
             }
         }

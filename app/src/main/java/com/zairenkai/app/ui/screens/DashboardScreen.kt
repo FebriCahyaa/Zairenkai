@@ -15,8 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.R
 import com.zairenkai.app.ui.OverviewViewModel
 import com.zairenkai.app.ui.VmFactory
 import com.zairenkai.app.ui.components.SectionCard
@@ -36,10 +38,10 @@ fun DashboardScreen(factory: VmFactory, onOpenSettings: () -> Unit) {
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Zairenkai") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "Pengaturan")
+                        Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.dashboard_settings))
                     }
                 },
             )
@@ -71,11 +73,10 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
         if (s.safeMode) {
             Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Mode Aman aktif", style = MaterialTheme.typography.titleMedium,
+                    Text(stringResource(R.string.dashboard_safe_mode_title), style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer)
                     Text(
-                        "Boot sebelumnya gagal/restart mendadak, jadi profil performa dipulihkan ke baseline. " +
-                            "Keluar dari mode aman hanya setelah penyebabnya diperiksa.",
+                        stringResource(R.string.dashboard_safe_mode_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
@@ -86,7 +87,7 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
                             contentColor = MaterialTheme.colorScheme.onErrorContainer,
                         ),
                     ) {
-                        Text("Keluar mode aman")
+                        Text(stringResource(R.string.dashboard_safe_mode_exit))
                     }
                 }
             }
@@ -97,11 +98,10 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
         if (apiOutdated) {
             Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("API ZKFC usang", style = MaterialTheme.typography.titleMedium,
+                    Text(stringResource(R.string.dashboard_api_outdated_title), style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer)
                     Text(
-                        "Kernel memakai ZKFC API lama. Perbarui kernel/ZKFC ke versi terbaru " +
-                            "agar fitur performa bekerja penuh.",
+                        stringResource(R.string.dashboard_api_outdated_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
@@ -111,15 +111,15 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatTile(
-                "Status ZKFC",
-                if (info?.ok == true) "Aktif" else "—",
+                stringResource(R.string.dashboard_zkfc_status),
+                if (info?.ok == true) stringResource(R.string.state_active) else "—",
                 if (info?.ok == true) ZkGood else ZkBad,
                 Modifier.weight(1f),
-                sub = info?.hookMode?.let { "Hook: $it" },
+                sub = info?.hookMode?.let { stringResource(R.string.dashboard_hook_sub, it) },
             )
             val licState = lic?.state ?: "—"
             StatTile(
-                "Lisensi API",
+                stringResource(R.string.dashboard_license),
                 licenseLabel(licState),
                 licenseColor(licState),
                 Modifier.weight(1f),
@@ -127,56 +127,58 @@ private fun DashboardContent(modifier: Modifier, vm: OverviewViewModel) {
             )
         }
 
-        SectionCard("Perangkat") {
-            LabeledRow("Arsitektur", info?.arch ?: "—")
-            LabeledRow("Tipe kernel", (info?.kernelType ?: "—").uppercase())
-            LabeledRow("Kernel", info?.kernelRelease ?: "—")
-            LabeledRow("Mode hook", info?.hookMode ?: "—")
-            info?.api?.let { LabeledRow("ZKFC API", "${it.major}.${it.minor}.${it.patch}") }
-            LabeledRow("Build", info?.buildId ?: "—")
+        SectionCard(stringResource(R.string.dashboard_device)) {
+            LabeledRow(stringResource(R.string.dashboard_arch), info?.arch ?: "—")
+            LabeledRow(stringResource(R.string.dashboard_kernel_type), (info?.kernelType ?: "—").uppercase())
+            LabeledRow(stringResource(R.string.dashboard_kernel), info?.kernelRelease ?: "—")
+            LabeledRow(stringResource(R.string.dashboard_hook_mode), info?.hookMode ?: "—")
+            info?.api?.let { LabeledRow(stringResource(R.string.dashboard_zkfc_api), "${it.major}.${it.minor}.${it.patch}") }
+            LabeledRow(stringResource(R.string.dashboard_build), info?.buildId ?: "—")
         }
 
-        SectionCard("Thermal envelope") {
+        SectionCard(stringResource(R.string.dashboard_thermal_envelope)) {
             val t = s.thermal
-            LabeledRow("Envelope", t?.band ?: "Unknown", when (t?.band) {
+            val unknown = stringResource(R.string.dashboard_unknown)
+            LabeledRow(stringResource(R.string.dashboard_envelope), t?.band ?: unknown, when (t?.band) {
                 "Nominal" -> ZkGood
                 "Critical" -> ZkBad
                 else -> ZkWarn
             })
-            LabeledRow("Headroom", t?.headroomPermille?.let { "$it‰" } ?: "Unknown")
-            LabeledRow("Control zone", t?.controlZone ?: "Unknown")
-            LabeledRow("Critical trip", t?.criticalTripMdeg?.let { "${it / 1000f} °C" } ?: "Unknown")
+            LabeledRow(stringResource(R.string.dashboard_headroom), t?.headroomPermille?.let { "$it‰" } ?: unknown)
+            LabeledRow(stringResource(R.string.dashboard_control_zone), t?.controlZone ?: unknown)
+            LabeledRow(stringResource(R.string.dashboard_critical_trip), t?.criticalTripMdeg?.let { "${it / 1000f} °C" } ?: unknown)
             Text(
-                t?.reason?.takeIf { it.isNotBlank() } ?: "Thermal authority belum memberikan evidence yang cukup.",
+                t?.reason?.takeIf { it.isNotBlank() } ?: stringResource(R.string.dashboard_thermal_no_evidence),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        SectionCard("Performa aktif") {
+        SectionCard(stringResource(R.string.dashboard_active_performance)) {
             val b = s.boost
-            LabeledRow("Input boost", if (b?.inputBoostActive == true) "Aktif" else "Idle",
+            LabeledRow(stringResource(R.string.dashboard_input_boost), if (b?.inputBoostActive == true) stringResource(R.string.state_active) else stringResource(R.string.dashboard_idle),
                 if (b?.inputBoostActive == true) ZkAqua else null)
-            LabeledRow("Task di-boost", (b?.boostedTasks ?: 0).toString())
-            LabeledRow("Permintaan cpufreq", (b?.cpufreqRequests ?: 0).toString())
+            LabeledRow(stringResource(R.string.dashboard_boosted_tasks), (b?.boostedTasks ?: 0).toString())
+            LabeledRow(stringResource(R.string.dashboard_cpufreq_requests), (b?.cpufreqRequests ?: 0).toString())
             LabeledRow(
-                "Thermal",
-                if (b?.thermalTripped == true) "Mitigasi aktif" else "Normal",
+                stringResource(R.string.dashboard_thermal),
+                if (b?.thermalTripped == true) stringResource(R.string.dashboard_thermal_mitigating) else stringResource(R.string.dashboard_thermal_normal),
                 if (b?.thermalTripped == true) ZkWarn else ZkGood,
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { vm.resetBoosts() }) { Text("Reset performa") }
+            OutlinedButton(onClick = { vm.resetBoosts() }) { Text(stringResource(R.string.dashboard_reset_boosts)) }
         }
     }
 }
 
-private fun licenseLabel(state: String) = when (state) {
-    "valid" -> "Valid"
-    "missing" -> "Belum ada"
-    "api_outdated" -> "API usang"
-    "expired" -> "Kedaluwarsa"
-    "no_owner_key" -> "Tanpa kunci"
-    "revoked" -> "Dicabut"
+@Composable
+private fun licenseLabel(state: String): String = when (state) {
+    "valid" -> stringResource(R.string.dashboard_license_valid)
+    "missing" -> stringResource(R.string.dashboard_license_missing)
+    "api_outdated" -> stringResource(R.string.dashboard_license_api_outdated)
+    "expired" -> stringResource(R.string.dashboard_license_expired)
+    "no_owner_key" -> stringResource(R.string.dashboard_license_no_owner_key)
+    "revoked" -> stringResource(R.string.dashboard_license_revoked)
     else -> state
 }
 

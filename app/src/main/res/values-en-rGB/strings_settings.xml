@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Settings screen -->
+    <string name="settings_theme_sub">Mode, accent, dynamic colour &amp; Glass UI</string>
+    <string name="settings_about_sub">Version, licences &amp; credits</string>
+    <string name="settings_dynamic_color_title">Dynamic colour (Material You)</string>
+
+    <!-- Theme screen -->
+    <string name="theme_dynamic_color">Dynamic colour</string>
+    <string name="theme_accent_disabled_hint">Turn off dynamic colour to choose an accent.</string>
+    <string name="theme_glass_sub">Translucent cards over a soft colour background</string>
+
+    <!-- About screen -->
+    <string name="about_license_title">Licences &amp; credits</string>
+</resources>

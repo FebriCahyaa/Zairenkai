@@ -6,7 +6,9 @@
 package com.zairenkai.app
 
 import android.os.Bundle
+import android.content.Context
 import androidx.activity.ComponentActivity
+import com.zairenkai.app.ui.locale.AppLocale
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
@@ -25,6 +27,11 @@ import com.zairenkai.app.ui.theme.GlassConfig
 import com.zairenkai.app.ui.theme.ZairenkaiTheme
 
 class MainActivity : ComponentActivity() {
+    // Android 12 per-app language (Android 13+ is handled by the framework).
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         enableEdgeToEdge()

@@ -9,6 +9,9 @@
  */
 package com.zairenkai.app.core.identity
 
+import androidx.annotation.StringRes
+import com.zairenkai.app.R
+
 object ZairenkaiIdentity {
     const val PRODUCT_ID = "zairenkai"
     const val PRODUCT_NAME = "Zairenkai"
@@ -17,31 +20,41 @@ object ZairenkaiIdentity {
     const val CORE_API = 1
 }
 
-enum class SubsystemId(val wireId: String, val displayName: String, val role: String) {
-    ATLAS("zairenkai.atlas", "Zairenkai Atlas", "device intelligence"),
-    SENTINEL("zairenkai.sentinel", "Zairenkai Sentinel", "safety and security"),
-    THERMOGUARD("zairenkai.thermoguard", "Zairenkai ThermoGuard", "thermal safety"),
-    ZPERFD("zairenkai.zperfd", "Zairenkai Runtime Performance Engine", "runtime orchestration"),
-    ZKFC("zairenkai.zkfc", "Zairenkai Kernel Framework Controller", "kernel authority"),
+/** [displayName] is a product name (not translated); [roleRes] is the localized role shown in the UI. */
+enum class SubsystemId(val wireId: String, val displayName: String, @StringRes val roleRes: Int) {
+    ATLAS("zairenkai.atlas", "Zairenkai Atlas", R.string.subsystem_role_atlas),
+    SENTINEL("zairenkai.sentinel", "Zairenkai Sentinel", R.string.subsystem_role_sentinel),
+    THERMOGUARD("zairenkai.thermoguard", "Zairenkai ThermoGuard", R.string.subsystem_role_thermoguard),
+    ZPERFD("zairenkai.zperfd", "Zairenkai Runtime Performance Engine", R.string.subsystem_role_zperfd),
+    ZKFC("zairenkai.zkfc", "Zairenkai Kernel Framework Controller", R.string.subsystem_role_zkfc),
 }
 
-enum class CapabilityId(val wireId: String, val title: String, val category: String) {
-    ROOT("runtime.root", "Root authority", "Runtime"),
-    ZKFC("runtime.zkfc", "ZKFC kernel authority", "Runtime"),
-    ZPERFD("runtime.zperfd", "zperfd runtime engine", "Runtime"),
-    THERMAL_TELEMETRY("thermal.telemetry", "Thermal telemetry", "Thermal"),
-    THERMAL_TRIPS("thermal.trip_topology", "Runtime trip topology", "Thermal"),
-    THERMAL_HEADROOM("thermal.headroom", "Thermal headroom", "Thermal"),
-    CPU_CPUFREQ("cpu.cpufreq", "CPU frequency policy", "CPU"),
-    CPU_UCLAMP("cpu.uclamp", "CPU uclamp", "CPU"),
-    CPU_SCHEDTUNE("cpu.schedtune", "CPU schedtune", "CPU"),
-    INPUT_BOOST("cpu.input_boost", "Input boost", "CPU"),
-    GPU_DEVFREQ("gpu.devfreq", "GPU devfreq", "GPU"),
-    MEMORY("memory.runtime", "Memory telemetry", "Memory"),
-    ZRAM("memory.zram", "ZRAM", "Memory"),
-    STORAGE("storage.runtime", "Storage topology", "Storage"),
-    NETWORK("network.runtime", "Network controls", "Network"),
-    PROPERTIES("system.properties", "Zairenkai property broker", "System"),
+/**
+ * [category] is a stable grouping key (not shown); [titleRes] and
+ * [categoryRes] are the localized labels shown in the UI.
+ */
+enum class CapabilityId(
+    val wireId: String,
+    @StringRes val titleRes: Int,
+    val category: String,
+    @StringRes val categoryRes: Int,
+) {
+    ROOT("runtime.root", R.string.capability_root, "Runtime", R.string.capability_category_runtime),
+    ZKFC("runtime.zkfc", R.string.capability_zkfc, "Runtime", R.string.capability_category_runtime),
+    ZPERFD("runtime.zperfd", R.string.capability_zperfd, "Runtime", R.string.capability_category_runtime),
+    THERMAL_TELEMETRY("thermal.telemetry", R.string.capability_thermal_telemetry, "Thermal", R.string.capability_category_thermal),
+    THERMAL_TRIPS("thermal.trip_topology", R.string.capability_thermal_trips, "Thermal", R.string.capability_category_thermal),
+    THERMAL_HEADROOM("thermal.headroom", R.string.capability_thermal_headroom, "Thermal", R.string.capability_category_thermal),
+    CPU_CPUFREQ("cpu.cpufreq", R.string.capability_cpu_cpufreq, "CPU", R.string.capability_category_cpu),
+    CPU_UCLAMP("cpu.uclamp", R.string.capability_cpu_uclamp, "CPU", R.string.capability_category_cpu),
+    CPU_SCHEDTUNE("cpu.schedtune", R.string.capability_cpu_schedtune, "CPU", R.string.capability_category_cpu),
+    INPUT_BOOST("cpu.input_boost", R.string.capability_input_boost, "CPU", R.string.capability_category_cpu),
+    GPU_DEVFREQ("gpu.devfreq", R.string.capability_gpu_devfreq, "GPU", R.string.capability_category_gpu),
+    MEMORY("memory.runtime", R.string.capability_memory, "Memory", R.string.capability_category_memory),
+    ZRAM("memory.zram", R.string.capability_zram, "Memory", R.string.capability_category_memory),
+    STORAGE("storage.runtime", R.string.capability_storage, "Storage", R.string.capability_category_storage),
+    NETWORK("network.runtime", R.string.capability_network, "Network", R.string.capability_category_network),
+    PROPERTIES("system.properties", R.string.capability_properties, "System", R.string.capability_category_system),
 }
 
 enum class OperationId(val wireName: String) {

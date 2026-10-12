@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 package com.zairenkai.app.core.runtime
 
+import com.zairenkai.app.R
 import com.zairenkai.app.core.capability.CapabilityMatrix
+import com.zairenkai.app.core.text.UiText
+import com.zairenkai.app.core.text.uiText
 import com.zairenkai.app.data.InfoResult
 import com.zairenkai.app.data.LicenseResult
 import com.zairenkai.app.data.SecurityResult
@@ -22,11 +25,12 @@ data class RuntimeSnapshot(
     val capabilities: CapabilityMatrix,
 )
 
-val RuntimeSnapshot.kernelLabel: String
+val RuntimeSnapshot.kernelLabel: UiText
     get() = listOf(info?.kernelType, info?.kernelRelease)
         .filterNotNull().filter { it.isNotBlank() }.joinToString(" · ")
-        .ifBlank { "Kernel tidak teridentifikasi" }
+        .takeIf { it.isNotBlank() }?.let { UiText.Raw(it) } ?: uiText(R.string.runtime_kernel_unidentified)
 
-val RuntimeSnapshot.platformLabel: String
+val RuntimeSnapshot.platformLabel: UiText
     get() = listOf(security?.device?.model, security?.device?.compatible)
-        .filterNotNull().filter { it.isNotBlank() }.firstOrNull() ?: "Perangkat tidak teridentifikasi"
+        .filterNotNull().filter { it.isNotBlank() }.firstOrNull()?.let { UiText.Raw(it) }
+        ?: uiText(R.string.runtime_platform_unidentified)

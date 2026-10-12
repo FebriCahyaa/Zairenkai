@@ -13,6 +13,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
+import com.zairenkai.app.ui.locale.AppLocale
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -35,6 +36,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class ZkMonitorService : Service() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
     private var recorder: UsageRecorder? = null
@@ -61,8 +66,8 @@ class ZkMonitorService : Service() {
             // Capture the active profile name as the scenario mode label.
             currentModeLabel = runCatching {
                 val id = container.settings.settings.first().activeProfile ?: ProfileId.BALANCED
-                Profiles.byId(id).name
-            }.getOrDefault("Seimbang")
+                getString(Profiles.byId(id).nameRes)
+            }.getOrDefault(getString(Profiles.BALANCED.nameRes))
             rec.run(this)
         }
         return START_STICKY
@@ -90,17 +95,17 @@ class ZkMonitorService : Service() {
 
     private fun startForegroundSafe() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(CHANNEL) == null) {
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Monitor penggunaan", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Merekam riwayat daya & penggunaan aplikasi"
-                    setShowBadge(false)
-                },
-            )
-        }
+        // Re-registering an existing channel only updates its name and
+        // description, so they follow the current app language.
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL, getString(R.string.usage_notif_channel_name), NotificationManager.IMPORTANCE_LOW).apply {
+                description = getString(R.string.usage_notif_channel_desc)
+                setShowBadge(false)
+            },
+        )
         val notif: Notification = NotificationCompat.Builder(this, CHANNEL)
-            .setContentTitle("Zairenkai")
-            .setContentText("Merekam riwayat penggunaan…")
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.usage_notif_recording))
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -121,7 +126,7 @@ class ZkMonitorService : Service() {
         private const val NOTIF_ID = 42
         const val ACTION_STOP = "com.zairenkai.app.MONITOR_STOP"
 
-        @Volatile private var currentModeLabel: String = "Seimbang"
+        @Volatile private var currentModeLabel: String = ""
 
         private val _running = MutableStateFlow(false)
         val running: StateFlow<Boolean> = _running.asStateFlow()

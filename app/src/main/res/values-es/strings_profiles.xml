@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Built-in profiles (one per zperfd mode) -->
+    <string name="profile_battery_name">Ahorro de batería</string>
+    <string name="profile_battery_tagline">Límite de rendimiento bajo, fresco y de bajo consumo</string>
+    <string name="profile_balanced_name">Equilibrado</string>
+    <string name="profile_balanced_tagline">Rango de frecuencia completo con input boost moderado</string>
+    <string name="profile_performance_name">Rendimiento</string>
+    <string name="profile_performance_tagline">Suelo de frecuencia y uclamp más altos para cargas pesadas</string>
+    <string name="profile_game_name">Juego</string>
+    <string name="profile_game_tagline">El suelo de frecuencia más alto y el input boost más fuerte</string>
+    <string name="profile_auto_name">Automático</string>
+    <string name="profile_auto_tagline">El motor elige el modo según batería, alimentación y margen térmico</string>
+
+    <!-- Mode summary line parts, joined with " · " -->
+    <string name="mode_cpu_min">CPU mín. %1$s</string>
+    <string name="mode_cpu_max_pct">CPU máx. %1$d%%</string>
+    <string name="mode_cpu_max">CPU máx. %1$s</string>
+    <string name="mode_uclamp">uclamp %1$d%%</string>
+    <string name="mode_input_boost">input boost %1$d%% %2$d ms</string>
+    <string name="mode_no_input_boost">sin input boost</string>
+    <string name="mode_gpu_min">GPU mín. %1$s</string>
+    <string name="mode_gpu_max_pct">GPU máx. %1$d%%</string>
+    <string name="mode_gpu_max">GPU máx. %1$s</string>
+    <string name="mode_swappiness">swappiness %1$d</string>
+    <string name="mode_kernel_defaults">Valores predeterminados del kernel</string>
+
+    <!-- Baseline hold reasons -->
+    <string name="hold_revalidation">El kernel o el dispositivo cambió desde que se eligió el perfil %1$s. El motor mantiene la base de fábrica hasta que lo vuelvas a confirmar.</string>
+    <string name="hold_revalidation_saved_fallback">guardado</string>
+    <string name="hold_safe_mode">SAFE MODE activo: se mantiene la base de fábrica y no se aplica el perfil.</string>
+    <string name="hold_stock">Restablecido a valores de fábrica: el motor no aplica ningún perfil.</string>
+    <string name="hold_other">El motor mantiene la base de fábrica (%1$s).</string>
+
+    <!-- Apply outcome -->
+    <string name="apply_success">Perfil %1$s aplicado: %2$s.</string>
+    <string name="apply_outcome_verified">%1$d verificados</string>
+    <string name="apply_outcome_constrained">%1$d limitados por el kernel</string>
+    <string name="apply_outcome_unverified">%1$d no se pudieron verificar</string>
+    <string name="apply_outcome_skipped">%1$d no disponibles en el dispositivo</string>
+    <string name="apply_fail_engine_unavailable">zperfd no está disponible; no se aplicó el perfil.</string>
+    <string name="apply_fail_framework_unavailable">ZKFC no está cargado en el kernel; perfiles bloqueados.</string>
+    <string name="apply_fail_framework_incompatible">La versión de la API de ZKFC no es compatible con el motor; perfiles bloqueados.</string>
+    <string name="apply_fail_license">El token de API de ZKFC aún no es válido; perfiles de rendimiento bloqueados.</string>
+    <string name="apply_fail_unauthorized">Core Authority rechazó la operación.</string>
+    <string name="apply_fail_sentinel">Bloqueado por Sentinel (seguridad térmica, de alimentación o de almacenamiento); no hubo cambios.</string>
+    <string name="apply_fail_thermal_guard">No se pudo configurar la protección térmica del kernel; no se aplicó el perfil.</string>
+    <string name="apply_fail_blocked">Bloqueado por el kernel (ZKFC/token), Sentinel o la protección térmica; no hubo cambios.</string>
+    <string name="apply_fail_rejected">El modo no está disponible en el perfil de este dispositivo.</string>
+    <string name="apply_fail_not_observed">El kernel no conservó los valores escritos; el motor realizó una reversión.</string>
+    <string name="apply_fail_failed">Error al aplicar; el motor realizó una reversión y el estado activo no cambió.</string>
+    <string name="apply_fail_rollback_failed">Error al aplicar y la reversión no se completó; se ejecutará la recuperación.</string>
+    <string name="apply_fail_state">No se pudo recuperar el estado del motor; no hubo cambios.</string>
+    <string name="apply_fail_timeout">El motor no respondió a tiempo; el estado es incierto, recarga.</string>
+    <string name="apply_fail_unknown">Respuesta del motor no reconocida; considera que no se aplicó.</string>
+    <string name="apply_engine_not_running">zperfd aún no está activo. No se aplicó el perfil para no saltarse las transacciones del motor.</string>
+
+    <!-- Custom profile store/remove refusals -->
+    <string name="custom_fail_rejected">El motor rechazó el perfil personalizado.</string>
+    <string name="custom_fail_limit">Se alcanzó el límite de perfiles personalizados; elimina uno primero.</string>
+    <string name="custom_fail_in_use">Este perfil está seleccionado. Elige otro perfil antes de eliminarlo.</string>
+    <string name="custom_fail_not_found">El perfil personalizado ya no existe.</string>
+    <string name="custom_fail_state">El motor no pudo guardar el perfil personalizado; no hubo cambios.</string>
+    <string name="custom_fail_unauthorized">Core Authority rechazó la operación.</string>
+    <string name="custom_fail_profile">No se pudo cargar el perfil de dispositivo del motor.</string>
+    <string name="custom_fail_engine_unavailable">zperfd no está disponible; no se guardó el perfil personalizado.</string>
+    <string name="custom_fail_timeout">El motor no respondió a tiempo; recarga para ver el estado.</string>
+    <string name="custom_fail_unknown">Respuesta del motor no reconocida; considera que no se guardó.</string>
+    <string name="custom_saved">Perfil personalizado %1$s guardado.</string>
+    <string name="custom_deleted">Perfil personalizado %1$s eliminado.</string>
+    <!-- Custom profile editor fields -->
+    <string name="custom_section_cpu">CPU</string>
+    <string name="custom_section_gpu">GPU</string>
+    <string name="custom_section_mem">Memoria</string>
+    <string name="custom_section_io">E/S</string>
+    <string name="custom_hint_freq" formatted="false">min, max, 80%, 1.8GHz, 1800MHz, -300MHz o kHz</string>
+    <string name="custom_hint_list">en orden de prioridad, separados por comas</string>
+    <string name="custom_field_cpu_min_freq">Frecuencia mínima de CPU</string>
+    <string name="custom_field_cpu_max_freq">Frecuencia máxima de CPU</string>
+    <string name="custom_field_cpu_min_perf_pct">Suelo de rendimiento de CPU (%)</string>
+    <string name="custom_field_cpu_max_perf_pct">Límite de rendimiento de CPU (%)</string>
+    <string name="custom_field_cpu_governor">Governor de CPU</string>
+    <string name="custom_field_cpu_uclamp_min">uclamp mínimo (%)</string>
+    <string name="custom_field_cpu_uclamp_max">uclamp máximo (%)</string>
+    <string name="custom_field_cpu_input_boost_pct" formatted="false">Input boost (% de la frecuencia máx.)</string>
+    <string name="custom_field_cpu_input_boost_ms">Duración del input boost (ms)</string>
+    <string name="custom_field_gpu_min_freq">Frecuencia mínima de GPU</string>
+    <string name="custom_field_gpu_max_freq">Frecuencia máxima de GPU</string>
+    <string name="custom_field_gpu_min_perf_pct">Suelo de rendimiento de GPU (%)</string>
+    <string name="custom_field_gpu_max_perf_pct">Límite de rendimiento de GPU (%)</string>
+    <string name="custom_field_gpu_governor">Governor de GPU</string>
+    <string name="custom_field_mem_swappiness">Swappiness</string>
+    <string name="custom_field_io_scheduler">Planificador de E/S</string>
+    <string name="custom_err_id">ID de perfil no válido.</string>
+    <string name="custom_err_label">El nombre del perfil debe tener entre 1 y 32 caracteres.</string>
+    <string name="custom_err_base">Elige un modo base.</string>
+    <string name="custom_err_integer">%1$s: debe ser un número entero.</string>
+    <string name="custom_err_range">%1$s: debe estar entre %2$d y %3$d.</string>
+    <string name="custom_err_freq">%1$s: formato de frecuencia no reconocido.</string>
+    <string name="custom_err_list">%1$s: lista no válida.</string>
+    <string name="custom_err_uclamp">El uclamp mínimo no puede superar el máximo.</string>
+
+    <!-- Profiles screen -->
+    <string name="profiles_title">Perfiles</string>
+    <string name="profiles_engine_down">zperfd no está activo: no se puede verificar el estado del perfil.</string>
+    <string name="profiles_engine_down_cached">Último elegido en la app: %1$s (no verificado).</string>
+    <string name="profiles_confirm_apply">Confirmar y aplicar %1$s</string>
+    <string name="profiles_values_note">Los valores de arriba son las solicitudes del perfil del dispositivo; las frecuencias se ajustan a la tabla OPP y la envolvente térmica puede reducirlas al aplicarse.</string>
+    <string name="profiles_none_selected">Sin seleccionar (predeterminado del motor: %1$s)</string>
+    <string name="profiles_selected">Seleccionado: %1$s</string>
+    <string name="profiles_running_as">En ejecución como: %1$s (elegido por Automático/reglas por app)</string>
+    <string name="profiles_unsupported">No disponible en el perfil de este dispositivo (modo %1$s).</string>
+    <string name="custom_section_title">Perfiles personalizados</string>
+    <string name="custom_list_unavailable">No se pudo leer la lista de perfiles personalizados desde zperfd.</string>
+    <string name="custom_section_subtitle">Variantes de los modos integrados con tus propios valores (%1$d/%2$d).</string>
+    <string name="custom_empty">Aún no hay perfiles personalizados. Elige un modo base y cambia solo los valores necesarios; el resto sigue al modo base.</string>
+    <string name="custom_manual_only">Los perfiles personalizados solo se aplican manualmente; Automático y las reglas por app siguen usando los modos integrados.</string>
+    <string name="custom_delete_title">¿Eliminar %1$s?</string>
+    <string name="custom_delete_body">Este perfil personalizado se eliminará del motor. El perfil seleccionado actualmente no se puede eliminar.</string>
+    <plurals name="custom_card_subtitle">
+        <item quantity="one">Basado en %1$s · %2$d cambio</item>
+        <item quantity="many">Basado en %1$s · %2$d cambios</item>
+        <item quantity="other">Basado en %1$s · %2$d cambios</item>
+    </plurals>
+    <string name="custom_card_invalid">No se puede aplicar: %1$s</string>
+    <string name="custom_invalid">no válido</string>
+    <string name="custom_editor_new">Nuevo perfil personalizado</string>
+    <string name="custom_editor_edit">Editar %1$s</string>
+    <string name="custom_editor_name">Nombre</string>
+    <string name="custom_editor_base">Modo base</string>
+    <string name="custom_editor_note">Deja un campo vacío para seguir al modo base. Los valores se ajustan a la tabla OPP, zperfd los valida y, al aplicarse, siguen limitados por Sentinel y la envolvente térmica.</string>
+    <string name="custom_editor_kernel_default">predeterminado del kernel</string>
+    <string name="custom_editor_base_value">Base: %1$s</string>
+</resources>

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Wizard frame -->
+    <string name="setup_step_welcome">Selamat datang</string>
+    <string name="setup_step_check">Pemeriksaan sistem</string>
+    <string name="setup_step_profile">Profil awal</string>
+    <string name="setup_step_done">Selesai</string>
+    <string name="setup_step_label" tools:ignore="PluralsCandidate">Langkah %1$d dari %2$d · %3$s</string>
+    <string name="setup_language">Bahasa</string>
+    <string name="setup_info">Info aplikasi &amp; perangkat</string>
+    <string name="setup_start">Mulai penyiapan</string>
+    <string name="setup_checking">Memeriksa…</string>
+    <string name="setup_apply_profile">Terapkan %1$s</string>
+    <string name="setup_skip_for_now">Lewati untuk sekarang</string>
+    <string name="setup_enter_app">Masuk ke Zairenkai</string>
+
+    <!-- 1. Welcome -->
+    <string name="setup_welcome_title">Selamat datang di Zairenkai</string>
+    <string name="setup_welcome_body">Kendali performa untuk perangkat root, dijalankan oleh engine zperfd di atas framework kernel ZKFC.</string>
+    <string name="setup_feature_monitor_title">Monitor langsung</string>
+    <string name="setup_feature_monitor_body">FPS UI, beban CPU per core, GPU, dan suhu zona termal.</string>
+    <string name="setup_feature_verified_title">Profil &amp; tweak terverifikasi</string>
+    <string name="setup_feature_verified_body">Setiap perubahan diterapkan zperfd, dibaca balik dari kernel, dan dibatalkan otomatis bila gagal.</string>
+    <string name="setup_feature_safety_title">Berlapis pengaman</string>
+    <string name="setup_feature_safety_body">Guard termal kernel, Sentinel, dan SAFE MODE setelah boot gagal. Fitur performa dibuka dengan token API.</string>
+    <string name="setup_welcome_note">Penyiapan hanya memeriksa sistem. Tidak ada pengaturan yang diubah sampai kamu sendiri memilih profil.</string>
+
+    <!-- 2. System check -->
+    <string name="setup_check_title">Pemeriksaan sistem</string>
+    <string name="setup_check_body">Zairenkai bekerja berlapis: akses root, framework kernel ZKFC, engine zperfd, lalu token API.</string>
+    <string name="setup_check_root">Akses root</string>
+    <string name="setup_check_zkfc">Framework kernel ZKFC</string>
+    <string name="setup_check_engine">Engine zperfd</string>
+    <string name="setup_check_token">Token API</string>
+    <string name="setup_needs_root">Membutuhkan akses root.</string>
+    <string name="setup_root_checking">Meminta izin root…</string>
+    <string name="setup_root_ok">Izin root diberikan.</string>
+    <string name="setup_root_missing">Izin root ditolak atau pengelola root tidak ditemukan.</string>
+    <string name="setup_root_fix">Izinkan Zairenkai di Magisk, KernelSU, atau APatch, lalu periksa ulang.</string>
+    <string name="setup_zkfc_checking">Membaca /dev/zkfc…</string>
+    <string name="setup_zkfc_missing">Tidak termuat.</string>
+    <string name="setup_zkfc_missing_detail">Tidak termuat: %1$s</string>
+    <string name="setup_zkfc_fix">Pasang modul Zairenkai dengan modul kernel ZKFC yang cocok untuk kernel ini, lalu reboot.</string>
+    <string name="setup_zkfc_outdated">%1$s (usang)</string>
+    <string name="setup_zkfc_outdated_fix">Perbarui modul kernel ZKFC; fitur baru dinonaktifkan pada API lama.</string>
+    <string name="setup_engine_checking">Menghubungi zperfd…</string>
+    <string name="setup_engine_missing">Belum terpasang di /data/adb/zperf.</string>
+    <string name="setup_engine_missing_fix">Pasang modul Zairenkai; zperfd adalah satu-satunya jalur yang menerapkan profil dan tweak.</string>
+    <string name="setup_engine_silent">Terpasang, tetapi tidak merespons.</string>
+    <string name="setup_engine_silent_fix">Reboot agar layanan modul memulai zperfd, lalu periksa ulang.</string>
+    <string name="setup_engine_safe_mode">Aktif · SAFE MODE (baseline stok ditahan)</string>
+    <string name="setup_engine_saved">Aktif · profil tersimpan: %1$s</string>
+    <string name="setup_engine_default">Aktif · default engine: %1$s</string>
+    <string name="setup_token_checking">Membaca status lisensi…</string>
+    <string name="setup_token_needs_zkfc">Membutuhkan framework kernel ZKFC.</string>
+    <string name="setup_token_ok">Token valid; fitur performa terbuka.</string>
+    <string name="setup_token_missing">Belum dipasang: profil performa dan tweak tetap terkunci.</string>
+    <string name="setup_token_missing_fix">Pasang token di tab Sistem. Monitor tetap bisa dipakai tanpa token.</string>
+    <string name="setup_token_bad">Token %1$s.</string>
+    <string name="setup_token_bad_fix">Pasang token yang diterbitkan untuk perangkat dan kernel ini di tab Sistem.</string>
+    <string name="setup_check_all_ok">Semua komponen siap.</string>
+    <string name="setup_check_ready_with_notes">Siap dipakai, dengan catatan di atas.</string>
+    <string name="setup_check_not_ready">Beberapa komponen belum siap. Kamu tetap bisa lanjut; fitur yang membutuhkannya akan terkunci sampai masalahnya diselesaikan.</string>
+    <string name="setup_recheck">Periksa ulang</string>
+    <string name="setup_state_checking">memeriksa</string>
+    <string name="setup_state_ok">siap</string>
+    <string name="setup_state_warn">perlu perhatian</string>
+    <string name="setup_state_missing">belum siap</string>
+    <string name="setup_check_a11y">%1$s: %2$s. %3$s</string>
+    <string name="setup_check_summary_row">%1$s: %2$s</string>
+
+    <!-- License states, as "Token <state>." -->
+    <string name="license_state_valid">valid</string>
+    <string name="license_state_missing">belum dipasang</string>
+    <string name="license_state_expired">kedaluwarsa</string>
+    <string name="license_state_bad_signature">tanda tangan tidak valid</string>
+    <string name="license_state_wrong_binding">terikat ke perangkat/kernel lain</string>
+    <string name="license_state_api_outdated">untuk API yang lebih lama</string>
+    <string name="license_state_api_incompatible">tidak kompatibel dengan API ZKFC</string>
+    <string name="license_state_malformed">rusak</string>
+    <string name="license_state_no_owner_key">kunci pemilik belum diprovisikan di kernel</string>
+    <string name="license_state_revoked">dicabut</string>
+
+    <!-- 3. First profile -->
+    <string name="setup_profile_title">Pilih profil awal</string>
+    <string name="setup_profile_body">Opsional. Profil adalah mode zperfd; nilainya diselaraskan ke tabel frekuensi perangkat dan tetap dibatasi envelope termal.</string>
+    <string name="setup_profile_blocked">Profil bisa diterapkan setelah %1$s siap. Kamu bisa memilihnya nanti di tab Profil.</string>
+
+    <!-- 4. Done -->
+    <string name="setup_done_ready_title">Siap digunakan</string>
+    <string name="setup_done_partial_title">Penyiapan selesai</string>
+    <string name="setup_done_applied">Profil %1$s diterapkan.</string>
+    <string name="setup_done_ready_body">Pilih profil kapan saja di tab Profil, atau buat profil kustom dari mode bawaan.</string>
+    <string name="setup_done_partial_body">Zairenkai bisa dibuka sekarang. Fitur yang membutuhkan komponen yang belum siap tetap terkunci.</string>
+    <string name="setup_next_steps">Langkah berikutnya</string>
+
+    <!-- Language sheet -->
+    <string name="language_title">Bahasa aplikasi</string>
+    <string name="language_body">Berlaku untuk seluruh aplikasi. Bisa diubah lagi kapan saja.</string>
+    <string name="language_system">Bawaan sistem</string>
+    <string name="language_system_current">Saat ini: %1$s</string>
+
+    <!-- Info sheet -->
+    <string name="info_title">Info aplikasi &amp; perangkat</string>
+    <string name="info_app_version">Versi aplikasi</string>
+    <string name="info_app_version_value">%1$s (build %2$d) · %3$s</string>
+    <string name="info_device">Perangkat</string>
+    <string name="info_android">Android</string>
+    <string name="info_android_value">Android %1$s · API %2$d · patch keamanan %3$s</string>
+    <string name="info_soc">SoC</string>
+    <plurals name="info_soc_value">
+        <item quantity="other">%1$s · %2$d inti · %3$s</item>
+    </plurals>
+    <string name="info_ram">RAM</string>
+    <string name="info_ram_value">%1$s total · %2$s tersedia</string>
+    <string name="info_storage">Penyimpanan internal</string>
+    <string name="info_storage_value">%1$s total · %2$s kosong</string>
+    <string name="info_kernel">Kernel</string>
+    <string name="info_copy">Salin</string>
+    <string name="info_copied">Disalin ke papan klip</string>
+</resources>

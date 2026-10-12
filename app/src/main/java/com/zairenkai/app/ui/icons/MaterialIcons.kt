@@ -1650,3 +1650,207 @@ public val Icons.Rounded.ViewCarousel: ImageVector
     }
 
 private var _viewCarousel: ImageVector? = null
+
+public val Icons.Rounded.Language: ImageVector
+    get() {
+        if (_language != null) {
+            return _language!!
+        }
+        _language = materialIcon(name = "Rounded.Language") {
+            materialPath {
+                moveTo(11.99f, 2.0f)
+                curveTo(6.47f, 2.0f, 2.0f, 6.48f, 2.0f, 12.0f)
+                reflectiveCurveToRelative(4.47f, 10.0f, 9.99f, 10.0f)
+                curveTo(17.52f, 22.0f, 22.0f, 17.52f, 22.0f, 12.0f)
+                reflectiveCurveTo(17.52f, 2.0f, 11.99f, 2.0f)
+                close()
+                moveTo(18.92f, 8.0f)
+                horizontalLineToRelative(-2.95f)
+                curveToRelative(-0.32f, -1.25f, -0.78f, -2.45f, -1.38f, -3.56f)
+                curveToRelative(1.84f, 0.63f, 3.37f, 1.91f, 4.33f, 3.56f)
+                close()
+                moveTo(12.0f, 4.04f)
+                curveToRelative(0.83f, 1.2f, 1.48f, 2.53f, 1.91f, 3.96f)
+                horizontalLineToRelative(-3.82f)
+                curveToRelative(0.43f, -1.43f, 1.08f, -2.76f, 1.91f, -3.96f)
+                close()
+                moveTo(4.26f, 14.0f)
+                curveTo(4.1f, 13.36f, 4.0f, 12.69f, 4.0f, 12.0f)
+                reflectiveCurveToRelative(0.1f, -1.36f, 0.26f, -2.0f)
+                horizontalLineToRelative(3.38f)
+                curveToRelative(-0.08f, 0.66f, -0.14f, 1.32f, -0.14f, 2.0f)
+                reflectiveCurveToRelative(0.06f, 1.34f, 0.14f, 2.0f)
+                lineTo(4.26f, 14.0f)
+                close()
+                moveTo(5.08f, 16.0f)
+                horizontalLineToRelative(2.95f)
+                curveToRelative(0.32f, 1.25f, 0.78f, 2.45f, 1.38f, 3.56f)
+                curveToRelative(-1.84f, -0.63f, -3.37f, -1.9f, -4.33f, -3.56f)
+                close()
+                moveTo(8.03f, 8.0f)
+                lineTo(5.08f, 8.0f)
+                curveToRelative(0.96f, -1.66f, 2.49f, -2.93f, 4.33f, -3.56f)
+                curveTo(8.81f, 5.55f, 8.35f, 6.75f, 8.03f, 8.0f)
+                close()
+                moveTo(12.0f, 19.96f)
+                curveToRelative(-0.83f, -1.2f, -1.48f, -2.53f, -1.91f, -3.96f)
+                horizontalLineToRelative(3.82f)
+                curveToRelative(-0.43f, 1.43f, -1.08f, 2.76f, -1.91f, 3.96f)
+                close()
+                moveTo(14.34f, 14.0f)
+                lineTo(9.66f, 14.0f)
+                curveToRelative(-0.09f, -0.66f, -0.16f, -1.32f, -0.16f, -2.0f)
+                reflectiveCurveToRelative(0.07f, -1.35f, 0.16f, -2.0f)
+                horizontalLineToRelative(4.68f)
+                curveToRelative(0.09f, 0.65f, 0.16f, 1.32f, 0.16f, 2.0f)
+                reflectiveCurveToRelative(-0.07f, 1.34f, -0.16f, 2.0f)
+                close()
+                moveTo(14.59f, 19.56f)
+                curveToRelative(0.6f, -1.11f, 1.06f, -2.31f, 1.38f, -3.56f)
+                horizontalLineToRelative(2.95f)
+                curveToRelative(-0.96f, 1.65f, -2.49f, 2.93f, -4.33f, 3.56f)
+                close()
+                moveTo(16.36f, 14.0f)
+                curveToRelative(0.08f, -0.66f, 0.14f, -1.32f, 0.14f, -2.0f)
+                reflectiveCurveToRelative(-0.06f, -1.34f, -0.14f, -2.0f)
+                horizontalLineToRelative(3.38f)
+                curveToRelative(0.16f, 0.64f, 0.26f, 1.31f, 0.26f, 2.0f)
+                reflectiveCurveToRelative(-0.1f, 1.36f, -0.26f, 2.0f)
+                horizontalLineToRelative(-3.38f)
+                close()
+            }
+        }
+        return _language!!
+    }
+
+private var _language: ImageVector? = null
+
+public val Icons.Rounded.PhoneAndroid: ImageVector
+    get() {
+        if (_phoneAndroid != null) {
+            return _phoneAndroid!!
+        }
+        _phoneAndroid = materialIcon(name = "Rounded.PhoneAndroid") {
+            materialPath {
+                moveTo(16.0f, 1.0f)
+                lineTo(8.0f, 1.0f)
+                curveTo(6.34f, 1.0f, 5.0f, 2.34f, 5.0f, 4.0f)
+                verticalLineToRelative(16.0f)
+                curveToRelative(0.0f, 1.66f, 1.34f, 3.0f, 3.0f, 3.0f)
+                horizontalLineToRelative(8.0f)
+                curveToRelative(1.66f, 0.0f, 3.0f, -1.34f, 3.0f, -3.0f)
+                lineTo(19.0f, 4.0f)
+                curveToRelative(0.0f, -1.66f, -1.34f, -3.0f, -3.0f, -3.0f)
+                close()
+                moveTo(13.5f, 21.0f)
+                horizontalLineToRelative(-3.0f)
+                curveToRelative(-0.28f, 0.0f, -0.5f, -0.22f, -0.5f, -0.5f)
+                reflectiveCurveToRelative(0.22f, -0.5f, 0.5f, -0.5f)
+                horizontalLineToRelative(3.0f)
+                curveToRelative(0.28f, 0.0f, 0.5f, 0.22f, 0.5f, 0.5f)
+                reflectiveCurveToRelative(-0.22f, 0.5f, -0.5f, 0.5f)
+                close()
+                moveTo(17.0f, 18.0f)
+                lineTo(7.0f, 18.0f)
+                lineTo(7.0f, 4.0f)
+                horizontalLineToRelative(10.0f)
+                verticalLineToRelative(14.0f)
+                close()
+            }
+        }
+        return _phoneAndroid!!
+    }
+
+private var _phoneAndroid: ImageVector? = null
+
+public val Icons.Rounded.Terminal: ImageVector
+    get() {
+        if (_terminal != null) {
+            return _terminal!!
+        }
+        _terminal = materialIcon(name = "Rounded.Terminal") {
+            materialPath {
+                moveTo(20.0f, 4.0f)
+                horizontalLineTo(4.0f)
+                curveTo(2.89f, 4.0f, 2.0f, 4.9f, 2.0f, 6.0f)
+                verticalLineToRelative(12.0f)
+                curveToRelative(0.0f, 1.1f, 0.89f, 2.0f, 2.0f, 2.0f)
+                horizontalLineToRelative(16.0f)
+                curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
+                verticalLineTo(6.0f)
+                curveTo(22.0f, 4.9f, 21.11f, 4.0f, 20.0f, 4.0f)
+                close()
+                moveTo(20.0f, 18.0f)
+                horizontalLineTo(4.0f)
+                verticalLineTo(8.0f)
+                horizontalLineToRelative(16.0f)
+                verticalLineTo(18.0f)
+                close()
+                moveTo(12.0f, 16.0f)
+                curveToRelative(0.0f, -0.55f, 0.45f, -1.0f, 1.0f, -1.0f)
+                horizontalLineToRelative(4.0f)
+                curveToRelative(0.55f, 0.0f, 1.0f, 0.45f, 1.0f, 1.0f)
+                curveToRelative(0.0f, 0.55f, -0.45f, 1.0f, -1.0f, 1.0f)
+                horizontalLineToRelative(-4.0f)
+                curveTo(12.45f, 17.0f, 12.0f, 16.55f, 12.0f, 16.0f)
+                close()
+                moveTo(6.79f, 9.71f)
+                curveToRelative(0.39f, -0.39f, 1.02f, -0.39f, 1.41f, 0.0f)
+                lineToRelative(2.59f, 2.59f)
+                curveToRelative(0.39f, 0.39f, 0.39f, 1.02f, 0.0f, 1.41f)
+                lineToRelative(-2.59f, 2.59f)
+                curveToRelative(-0.39f, 0.39f, -1.02f, 0.39f, -1.41f, 0.0f)
+                curveToRelative(-0.39f, -0.39f, -0.39f, -1.02f, 0.0f, -1.41f)
+                lineTo(8.67f, 13.0f)
+                lineToRelative(-1.88f, -1.88f)
+                curveTo(6.4f, 10.73f, 6.4f, 10.1f, 6.79f, 9.71f)
+                close()
+            }
+        }
+        return _terminal!!
+    }
+
+private var _terminal: ImageVector? = null
+
+public val Icons.Rounded.ContentCopy: ImageVector
+    get() {
+        if (_contentCopy != null) {
+            return _contentCopy!!
+        }
+        _contentCopy = materialIcon(name = "Rounded.ContentCopy") {
+            materialPath {
+                moveTo(15.0f, 20.0f)
+                horizontalLineTo(5.0f)
+                verticalLineTo(7.0f)
+                curveToRelative(0.0f, -0.55f, -0.45f, -1.0f, -1.0f, -1.0f)
+                horizontalLineToRelative(0.0f)
+                curveTo(3.45f, 6.0f, 3.0f, 6.45f, 3.0f, 7.0f)
+                verticalLineToRelative(13.0f)
+                curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
+                horizontalLineToRelative(10.0f)
+                curveToRelative(0.55f, 0.0f, 1.0f, -0.45f, 1.0f, -1.0f)
+                verticalLineToRelative(0.0f)
+                curveTo(16.0f, 20.45f, 15.55f, 20.0f, 15.0f, 20.0f)
+                close()
+                moveTo(20.0f, 16.0f)
+                verticalLineTo(4.0f)
+                curveToRelative(0.0f, -1.1f, -0.9f, -2.0f, -2.0f, -2.0f)
+                horizontalLineTo(9.0f)
+                curveTo(7.9f, 2.0f, 7.0f, 2.9f, 7.0f, 4.0f)
+                verticalLineToRelative(12.0f)
+                curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
+                horizontalLineToRelative(9.0f)
+                curveTo(19.1f, 18.0f, 20.0f, 17.1f, 20.0f, 16.0f)
+                close()
+                moveTo(18.0f, 16.0f)
+                horizontalLineTo(9.0f)
+                verticalLineTo(4.0f)
+                horizontalLineToRelative(9.0f)
+                verticalLineTo(16.0f)
+                close()
+            }
+        }
+        return _contentCopy!!
+    }
+
+private var _contentCopy: ImageVector? = null

@@ -6,6 +6,8 @@
  */
 package com.zairenkai.app.ui
 
+import com.zairenkai.app.R
+import com.zairenkai.app.core.text.UiText
 import com.zairenkai.app.data.CpuSample
 import com.zairenkai.app.data.GpuSample
 import com.zairenkai.app.data.MonitorResult
@@ -67,11 +69,11 @@ class MonitorStateTest {
         )
         val failed = good.withResult(MonitorResult(ok = false, error = "su: permission denied"))
         assertNull(failed.latest)
-        assertEquals("su: permission denied", failed.error)
+        assertEquals(UiText.Raw("su: permission denied"), failed.error)
         assertEquals(listOf(50), failed.cpuHistory)
 
         val noOutput = failed.withResult(null)
-        assertEquals("zkfctl tidak merespons", noOutput.error)
+        assertEquals(UiText.Res(R.string.monitor_error_no_response), noOutput.error)
         assertEquals(2, noOutput.failures)
 
         assertEquals(listOf(0L, 1000L, 2000L, 4000L, 8000L, 8000L), (0..5).map(::monitorRetryDelayMs))

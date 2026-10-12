@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="dashboard_settings">Configuración</string>
+
+    <!-- Safe mode banner -->
+    <string name="dashboard_safe_mode_title">Modo seguro activo</string>
+    <string name="dashboard_safe_mode_body">El arranque anterior falló o hubo un reinicio inesperado, así que el perfil de rendimiento se restauró a la base de fábrica. Sal del modo seguro solo después de revisar la causa.</string>
+    <string name="dashboard_safe_mode_exit">Salir del modo seguro</string>
+
+    <!-- API banner -->
+    <string name="dashboard_api_outdated_title">API de ZKFC obsoleta</string>
+    <string name="dashboard_api_outdated_body">El kernel usa una API de ZKFC antigua. Actualiza el kernel/ZKFC a la versión más reciente para que las funciones de rendimiento funcionen por completo.</string>
+
+    <!-- Stat tiles -->
+    <string name="dashboard_zkfc_status">Estado de ZKFC</string>
+    <!-- %1$s: hook mode reported by ZKFC -->
+    <string name="dashboard_hook_sub">Hook: %1$s</string>
+    <string name="dashboard_license">Licencia de API</string>
+
+    <!-- License states -->
+    <string name="dashboard_license_valid">Válida</string>
+    <string name="dashboard_license_missing">Sin licencia</string>
+    <string name="dashboard_license_api_outdated">API obsoleta</string>
+    <string name="dashboard_license_expired">Caducada</string>
+    <string name="dashboard_license_no_owner_key">Sin clave</string>
+    <string name="dashboard_license_revoked">Revocada</string>
+
+    <!-- Device section -->
+    <string name="dashboard_device">Dispositivo</string>
+    <string name="dashboard_arch">Arquitectura</string>
+    <string name="dashboard_kernel_type">Tipo de kernel</string>
+    <string name="dashboard_kernel">Kernel</string>
+    <string name="dashboard_hook_mode">Modo de hook</string>
+    <string name="dashboard_build">Compilación</string>
+
+    <!-- Thermal section -->
+    <string name="dashboard_thermal_envelope">Envolvente térmica</string>
+    <string name="dashboard_envelope">Envolvente</string>
+    <string name="dashboard_headroom">Margen</string>
+    <string name="dashboard_control_zone">Zona de control</string>
+    <string name="dashboard_critical_trip">Umbral crítico</string>
+    <string name="dashboard_unknown">Desconocido</string>
+    <string name="dashboard_thermal_no_evidence">La autoridad térmica aún no ha aportado suficiente evidencia.</string>
+
+    <!-- Active performance section -->
+    <string name="dashboard_active_performance">Rendimiento activo</string>
+    <string name="dashboard_input_boost">Input boost</string>
+    <string name="dashboard_idle">Inactivo</string>
+    <string name="dashboard_boosted_tasks">Tareas con boost</string>
+    <string name="dashboard_cpufreq_requests">Solicitudes de cpufreq</string>
+    <string name="dashboard_thermal">Térmico</string>
+    <string name="dashboard_thermal_mitigating">Mitigación activa</string>
+    <string name="dashboard_thermal_normal">Normal</string>
+    <string name="dashboard_reset_boosts">Restablecer rendimiento</string>
+</resources>

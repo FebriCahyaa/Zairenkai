@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Wizard frame -->
+    <string name="setup_step_welcome">Welcome</string>
+    <string name="setup_step_check">System check</string>
+    <string name="setup_step_profile">First profile</string>
+    <string name="setup_step_done">Done</string>
+    <string name="setup_step_label" tools:ignore="PluralsCandidate">Step %1$d of %2$d · %3$s</string>
+    <string name="setup_language">Language</string>
+    <string name="setup_info">App &amp; device info</string>
+    <string name="setup_start">Start setup</string>
+    <string name="setup_checking">Checking…</string>
+    <string name="setup_apply_profile">Apply %1$s</string>
+    <string name="setup_skip_for_now">Skip for now</string>
+    <string name="setup_enter_app">Enter Zairenkai</string>
+
+    <!-- 1. Welcome -->
+    <string name="setup_welcome_title">Welcome to Zairenkai</string>
+    <string name="setup_welcome_body">Performance control for rooted devices, run by the zperfd engine on top of the ZKFC kernel framework.</string>
+    <string name="setup_feature_monitor_title">Live monitor</string>
+    <string name="setup_feature_monitor_body">UI FPS, per-core CPU load, GPU and thermal zone temperatures.</string>
+    <string name="setup_feature_verified_title">Verified profiles &amp; tweaks</string>
+    <string name="setup_feature_verified_body">Every change is applied by zperfd, read back from the kernel, and rolled back automatically if it fails.</string>
+    <string name="setup_feature_safety_title">Layered safeguards</string>
+    <string name="setup_feature_safety_body">Kernel thermal guard, Sentinel, and SAFE MODE after a failed boot. Performance features are unlocked with an API token.</string>
+    <string name="setup_welcome_note">Setup only checks the system. No settings are changed until you choose a profile yourself.</string>
+
+    <!-- 2. System check -->
+    <string name="setup_check_title">System check</string>
+    <string name="setup_check_body">Zairenkai works in layers: root access, the ZKFC kernel framework, the zperfd engine, then the API token.</string>
+    <string name="setup_check_root">Root access</string>
+    <string name="setup_check_zkfc">ZKFC kernel framework</string>
+    <string name="setup_check_engine">zperfd engine</string>
+    <string name="setup_check_token">API token</string>
+    <string name="setup_needs_root">Requires root access.</string>
+    <string name="setup_root_checking">Requesting root permission…</string>
+    <string name="setup_root_ok">Root permission granted.</string>
+    <string name="setup_root_missing">Root permission denied or no root manager found.</string>
+    <string name="setup_root_fix">Allow Zairenkai in Magisk, KernelSU or APatch, then check again.</string>
+    <string name="setup_zkfc_checking">Reading /dev/zkfc…</string>
+    <string name="setup_zkfc_missing">Not loaded.</string>
+    <string name="setup_zkfc_missing_detail">Not loaded: %1$s</string>
+    <string name="setup_zkfc_fix">Install the Zairenkai module with the ZKFC kernel module that matches this kernel, then reboot.</string>
+    <string name="setup_zkfc_outdated">%1$s (outdated)</string>
+    <string name="setup_zkfc_outdated_fix">Update the ZKFC kernel module; new features are disabled on the old API.</string>
+    <string name="setup_engine_checking">Contacting zperfd…</string>
+    <string name="setup_engine_missing">Not installed in /data/adb/zperf yet.</string>
+    <string name="setup_engine_missing_fix">Install the Zairenkai module; zperfd is the only path that applies profiles and tweaks.</string>
+    <string name="setup_engine_silent">Installed, but not responding.</string>
+    <string name="setup_engine_silent_fix">Reboot so the module service starts zperfd, then check again.</string>
+    <string name="setup_engine_safe_mode">Running · SAFE MODE (stock baseline held)</string>
+    <string name="setup_engine_saved">Running · saved profile: %1$s</string>
+    <string name="setup_engine_default">Running · engine default: %1$s</string>
+    <string name="setup_token_checking">Reading license status…</string>
+    <string name="setup_token_needs_zkfc">Requires the ZKFC kernel framework.</string>
+    <string name="setup_token_ok">Token valid; performance features unlocked.</string>
+    <string name="setup_token_missing">Not installed: performance profiles and tweaks stay locked.</string>
+    <string name="setup_token_missing_fix">Install a token in the System tab. The monitor still works without a token.</string>
+    <string name="setup_token_bad">Token %1$s.</string>
+    <string name="setup_token_bad_fix">Install a token issued for this device and kernel in the System tab.</string>
+    <string name="setup_check_all_ok">All components are ready.</string>
+    <string name="setup_check_ready_with_notes">Ready to use, with the notes above.</string>
+    <string name="setup_check_not_ready">Some components aren\'t ready yet. You can still continue; features that need them will stay locked until the issue is resolved.</string>
+    <string name="setup_recheck">Check again</string>
+    <string name="setup_state_checking">checking</string>
+    <string name="setup_state_ok">ready</string>
+    <string name="setup_state_warn">needs attention</string>
+    <string name="setup_state_missing">not ready</string>
+    <string name="setup_check_a11y">%1$s: %2$s. %3$s</string>
+    <string name="setup_check_summary_row">%1$s: %2$s</string>
+
+    <!-- License states, as "Token <state>." -->
+    <string name="license_state_valid">valid</string>
+    <string name="license_state_missing">not installed</string>
+    <string name="license_state_expired">expired</string>
+    <string name="license_state_bad_signature">has an invalid signature</string>
+    <string name="license_state_wrong_binding">bound to another device/kernel</string>
+    <string name="license_state_api_outdated">is for an older API</string>
+    <string name="license_state_api_incompatible">incompatible with the ZKFC API</string>
+    <string name="license_state_malformed">malformed</string>
+    <string name="license_state_no_owner_key">owner key not provisioned in the kernel</string>
+    <string name="license_state_revoked">revoked</string>
+
+    <!-- 3. First profile -->
+    <string name="setup_profile_title">Choose a first profile</string>
+    <string name="setup_profile_body">Optional. Profiles are zperfd modes; their values are aligned to the device frequency table and still limited by the thermal envelope.</string>
+    <string name="setup_profile_blocked">Profiles can be applied once %1$s is ready. You can choose one later in the Profiles tab.</string>
+
+    <!-- 4. Done -->
+    <string name="setup_done_ready_title">Ready to use</string>
+    <string name="setup_done_partial_title">Setup complete</string>
+    <string name="setup_done_applied">Profile %1$s applied.</string>
+    <string name="setup_done_ready_body">Choose a profile anytime in the Profiles tab, or create a custom profile from a built-in mode.</string>
+    <string name="setup_done_partial_body">You can open Zairenkai now. Features that need components that aren\'t ready stay locked.</string>
+    <string name="setup_next_steps">Next steps</string>
+
+    <!-- Language sheet -->
+    <string name="language_title">App language</string>
+    <string name="language_body">Applies to the whole app. You can change it again anytime.</string>
+    <string name="language_system">System default</string>
+    <string name="language_system_current">Current: %1$s</string>
+
+    <!-- Info sheet -->
+    <string name="info_title">App &amp; device info</string>
+    <string name="info_app_version">App version</string>
+    <string name="info_app_version_value">%1$s (build %2$d) · %3$s</string>
+    <string name="info_device">Device</string>
+    <string name="info_android">Android</string>
+    <string name="info_android_value">Android %1$s · API %2$d · security patch %3$s</string>
+    <string name="info_soc">SoC</string>
+    <plurals name="info_soc_value">
+        <item quantity="one">%1$s · %2$d core · %3$s</item>
+        <item quantity="other">%1$s · %2$d cores · %3$s</item>
+    </plurals>
+    <string name="info_ram">RAM</string>
+    <string name="info_ram_value">%1$s total · %2$s available</string>
+    <string name="info_storage">Internal storage</string>
+    <string name="info_storage_value">%1$s total · %2$s free</string>
+    <string name="info_kernel">Kernel</string>
+    <string name="info_copy">Copy</string>
+    <string name="info_copied">Copied to clipboard</string>
+</resources>

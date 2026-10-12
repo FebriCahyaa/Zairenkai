@@ -19,62 +19,90 @@ class UsageRecorder(
     private val fg: ForegroundApp,
     private val modeLabel: () -> String,
 ) {
+    private var acc: UsageAccumulator? = null
+
+    val samples: Int get() = acc?.samples ?: 0
+
+    /** Blocks on [scope] until cancelled, sampling every [intervalMs]. */
+    suspend fun run(scope: CoroutineScope, intervalMs: Long = 2000L, onUpdate: (() -> Unit)? = null) {
+        val a = acc ?: UsageAccumulator(System.currentTimeMillis()).also { acc = it }
+        while (scope.isActive) {
+            val r = power.read()
+            val pkg = fg.current() ?: "android.system"
+            a.add(r, System.currentTimeMillis(), pkg, { fg.label(pkg) }, modeLabel)
+            onUpdate?.invoke()
+            delay(intervalMs)
+        }
+    }
+
+    fun build(fpsSessions: List<FpsSession> = emptyList()): UsageSession =
+        (acc ?: UsageAccumulator(System.currentTimeMillis())).build(System.currentTimeMillis(), fpsSessions)
+
+    /** Non-empty once there is anything worth persisting. */
+    fun hasData(): Boolean = acc?.hasData() == true
+}
+
+/**
+ * The pure part of a recording: folds power samples into the session curve
+ * and per-app scenarios. Values a device did not report (no battery
+ * temperature, no voltage, unknown level) are left out of averages and
+ * maxima instead of counting as zero.
+ */
+class UsageAccumulator(private val startMs: Long) {
     private class ScenarioAcc(var label: String, var mode: String) {
         var durationMs: Long = 0
         var energyWs: Double = 0.0
         var maxPowerW: Float = 0f
         var tempSum: Double = 0.0
         var tempCount: Int = 0
-        var maxTempC: Float = 0f
+        var maxTempC: Float? = null
     }
 
     private val scenarios = LinkedHashMap<String, ScenarioAcc>()
     private val curve = ArrayList<PowerPoint>()
-    private var startMs = 0L
+    private var lastMs = startMs
     private var startLevel = -1
     private var lastLevel = -1
     private var voltSum = 0.0; private var voltCount = 0
     private var powerSumW = 0.0; private var powerCount = 0
     private var tempSum = 0.0; private var tempCount = 0
-    private var maxTemp = 0f
+    private var maxTemp: Float? = null
+    private var lastTemp: Float? = null
     private var capacityWh = 0f
     private var activeMs = 0L
     private val curveCap = 480
 
-    @Volatile var samples: Int = 0; private set
+    var samples: Int = 0
+        private set
 
-    /** Blocks on [scope] until cancelled, sampling every [intervalMs]. */
-    suspend fun run(scope: CoroutineScope, intervalMs: Long = 2000L, onUpdate: (() -> Unit)? = null) {
-        if (startMs == 0L) startMs = System.currentTimeMillis()
-        var lastMs = startMs
-        while (scope.isActive) {
-            val r = power.read()
-            val now = System.currentTimeMillis()
-            val dt = (now - lastMs).coerceIn(0, 10_000); lastMs = now
+    fun add(r: PowerReading, nowMs: Long, pkg: String, label: () -> String, mode: () -> String) {
+        val dt = (nowMs - lastMs).coerceIn(0, 10_000); lastMs = nowMs
 
-            if (startLevel < 0 && r.levelPct >= 0) startLevel = r.levelPct
-            if (r.levelPct >= 0) lastLevel = r.levelPct
-            if (r.capacityWh > 0) capacityWh = r.capacityWh
-            if (r.voltageV > 0) { voltSum += r.voltageV; voltCount++ }
-            if (!r.charging) { powerSumW += r.powerW; powerCount++; activeMs += dt }
-            tempSum += r.tempC; tempCount++
-            if (r.tempC > maxTemp) maxTemp = r.tempC
-
-            curve.add(PowerPoint(now, r.levelPct, if (r.charging) -r.powerW else r.powerW, r.tempC))
-            if (curve.size > curveCap) decimate()
-
-            val pkg = fg.current() ?: "android.system"
-            val acc = scenarios.getOrPut(pkg) { ScenarioAcc(fg.label(pkg), modeLabel()) }
-            acc.durationMs += dt
-            acc.energyWs += r.powerW * (dt / 1000.0)
-            if (r.powerW > acc.maxPowerW) acc.maxPowerW = r.powerW
-            acc.tempSum += r.tempC; acc.tempCount++
-            if (r.tempC > acc.maxTempC) acc.maxTempC = r.tempC
-
-            samples++
-            onUpdate?.invoke()
-            delay(intervalMs)
+        if (startLevel < 0 && r.levelPct >= 0) startLevel = r.levelPct
+        if (r.levelPct >= 0) lastLevel = r.levelPct
+        if (r.capacityWh > 0) capacityWh = r.capacityWh
+        if (r.voltageV > 0) { voltSum += r.voltageV; voltCount++ }
+        if (!r.charging) { powerSumW += r.powerW; powerCount++; activeMs += dt }
+        val temp = r.tempC.takeIf { r.tempKnown }
+        if (temp != null) {
+            tempSum += temp; tempCount++
+            maxTemp = maxOf(maxTemp ?: temp, temp)
+            lastTemp = temp
         }
+
+        // The curve needs a value per point: hold the last reported temperature.
+        curve.add(PowerPoint(nowMs, r.levelPct, if (r.charging) -r.powerW else r.powerW, temp ?: lastTemp ?: 0f))
+        if (curve.size > curveCap) decimate()
+
+        val acc = scenarios.getOrPut(pkg) { ScenarioAcc(label(), mode()) }
+        acc.durationMs += dt
+        acc.energyWs += r.powerW * (dt / 1000.0)
+        if (r.powerW > acc.maxPowerW) acc.maxPowerW = r.powerW
+        if (temp != null) {
+            acc.tempSum += temp; acc.tempCount++
+            acc.maxTempC = maxOf(acc.maxTempC ?: temp, temp)
+        }
+        samples++
     }
 
     /** Halve curve resolution while keeping the full time span. */
@@ -88,8 +116,7 @@ class UsageRecorder(
         while (curve.size > w) curve.removeAt(curve.size - 1)
     }
 
-    fun build(fpsSessions: List<FpsSession> = emptyList()): UsageSession {
-        val end = System.currentTimeMillis()
+    fun build(endMs: Long, fpsSessions: List<FpsSession> = emptyList()): UsageSession {
         val avgPower = if (powerCount > 0) (powerSumW / powerCount).toFloat() else 0f
         val avgVolt = if (voltCount > 0) (voltSum / voltCount).toFloat() else 0f
         val avgTemp = if (tempCount > 0) (tempSum / tempCount).toFloat() else 0f
@@ -105,13 +132,13 @@ class UsageRecorder(
                 avgPowerW = if (a.durationMs > 0) (a.energyWs / (a.durationMs / 1000.0)).toFloat() else 0f,
                 maxPowerW = a.maxPowerW,
                 avgTempC = if (a.tempCount > 0) (a.tempSum / a.tempCount).toFloat() else 0f,
-                maxTempC = a.maxTempC,
+                maxTempC = a.maxTempC ?: 0f,
             )
         }.sortedByDescending { it.durationMs }
         return UsageSession(
             id = UUID.randomUUID().toString(),
             startedAtMs = startMs,
-            endedAtMs = end,
+            endedAtMs = endMs,
             startLevelPct = startLevel,
             endLevelPct = lastLevel,
             avgPowerW = avgPower,
@@ -119,7 +146,7 @@ class UsageRecorder(
             estEnduranceMin = estMin,
             capacityWh = capacityWh,
             avgTempC = avgTemp,
-            maxTempC = maxTemp,
+            maxTempC = maxTemp ?: 0f,
             avgVoltageV = avgVolt,
             curve = curve.toList(),
             scenarios = scenList,
@@ -127,6 +154,5 @@ class UsageRecorder(
         )
     }
 
-    /** Non-empty once there is anything worth persisting. */
     fun hasData(): Boolean = samples > 0 && scenarios.isNotEmpty()
 }

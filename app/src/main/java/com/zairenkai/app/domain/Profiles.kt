@@ -8,6 +8,9 @@
  */
 package com.zairenkai.app.domain
 
+import androidx.annotation.StringRes
+import com.zairenkai.app.R
+
 enum class ProfileId {
     BATTERY, BALANCED, PERFORMANCE, GAME, AUTO;
 
@@ -27,8 +30,8 @@ enum class ProfileId {
 
 data class Profile(
     val id: ProfileId,
-    val name: String,
-    val tagline: String,
+    @StringRes val nameRes: Int,
+    @StringRes val taglineRes: Int,
     val icon: String,              // material icon name key, resolved in UI
     /** The zperfd mode this profile selects. */
     val mode: String,
@@ -36,23 +39,23 @@ data class Profile(
 
 object Profiles {
     val BATTERY = Profile(
-        ProfileId.BATTERY, "Hemat Baterai", "Batas performa rendah, dingin & irit daya", "battery_saver",
+        ProfileId.BATTERY, R.string.profile_battery_name, R.string.profile_battery_tagline, "battery_saver",
         mode = "powersave",
     )
     val BALANCED = Profile(
-        ProfileId.BALANCED, "Seimbang", "Rentang frekuensi penuh dengan boost input sedang", "balance",
+        ProfileId.BALANCED, R.string.profile_balanced_name, R.string.profile_balanced_tagline, "balance",
         mode = "balance",
     )
     val PERFORMANCE = Profile(
-        ProfileId.PERFORMANCE, "Performa", "Lantai frekuensi dan uclamp lebih tinggi untuk beban berat", "speed",
+        ProfileId.PERFORMANCE, R.string.profile_performance_name, R.string.profile_performance_tagline, "speed",
         mode = "performance",
     )
     val GAME = Profile(
-        ProfileId.GAME, "Game", "Lantai frekuensi tertinggi dan boost input terkuat", "sports_esports",
+        ProfileId.GAME, R.string.profile_game_name, R.string.profile_game_tagline, "sports_esports",
         mode = "fast",
     )
     val AUTO = Profile(
-        ProfileId.AUTO, "Otomatis", "Engine memilih mode dari baterai, daya & headroom termal", "auto_mode",
+        ProfileId.AUTO, R.string.profile_auto_name, R.string.profile_auto_tagline, "auto_mode",
         mode = "auto",
     )
 

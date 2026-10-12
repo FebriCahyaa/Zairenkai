@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Settings screen -->
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_section_appearance">Tampilan</string>
+    <string name="settings_theme_sub">Mode, aksen, warna dinamis &amp; Glass UI</string>
+    <string name="settings_about_sub">Versi, lisensi &amp; kredit</string>
+    <string name="settings_section_general">Umum</string>
+    <string name="settings_lite_title">Mode Lite</string>
+    <string name="settings_lite_sub">Sembunyikan tweak berat, kurangi overhead.</string>
+    <string name="settings_mitigation_title">Mitigasi perangkat</string>
+    <string name="settings_mitigation_sub">Batasi boost untuk perangkat panas/SoC lawas.</string>
+    <string name="settings_dynamic_color_title">Warna dinamis (Material You)</string>
+    <string name="settings_dynamic_color_sub">Ikuti wallpaper (Android 12+).</string>
+    <string name="settings_log_level_title">Level log</string>
+    <string name="settings_log_level_desc">Level log ZKFC yang direkam kernel.</string>
+    <string name="settings_live_log">Log langsung</string>
+    <string name="settings_log_empty">Belum ada log. Pastikan modul ZKFC termuat.</string>
+
+    <!-- Theme screen -->
+    <string name="theme_title">Tema</string>
+    <string name="theme_mode">Mode</string>
+    <string name="theme_mode_system">Sistem</string>
+    <string name="theme_mode_light">Terang</string>
+    <string name="theme_mode_dark">Gelap</string>
+    <string name="theme_dynamic_color">Warna dinamis</string>
+    <string name="theme_dynamic_color_sub">Ikuti wallpaper (Material You)</string>
+    <string name="theme_accent">Aksen</string>
+    <string name="theme_accent_disabled_hint">Matikan warna dinamis untuk memilih aksen.</string>
+    <string name="theme_glass" translatable="false">Glass UI</string>
+    <string name="theme_glass_sub">Kartu transparan dengan latar warna lembut</string>
+    <string name="theme_glass_opacity">Transparansi</string>
+    <string name="theme_glass_blur">Blur latar</string>
+    <string name="theme_glass_tint">Tint aksen</string>
+    <string name="theme_preview_glass_active">Glass UI aktif</string>
+    <string name="theme_preview">Pratinjau tema</string>
+
+    <!-- About screen -->
+    <string name="about_title">Tentang</string>
+    <string name="about_version">Versi</string>
+    <string name="about_package">Paket</string>
+    <string name="about_product_id">ID produk</string>
+    <string name="about_core_id">ID Core</string>
+    <string name="about_author">Pembuat</string>
+    <string name="about_zkfc_api">API ZKFC</string>
+    <string name="about_license_title">Lisensi &amp; kredit</string>
+    <string name="about_license_body">Kernel ZKFC berlisensi GPL-2.0. Aplikasi, engine, modul, dan tools berlisensi Zairenkai Proprietary. Font Roboto Flex (OFL-1.1). Verifier Ed25519/SHA-512 berbasis TweetNaCl (domain publik).</string>
+    <string name="about_copyright">© 2026 FebriCahyaa. Hak cipta dilindungi.</string>
+    <string name="about_tagline" translatable="false">Tweaks Suite • Material 3 Expressive</string>
+</resources>

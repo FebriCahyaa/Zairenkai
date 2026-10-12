@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<!-- Shared actions and states used across screens. -->
+<resources>
+    <string name="action_apply">Apply</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
+    <string name="action_create">Create</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_reload">Reload</string>
+    <string name="action_save">Save</string>
+    <string name="action_back">Back</string>
+    <string name="action_next">Next</string>
+    <string name="action_skip">Skip</string>
+    <string name="state_active">Active</string>
+    <string name="a11y_suffix_active">, active</string>
+    <string name="a11y_suffix_unsupported">, not available on this device</string>
+    <string name="a11y_suffix_invalid">, invalid</string>
+</resources>

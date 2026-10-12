@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Bottom navigation -->
+    <string name="nav_dashboard">主页</string>
+    <string name="nav_monitor">监控</string>
+    <string name="nav_tweaks">调校</string>
+    <string name="nav_profiles">配置</string>
+    <string name="nav_system">系统</string>
+</resources>

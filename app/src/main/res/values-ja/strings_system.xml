@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- System & security screen -->
+    <string name="system_title">システム &amp; セキュリティ</string>
+    <string name="system_yes">はい</string>
+    <string name="system_no">いいえ</string>
+    <string name="system_label_status">ステータス</string>
+
+    <!-- App integrity (SignatureGuard) -->
+    <string name="system_integrity_title">アプリの整合性</string>
+    <string name="system_sig_official">公式（署名が一致）</string>
+    <string name="system_sig_modified">改変 / 再パッケージ済み</string>
+    <string name="system_sig_unknown">未検証（デバッグ/偽装）</string>
+    <string name="system_label_signature_fingerprint">署名のフィンガープリント</string>
+
+    <!-- Runtime architecture entry -->
+    <string name="system_runtime_title">ランタイムアーキテクチャ</string>
+    <string name="system_runtime_desc">アイデンティティ、ランタイム機能、サーマルオーソリティ、サブシステムレジストリは、Zairenkai の監視境界から取得されます。</string>
+    <string name="system_runtime_open">Zairenkai Runtime を開く</string>
+
+    <!-- ZKFC API license -->
+    <string name="system_license_title">API ライセンス（ZKFC）</string>
+    <string name="system_label_token_installed">インストール済みのトークン</string>
+    <string name="system_label_owner_key">オーナーキー</string>
+    <string name="system_owner_key_installed">インストール済み</string>
+    <string name="system_owner_key_missing">未インストール</string>
+    <string name="system_label_key_fingerprint">キーのフィンガープリント</string>
+    <string name="system_label_kernel_binding">カーネルバインディング</string>
+    <string name="system_label_licensee">ライセンシー</string>
+    <string name="system_install_token">トークンをインストール（.zkl）</string>
+    <string name="system_license_note">APIトークンは、リクエストに応じて Zairenkai のオーナーのみが発行します。docs/security/API_TOKENS.md を参照してください。</string>
+    <string name="system_token_read_failed">トークンファイルを読み取れませんでした。</string>
+    <!-- %1$s: licensee name from the token, or system_token_this_device -->
+    <string name="system_token_installed">%1$s 向けのトークンをインストールしました。</string>
+    <string name="system_token_this_device">このデバイス</string>
+    <!-- %1$s: raw license state reported by the engine -->
+    <string name="system_token_rejected">拒否: %1$s</string>
+
+    <!-- Caller identity -->
+    <string name="system_caller_title">呼び出し元の識別情報</string>
+    <string name="system_label_zkfc_caps">ZKFC の機能</string>
+
+    <!-- System security -->
+    <string name="system_security_title">システムセキュリティ</string>
+    <string name="system_present">あり</string>
+    <string name="system_label_module_signing">モジュール署名</string>
+    <string name="system_enforced">強制</string>
+    <string name="system_label_lockdown">カーネルロックダウン</string>
+    <string name="system_label_taint">Taint</string>
+    <string name="system_taint_clean">クリーン</string>
+    <string name="system_label_config_digest">設定ダイジェスト</string>
+
+    <!-- Device -->
+    <string name="system_device_title">デバイス</string>
+    <string name="system_label_model">モデル</string>
+    <string name="system_label_compatible">互換性</string>
+    <string name="system_label_kernel_tag">カーネルタグ</string>
+    <string name="system_empty">（空）</string>
+    <string name="system_label_cpu_count">CPU 数</string>
+
+    <!-- Performance engine (zperfd) -->
+    <string name="system_zperf_title">パフォーマンスエンジン（zperfd）</string>
+    <string name="system_label_kernel">カーネル</string>
+    <string name="system_label_release">リリース</string>
+    <string name="system_label_boost">ブースト</string>
+
+    <!-- Access policy -->
+    <string name="system_policy_title">アクセスポリシー（UID/GID/グループ）</string>
+    <!-- %1$s: entry type (uid/gid/group), %2$d: numeric id -->
+    <string name="system_policy_entry_builtin">%1$s:%2$d（組み込み）</string>
+
+    <!-- Root required (shared screen piece) -->
+    <string name="system_root_required_title">root アクセスが必要です</string>
+    <string name="system_root_required_body">Zairenkai には root（Magisk / KernelSU / APatch）と、インストール済みの ZKFC モジュールが必要です。モジュールをインストールしてから、もう一度お試しください。</string>
+    <string name="system_action_retry">再試行</string>
+
+    <!-- Zairenkai Runtime screen -->
+    <string name="runtime_identity_title">Zairenkai の識別情報</string>
+    <string name="runtime_label_product">製品</string>
+    <string name="runtime_label_app_id">アプリ ID</string>
+    <string name="runtime_label_core_id">Core ID</string>
+    <string name="runtime_label_core_api">Core API</string>
+    <string name="runtime_label_platform">プラットフォーム</string>
+    <string name="runtime_kernel_unidentified">カーネルを識別できません</string>
+    <string name="runtime_platform_unidentified">デバイスを識別できません</string>
+    <string name="runtime_thermal_title">サーマルオーソリティ</string>
+    <string name="runtime_label_envelope">エンベロープ</string>
+    <string name="runtime_label_headroom">ヘッドルーム</string>
+    <string name="runtime_label_control_zone">制御ゾーン</string>
+    <string name="runtime_label_critical_trip">クリティカルトリップ</string>
+    <string name="runtime_label_telemetry">テレメトリ</string>
+    <string name="runtime_telemetry_complete">完全</string>
+    <string name="runtime_telemetry_incomplete">不完全</string>
+    <string name="runtime_unknown">不明</string>
+    <!-- %1$s: capability category name -->
+    <string name="runtime_capability_section">機能 · %1$s</string>
+    <string name="runtime_cap_ready">準備完了</string>
+    <string name="runtime_cap_unavailable">利用不可</string>
+    <string name="runtime_cap_unobserved">未観測</string>
+    <string name="runtime_subsystem_title">サブシステムレジストリ</string>
+    <string name="runtime_observe_failed">ランタイムの監視に失敗しました。</string>
+
+    <!-- Capability categories -->
+    <string name="capability_category_runtime">ランタイム</string>
+    <string name="capability_category_thermal">サーマル</string>
+    <string name="capability_category_memory">メモリ</string>
+    <string name="capability_category_storage">ストレージ</string>
+    <string name="capability_category_network">ネットワーク</string>
+    <string name="capability_category_system">システム</string>
+
+    <!-- Capability titles -->
+    <string name="capability_root">root オーソリティ</string>
+    <string name="capability_zkfc">ZKFC カーネルオーソリティ</string>
+    <string name="capability_zperfd">zperfd ランタイムエンジン</string>
+    <string name="capability_thermal_telemetry">サーマルテレメトリ</string>
+    <string name="capability_thermal_trips">ランタイムのトリップトポロジー</string>
+    <string name="capability_thermal_headroom">サーマルヘッドルーム</string>
+    <string name="capability_cpu_cpufreq">CPU 周波数ポリシー</string>
+    <string name="capability_cpu_uclamp">CPU uclamp</string>
+    <string name="capability_cpu_schedtune">CPU schedtune</string>
+    <string name="capability_input_boost">入力ブースト</string>
+    <string name="capability_gpu_devfreq">GPU devfreq</string>
+    <string name="capability_memory">メモリテレメトリ</string>
+    <string name="capability_storage">ストレージトポロジー</string>
+    <string name="capability_network">ネットワーク制御</string>
+    <string name="capability_properties">Zairenkai プロパティブローカー</string>
+
+    <!-- Subsystem roles (display names are product names and stay in code) -->
+    <string name="subsystem_role_atlas">デバイスインテリジェンス</string>
+    <string name="subsystem_role_sentinel">安全性とセキュリティ</string>
+    <string name="subsystem_role_thermoguard">サーマルセーフティ</string>
+    <string name="subsystem_role_zperfd">ランタイムオーケストレーション</string>
+    <string name="subsystem_role_zkfc">カーネルオーソリティ</string>
+</resources>

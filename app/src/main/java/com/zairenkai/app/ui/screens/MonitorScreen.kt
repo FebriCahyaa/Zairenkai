@@ -27,11 +27,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.R
+import com.zairenkai.app.core.text.asString
 import com.zairenkai.app.data.CpuSample
 import com.zairenkai.app.data.ThermalSample
 import com.zairenkai.app.ui.MonitorViewModel
@@ -98,8 +102,7 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    "Telemetri CPU, GPU dan termal tidak tersedia: $error\n" +
-                        "Mencoba lagi otomatis (percobaan ${ui.failures}). FPS di bawah tetap diukur dari UI.",
+                    stringResource(R.string.monitor_telemetry_unavailable, error.asString(), ui.failures),
                     modifier = Modifier.padding(14.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
@@ -122,10 +125,10 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
                 title = "CPU",
                 value = cpuNow?.let { "$it%" } ?: "—",
                 detail = when {
-                    cpuNow != null -> "${validCores.size} core terbaca"
-                    ui.error != null -> "Tidak tersedia"
-                    ui.latest == null -> "Menunggu sampel pertama"
-                    else -> "Sensor belum terbaca"
+                    cpuNow != null -> pluralStringResource(R.plurals.monitor_cores_read, validCores.size, validCores.size)
+                    ui.error != null -> stringResource(R.string.monitor_unavailable)
+                    ui.latest == null -> stringResource(R.string.monitor_waiting_first_sample)
+                    else -> stringResource(R.string.monitor_sensor_not_read)
                 },
                 icon = Icons.Rounded.Memory,
                 accent = ZkCpu,
@@ -135,13 +138,13 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
             MetricCard(
                 modifier = Modifier.weight(1f),
                 title = "GPU",
-                value = gpuNow?.let { "$it%" } ?: "n/a",
+                value = gpuNow?.let { "$it%" } ?: stringResource(R.string.monitor_value_na),
                 detail = when {
                     gpuFreqMhz != null -> "$gpuFreqMhz MHz"
-                    gpuNow != null -> "Utilisasi terbaca"
-                    ui.error != null -> "Tidak tersedia"
-                    ui.latest == null -> "Menunggu sampel pertama"
-                    else -> "Sensor tidak tersedia"
+                    gpuNow != null -> stringResource(R.string.monitor_gpu_util_read)
+                    ui.error != null -> stringResource(R.string.monitor_unavailable)
+                    ui.latest == null -> stringResource(R.string.monitor_waiting_first_sample)
+                    else -> stringResource(R.string.monitor_sensor_unavailable)
                 },
                 icon = Icons.Rounded.DeveloperBoard,
                 accent = ZkGpu,
@@ -162,15 +165,15 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Aktivitas per-core", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.monitor_cores_title), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "${coreSamples.count { it.online }} online · ${coreSamples.size} terdeteksi",
+                                stringResource(R.string.monitor_cores_count, coreSamples.count { it.online }, coreSamples.size),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         TextButton(onClick = { showCores = !showCores }) {
-                            Text(if (showCores) "Ringkas" else "Lihat detail")
+                            Text(stringResource(if (showCores) R.string.monitor_cores_collapse else R.string.monitor_cores_expand))
                             Spacer(Modifier.width(4.dp))
                             Icon(
                                 if (showCores) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
@@ -216,12 +219,12 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
                         tint = if (zkfc.thermalTripped) ZkWarn else ZkGood,
                     )
                     Column(Modifier.weight(1f)) {
-                        Text("ZKFC runtime", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.monitor_zkfc_title), style = MaterialTheme.typography.titleSmall)
                         Text(
                             when {
-                                zkfc.thermalTripped -> "Thermal guard sedang membatasi performa"
-                                zkfc.inputBoostActive -> "Input boost aktif"
-                                else -> "Kontrol kernel berjalan normal"
+                                zkfc.thermalTripped -> stringResource(R.string.monitor_zkfc_thermal_tripped)
+                                zkfc.inputBoostActive -> stringResource(R.string.monitor_zkfc_input_boost)
+                                else -> stringResource(R.string.monitor_zkfc_normal)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -254,13 +257,13 @@ private fun MonitorHeader(
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                "Monitor",
+                stringResource(R.string.monitor_title),
                 style = MaterialTheme.typography.displaySmall.copy(letterSpacing = (-0.7).sp),
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                "Performa perangkat, secara langsung",
+                stringResource(R.string.monitor_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -268,10 +271,10 @@ private fun MonitorHeader(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LiveStatusPill(
                     label = when {
-                        !isRunning -> "PAUSED"
-                        hasSample -> "LIVE"
-                        unavailable -> "TIDAK TERSEDIA"
-                        else -> "MENGHUBUNGKAN"
+                        !isRunning -> stringResource(R.string.monitor_status_paused)
+                        hasSample -> stringResource(R.string.monitor_status_live)
+                        unavailable -> stringResource(R.string.monitor_status_unavailable)
+                        else -> stringResource(R.string.monitor_status_connecting)
                     },
                     dotColor = when {
                         !isRunning -> MaterialTheme.colorScheme.outline
@@ -291,7 +294,7 @@ private fun MonitorHeader(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
                     Text(
-                        "${refreshHzLabel(refreshHz)} DISPLAY",
+                        stringResource(R.string.monitor_display_refresh, refreshHzLabel(refreshHz)),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -303,7 +306,7 @@ private fun MonitorHeader(
             onClick = onOpenHistory,
             modifier = Modifier.size(52.dp),
         ) {
-            Icon(Icons.Rounded.History, contentDescription = "Riwayat penggunaan")
+            Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.monitor_open_history))
         }
     }
 }
@@ -347,7 +350,7 @@ private fun FpsHeroCard(
             ) {
                 Column {
                     Text(
-                        "FPS UI MONITOR",
+                        stringResource(R.string.monitor_fps_title),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                     )
@@ -393,13 +396,13 @@ private fun FpsHeroCard(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "Refresh panel ${refreshHzLabel(refreshHz)}",
+                    stringResource(R.string.monitor_panel_refresh, refreshHzLabel(refreshHz)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    if (hasSamples) "Sampel stabil" else "Mengumpulkan sampel",
+                    stringResource(if (hasSamples) R.string.monitor_samples_stable else R.string.monitor_samples_collecting),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
                 )
@@ -417,8 +420,8 @@ private fun FpsHeroCard(
             } else {
                 ChartEmptyState(
                     modifier = Modifier.fillMaxWidth().height(86.dp),
-                    title = "Menunggu sampel frame",
-                    detail = "Grafik muncul setelah data tersedia",
+                    title = stringResource(R.string.monitor_waiting_frames),
+                    detail = stringResource(R.string.monitor_chart_after_data),
                     compact = true,
                     foreground = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
@@ -433,17 +436,17 @@ private fun FpsHeroCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FpsStat(
-                    label = "RATA-RATA",
+                    label = stringResource(R.string.monitor_fps_avg),
                     value = frame.avgFps.takeIf { it > 0f }?.let { "%.0f".format(it) } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
                 FpsStat(
-                    label = "5% LOW",
+                    label = stringResource(R.string.monitor_fps_low5),
                     value = frame.low5Fps.takeIf { it > 0f }?.let { "%.0f".format(it) } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
                 FpsStat(
-                    label = "JANK",
+                    label = stringResource(R.string.monitor_fps_jank),
                     value = if (frame.totalFrames > 0) "${frame.jankCount}" else "—",
                     modifier = Modifier.weight(1f),
                     valueColor = if (frame.jankCount > 0) ZkFpsDrop else MaterialTheme.colorScheme.onPrimaryContainer,
@@ -536,7 +539,7 @@ private fun MetricCard(
             } else {
                 ChartEmptyState(
                     modifier = Modifier.fillMaxWidth().height(54.dp),
-                    title = if (hasCurrentValue) "Sampel awal" else "Belum tersedia",
+                    title = stringResource(if (hasCurrentValue) R.string.monitor_chart_initial else R.string.monitor_chart_unavailable),
                     detail = null,
                     compact = true,
                     foreground = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -573,9 +576,9 @@ private fun ThermalCard(
                     )
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("Thermal", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.monitor_thermal_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Sensor suhu perangkat",
+                        stringResource(R.string.monitor_thermal_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -608,9 +611,9 @@ private fun ThermalCard(
                         modifier = Modifier.size(22.dp),
                     )
                     Column(Modifier.weight(1f)) {
-                        Text("Belum ada pembacaan", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.monitor_thermal_empty_title), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "Kernel atau vendor belum mengekspos zona thermal yang valid.",
+                            stringResource(R.string.monitor_thermal_empty_detail),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -644,8 +647,9 @@ private fun ThermalZoneRow(zone: ThermalSample, isLast: Boolean) {
     ) {
         Box(Modifier.size(7.dp).clip(CircleShape).background(thermalColor(zone.celsius)))
         Spacer(Modifier.width(10.dp))
+        val zoneFallback = stringResource(R.string.monitor_thermal_zone_fallback)
         Text(
-            zone.type.ifBlank { zone.zone.ifBlank { "Thermal zone" } },
+            zone.type.ifBlank { zone.zone.ifBlank { zoneFallback } },
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
@@ -732,7 +736,7 @@ private fun CoreGrid(cores: List<CpuSample>) {
                                 Text("CPU ${core.cpu}", style = MaterialTheme.typography.labelLarge)
                                 Text(
                                     when {
-                                        !core.online -> "OFF"
+                                        !core.online -> stringResource(R.string.monitor_core_off)
                                         hasLoad -> "${core.loadPct}%"
                                         else -> "—"
                                     },
@@ -753,7 +757,7 @@ private fun CoreGrid(cores: List<CpuSample>) {
                             )
                             Spacer(Modifier.height(7.dp))
                             Text(
-                                if (core.curKhz > 0) "${core.curKhz / 1000} MHz" else "Frekuensi n/a",
+                                if (core.curKhz > 0) "${core.curKhz / 1000} MHz" else stringResource(R.string.monitor_core_freq_na),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

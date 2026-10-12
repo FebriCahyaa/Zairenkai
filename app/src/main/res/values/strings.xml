@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<!-- Default language: Indonesian. Translations live in values-en (US), values-en-rGB, values-ja, values-es, values-zh-rCN. -->
 <resources>
-    <string name="app_name">Zairenkai</string>
+    <string name="app_name" translatable="false">Zairenkai</string>
 </resources>

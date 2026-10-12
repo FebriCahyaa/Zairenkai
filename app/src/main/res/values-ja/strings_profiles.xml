@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Built-in profiles (one per zperfd mode) -->
+    <string name="profile_battery_name">バッテリー節約</string>
+    <string name="profile_battery_tagline">パフォーマンス上限を低くし、低温 &amp; 省電力</string>
+    <string name="profile_balanced_name">バランス</string>
+    <string name="profile_balanced_tagline">周波数範囲をフルに使い、入力ブーストは中程度</string>
+    <string name="profile_performance_name">パフォーマンス</string>
+    <string name="profile_performance_tagline">高負荷向けに周波数の下限と uclamp を引き上げ</string>
+    <string name="profile_game_name">ゲーム</string>
+    <string name="profile_game_tagline">最も高い周波数の下限と最も強い入力ブースト</string>
+    <string name="profile_auto_name">自動</string>
+    <string name="profile_auto_tagline">バッテリー、電源 &amp; サーマルヘッドルームからエンジンがモードを選択</string>
+
+    <!-- Mode summary line parts, joined with " · " -->
+    <string name="mode_cpu_min">CPU 最小 %1$s</string>
+    <string name="mode_cpu_max_pct">CPU 最大 %1$d%%</string>
+    <string name="mode_cpu_max">CPU 最大 %1$s</string>
+    <string name="mode_uclamp">uclamp %1$d%%</string>
+    <string name="mode_input_boost">入力ブースト %1$d%% %2$d ms</string>
+    <string name="mode_no_input_boost">入力ブーストなし</string>
+    <string name="mode_gpu_min">GPU 最小 %1$s</string>
+    <string name="mode_gpu_max_pct">GPU 最大 %1$d%%</string>
+    <string name="mode_gpu_max">GPU 最大 %1$s</string>
+    <string name="mode_swappiness">swappiness %1$d</string>
+    <string name="mode_kernel_defaults">カーネルのデフォルト値</string>
+
+    <!-- Baseline hold reasons -->
+    <string name="hold_revalidation">%1$sプロファイルを選択した後に、カーネルまたはデバイスが変更されました。再確認するまで、エンジンはストックのベースラインを維持します。</string>
+    <string name="hold_revalidation_saved_fallback">保存済み</string>
+    <string name="hold_safe_mode">SAFE MODE 有効: ストックのベースラインを維持し、プロファイルは適用されません。</string>
+    <string name="hold_stock">ストックにリセット済み: エンジンはプロファイルを適用していません。</string>
+    <string name="hold_other">エンジンはストックのベースラインを維持しています（%1$s）。</string>
+
+    <!-- Apply outcome -->
+    <string name="apply_success">プロファイル %1$s を適用しました: %2$s。</string>
+    <string name="apply_outcome_verified">%1$d件検証済み</string>
+    <string name="apply_outcome_constrained">%1$d件カーネルにより制限</string>
+    <string name="apply_outcome_unverified">%1$d件検証不可</string>
+    <string name="apply_outcome_skipped">%1$d件デバイスで利用不可</string>
+    <string name="apply_fail_engine_unavailable">zperfd を利用できないため、プロファイルは適用されませんでした。</string>
+    <string name="apply_fail_framework_unavailable">ZKFC がカーネルに読み込まれていないため、プロファイルはロックされています。</string>
+    <string name="apply_fail_framework_incompatible">ZKFC の API バージョンがエンジンと互換性がないため、プロファイルはロックされています。</string>
+    <string name="apply_fail_license">ZKFC の APIトークンがまだ有効でないため、パフォーマンスプロファイルはロックされています。</string>
+    <string name="apply_fail_unauthorized">Core Authority により操作が拒否されました。</string>
+    <string name="apply_fail_sentinel">Sentinel（サーマル/電源/ストレージの安全機構）によりブロックされました。変更はありません。</string>
+    <string name="apply_fail_thermal_guard">カーネルのサーマルガードを設定できないため、プロファイルは適用されませんでした。</string>
+    <string name="apply_fail_blocked">カーネル（ZKFC/トークン）、Sentinel、またはサーマルガードによりブロックされました。変更はありません。</string>
+    <string name="apply_fail_rejected">このデバイスのプロファイルではこのモードを利用できません。</string>
+    <string name="apply_fail_not_observed">カーネルが書き込んだ値を保持しなかったため、エンジンがロールバックしました。</string>
+    <string name="apply_fail_failed">適用に失敗しました。エンジンがロールバックし、有効な状態は変わっていません。</string>
+    <string name="apply_fail_rollback_failed">適用に失敗し、ロールバックも完了しませんでした。復旧処理を実行します。</string>
+    <string name="apply_fail_state">エンジンの状態を復元できません。変更はありません。</string>
+    <string name="apply_fail_timeout">エンジンが時間内に応答しませんでした。状態が不確定のため、再読み込みしてください。</string>
+    <string name="apply_fail_unknown">エンジンの応答を認識できません。適用されていないものとみなしてください。</string>
+    <string name="apply_engine_not_running">zperfd がまだ起動していません。エンジンのトランザクションを経由しない適用を避けるため、プロファイルは適用されませんでした。</string>
+
+    <!-- Custom profile store/remove refusals -->
+    <string name="custom_fail_rejected">カスタムプロファイルがエンジンに拒否されました。</string>
+    <string name="custom_fail_limit">カスタムプロファイルの上限数に達しました。先にいずれかを削除してください。</string>
+    <string name="custom_fail_in_use">このプロファイルは現在選択されています。削除する前に別のプロファイルを選択してください。</string>
+    <string name="custom_fail_not_found">カスタムプロファイルはすでに存在しません。</string>
+    <string name="custom_fail_state">エンジンがカスタムプロファイルを保存できませんでした。変更はありません。</string>
+    <string name="custom_fail_unauthorized">Core Authority により操作が拒否されました。</string>
+    <string name="custom_fail_profile">エンジンのデバイスプロファイルを読み込めません。</string>
+    <string name="custom_fail_engine_unavailable">zperfd を利用できないため、カスタムプロファイルは保存されませんでした。</string>
+    <string name="custom_fail_timeout">エンジンが時間内に応答しませんでした。再読み込みして状態を確認してください。</string>
+    <string name="custom_fail_unknown">エンジンの応答を認識できません。保存されていないものとみなしてください。</string>
+    <string name="custom_saved">カスタムプロファイル %1$s を保存しました。</string>
+    <string name="custom_deleted">カスタムプロファイル %1$s を削除しました。</string>
+    <!-- Custom profile editor fields -->
+    <string name="custom_section_cpu">CPU</string>
+    <string name="custom_section_gpu">GPU</string>
+    <string name="custom_section_mem">メモリ</string>
+    <string name="custom_section_io">I/O</string>
+    <string name="custom_hint_freq" formatted="false">min, max, 80%, 1.8GHz, 1800MHz, -300MHz または kHz</string>
+    <string name="custom_hint_list">優先順、カンマ区切り</string>
+    <string name="custom_field_cpu_min_freq">CPU 最小周波数</string>
+    <string name="custom_field_cpu_max_freq">CPU 最大周波数</string>
+    <string name="custom_field_cpu_min_perf_pct">CPU パフォーマンス下限 (%)</string>
+    <string name="custom_field_cpu_max_perf_pct">CPU パフォーマンス上限 (%)</string>
+    <string name="custom_field_cpu_governor">CPU governor</string>
+    <string name="custom_field_cpu_uclamp_min">uclamp 最小 (%)</string>
+    <string name="custom_field_cpu_uclamp_max">uclamp 最大 (%)</string>
+    <string name="custom_field_cpu_input_boost_pct" formatted="false">入力ブースト（最大周波数の%）</string>
+    <string name="custom_field_cpu_input_boost_ms">入力ブーストの持続時間 (ms)</string>
+    <string name="custom_field_gpu_min_freq">GPU 最小周波数</string>
+    <string name="custom_field_gpu_max_freq">GPU 最大周波数</string>
+    <string name="custom_field_gpu_min_perf_pct">GPU パフォーマンス下限 (%)</string>
+    <string name="custom_field_gpu_max_perf_pct">GPU パフォーマンス上限 (%)</string>
+    <string name="custom_field_gpu_governor">GPU governor</string>
+    <string name="custom_field_mem_swappiness">Swappiness</string>
+    <string name="custom_field_io_scheduler">I/O スケジューラ</string>
+    <string name="custom_err_id">プロファイル ID が無効です。</string>
+    <string name="custom_err_label">プロファイル名は1–32文字で入力してください。</string>
+    <string name="custom_err_base">ベースモードを選択してください。</string>
+    <string name="custom_err_integer">%1$s: 整数で入力してください。</string>
+    <string name="custom_err_range">%1$s: %2$d–%3$dの範囲で入力してください。</string>
+    <string name="custom_err_freq">%1$s: 周波数の形式を認識できません。</string>
+    <string name="custom_err_list">%1$s: リストが無効です。</string>
+    <string name="custom_err_uclamp">uclamp の最小値は最大値を超えられません。</string>
+
+    <!-- Profiles screen -->
+    <string name="profiles_title">プロファイル</string>
+    <string name="profiles_engine_down">zperfd が動作していません — プロファイルの状態を検証できません。</string>
+    <string name="profiles_engine_down_cached">アプリで最後に選択: %1$s（未検証）</string>
+    <string name="profiles_confirm_apply">%1$s を確認 &amp; 適用</string>
+    <string name="profiles_values_note">上の値はデバイスプロファイルの要求値です。周波数は OPP テーブルに合わせて調整され、適用時に熱エンベロープによって引き下げられる場合があります。</string>
+    <string name="profiles_none_selected">未選択（エンジンのデフォルト: %1$s）</string>
+    <string name="profiles_selected">選択中: %1$s</string>
+    <string name="profiles_running_as">実行中: %1$s（自動/アプリ別ルールにより選択）</string>
+    <string name="profiles_unsupported">このデバイスのプロファイルでは利用できません（%1$s モード）。</string>
+    <string name="custom_section_title">カスタムプロファイル</string>
+    <string name="custom_list_unavailable">zperfd からカスタムプロファイルの一覧を読み取れません。</string>
+    <string name="custom_section_subtitle">組み込みモードを基に独自の値を設定します（%1$d/%2$d）。</string>
+    <string name="custom_empty">カスタムプロファイルはまだありません。ベースモードを選択し、必要な値だけを変更してください。それ以外はベースモードに従います。</string>
+    <string name="custom_manual_only">カスタムプロファイルは手動でのみ適用されます。自動とアプリ別ルールでは引き続き組み込みモードが使われます。</string>
+    <string name="custom_delete_title">%1$s を削除しますか？</string>
+    <string name="custom_delete_body">このカスタムプロファイルはエンジンから削除されます。選択中のプロファイルは削除できません。</string>
+    <plurals name="custom_card_subtitle">
+        <item quantity="other">%1$s ベース · %2$d件の変更</item>
+    </plurals>
+    <string name="custom_card_invalid">適用できません: %1$s</string>
+    <string name="custom_invalid">無効</string>
+    <string name="custom_editor_new">新しいカスタムプロファイル</string>
+    <string name="custom_editor_edit">%1$s を編集</string>
+    <string name="custom_editor_name">名前</string>
+    <string name="custom_editor_base">ベースモード</string>
+    <string name="custom_editor_note">空欄の項目はベースモードに従います。値は OPP テーブルに合わせて調整され、zperfd で検証されます。適用時には引き続き Sentinel と熱エンベロープによって制限されます。</string>
+    <string name="custom_editor_kernel_default">カーネルのデフォルト</string>
+    <string name="custom_editor_base_value">ベース: %1$s</string>
+</resources>

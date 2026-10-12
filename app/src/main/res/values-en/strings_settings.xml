@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_theme_sub">Mode, accent, dynamic color &amp; Glass UI</string>
+    <string name="settings_about_sub">Version, licenses &amp; credits</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_lite_title">Lite mode</string>
+    <string name="settings_lite_sub">Hide heavy tweaks and reduce overhead.</string>
+    <string name="settings_mitigation_title">Device mitigation</string>
+    <string name="settings_mitigation_sub">Limit boosts on hot devices or older SoCs.</string>
+    <string name="settings_dynamic_color_title">Dynamic color (Material You)</string>
+    <string name="settings_dynamic_color_sub">Follow the wallpaper (Android 12+).</string>
+    <string name="settings_log_level_title">Log level</string>
+    <string name="settings_log_level_desc">ZKFC log level recorded by the kernel.</string>
+    <string name="settings_live_log">Live log</string>
+    <string name="settings_log_empty">No logs yet. Make sure the ZKFC module is loaded.</string>
+
+    <!-- Theme screen -->
+    <string name="theme_title">Theme</string>
+    <string name="theme_mode">Mode</string>
+    <string name="theme_mode_system">System</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="theme_dynamic_color">Dynamic color</string>
+    <string name="theme_dynamic_color_sub">Follow the wallpaper (Material You)</string>
+    <string name="theme_accent">Accent</string>
+    <string name="theme_accent_disabled_hint">Turn off dynamic color to choose an accent.</string>
+    <string name="theme_glass_sub">Translucent cards over a soft color background</string>
+    <string name="theme_glass_opacity">Transparency</string>
+    <string name="theme_glass_blur">Background blur</string>
+    <string name="theme_glass_tint">Accent tint</string>
+    <string name="theme_preview_glass_active">Glass UI active</string>
+    <string name="theme_preview">Theme preview</string>
+
+    <!-- About screen -->
+    <string name="about_title">About</string>
+    <string name="about_version">Version</string>
+    <string name="about_package">Package</string>
+    <string name="about_product_id">Product ID</string>
+    <string name="about_core_id">Core ID</string>
+    <string name="about_author">Author</string>
+    <string name="about_zkfc_api">ZKFC API</string>
+    <string name="about_license_title">Licenses &amp; credits</string>
+    <string name="about_license_body">The ZKFC kernel is licensed under GPL-2.0. The app, engine, modules and tools are licensed under Zairenkai Proprietary. Roboto Flex font (OFL-1.1). Ed25519/SHA-512 verifier based on TweetNaCl (public domain).</string>
+    <string name="about_copyright">© 2026 FebriCahyaa. All rights reserved.</string>
+</resources>

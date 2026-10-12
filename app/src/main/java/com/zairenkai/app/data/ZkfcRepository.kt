@@ -42,7 +42,7 @@ class ZkfcRepository(
     /** The only tweak mutation path: zperfd (license gate, Sentinel, transaction, readback). */
     suspend fun setTweak(id: String, value: String, lite: Boolean): TweakWriteResult {
         if (!zperf.available()) {
-            return TweakWriteResult(ok = false, id = id, kind = "engine_unavailable", error = "zperfd tidak terpasang")
+            return TweakWriteResult(ok = false, id = id, kind = "engine_unavailable", error = "zperfd not installed")
         }
         return zperf.setTweak(id, value, lite)
     }

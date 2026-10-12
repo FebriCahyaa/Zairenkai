@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="tweaks_title">Ajustes</string>
+    <string name="tweaks_retry">Reintentar</string>
+
+    <!-- List loading -->
+    <string name="tweaks_load_no_root">Acceso root no disponible.</string>
+    <string name="tweaks_load_failed">No se pudo leer la lista de ajustes.</string>
+    <!-- %1$s: exception detail, or tweaks_load_error_generic -->
+    <string name="tweaks_load_failed_detail">No se pudo leer la lista de ajustes: %1$s</string>
+    <string name="tweaks_load_error_generic">error</string>
+
+    <!-- Banners -->
+    <string name="tweaks_readonly_banner">zperfd no está activo: los valores solo se muestran. Los cambios necesitan el motor para pasar por la licencia, Sentinel, las transacciones y la verificación.</string>
+    <string name="tweaks_lite_banner">Modo Lite activo: algunos ajustes pesados están ocultos.</string>
+    <string name="tweaks_empty">No se pudo leer ningún parámetro ajustable en este dispositivo.</string>
+
+    <!-- Rows. %1$s: tweak title, %2$s: value, %3$s: engine lock reason -->
+    <string name="tweaks_a11y_row">%1$s, valor %2$s</string>
+    <string name="tweaks_a11y_row_locked">%1$s, valor %2$s, bloqueado: %3$s</string>
+    <string name="tweaks_a11y_value_unread">sin leer</string>
+    <string name="tweaks_locked">Bloqueado: %1$s</string>
+
+    <!-- Editor dialog -->
+    <string name="tweaks_current">Actual: %1$s</string>
+    <string name="tweaks_value">Valor</string>
+    <string name="tweaks_value_range">Valor (%1$d–%2$d)</string>
+    <string name="tweaks_heavy_warning">Ajuste pesado: vigila la temperatura y la estabilidad después de aplicarlo.</string>
+    <string name="tweaks_error_no_choices">El dispositivo no ofrece una lista de opciones para este ajuste.</string>
+    <string name="tweaks_error_pick_supported">Elige uno de los valores compatibles con el dispositivo.</string>
+    <string name="tweaks_error_integer">Introduce un número entero.</string>
+    <string name="tweaks_error_out_of_range">Fuera del rango seguro %1$d–%2$d.</string>
+    <string name="tweaks_error_empty">El valor no puede estar vacío.</string>
+
+    <!-- Write outcomes. %1$s: tweak id, %2$s: value, %3$d: number of targets -->
+    <string name="tweaks_success">%1$s = %2$s aplicado y verificado.</string>
+    <plurals name="tweaks_success_targets">
+        <item quantity="one">%1$s = %2$s aplicado y verificado en %3$d destino.</item>
+        <item quantity="many">%1$s = %2$s aplicado y verificado en %3$d destinos.</item>
+        <item quantity="other">%1$s = %2$s aplicado y verificado en %3$d destinos.</item>
+    </plurals>
+    <string name="tweaks_fail_engine_unavailable">zperfd no está disponible; no hubo cambios.</string>
+    <string name="tweaks_fail_framework_unavailable">ZKFC no está cargado en el kernel; ajustes bloqueados.</string>
+    <string name="tweaks_fail_framework_incompatible">La versión de la API de ZKFC no es compatible con el motor; ajustes bloqueados.</string>
+    <string name="tweaks_fail_license">El token de API de ZKFC aún no es válido; ajustes de rendimiento bloqueados.</string>
+    <string name="tweaks_fail_unauthorized">Core Authority rechazó la operación.</string>
+    <string name="tweaks_fail_sentinel">Bloqueado por Sentinel (seguridad térmica, de alimentación o de almacenamiento).</string>
+    <string name="tweaks_fail_lite">Este ajuste está desactivado en el modo Lite.</string>
+    <string name="tweaks_fail_unknown_tweak">El motor no reconoce este ajuste.</string>
+    <string name="tweaks_fail_rejected">Valor rechazado; se revirtió el cambio.</string>
+    <string name="tweaks_fail_not_observed">El kernel no conservó el valor; se revirtió el cambio.</string>
+    <string name="tweaks_fail_rollback_failed">Error al aplicar y la reversión no se completó; se ejecutará la recuperación.</string>
+    <string name="tweaks_fail_state">No se pudo recuperar el estado del motor; no hubo cambios.</string>
+    <string name="tweaks_fail_timeout">El motor no respondió a tiempo; el estado es incierto, recarga.</string>
+    <string name="tweaks_fail_generic">Respuesta del motor no reconocida; considera que no se aplicó.</string>
+</resources>

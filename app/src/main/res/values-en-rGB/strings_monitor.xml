@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- CPU / GPU metric cards -->
+    <string name="monitor_gpu_util_read">Utilisation read</string>
+</resources>

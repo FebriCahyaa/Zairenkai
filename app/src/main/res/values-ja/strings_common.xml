@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<!-- Shared actions and states used across screens. -->
+<resources>
+    <string name="action_apply">適用</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_close">閉じる</string>
+    <string name="action_create">作成</string>
+    <string name="action_delete">削除</string>
+    <string name="action_edit">編集</string>
+    <string name="action_reload">再読み込み</string>
+    <string name="action_save">保存</string>
+    <string name="action_back">戻る</string>
+    <string name="action_next">次へ</string>
+    <string name="action_skip">スキップ</string>
+    <string name="state_active">有効</string>
+    <string name="a11y_suffix_active">、有効</string>
+    <string name="a11y_suffix_unsupported">、このデバイスでは利用できません</string>
+    <string name="a11y_suffix_invalid">、無効</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<!-- Shared actions and states used across screens. -->
+<resources>
+    <string name="action_apply">应用</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_close">关闭</string>
+    <string name="action_create">创建</string>
+    <string name="action_delete">删除</string>
+    <string name="action_edit">编辑</string>
+    <string name="action_reload">重新加载</string>
+    <string name="action_save">保存</string>
+    <string name="action_back">返回</string>
+    <string name="action_next">下一步</string>
+    <string name="action_skip">跳过</string>
+    <string name="state_active">已启用</string>
+    <string name="a11y_suffix_active">，已启用</string>
+    <string name="a11y_suffix_unsupported">，此设备不支持</string>
+    <string name="a11y_suffix_invalid">，无效</string>
+</resources>

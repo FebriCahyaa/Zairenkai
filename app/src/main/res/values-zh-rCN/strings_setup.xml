@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Wizard frame -->
+    <string name="setup_step_welcome">欢迎</string>
+    <string name="setup_step_check">系统检查</string>
+    <string name="setup_step_profile">初始配置</string>
+    <string name="setup_step_done">完成</string>
+    <string name="setup_step_label">第 %1$d 步，共 %2$d 步 · %3$s</string>
+    <string name="setup_language">语言</string>
+    <string name="setup_info">应用与设备信息</string>
+    <string name="setup_start">开始设置</string>
+    <string name="setup_checking">正在检查…</string>
+    <string name="setup_apply_profile">应用%1$s</string>
+    <string name="setup_skip_for_now">暂时跳过</string>
+    <string name="setup_enter_app">进入 Zairenkai</string>
+
+    <!-- 1. Welcome -->
+    <string name="setup_welcome_title">欢迎使用 Zairenkai</string>
+    <string name="setup_welcome_body">面向 root 设备的性能控制，由运行在 ZKFC 内核框架之上的 zperfd 引擎驱动。</string>
+    <string name="setup_feature_monitor_title">实时监控</string>
+    <string name="setup_feature_monitor_body">UI FPS、每核心 CPU 负载、GPU 以及温控区温度。</string>
+    <string name="setup_feature_verified_title">经验证的配置与调校</string>
+    <string name="setup_feature_verified_body">每项更改都由 zperfd 应用，并从内核回读；失败时自动回滚。</string>
+    <string name="setup_feature_safety_title">多层安全防护</string>
+    <string name="setup_feature_safety_body">内核温控保护、Sentinel，以及启动失败后的 SAFE MODE。性能功能需使用 API 令牌解锁。</string>
+    <string name="setup_welcome_note">设置向导只检查系统。在你亲自选择配置之前，不会更改任何设置。</string>
+
+    <!-- 2. System check -->
+    <string name="setup_check_title">系统检查</string>
+    <string name="setup_check_body">Zairenkai 分层工作：root 权限、ZKFC 内核框架、zperfd 引擎，最后是 API 令牌。</string>
+    <string name="setup_check_root">root 权限</string>
+    <string name="setup_check_zkfc">ZKFC 内核框架</string>
+    <string name="setup_check_engine">zperfd 引擎</string>
+    <string name="setup_check_token">API 令牌</string>
+    <string name="setup_needs_root">需要 root 权限。</string>
+    <string name="setup_root_checking">正在请求 root 权限…</string>
+    <string name="setup_root_ok">已授予 root 权限。</string>
+    <string name="setup_root_missing">root 权限被拒绝，或未找到 root 管理器。</string>
+    <string name="setup_root_fix">请在 Magisk、KernelSU 或 APatch 中允许 Zairenkai，然后重新检查。</string>
+    <string name="setup_zkfc_checking">正在读取 /dev/zkfc…</string>
+    <string name="setup_zkfc_missing">未加载。</string>
+    <string name="setup_zkfc_missing_detail">未加载：%1$s</string>
+    <string name="setup_zkfc_fix">安装 Zairenkai 模块及与此内核匹配的 ZKFC 内核模块，然后重启。</string>
+    <string name="setup_zkfc_outdated">%1$s（过旧）</string>
+    <string name="setup_zkfc_outdated_fix">请更新 ZKFC 内核模块；旧版 API 下新功能将被禁用。</string>
+    <string name="setup_engine_checking">正在连接 zperfd…</string>
+    <string name="setup_engine_missing">尚未安装到 /data/adb/zperf。</string>
+    <string name="setup_engine_missing_fix">请安装 Zairenkai 模块；zperfd 是应用配置与调校的唯一途径。</string>
+    <string name="setup_engine_silent">已安装，但无响应。</string>
+    <string name="setup_engine_silent_fix">请重启，让模块服务启动 zperfd，然后重新检查。</string>
+    <string name="setup_engine_safe_mode">运行中 · SAFE MODE（保持原厂基线）</string>
+    <string name="setup_engine_saved">运行中 · 已保存的配置：%1$s</string>
+    <string name="setup_engine_default">运行中 · 引擎默认：%1$s</string>
+    <string name="setup_token_checking">正在读取许可状态…</string>
+    <string name="setup_token_needs_zkfc">需要 ZKFC 内核框架。</string>
+    <string name="setup_token_ok">令牌有效；性能功能已解锁。</string>
+    <string name="setup_token_missing">尚未安装：性能配置与调校仍处于锁定状态。</string>
+    <string name="setup_token_missing_fix">请在“系统”标签页中安装令牌。无令牌时仍可使用监控。</string>
+    <string name="setup_token_bad">令牌%1$s。</string>
+    <string name="setup_token_bad_fix">请在“系统”标签页中安装为此设备和内核签发的令牌。</string>
+    <string name="setup_check_all_ok">所有组件均已就绪。</string>
+    <string name="setup_check_ready_with_notes">可以使用，但请留意上方提示。</string>
+    <string name="setup_check_not_ready">部分组件尚未就绪。你仍可继续；依赖这些组件的功能将保持锁定，直到问题解决。</string>
+    <string name="setup_recheck">重新检查</string>
+    <string name="setup_state_checking">检查中</string>
+    <string name="setup_state_ok">就绪</string>
+    <string name="setup_state_warn">需要注意</string>
+    <string name="setup_state_missing">未就绪</string>
+    <string name="setup_check_a11y">%1$s：%2$s。%3$s</string>
+    <string name="setup_check_summary_row">%1$s：%2$s</string>
+
+    <!-- License states, as "Token <state>." -->
+    <string name="license_state_valid">有效</string>
+    <string name="license_state_missing">未安装</string>
+    <string name="license_state_expired">已过期</string>
+    <string name="license_state_bad_signature">签名无效</string>
+    <string name="license_state_wrong_binding">已绑定到其他设备/内核</string>
+    <string name="license_state_api_outdated">适用于旧版 API</string>
+    <string name="license_state_api_incompatible">与 ZKFC API 不兼容</string>
+    <string name="license_state_malformed">已损坏</string>
+    <string name="license_state_no_owner_key">缺少所有者密钥（内核尚未配置）</string>
+    <string name="license_state_revoked">已吊销</string>
+
+    <!-- 3. First profile -->
+    <string name="setup_profile_title">选择初始配置</string>
+    <string name="setup_profile_body">可选。配置即 zperfd 模式；其数值会对齐到设备频率表，并始终受温控包络限制。</string>
+    <string name="setup_profile_blocked">%1$s 就绪后才能应用配置。你也可以稍后在“配置”标签页中选择。</string>
+
+    <!-- 4. Done -->
+    <string name="setup_done_ready_title">准备就绪</string>
+    <string name="setup_done_partial_title">设置完成</string>
+    <string name="setup_done_applied">已应用配置“%1$s”。</string>
+    <string name="setup_done_ready_body">随时可在“配置”标签页中选择配置，或基于内置模式创建自定义配置。</string>
+    <string name="setup_done_partial_body">现在即可打开 Zairenkai。依赖未就绪组件的功能将保持锁定。</string>
+    <string name="setup_next_steps">后续步骤</string>
+
+    <!-- Language sheet -->
+    <string name="language_title">应用语言</string>
+    <string name="language_body">适用于整个应用，可随时更改。</string>
+    <string name="language_system">系统默认</string>
+    <string name="language_system_current">当前：%1$s</string>
+
+    <!-- Info sheet -->
+    <string name="info_title">应用与设备信息</string>
+    <string name="info_app_version">应用版本</string>
+    <string name="info_app_version_value">%1$s（build %2$d）· %3$s</string>
+    <string name="info_device">设备</string>
+    <string name="info_android">Android</string>
+    <string name="info_android_value">Android %1$s · API %2$d · 安全补丁 %3$s</string>
+    <string name="info_soc">SoC</string>
+    <plurals name="info_soc_value">
+        <item quantity="other">%1$s · %2$d 核 · %3$s</item>
+    </plurals>
+    <string name="info_ram">RAM</string>
+    <string name="info_ram_value">共 %1$s · 可用 %2$s</string>
+    <string name="info_storage">内部存储</string>
+    <string name="info_storage_value">共 %1$s · 剩余 %2$s</string>
+    <string name="info_kernel">内核</string>
+    <string name="info_copy">复制</string>
+    <string name="info_copied">已复制到剪贴板</string>
+</resources>

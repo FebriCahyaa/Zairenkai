@@ -26,9 +26,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.R
 import com.zairenkai.app.data.UsageSession
 import com.zairenkai.app.data.ZkMonitorService
 import com.zairenkai.app.ui.UsageHistoryViewModel
@@ -55,14 +57,14 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Riwayat Penggunaan") },
+                title = { Text(stringResource(R.string.usage_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, "Kembali") }
+                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back)) }
                 },
                 actions = {
                     if (ui.sessions.isNotEmpty()) {
                         IconButton(onClick = { vm.clearAll() }) {
-                            Icon(Icons.Rounded.DeleteSweep, "Hapus semua")
+                            Icon(Icons.Rounded.DeleteSweep, stringResource(R.string.usage_clear_all))
                         }
                     }
                 },
@@ -76,12 +78,12 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
             contentPadding = PaddingValues(vertical = 12.dp),
         ) {
             item {
-                SectionCard(if (recording) "Merekam…" else "Perekaman latar belakang") {
+                SectionCard(stringResource(if (recording) R.string.usage_recording_title else R.string.usage_background_title)) {
                     Text(
                         if (recording) {
-                            "Zairenkai sedang merekam daya & aplikasi yang aktif. Hentikan untuk menyimpan sesi."
+                            stringResource(R.string.usage_recording_body)
                         } else {
-                            "Rekam riwayat daya dan penggunaan aplikasi di latar belakang, lalu tinjau per sesi."
+                            stringResource(R.string.usage_idle_body)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -92,7 +94,7 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
                             onClick = { ZkMonitorService.stop(context) },
                             colors = ButtonDefaults.buttonColors(containerColor = ZkBad),
                         ) {
-                            Icon(Icons.Rounded.Stop, null); Spacer(Modifier.width(8.dp)); Text("Hentikan & simpan")
+                            Icon(Icons.Rounded.Stop, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.usage_stop_save))
                         }
                     } else {
                         Button(onClick = {
@@ -103,14 +105,13 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
                             }
                         }) {
                             Icon(Icons.Rounded.FiberManualRecord, null, tint = ZkBad)
-                            Spacer(Modifier.width(8.dp)); Text("Mulai merekam")
+                            Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.usage_start))
                         }
                     }
                     if (!ui.hasUsageAccess) {
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "Beri izin \"Akses penggunaan\" agar aplikasi aktif terdeteksi akurat " +
-                                "(tanpa itu, deteksi memakai root bila tersedia).",
+                            stringResource(R.string.usage_access_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -122,7 +123,7 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
                                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                                 )
                             }
-                        }) { Text("Buka pengaturan akses") }
+                        }) { Text(stringResource(R.string.usage_open_access_settings)) }
                     }
                 }
             }
@@ -130,7 +131,7 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
             if (ui.sessions.isEmpty() && !ui.loading) {
                 item {
                     Text(
-                        "Belum ada sesi. Mulai merekam untuk melihat riwayat di sini.",
+                        stringResource(R.string.usage_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(8.dp),
@@ -156,7 +157,7 @@ private fun SessionCard(s: UsageSession, onClick: () -> Unit) {
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "${s.startLevelPct}% → ${s.endLevelPct}%  •  turun ${s.levelDropPct}%",
+                    stringResource(R.string.usage_session_levels, s.startLevelPct, s.endLevelPct, s.levelDropPct),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

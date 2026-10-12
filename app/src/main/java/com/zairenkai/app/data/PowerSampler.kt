@@ -22,6 +22,8 @@ data class PowerReading(
     val charging: Boolean = false,
     val tempC: Float = 0f,
     val capacityWh: Float = 0f,     // remaining energy, best effort
+    /** False when the device did not report a battery temperature ([tempC] is then 0). */
+    val tempKnown: Boolean = false,
 )
 
 class PowerSampler(context: Context) {
@@ -36,7 +38,9 @@ class PowerSampler(context: Context) {
         val status = sticky?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
             status == BatteryManager.BATTERY_STATUS_FULL
-        val tempC = (sticky?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
+        val tempTenths = sticky?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE) ?: Int.MIN_VALUE
+        val tempKnown = tempTenths != Int.MIN_VALUE
+        val tempC = if (tempKnown) tempTenths / 10f else 0f
         val voltageV = (sticky?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0) / 1000f
 
         // current_now is reported in µA on almost all devices (some in mA — we
@@ -56,6 +60,6 @@ class PowerSampler(context: Context) {
                 .getOrDefault(0L)
             if (chargeUah > 0 && voltageV > 0) (chargeUah / 1_000_000f) * voltageV else 0f
         }
-        return PowerReading(levelPct, voltageV, currentMa, powerW, charging, tempC, capacityWh)
+        return PowerReading(levelPct, voltageV, currentMa, powerW, charging, tempC, capacityWh, tempKnown)
     }
 }

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="dashboard_settings">設定</string>
+
+    <!-- Safe mode banner -->
+    <string name="dashboard_safe_mode_title">セーフモード有効</string>
+    <string name="dashboard_safe_mode_body">前回の起動が失敗したか予期せず再起動したため、パフォーマンスプロファイルをベースラインに戻しました。原因を確認してからセーフモードを終了してください。</string>
+    <string name="dashboard_safe_mode_exit">セーフモードを終了</string>
+
+    <!-- API banner -->
+    <string name="dashboard_api_outdated_title">ZKFC APIが古くなっています</string>
+    <string name="dashboard_api_outdated_body">カーネルが古いZKFC APIを使用しています。パフォーマンス機能をすべて利用するには、カーネル/ZKFCを最新バージョンに更新してください。</string>
+
+    <!-- Stat tiles -->
+    <string name="dashboard_zkfc_status">ZKFCステータス</string>
+    <!-- %1$s: hook mode reported by ZKFC -->
+    <string name="dashboard_hook_sub">フック: %1$s</string>
+    <string name="dashboard_license">APIライセンス</string>
+
+    <!-- License states -->
+    <string name="dashboard_license_valid">有効</string>
+    <string name="dashboard_license_missing">未設定</string>
+    <string name="dashboard_license_api_outdated">APIが古い</string>
+    <string name="dashboard_license_expired">期限切れ</string>
+    <string name="dashboard_license_no_owner_key">キーなし</string>
+    <string name="dashboard_license_revoked">失効</string>
+
+    <!-- Device section -->
+    <string name="dashboard_device">デバイス</string>
+    <string name="dashboard_arch">アーキテクチャ</string>
+    <string name="dashboard_kernel_type">カーネルの種類</string>
+    <string name="dashboard_kernel">カーネル</string>
+    <string name="dashboard_hook_mode">フックモード</string>
+    <string name="dashboard_build">ビルド</string>
+
+    <!-- Thermal section -->
+    <string name="dashboard_thermal_envelope">熱エンベロープ</string>
+    <string name="dashboard_envelope">エンベロープ</string>
+    <string name="dashboard_headroom">ヘッドルーム</string>
+    <string name="dashboard_control_zone">制御ゾーン</string>
+    <string name="dashboard_critical_trip">クリティカルトリップ</string>
+    <string name="dashboard_unknown">不明</string>
+    <string name="dashboard_thermal_no_evidence">サーマルオーソリティから十分な根拠がまだ得られていません。</string>
+
+    <!-- Active performance section -->
+    <string name="dashboard_active_performance">現在のパフォーマンス</string>
+    <string name="dashboard_input_boost">入力ブースト</string>
+    <string name="dashboard_idle">アイドル</string>
+    <string name="dashboard_boosted_tasks">ブースト中のタスク</string>
+    <string name="dashboard_cpufreq_requests">cpufreqリクエスト</string>
+    <string name="dashboard_thermal">サーマル</string>
+    <string name="dashboard_thermal_mitigating">緩和中</string>
+    <string name="dashboard_thermal_normal">正常</string>
+    <string name="dashboard_reset_boosts">パフォーマンスをリセット</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<!-- Shared actions and states used across screens. -->
+<resources>
+    <string name="action_apply">Aplicar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_create">Crear</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_reload">Recargar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_back">Atrás</string>
+    <string name="action_next">Siguiente</string>
+    <string name="action_skip">Omitir</string>
+    <string name="state_active">Activo</string>
+    <string name="a11y_suffix_active">, activo</string>
+    <string name="a11y_suffix_unsupported">, no disponible en este dispositivo</string>
+    <string name="a11y_suffix_invalid">, no válido</string>
+</resources>

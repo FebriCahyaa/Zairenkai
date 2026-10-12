@@ -31,9 +31,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.zairenkai.app.BuildConfig
+import com.zairenkai.app.R
 import com.zairenkai.app.core.identity.ZairenkaiIdentity
 import kotlin.math.cos
 import kotlin.math.sin
@@ -45,10 +47,10 @@ fun AboutScreen(onBack: () -> Unit) {
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Tentang") },
+                title = { Text(stringResource(R.string.about_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ChevronLeft, "Kembali")
+                        Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back))
                     }
                 },
             )
@@ -62,28 +64,26 @@ fun AboutScreen(onBack: () -> Unit) {
 
             ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(18.dp)) {
-                    AboutRow("Versi", BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")")
-                    AboutRow("Paket", BuildConfig.APPLICATION_ID)
-                    AboutRow("Product ID", ZairenkaiIdentity.PRODUCT_ID)
-                    AboutRow("Core ID", ZairenkaiIdentity.CORE_ID)
-                    AboutRow("Pembuat", "FEBRIAN RAHMAD CAHYA")
-                    AboutRow("ZKFC API", ZairenkaiIdentity.CORE_API.toString())
+                    AboutRow(stringResource(R.string.about_version), BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")")
+                    AboutRow(stringResource(R.string.about_package), BuildConfig.APPLICATION_ID)
+                    AboutRow(stringResource(R.string.about_product_id), ZairenkaiIdentity.PRODUCT_ID)
+                    AboutRow(stringResource(R.string.about_core_id), ZairenkaiIdentity.CORE_ID)
+                    AboutRow(stringResource(R.string.about_author), "FEBRIAN RAHMAD CAHYA")
+                    AboutRow(stringResource(R.string.about_zkfc_api), ZairenkaiIdentity.CORE_API.toString())
                 }
             }
 
             ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(18.dp)) {
-                    Text("Lisensi & kredit", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.about_license_title), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Kernel ZKFC berlisensi GPL-2.0. Aplikasi, engine, modul, dan tools " +
-                            "berlisensi Zairenkai Proprietary. Font Roboto Flex (OFL-1.1). " +
-                            "Verifier Ed25519/SHA-512 berbasis TweetNaCl (domain publik).",
+                        stringResource(R.string.about_license_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(10.dp))
-                    Text("© 2026 FebriCahyaa. Hak cipta dilindungi.",
+                    Text(stringResource(R.string.about_copyright),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -177,7 +177,7 @@ private fun LiquidBanner() {
                     Column {
                         Text("Zairenkai", color = Color.White, fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.headlineSmall)
-                        Text("Tweaks Suite • Material 3 Expressive",
+                        Text(stringResource(R.string.about_tagline),
                             color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelMedium)
                     }
                 }

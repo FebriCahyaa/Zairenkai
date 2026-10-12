@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Sampling state (MonitorViewModel) -->
+    <string name="monitor_error_no_response">zkfctlが応答しません</string>
+
+    <!-- Header -->
+    <string name="monitor_title">モニター</string>
+    <string name="monitor_subtitle">デバイスのパフォーマンスをリアルタイムで表示</string>
+    <string name="monitor_status_paused">一時停止</string>
+    <string name="monitor_status_live">LIVE</string>
+    <string name="monitor_status_unavailable">利用不可</string>
+    <string name="monitor_status_connecting">接続中</string>
+    <!-- %1$s: display refresh rate, e.g. "120 Hz" -->
+    <string name="monitor_display_refresh">ディスプレイ %1$s</string>
+    <string name="monitor_open_history">使用履歴</string>
+
+    <!-- %1$s: engine detail, %2$d: attempt number -->
+    <string name="monitor_telemetry_unavailable">CPU、GPU、サーマルのテレメトリを利用できません: %1$s\n自動で再試行しています（%2$d回目）。下のFPSは引き続きUIから計測されます。</string>
+
+    <!-- FPS card -->
+    <string name="monitor_fps_title">モニターUIのFPS</string>
+    <!-- %1$s: panel refresh rate, e.g. "120 Hz" -->
+    <string name="monitor_panel_refresh">パネルのリフレッシュレート %1$s</string>
+    <string name="monitor_samples_stable">サンプル安定</string>
+    <string name="monitor_samples_collecting">サンプルを収集中</string>
+    <string name="monitor_waiting_frames">フレームのサンプルを待機中</string>
+    <string name="monitor_chart_after_data">データが揃うとグラフが表示されます</string>
+    <string name="monitor_fps_avg">平均</string>
+    <!-- No format args: getString() returns it verbatim, so the % is literal. -->
+    <string name="monitor_fps_low5" formatted="false">5% LOW</string>
+    <string name="monitor_fps_jank">ジャンク</string>
+
+    <!-- CPU / GPU metric cards -->
+    <string name="monitor_value_na">n/a</string>
+    <plurals name="monitor_cores_read">
+        <item quantity="other">%1$dコアを読み取り</item>
+    </plurals>
+    <string name="monitor_unavailable">利用不可</string>
+    <string name="monitor_waiting_first_sample">最初のサンプルを待機中</string>
+    <string name="monitor_sensor_not_read">センサーをまだ読み取れていません</string>
+    <string name="monitor_gpu_util_read">使用率を読み取り済み</string>
+    <string name="monitor_sensor_unavailable">センサーを利用できません</string>
+    <string name="monitor_chart_initial">初期サンプル</string>
+    <string name="monitor_chart_unavailable">まだ利用できません</string>
+
+    <!-- Per-core activity -->
+    <string name="monitor_cores_title">コアごとのアクティビティ</string>
+    <!-- %1$d: online cores, %2$d: detected cores -->
+    <string name="monitor_cores_count">%1$dオンライン · %2$d検出</string>
+    <string name="monitor_cores_collapse">折りたたむ</string>
+    <string name="monitor_cores_expand">詳細を表示</string>
+    <string name="monitor_core_off">OFF</string>
+    <string name="monitor_core_freq_na">周波数 n/a</string>
+
+    <!-- Thermal -->
+    <string name="monitor_thermal_title">サーマル</string>
+    <string name="monitor_thermal_subtitle">デバイスの温度センサー</string>
+    <string name="monitor_thermal_empty_title">読み取り値がありません</string>
+    <string name="monitor_thermal_empty_detail">カーネルまたはベンダーが有効なサーマルゾーンを公開していません。</string>
+    <string name="monitor_thermal_zone_fallback">サーマルゾーン</string>
+
+    <!-- ZKFC runtime -->
+    <string name="monitor_zkfc_title">ZKFCランタイム</string>
+    <string name="monitor_zkfc_thermal_tripped">サーマルガードがパフォーマンスを制限しています</string>
+    <string name="monitor_zkfc_input_boost">入力ブースト有効</string>
+    <string name="monitor_zkfc_normal">カーネル制御は正常に動作しています</string>
+</resources>

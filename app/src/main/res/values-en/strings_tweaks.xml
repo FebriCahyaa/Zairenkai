@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="tweaks_title">Tweaks</string>
+    <string name="tweaks_retry">Try again</string>
+
+    <!-- List loading -->
+    <string name="tweaks_load_no_root">Root access is not available.</string>
+    <string name="tweaks_load_failed">Couldn\'t read the tweak list.</string>
+    <!-- %1$s: exception detail, or tweaks_load_error_generic -->
+    <string name="tweaks_load_failed_detail">Couldn\'t read the tweak list: %1$s</string>
+    <string name="tweaks_load_error_generic">error</string>
+
+    <!-- Banners -->
+    <string name="tweaks_readonly_banner">zperfd is not running — values are display-only. Changes need the engine so they pass license checks, Sentinel, transactions and verification.</string>
+    <string name="tweaks_lite_banner">Lite mode is on — some heavy tweaks are hidden.</string>
+    <string name="tweaks_empty">No tunables could be read on this device.</string>
+
+    <!-- Rows. %1$s: tweak title, %2$s: value, %3$s: engine lock reason -->
+    <string name="tweaks_a11y_row">%1$s, value %2$s</string>
+    <string name="tweaks_a11y_row_locked">%1$s, value %2$s, locked: %3$s</string>
+    <string name="tweaks_a11y_value_unread">not read</string>
+    <string name="tweaks_locked">Locked: %1$s</string>
+
+    <!-- Editor dialog -->
+    <string name="tweaks_current">Current: %1$s</string>
+    <string name="tweaks_value">Value</string>
+    <string name="tweaks_value_range">Value (%1$d–%2$d)</string>
+    <string name="tweaks_heavy_warning">Heavy tweak: monitor temperature and stability after applying.</string>
+    <string name="tweaks_error_no_choices">The device doesn\'t provide a list of choices for this tweak.</string>
+    <string name="tweaks_error_pick_supported">Pick one of the values your device supports.</string>
+    <string name="tweaks_error_integer">Enter a whole number.</string>
+    <string name="tweaks_error_out_of_range">Outside the safe range %1$d–%2$d.</string>
+    <string name="tweaks_error_empty">Value can\'t be empty.</string>
+
+    <!-- Write outcomes. %1$s: tweak id, %2$s: value, %3$d: number of targets -->
+    <string name="tweaks_success">%1$s = %2$s applied and verified.</string>
+    <plurals name="tweaks_success_targets">
+        <item quantity="one">%1$s = %2$s applied and verified on %3$d target.</item>
+        <item quantity="other">%1$s = %2$s applied and verified on %3$d targets.</item>
+    </plurals>
+    <string name="tweaks_fail_engine_unavailable">zperfd is not available; nothing was changed.</string>
+    <string name="tweaks_fail_framework_unavailable">ZKFC is not loaded in the kernel; tweaks are locked.</string>
+    <string name="tweaks_fail_framework_incompatible">The ZKFC API version is not compatible with the engine; tweaks are locked.</string>
+    <string name="tweaks_fail_license">The ZKFC API token is not valid yet; performance tweaks are locked.</string>
+    <string name="tweaks_fail_unauthorized">Operation denied by Core Authority.</string>
+    <string name="tweaks_fail_sentinel">Blocked by Sentinel (thermal/power/storage safety).</string>
+    <string name="tweaks_fail_lite">This tweak is disabled in Lite mode.</string>
+    <string name="tweaks_fail_unknown_tweak">The engine doesn\'t recognize this tweak.</string>
+    <string name="tweaks_fail_rejected">Value rejected; the change was rolled back.</string>
+    <string name="tweaks_fail_not_observed">The kernel didn\'t keep the value; the change was rolled back.</string>
+    <string name="tweaks_fail_rollback_failed">Apply failed and the rollback was incomplete; recovery will run.</string>
+    <string name="tweaks_fail_state">The engine state couldn\'t be restored; nothing was changed.</string>
+    <string name="tweaks_fail_timeout">The engine didn\'t respond in time; the status is uncertain, reload.</string>
+    <string name="tweaks_fail_generic">Unrecognized engine response; assume it was not applied.</string>
+</resources>

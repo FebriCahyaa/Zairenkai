@@ -17,9 +17,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zairenkai.app.R
 import com.zairenkai.app.data.AppScenario
 import com.zairenkai.app.data.FpsSession
 import com.zairenkai.app.data.UsageSession
@@ -39,9 +41,9 @@ fun SessionDetailScreen(factory: VmFactory, sessionId: String, onBack: () -> Uni
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Statistik Daya") },
+                title = { Text(stringResource(R.string.usage_detail_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, "Kembali") }
+                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             )
@@ -55,7 +57,7 @@ fun SessionDetailScreen(factory: VmFactory, sessionId: String, onBack: () -> Uni
             when {
                 ui.loading -> Box(Modifier.fillMaxWidth().padding(40.dp), Alignment.Center) { CircularProgressIndicator() }
                 session == null -> Text(
-                    "Sesi tidak ditemukan.",
+                    stringResource(R.string.usage_session_not_found),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -67,7 +69,7 @@ fun SessionDetailScreen(factory: VmFactory, sessionId: String, onBack: () -> Uni
 
 @Composable
 private fun SessionBody(s: UsageSession) {
-    SectionCard("Proses penggunaan  •  ${s.levelDropPct}%") {
+    SectionCard(stringResource(R.string.usage_detail_process, s.levelDropPct)) {
         if (s.curve.size >= 2) {
             LineChart(
                 s.curve.map { it.levelPct.coerceAtLeast(0).toFloat() },
@@ -86,19 +88,19 @@ private fun SessionBody(s: UsageSession) {
             MetricChip("${"%.1f".format(s.capacityWh)}Wh")
             MetricChip("${"%.1f".format(s.avgTempC)}°C")
             MetricChip("${"%.3f".format(s.avgVoltageV)}v")
-            MetricChip(if (s.avgPowerW > 0f) "Discharge" else "—")
+            MetricChip(if (s.avgPowerW > 0f) stringResource(R.string.usage_detail_discharge) else "—")
         }
     }
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StatTile("Rata-rata daya", "%.2f W".format(s.avgPowerW), ZkGpu, Modifier.weight(1f))
-        StatTile("Dipakai", formatDuration(s.usedMs), ZkCpu, Modifier.weight(1f))
-        StatTile("Estimasi", enduranceText(s.estEnduranceMin), ZkGood, Modifier.weight(1f))
+        StatTile(stringResource(R.string.usage_detail_avg_power), "%.2f W".format(s.avgPowerW), ZkGpu, Modifier.weight(1f))
+        StatTile(stringResource(R.string.usage_detail_used), formatDuration(s.usedMs), ZkCpu, Modifier.weight(1f))
+        StatTile(stringResource(R.string.usage_detail_estimate), enduranceText(s.estEnduranceMin), ZkGood, Modifier.weight(1f))
     }
 
-    SectionCard("Skenario penggunaan") {
+    SectionCard(stringResource(R.string.usage_detail_scenarios)) {
         if (s.scenarios.isEmpty()) {
-            Text("Tidak ada data skenario.", style = MaterialTheme.typography.bodySmall,
+            Text(stringResource(R.string.usage_detail_no_scenarios), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             s.scenarios.forEachIndexed { i, sc ->
@@ -124,7 +126,7 @@ private fun ScenarioRow(sc: AppScenario) {
             Text(sc.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
                 maxLines = 1)
             Text(
-                "AVG ${"%.2f".format(sc.avgPowerW)}W   MAX ${"%.0f".format(sc.maxTempC)}°C",
+                stringResource(R.string.usage_detail_scenario_stats, "%.2f".format(sc.avgPowerW), "%.0f".format(sc.maxTempC)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -136,19 +138,19 @@ private fun ScenarioRow(sc: AppScenario) {
 
 @Composable
 private fun FpsSessionCard(f: FpsSession) {
-    SectionCard("FPS  •  ${f.label}") {
+    SectionCard(stringResource(R.string.usage_detail_fps_title, f.label)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            StatCell("MAX", "%.0f".format(f.maxFps), ZkFps)
-            StatCell("MIN", "%.0f".format(f.minFps), ZkFps)
-            StatCell("AVG", "%.0f".format(f.avgFps), ZkFps)
-            StatCell("VARIANCE", "%.1f".format(f.varianceFps), ZkFps)
+            StatCell(stringResource(R.string.usage_stat_max), "%.0f".format(f.maxFps), ZkFps)
+            StatCell(stringResource(R.string.usage_stat_min), "%.0f".format(f.minFps), ZkFps)
+            StatCell(stringResource(R.string.usage_stat_avg), "%.0f".format(f.avgFps), ZkFps)
+            StatCell(stringResource(R.string.usage_stat_variance), "%.1f".format(f.varianceFps), ZkFps)
         }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             StatCell("≥${f.smoothnessTarget}FPS", "%.1f%%".format(f.smoothnessPct), ZkGood)
-            StatCell("5% Low", "%.0f".format(f.low5Fps), ZkWarn)
-            StatCell("MAX °C", "%.0f".format(f.maxTempC), ZkTemp)
-            StatCell("AVG W", "%.2f".format(f.avgPowerW), ZkGpu)
+            StatCell(stringResource(R.string.usage_stat_low5), "%.0f".format(f.low5Fps), ZkWarn)
+            StatCell(stringResource(R.string.usage_stat_max_temp), "%.0f".format(f.maxTempC), ZkTemp)
+            StatCell(stringResource(R.string.usage_stat_avg_power), "%.2f".format(f.avgPowerW), ZkGpu)
         }
         if (f.fps.size >= 2) {
             Spacer(Modifier.height(12.dp))
@@ -162,7 +164,7 @@ private fun FpsSessionCard(f: FpsSession) {
         }
         if (f.frameTimeMs.size >= 2) {
             Spacer(Modifier.height(12.dp))
-            Text("Frame Time (ms)", style = MaterialTheme.typography.labelMedium,
+            Text(stringResource(R.string.usage_detail_frame_time), style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
             LineChart(f.frameTimeMs, ZkFpsDrop, Modifier.fillMaxWidth().height(90.dp),

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Settings screen -->
+    <string name="settings_title">Configuración</string>
+    <string name="settings_section_appearance">Apariencia</string>
+    <string name="settings_theme_sub">Modo, acento, color dinámico y Glass UI</string>
+    <string name="settings_about_sub">Versión, licencias y créditos</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_lite_title">Modo Lite</string>
+    <string name="settings_lite_sub">Oculta los ajustes pesados y reduce la sobrecarga.</string>
+    <string name="settings_mitigation_title">Mitigación del dispositivo</string>
+    <string name="settings_mitigation_sub">Limita el boost en dispositivos que se calientan o con SoC antiguos.</string>
+    <string name="settings_dynamic_color_title">Color dinámico (Material You)</string>
+    <string name="settings_dynamic_color_sub">Sigue el fondo de pantalla (Android 12+).</string>
+    <string name="settings_log_level_title">Nivel de log</string>
+    <string name="settings_log_level_desc">Nivel de log de ZKFC que registra el kernel.</string>
+    <string name="settings_live_log">Log en vivo</string>
+    <string name="settings_log_empty">Aún no hay logs. Asegúrate de que el módulo ZKFC esté cargado.</string>
+
+    <!-- Theme screen -->
+    <string name="theme_title">Tema</string>
+    <string name="theme_mode">Modo</string>
+    <string name="theme_mode_system">Sistema</string>
+    <string name="theme_mode_light">Claro</string>
+    <string name="theme_mode_dark">Oscuro</string>
+    <string name="theme_dynamic_color">Color dinámico</string>
+    <string name="theme_dynamic_color_sub">Sigue el fondo de pantalla (Material You)</string>
+    <string name="theme_accent">Acento</string>
+    <string name="theme_accent_disabled_hint">Desactiva el color dinámico para elegir un acento.</string>
+    <string name="theme_glass_sub">Tarjetas transparentes con fondo de color suave</string>
+    <string name="theme_glass_opacity">Transparencia</string>
+    <string name="theme_glass_blur">Desenfoque de fondo</string>
+    <string name="theme_glass_tint">Tinte de acento</string>
+    <string name="theme_preview_glass_active">Glass UI activo</string>
+    <string name="theme_preview">Vista previa del tema</string>
+
+    <!-- About screen -->
+    <string name="about_title">Acerca de</string>
+    <string name="about_version">Versión</string>
+    <string name="about_package">Paquete</string>
+    <string name="about_product_id">ID de producto</string>
+    <string name="about_core_id">ID de Core</string>
+    <string name="about_author">Autor</string>
+    <string name="about_zkfc_api">API de ZKFC</string>
+    <string name="about_license_title">Licencias y créditos</string>
+    <string name="about_license_body">El kernel ZKFC tiene licencia GPL-2.0. La app, el motor, el módulo y las herramientas tienen licencia Zairenkai Proprietary. Fuente Roboto Flex (OFL-1.1). Verificador Ed25519/SHA-512 basado en TweetNaCl (dominio público).</string>
+    <string name="about_copyright">© 2026 FebriCahyaa. Todos los derechos reservados.</string>
+</resources>

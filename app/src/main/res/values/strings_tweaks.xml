@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="tweaks_title">Tweaks</string>
+    <string name="tweaks_retry">Coba lagi</string>
+
+    <!-- List loading -->
+    <string name="tweaks_load_no_root">Akses root tidak tersedia.</string>
+    <string name="tweaks_load_failed">Daftar tweak tidak dapat dibaca.</string>
+    <!-- %1$s: exception detail, or tweaks_load_error_generic -->
+    <string name="tweaks_load_failed_detail">Daftar tweak tidak dapat dibaca: %1$s</string>
+    <string name="tweaks_load_error_generic">galat</string>
+
+    <!-- Banners -->
+    <string name="tweaks_readonly_banner">zperfd tidak aktif — nilai hanya ditampilkan. Perubahan membutuhkan engine agar melewati lisensi, Sentinel, transaksi, dan verifikasi.</string>
+    <string name="tweaks_lite_banner">Mode Lite aktif — sebagian tweak berat disembunyikan.</string>
+    <string name="tweaks_empty">Tidak ada tunable yang terbaca pada perangkat ini.</string>
+
+    <!-- Rows. %1$s: tweak title, %2$s: value, %3$s: engine lock reason -->
+    <string name="tweaks_a11y_row">%1$s, nilai %2$s</string>
+    <string name="tweaks_a11y_row_locked">%1$s, nilai %2$s, terkunci: %3$s</string>
+    <string name="tweaks_a11y_value_unread">tidak terbaca</string>
+    <string name="tweaks_locked">Terkunci: %1$s</string>
+
+    <!-- Editor dialog -->
+    <string name="tweaks_current">Saat ini: %1$s</string>
+    <string name="tweaks_value">Nilai</string>
+    <string name="tweaks_value_range">Nilai (%1$d–%2$d)</string>
+    <string name="tweaks_heavy_warning">Tweak berat: pantau suhu dan stabilitas setelah diterapkan.</string>
+    <string name="tweaks_error_no_choices">Perangkat tidak menyediakan daftar pilihan untuk tweak ini.</string>
+    <string name="tweaks_error_pick_supported">Pilih salah satu nilai yang didukung perangkat.</string>
+    <string name="tweaks_error_integer">Masukkan bilangan bulat.</string>
+    <string name="tweaks_error_out_of_range">Di luar rentang aman %1$d–%2$d.</string>
+    <string name="tweaks_error_empty">Nilai tidak boleh kosong.</string>
+
+    <!-- Write outcomes. %1$s: tweak id, %2$s: value, %3$d: number of targets -->
+    <string name="tweaks_success">%1$s = %2$s diterapkan dan terverifikasi.</string>
+    <plurals name="tweaks_success_targets">
+        <item quantity="other">%1$s = %2$s diterapkan dan terverifikasi pada %3$d target.</item>
+    </plurals>
+    <string name="tweaks_fail_engine_unavailable">zperfd tidak tersedia; tidak ada perubahan.</string>
+    <string name="tweaks_fail_framework_unavailable">ZKFC tidak termuat di kernel; tweak dikunci.</string>
+    <string name="tweaks_fail_framework_incompatible">Versi API ZKFC tidak kompatibel dengan engine; tweak dikunci.</string>
+    <string name="tweaks_fail_license">Token API ZKFC belum valid; tweak performa dikunci.</string>
+    <string name="tweaks_fail_unauthorized">Operasi ditolak oleh Core Authority.</string>
+    <string name="tweaks_fail_sentinel">Diblokir Sentinel (keamanan termal/daya/penyimpanan).</string>
+    <string name="tweaks_fail_lite">Tweak ini dinonaktifkan dalam Mode Lite.</string>
+    <string name="tweaks_fail_unknown_tweak">Tweak tidak dikenal oleh engine.</string>
+    <string name="tweaks_fail_rejected">Nilai ditolak; perubahan dibatalkan.</string>
+    <string name="tweaks_fail_not_observed">Kernel tidak mempertahankan nilai; perubahan dibatalkan.</string>
+    <string name="tweaks_fail_rollback_failed">Penerapan gagal dan rollback tidak tuntas; pemulihan akan dijalankan.</string>
+    <string name="tweaks_fail_state">State engine tidak dapat dipulihkan; tidak ada perubahan.</string>
+    <string name="tweaks_fail_timeout">Engine tidak merespons tepat waktu; status tidak pasti, muat ulang.</string>
+    <string name="tweaks_fail_generic">Respons engine tidak dikenali; anggap tidak diterapkan.</string>
+</resources>

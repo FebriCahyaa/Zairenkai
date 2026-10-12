@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Usage history list -->
+    <string name="usage_title">使用履歴</string>
+    <string name="usage_clear_all">すべて削除</string>
+    <string name="usage_recording_title">記録中…</string>
+    <string name="usage_background_title">バックグラウンド記録</string>
+    <string name="usage_recording_body">Zairenkai は電力 &amp; 使用中のアプリを記録しています。停止するとセッションが保存されます。</string>
+    <string name="usage_idle_body">電力とアプリの使用履歴をバックグラウンドで記録し、セッションごとに確認できます。</string>
+    <string name="usage_stop_save">停止 &amp; 保存</string>
+    <string name="usage_start">記録を開始</string>
+    <string name="usage_access_hint">使用中のアプリを正確に検出するため、「使用状況へのアクセス」を許可してください（許可しない場合は、利用可能であれば root で検出します）。</string>
+    <string name="usage_open_access_settings">アクセス設定を開く</string>
+    <string name="usage_empty">セッションはまだありません。記録を開始すると、ここに履歴が表示されます。</string>
+    <!-- %1$d: start level %, %2$d: end level %, %3$d: level drop %. Quoted to keep the double spaces. -->
+    <string name="usage_session_levels">"%1$d%% → %2$d%%  •  %3$d%% 減少"</string>
+
+    <!-- Session detail (power statistics) -->
+    <string name="usage_detail_title">電力統計</string>
+    <string name="usage_session_not_found">セッションが見つかりません。</string>
+    <!-- %1$d: level drop %. Quoted to keep the double spaces. -->
+    <string name="usage_detail_process">"使用状況の推移  •  %1$d%%"</string>
+    <string name="usage_detail_discharge">放電</string>
+    <string name="usage_detail_avg_power">平均電力</string>
+    <string name="usage_detail_used">使用量</string>
+    <string name="usage_detail_estimate">推定</string>
+    <string name="usage_detail_scenarios">使用シナリオ</string>
+    <string name="usage_detail_no_scenarios">シナリオのデータがありません。</string>
+    <!-- %1$s: average power (W, 2 decimals), %2$s: max temperature (°C, no decimals). Quoted to keep the spacing. -->
+    <string name="usage_detail_scenario_stats">"AVG %1$sW   MAX %2$s°C"</string>
+    <!-- %1$s: game / app label. Quoted to keep the double spaces. -->
+    <string name="usage_detail_fps_title">"FPS  •  %1$s"</string>
+    <string name="usage_stat_max">MAX</string>
+    <string name="usage_stat_min">MIN</string>
+    <string name="usage_stat_avg">AVG</string>
+    <string name="usage_stat_variance">分散</string>
+    <!-- No format args: getString() returns it verbatim, so the % is literal. -->
+    <string name="usage_stat_low5" formatted="false">5% Low</string>
+    <string name="usage_stat_max_temp">MAX °C</string>
+    <string name="usage_stat_avg_power">AVG W</string>
+    <string name="usage_detail_frame_time">フレームタイム (ms)</string>
+
+    <!-- Background recording service notification -->
+    <string name="usage_notif_channel_name">使用状況モニター</string>
+    <string name="usage_notif_channel_desc">電力 &amp; アプリの使用履歴を記録します</string>
+    <string name="usage_notif_recording">使用履歴を記録中…</string>
+</resources>

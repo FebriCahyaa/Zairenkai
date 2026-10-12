@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Built-in profiles (one per zperfd mode) -->
+    <string name="profile_battery_name">省电</string>
+    <string name="profile_battery_tagline">低性能上限，低温且省电</string>
+    <string name="profile_balanced_name">均衡</string>
+    <string name="profile_balanced_tagline">完整频率范围，中等输入加速</string>
+    <string name="profile_performance_name">性能</string>
+    <string name="profile_performance_tagline">更高的频率下限与 uclamp，适合重负载</string>
+    <string name="profile_game_name">游戏</string>
+    <string name="profile_game_tagline">最高频率下限与最强输入加速</string>
+    <string name="profile_auto_name">自动</string>
+    <string name="profile_auto_tagline">引擎根据电量、供电与温控余量选择模式</string>
+
+    <!-- Mode summary line parts, joined with " · " -->
+    <string name="mode_cpu_min">CPU 最低 %1$s</string>
+    <string name="mode_cpu_max_pct">CPU 最高 %1$d%%</string>
+    <string name="mode_cpu_max">CPU 最高 %1$s</string>
+    <string name="mode_uclamp">uclamp %1$d%%</string>
+    <string name="mode_input_boost">输入加速 %1$d%% %2$d ms</string>
+    <string name="mode_no_input_boost">无输入加速</string>
+    <string name="mode_gpu_min">GPU 最低 %1$s</string>
+    <string name="mode_gpu_max_pct">GPU 最高 %1$d%%</string>
+    <string name="mode_gpu_max">GPU 最高 %1$s</string>
+    <string name="mode_swappiness">swappiness %1$d</string>
+    <string name="mode_kernel_defaults">内核默认值</string>
+
+    <!-- Baseline hold reasons -->
+    <string name="hold_revalidation">自选择配置“%1$s”以来，内核或设备已发生变化。在您重新确认前，引擎将保持原厂基线。</string>
+    <string name="hold_revalidation_saved_fallback">已保存</string>
+    <string name="hold_safe_mode">SAFE MODE 已启用：保持原厂基线，不应用配置。</string>
+    <string name="hold_stock">已重置为原厂：引擎不应用任何配置。</string>
+    <string name="hold_other">引擎正在保持原厂基线（%1$s）。</string>
+
+    <!-- Apply outcome -->
+    <string name="apply_success">已应用配置“%1$s”：%2$s。</string>
+    <string name="apply_outcome_verified">%1$d 项已验证</string>
+    <string name="apply_outcome_constrained">%1$d 项受内核限制</string>
+    <string name="apply_outcome_unverified">%1$d 项无法验证</string>
+    <string name="apply_outcome_skipped">%1$d 项此设备不可用</string>
+    <string name="apply_fail_engine_unavailable">zperfd 不可用；未应用配置。</string>
+    <string name="apply_fail_framework_unavailable">内核未加载 ZKFC；配置已锁定。</string>
+    <string name="apply_fail_framework_incompatible">ZKFC API 版本与引擎不兼容；配置已锁定。</string>
+    <string name="apply_fail_license">ZKFC API 令牌尚未生效；性能配置已锁定。</string>
+    <string name="apply_fail_unauthorized">操作被 Core Authority 拒绝。</string>
+    <string name="apply_fail_sentinel">已被 Sentinel 拦截（温控/电源/存储安全）；未做任何更改。</string>
+    <string name="apply_fail_thermal_guard">无法配置内核温控保护；未应用配置。</string>
+    <string name="apply_fail_blocked">已被内核（ZKFC/令牌）、Sentinel 或温控保护拦截；未做任何更改。</string>
+    <string name="apply_fail_rejected">此设备配置不支持该模式。</string>
+    <string name="apply_fail_not_observed">内核未保留写入的值；引擎已执行回滚。</string>
+    <string name="apply_fail_failed">应用失败；引擎已回滚，当前状态未改变。</string>
+    <string name="apply_fail_rollback_failed">应用失败且回滚未完成；将执行恢复。</string>
+    <string name="apply_fail_state">无法恢复引擎状态；未做任何更改。</string>
+    <string name="apply_fail_timeout">引擎未及时响应；状态不确定，请重新加载。</string>
+    <string name="apply_fail_unknown">无法识别引擎响应；视为未应用。</string>
+    <string name="apply_engine_not_running">zperfd 尚未运行。为避免绕过引擎事务，未应用配置。</string>
+
+    <!-- Custom profile store/remove refusals -->
+    <string name="custom_fail_rejected">自定义配置被引擎拒绝。</string>
+    <string name="custom_fail_limit">自定义配置数量已达上限；请先删除一个。</string>
+    <string name="custom_fail_in_use">此配置当前已选中。请先选择其他配置再删除。</string>
+    <string name="custom_fail_not_found">该自定义配置已不存在。</string>
+    <string name="custom_fail_state">引擎保存自定义配置失败；未做任何更改。</string>
+    <string name="custom_fail_unauthorized">操作被 Core Authority 拒绝。</string>
+    <string name="custom_fail_profile">无法加载引擎的设备配置。</string>
+    <string name="custom_fail_engine_unavailable">zperfd 不可用；未保存自定义配置。</string>
+    <string name="custom_fail_timeout">引擎未及时响应；请重新加载以查看状态。</string>
+    <string name="custom_fail_unknown">无法识别引擎响应；视为未保存。</string>
+    <string name="custom_saved">已保存自定义配置“%1$s”。</string>
+    <string name="custom_deleted">已删除自定义配置“%1$s”。</string>
+    <!-- Custom profile editor fields -->
+    <string name="custom_section_cpu">CPU</string>
+    <string name="custom_section_gpu">GPU</string>
+    <string name="custom_section_mem">内存</string>
+    <string name="custom_section_io">I/O</string>
+    <string name="custom_hint_freq" formatted="false">min, max, 80%, 1.8GHz, 1800MHz, -300MHz 或 kHz</string>
+    <string name="custom_hint_list">按优先级排序，以逗号分隔</string>
+    <string name="custom_field_cpu_min_freq">CPU 最低频率</string>
+    <string name="custom_field_cpu_max_freq">CPU 最高频率</string>
+    <string name="custom_field_cpu_min_perf_pct">CPU 性能下限 (%)</string>
+    <string name="custom_field_cpu_max_perf_pct">CPU 性能上限 (%)</string>
+    <string name="custom_field_cpu_governor">CPU 调速器</string>
+    <string name="custom_field_cpu_uclamp_min">uclamp 最小值 (%)</string>
+    <string name="custom_field_cpu_uclamp_max">uclamp 最大值 (%)</string>
+    <string name="custom_field_cpu_input_boost_pct" formatted="false">输入加速（最高频率的 %）</string>
+    <string name="custom_field_cpu_input_boost_ms">输入加速时长 (ms)</string>
+    <string name="custom_field_gpu_min_freq">GPU 最低频率</string>
+    <string name="custom_field_gpu_max_freq">GPU 最高频率</string>
+    <string name="custom_field_gpu_min_perf_pct">GPU 性能下限 (%)</string>
+    <string name="custom_field_gpu_max_perf_pct">GPU 性能上限 (%)</string>
+    <string name="custom_field_gpu_governor">GPU 调速器</string>
+    <string name="custom_field_mem_swappiness">Swappiness</string>
+    <string name="custom_field_io_scheduler">I/O 调度器</string>
+    <string name="custom_err_id">配置 ID 无效。</string>
+    <string name="custom_err_label">配置名称须为 1–32 个字符。</string>
+    <string name="custom_err_base">请选择基础模式。</string>
+    <string name="custom_err_integer">%1$s：必须为整数。</string>
+    <string name="custom_err_range">%1$s：必须在 %2$d–%3$d 之间。</string>
+    <string name="custom_err_freq">%1$s：无法识别的频率格式。</string>
+    <string name="custom_err_list">%1$s：列表无效。</string>
+    <string name="custom_err_uclamp">uclamp 最小值不能超过最大值。</string>
+
+    <!-- Profiles screen -->
+    <string name="profiles_title">配置</string>
+    <string name="profiles_engine_down">zperfd 未运行，无法验证配置状态。</string>
+    <string name="profiles_engine_down_cached">应用中上次选择：%1$s（未验证）。</string>
+    <string name="profiles_confirm_apply">确认并应用 %1$s</string>
+    <string name="profiles_values_note">以上数值为设备配置的请求值；应用时频率会对齐到 OPP 表，并可能因温控包络而降低。</string>
+    <string name="profiles_none_selected">尚未选择（引擎默认：%1$s）</string>
+    <string name="profiles_selected">已选择：%1$s</string>
+    <string name="profiles_running_as">当前运行：%1$s（由自动/按应用规则选择）</string>
+    <string name="profiles_unsupported">此设备配置不支持（%1$s 模式）。</string>
+    <string name="custom_section_title">自定义配置</string>
+    <string name="custom_list_unavailable">无法从 zperfd 读取自定义配置列表。</string>
+    <string name="custom_section_subtitle">基于内置模式、使用您自己数值的派生配置（%1$d/%2$d）。</string>
+    <string name="custom_empty">暂无自定义配置。选择一个基础模式，然后只修改需要的数值；其余沿用基础模式。</string>
+    <string name="custom_manual_only">自定义配置仅能手动应用；自动与按应用规则仍使用内置模式。</string>
+    <string name="custom_delete_title">删除 %1$s？</string>
+    <string name="custom_delete_body">此自定义配置将从引擎中删除。当前已选中的配置无法删除。</string>
+    <plurals name="custom_card_subtitle">
+        <item quantity="other">派生自 %1$s · %2$d 项更改</item>
+    </plurals>
+    <string name="custom_card_invalid">无法应用：%1$s</string>
+    <string name="custom_invalid">无效</string>
+    <string name="custom_editor_new">新建自定义配置</string>
+    <string name="custom_editor_edit">编辑 %1$s</string>
+    <string name="custom_editor_name">名称</string>
+    <string name="custom_editor_base">基础模式</string>
+    <string name="custom_editor_note">留空则沿用基础模式。数值将对齐到 OPP 表并由 zperfd 校验，应用时仍受 Sentinel 与温控包络限制。</string>
+    <string name="custom_editor_kernel_default">内核默认</string>
+    <string name="custom_editor_base_value">基础：%1$s</string>
+</resources>
