@@ -120,6 +120,17 @@ grep -q 'fun setupChecks' app/src/main/java/com/zairenkai/app/ui/onboarding/Setu
 grep -q 'c.zperf.apply(profile.mode)' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
 ! grep -q 'RootShell.run' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
 
+# Monitor redesign: battery and frame telemetry are read-only zperfd
+# commands, the FPS recorder only streams them, and the Monitor no longer
+# measures its own UI frames.
+grep -q 'mod observe;' rust/zperfd/src/main.rs
+grep -A3 'fn cmd_battery' rust/zperfd/src/main.rs | grep -q 'Operation::ReadInventory'
+grep -A3 'fn cmd_frames' rust/zperfd/src/main.rs | grep -q 'Operation::ReadPerformance'
+! grep -q 'fs::write\|write_node\|apply_' rust/zperfd/src/observe.rs
+grep -q 'frames --follow --watch' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
+! grep -R -q 'RootShell.run\|tweak set\|apply(' app/src/main/java/com/zairenkai/app/data/fps app/src/main/java/com/zairenkai/app/data/monitor
+test ! -e app/src/main/java/com/zairenkai/app/ui/components/FrameMonitor.kt
+
 # Languages: every shipped locale has resources, the list matches
 # locales_config.xml, and the setup animations are reproducible from the generator.
 for q in values-en values-en-rGB values-ja values-es values-zh-rCN; do test -d "app/src/main/res/$q"; done

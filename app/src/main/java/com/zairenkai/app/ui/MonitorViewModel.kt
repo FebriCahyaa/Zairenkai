@@ -1,25 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * Live monitor sampling (zkfctl monitor).
+ * Live monitor state: the `zkfctl monitor` fold rules and the screen-facing
+ * view of the shared sampler.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.zairenkai.app.AppContainer
 import com.zairenkai.app.R
 import com.zairenkai.app.core.text.UiText
 import com.zairenkai.app.core.text.uiText
 import com.zairenkai.app.data.*
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.zairenkai.app.data.monitor.LiveState
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 // Metric sources, units and unavailable states: docs/monitor-metrics.md.
 data class MonitorUi(
@@ -74,35 +68,28 @@ internal fun MonitorUi.withResult(m: MonitorResult?, cap: Int = 60): MonitorUi {
 internal fun monitorRetryDelayMs(failures: Int): Long =
     if (failures <= 0) 0L else 1000L shl (failures - 1).coerceAtMost(3)
 
+/**
+ * Thin view of the shared [com.zairenkai.app.data.monitor.LiveMonitor]: the
+ * hub and every detail screen read the same state, so the graphs carry over
+ * when the user opens a card.
+ */
 class MonitorViewModel(private val c: AppContainer) : ViewModel() {
-    private val _ui = MutableStateFlow(MonitorUi())
-    val ui: StateFlow<MonitorUi> = _ui.asStateFlow()
-    private var job: Job? = null
+    val state: StateFlow<LiveState> = c.live.state
+    private var held = false
 
     fun start() {
-        if (job?.isActive == true) return
-        // Keep the rolling graphs, but force the headline status to wait for a
-        // fresh result instead of presenting a stale sample as live telemetry.
-        _ui.value = _ui.value.copy(running = true, latest = null, error = null, failures = 0)
-        job = viewModelScope.launch {
-            while (isActive) {
-                val m = runCatching { c.repository.monitor(SAMPLE_WINDOW_MS) }.getOrNull()
-                ensureActive()
-                _ui.value = _ui.value.withResult(m)
-                delay(monitorRetryDelayMs(_ui.value.failures))
-            }
-        }
+        if (held) return
+        held = true
+        c.live.acquire()
     }
 
-    // Cancelling (not just flagging) the loop means a quick stop/start cannot
-    // leave two loops sampling side by side.
     fun stop() {
-        job?.cancel()
-        job = null
-        _ui.value = _ui.value.copy(running = false)
+        if (!held) return
+        held = false
+        c.live.release()
     }
+
+    fun dismissModuleBanner() = c.live.dismissModuleBanner()
 
     override fun onCleared() { stop() }
-
-    private companion object { const val SAMPLE_WINDOW_MS = 500 }
 }

@@ -12,8 +12,13 @@
 package com.zairenkai.app.data
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
@@ -99,6 +104,45 @@ object RootShell {
                 ShellResult(125, "", e.message ?: "root process failed")
             }
         }
+
+    /**
+     * Run a long-lived root command and emit its stdout line by line. The
+     * process is destroyed when the collector stops (cancellation or
+     * completion); stderr is drained and dropped so the child never blocks.
+     */
+    fun stream(command: String): Flow<String> = streamWith(listOf("su", "-c"), command)
+
+    /** [stream] with an injectable launcher; tests use `sh -c` instead of `su -c`. */
+    internal fun streamWith(launcher: List<String>, command: String): Flow<String> = flow {
+        val process = ProcessBuilder(launcher + command).redirectErrorStream(false).start()
+        try {
+            coroutineScope {
+                // A pipe read does not react to thread interrupts, so a
+                // cancelled collector would wait for the next line. This
+                // child destroys the process on cancellation, which ends
+                // the read immediately.
+                val killer = launch {
+                    try {
+                        awaitCancellation()
+                    } finally {
+                        withContext(NonCancellable + Dispatchers.IO) { destroyProcess(process) }
+                    }
+                }
+                launch(Dispatchers.IO) { runCatching { process.errorStream.use { e -> val buf = ByteArray(4096); while (e.read(buf) >= 0) Unit } } }
+                val reader = process.inputStream.bufferedReader()
+                try {
+                    while (true) {
+                        val line = runInterruptible(Dispatchers.IO) { runCatching { reader.readLine() }.getOrNull() } ?: break
+                        if (line.isNotBlank()) emit(line)
+                    }
+                } finally {
+                    killer.cancel()
+                }
+            }
+        } finally {
+            withContext(NonCancellable + Dispatchers.IO) { destroyProcess(process) }
+        }
+    }
 
     private fun destroyProcess(process: Process) {
         runCatching { process.destroy() }

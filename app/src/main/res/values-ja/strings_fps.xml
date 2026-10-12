@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
+    <string name="fps_drop_hitch">%1$s · 一瞬のカクつき: 1 フレームが %2$d ms 止まりました。ゲームがアセットの読み込み、シェーダーのコンパイル、メモリの解放を行うときによく起こります。</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS が %4$d 秒間 %2$d から %3$d に低下し、その間バッテリー温度はセッション開始時から %5$s °C 上昇しました。発熱によりデバイスが周波数を下げた（サーマルスロットリング）可能性があります。</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS が %4$d 秒間 %2$d から %3$d に低下しました（最長フレーム %5$d ms）。重いシーンが長く続き、CPU または GPU が限界まで動作しています。</string>
+    <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · %4$d 秒間 %2$d から %3$d FPS に一時的に低下し（最長フレーム %5$d ms）、その後回復しました。</string>
+
+    <!-- Session insights -->
+    <string name="fps_insight_no_data">分析に必要なフレームがまだ足りません。</string>
+    <string name="fps_insight_stable" tools:ignore="PluralsCandidate">非常に安定: 時間の %1$d%% が中央値 %2$d FPS の ±10%% 以内でした。</string>
+    <string name="fps_insight_mostly_stable" tools:ignore="PluralsCandidate">おおむね安定: 時間の %1$d%% が中央値 %2$d FPS の ±10%% 以内で、何度か低下がありました。</string>
+    <string name="fps_insight_unstable" tools:ignore="PluralsCandidate">不安定: 中央値 %2$d FPS 付近だったのは時間の %1$d%% のみで、FPS は 1 秒ごとに ±%3$d 変動しました。</string>
+    <string name="fps_insight_capped" tools:ignore="PluralsCandidate">画面は %2$d Hz で動作していますが、FPS は %1$d に制限されているようです。ゲームにより高いフレームレートの設定があれば、有効にしてリフレッシュレートを最大限に活用しましょう。</string>
+    <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low は平均 %2$d に対して %1$d FPS しかありません。平均が高くても、ときどき体感できるカクつきがあります。</string>
+    <string name="fps_insight_pacing">フレームペーシングが不均一です: フレーム間隔が平均 %2$s ms に対して ±%1$s ms ばらつき、マイクロスタッターとして感じられます。</string>
+    <string name="fps_insight_thermal_decline">セッションの最後の 3 分の 1 で FPS が %1$d%% 低下し、バッテリー温度が %2$s °C 上昇しました: サーマルスロットリングの兆候です。</string>
+    <string name="fps_insight_decline">セッションの最後の 3 分の 1 で FPS が序盤より %1$d%% 低下しましたが、目立った温度上昇はありません: より重いシーンによる可能性があります。</string>
+    <plurals name="fps_insight_stutters">
+        <item quantity="other">目で見てわかる 100 ms 超のカクつきが %1$d 回ありました（最長 %2$d ms）。</item>
+    </plurals>
+    <string name="fps_insight_jank_rate" tools:ignore="PluralsCandidate">1 分あたり約 %1$d 回の Jank: 自身のフレーム間隔の 2 倍を超えて遅れたフレームです。</string>
+    <string name="fps_insight_power">セッション中の平均電力 %1$s W、バッテリー最高温度 %2$s °C。</string>
+    <string name="fps_insight_all_good">このセッションでは目立ったパフォーマンスの問題はありませんでした。</string>
+
+    <!-- FPS recorder notification -->
+    <string name="fps_notif_channel">FPS レコーダー</string>
+    <string name="fps_notif_channel_desc">選択したゲームやアプリの FPS を記録します</string>
+    <string name="fps_notif_title">FPS レコーダー有効</string>
+    <string name="fps_notif_waiting">監視対象アプリの起動を待機中</string>
+    <!-- %1$s: app name -->
+    <string name="fps_notif_recording">%1$s を記録中</string>
+    <string name="fps_notif_stop">停止</string>
+    <!-- FPS screen -->
+    <string name="fps_screen_title">FPS モニター</string>
+    <string name="fps_auto_title">自動記録</string>
+    <string name="fps_auto_off">オンにすると、監視対象アプリを開くたびに FPS を自動で記録します。</string>
+    <string name="fps_auto_no_apps">記録を始めるには、下でアプリを 1 つ以上追加してください。</string>
+    <string name="fps_auto_connecting">zperfd に接続中（Zairenkai モジュールと root アクセスが必要）…</string>
+    <string name="fps_auto_waiting">監視対象アプリの起動を待機しています。</string>
+    <string name="fps_auto_recording">記録中です。アプリを閉じるとセッションが保存されます。</string>
+    <plurals name="fps_frames_recorded">
+        <item quantity="other">%1$d フレームを記録</item>
+    </plurals>
+    <string name="fps_watch_title">監視対象アプリ</string>
+    <string name="fps_watch_sub">FPS を記録するゲームとアプリ</string>
+    <string name="fps_watch_add">追加</string>
+    <string name="fps_watch_remove">監視から削除</string>
+    <string name="fps_watch_empty">アプリはまだありません。「追加」をタップしてゲームやアプリを選択してください。</string>
+    <string name="fps_picker_title">アプリを選択</string>
+    <string name="fps_picker_search">アプリを検索</string>
+    <string name="fps_overview_title">概要</string>
+    <string name="fps_overview_sessions">セッション</string>
+    <string name="fps_overview_time">合計時間</string>
+    <string name="fps_sessions_title">記録済みセッション</string>
+    <string name="fps_sessions_empty_title">セッションはまだありません</string>
+    <string name="fps_sessions_empty_body">自動記録をオンにして、監視対象のゲームを 10 秒以上プレイしてください。分析付きの結果がここに表示されます。</string>
+    <string name="fps_avg_short">平均 FPS</string>
+    <!-- %1$s: FPS value -->
+    <string name="fps_pill_low1">1%% low %1$s</string>
+    <!-- %1$s: percent value -->
+    <string name="fps_pill_stability">安定 %1$s%%</string>
+    <plurals name="fps_pill_stutters">
+        <item quantity="other">カクつき %1$d 回</item>
+    </plurals>
+    <string name="fps_clear_all">すべてのセッションを削除</string>
+    <string name="fps_clear_confirm">記録されたすべての FPS セッションが削除されます。監視対象アプリのリストは保持されます。</string>
+    <string name="fps_delete">削除</string>
+
+    <!-- FPS session detail -->
+    <string name="fps_session_title">FPS セッション</string>
+    <string name="fps_session_missing">このセッションはもう存在しません。</string>
+    <!-- %1$s: refresh rate, %2$s: frame source -->
+    <string name="fps_session_meta">画面 %1$s Hz · ソース %2$s</string>
+    <string name="fps_delete_title">セッションを削除しますか？</string>
+    <!-- %1$s: app name -->
+    <string name="fps_delete_confirm">この %1$s のセッションは完全に削除されます。</string>
+    <string name="fps_stat_avg">平均 FPS</string>
+    <string name="fps_stat_stability">安定</string>
+    <string name="fps_stat_median">中央値</string>
+    <string name="fps_stat_low1" formatted="false">1% low</string>
+    <string name="fps_stat_low01" formatted="false">0.1% low</string>
+    <string name="fps_stat_low5" formatted="false">5% low</string>
+    <string name="fps_stat_min">最小 FPS</string>
+    <string name="fps_stat_max">最大 FPS</string>
+    <string name="fps_stat_frames">総フレーム数</string>
+    <string name="fps_stat_jank">Jank</string>
+    <string name="fps_stat_stutter">カクつき &gt;100 ms</string>
+    <string name="fps_stat_dropped">ドロップフレーム</string>
+    <string name="fps_stat_duration">アクティブ時間</string>
+    <string name="fps_stat_power">平均電力</string>
+    <string name="fps_stat_frame_avg">平均</string>
+    <string name="fps_stat_frame_p95">95 パーセンタイル</string>
+    <string name="fps_stat_frame_p99">99 パーセンタイル</string>
+    <string name="fps_stat_frame_max">最長</string>
+    <string name="fps_stat_pacing">フレームペーシング</string>
+    <string name="fps_stat_fps_sd">FPS の変動</string>
+    <string name="fps_timeline_title">秒ごとの FPS</string>
+    <string name="fps_timeline_sub">赤い領域は FPS の低下を示します</string>
+    <string name="fps_legend_drop">低下</string>
+    <string name="fps_legend_refresh">リフレッシュレート</string>
+    <string name="fps_temp_title">セッション中のバッテリー温度</string>
+    <string name="fps_insights_title">セッション分析</string>
+    <string name="fps_insights_sub">このセッションのデータから分析</string>
+    <string name="fps_drops_title">FPS の低下</string>
+    <!-- %1$d: number of drop events -->
+    <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d 件の発生とその説明</string>
+    <string name="fps_drops_none">このセッションでは目立った FPS の低下はありませんでした。</string>
+    <string name="fps_cause_hitch">カクつき</string>
+    <string name="fps_cause_thermal">サーマル</string>
+    <string name="fps_cause_sustained">高負荷</string>
+    <string name="fps_cause_brief">短時間</string>
+    <string name="fps_frametime_title">フレームタイム</string>
+    <string name="fps_frametime_sub">フレーム間隔。小さく均一なほど滑らかです</string>
+    <string name="fps_dist_title">FPS 分布</string>
+    <string name="fps_dist_sub">各 FPS 範囲にとどまった秒数</string>
+    <string name="fps_full_stats_title">詳細な統計</string>
+    <string name="fps_stats_note">FPS は推定値ではなく、Android がこのアプリで実際に表示したフレームのタイミング（SurfaceFlinger または gfxinfo）から算出しています。</string>
+</resources>

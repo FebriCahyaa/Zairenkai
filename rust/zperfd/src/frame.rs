@@ -35,13 +35,57 @@ pub struct FrameMetrics {
     pub fresh: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
-struct FrameTiming {
-    token: i64,
-    intended_ns: i64,
-    completed_ns: i64,
-    duration_ns: u64,
-    jank: bool,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct FrameTiming {
+    pub(crate) token: i64,
+    pub(crate) intended_ns: i64,
+    pub(crate) completed_ns: i64,
+    pub(crate) duration_ns: u64,
+    pub(crate) jank: bool,
+}
+
+/// One read of the frames Android currently retains for `package`, without
+/// any analyzer state: SurfaceFlinger FrameTimeline first, then gfxinfo
+/// framestats. Used by the read-only `frames` command, which keeps its own
+/// cursor. `pid` 0 matches by layer name only.
+pub(crate) fn recent_frames(
+    package: &str,
+    pid: i32,
+    source_preference: &str,
+) -> Option<(&'static str, Vec<FrameTiming>)> {
+    if matches!(source_preference, "auto" | "surfaceflinger") {
+        if let Some(output) = bounded_command(
+            Command::new("dumpsys").args(["SurfaceFlinger", "--frametimeline"]),
+            COMMAND_TIMEOUT,
+        ) {
+            let parsed =
+                parse_surfaceflinger_frametimeline(&String::from_utf8_lossy(&output), package, pid);
+            if !parsed.is_empty() {
+                return Some(("surfaceflinger-frametimeline", parsed));
+            }
+        }
+    }
+    if matches!(source_preference, "auto" | "gfxinfo") {
+        if let Some(output) = bounded_command(
+            Command::new("dumpsys").args(["gfxinfo", package, "framestats"]),
+            COMMAND_TIMEOUT,
+        ) {
+            let parsed = parse_framestats(&String::from_utf8_lossy(&output));
+            if !parsed.is_empty() {
+                return Some(("gfxinfo", parsed));
+            }
+        }
+    }
+    None
+}
+
+/// Current display refresh rate from `dumpsys display`, uncached.
+pub(crate) fn display_refresh_hz() -> Option<f64> {
+    bounded_command(
+        Command::new("dumpsys").arg("display"),
+        Duration::from_millis(800),
+    )
+    .and_then(|bytes| parse_refresh_rate(&String::from_utf8_lossy(&bytes)))
 }
 
 pub struct FrameAnalyzer {
@@ -347,7 +391,8 @@ fn parse_surfaceflinger_frametimeline(text: &str, package: &str, pid: i32) -> Ve
                  actual_start: &mut Option<i64>,
                  actual_end: &mut Option<i64>,
                  actual_present: &mut Option<i64>| {
-        let match_frame = *owner_pid == pid || (*layer_match && !package.is_empty());
+        // pid 0 means "unknown": never let it match frames without an owner pid.
+        let match_frame = (pid > 0 && *owner_pid == pid) || (*layer_match && !package.is_empty());
         if match_frame {
             if let (Some(start), Some(end)) = (*actual_start, *actual_end) {
                 if end > start && (end - start) < 2_500_000_000 {

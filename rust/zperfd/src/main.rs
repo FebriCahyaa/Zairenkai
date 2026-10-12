@@ -21,6 +21,7 @@ mod interaction;
 mod inventory;
 mod memory;
 mod nodes;
+mod observe;
 mod optimize;
 mod platform;
 mod properties;
@@ -115,6 +116,8 @@ fn print_help() {
   probe [--json]\n\
   modes [--json]\n\
   custom list [--json] | put <custom-id> <file.toml> | delete <custom-id>\n\
+  battery                       (read-only power supply snapshot, JSON)\n\
+  frames [--watch a.b,c.d] [--follow] [--interval MS] [--duration S]\n\
   tweak list|get <id>|set <id> <value>\n\
   apply <mode>\n\
   set <mode|auto>\n\
@@ -415,9 +418,16 @@ fn cmd_probe(s: &Sysroot, state: &Path, json: bool) -> i32 {
             .policies
             .iter()
             .map(|p| {
+                let cpus = p.cpus.iter().map(|c| c.to_string()).collect::<Vec<_>>().join(",");
+                let governor = s
+                    .read(&p.rel("scaling_governor"))
+                    .map(|g| format!("\"{}\"", json_escape(&g)))
+                    .unwrap_or_else(|| "null".into());
                 format!(
-                    "{{\"name\":\"{}\",\"min_hw\":{},\"max_hw\":{},\"opps\":{},\"min_opp\":{},\"max_opp\":{}}}",
+                    "{{\"name\":\"{}\",\"cpus\":[{}],\"governor\":{},\"min_hw\":{},\"max_hw\":{},\"opps\":{},\"min_opp\":{},\"max_opp\":{}}}",
                     json_escape(&p.name),
+                    cpus,
+                    governor,
                     p.min_hw,
                     p.max_hw,
                     p.avail.len(),
@@ -1605,6 +1615,113 @@ fn cmd_modes(args: &Args) -> i32 {
     }
 }
 
+/// `battery`: read-only snapshot of the battery and charger supplies.
+fn cmd_battery(args: &Args) -> i32 {
+    if let Err(e) = core_authorize(Operation::ReadInventory) {
+        eprintln!("{e}");
+        return 1;
+    }
+    println!("{}", observe::battery_json(&Sysroot::new(&args.root)));
+    0
+}
+
+/// `frames`: read-only frame timeline of the foreground app. With `--watch`
+/// only the listed packages are sampled; `--follow` keeps streaming one
+/// JSON line per interval (frames since the previous line) until the reader
+/// goes away or `--duration` elapses. Lines for an unwatched foreground app
+/// carry no frames and are only sent when it changes or every 10 s.
+fn cmd_frames(args: &Args) -> i32 {
+    use std::io::Write;
+    if let Err(e) = core_authorize(Operation::ReadPerformance) {
+        eprintln!("{e}");
+        return 1;
+    }
+    let mut watch = Vec::new();
+    let mut follow = false;
+    let mut duration_s = 4 * 3600u64;
+    let mut it = args.positional.iter();
+    while let Some(arg) = it.next() {
+        match arg.as_str() {
+            "--watch" => watch = observe::parse_watch(it.next().map(String::as_str).unwrap_or("")),
+            "--follow" => follow = true,
+            "--duration" => {
+                duration_s = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(duration_s)
+                    .clamp(10, 86_400)
+            }
+            other => {
+                eprintln!("frames: unknown argument '{other}'");
+                return 2;
+            }
+        }
+    }
+    let s = Sysroot::new(&args.root);
+    let interval = Duration::from_millis(args.interval_ms.clamp(250, 5_000));
+    let deadline = Instant::now() + Duration::from_secs(duration_s);
+    let mut cursor = observe::FrameCursor::default();
+    let mut refresh: Option<(Instant, Option<f64>)> = None;
+    let mut last_fg: Option<String> = None;
+    let mut last_emit: Option<Instant> = None;
+    let stdout = std::io::stdout();
+    loop {
+        let now = Instant::now();
+        let fg = scene::foreground_pkg();
+        let watched = fg.as_deref().is_some_and(|p| {
+            if watch.is_empty() {
+                true
+            } else {
+                watch.iter().any(|w| w == p)
+            }
+        });
+        let (source, frames) = match (watched, fg.as_deref()) {
+            (true, Some(pkg)) => {
+                let pid = workload::find_package_pid(&s, pkg).unwrap_or(0);
+                match frame::recent_frames(pkg, pid, "auto") {
+                    Some((source, frames)) => (Some(source), cursor.take_new(pkg, frames)),
+                    None => (None, Vec::new()),
+                }
+            }
+            _ => (None, Vec::new()),
+        };
+        if refresh
+            .is_none_or(|(at, _)| now.saturating_duration_since(at) >= Duration::from_secs(10))
+        {
+            refresh = Some((now, frame::display_refresh_hz()));
+        }
+        let changed = fg != last_fg;
+        let heartbeat =
+            last_emit.is_none_or(|t| now.saturating_duration_since(t) >= Duration::from_secs(10));
+        if watched || changed || heartbeat || !follow {
+            let t_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0);
+            let line = observe::Batch {
+                t_ms,
+                foreground: fg.as_deref(),
+                watched,
+                source,
+                refresh_hz: refresh.and_then(|(_, hz)| hz),
+                frames: &frames,
+            }
+            .json();
+            let mut out = stdout.lock();
+            if writeln!(out, "{line}").and_then(|_| out.flush()).is_err() {
+                // The reader went away (app closed the stream).
+                return 0;
+            }
+            last_emit = Some(now);
+        }
+        last_fg = fg;
+        if !follow || Instant::now() >= deadline {
+            return 0;
+        }
+        std::thread::sleep(interval);
+    }
+}
+
 fn custom_refusal(id: &str, refusal: custom::Refusal) -> i32 {
     match refusal {
         custom::Refusal::Rejected(message) => tweak_fail(2, "rejected", id, &message),
@@ -2312,6 +2429,8 @@ fn main() {
         "modes" => cmd_modes(&args),
         "tweak" => cmd_tweak(&args),
         "custom" => cmd_custom(&args),
+        "battery" => cmd_battery(&args),
+        "frames" => cmd_frames(&args),
         "apply" | "set" => args
             .positional
             .first()

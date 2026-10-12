@@ -11,6 +11,14 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- The FPS recorder lets the user pick installed games/apps by their launcher entry. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".ZairenkaiApp"
         android:allowBackup="false"
@@ -43,6 +51,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Records battery/power and foreground-app usage history for the user" />
+        </service>
+
+        <!-- FPS recorder for the apps the user chose (read-only zperfd frames stream). -->
+        <service
+            android:name=".data.fps.FpsMonitorService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Records frame-rate statistics of games and apps the user selected" />
         </service>
     </application>
 </manifest>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
+    <string name="fps_drop_hitch">%1$s · Patah sesaat: satu frame tertahan %2$d ms. Biasanya terjadi saat game memuat aset, mengompilasi shader, atau membersihkan memori.</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS turun dari %2$d ke %3$d selama %4$d detik, saat suhu baterai naik %5$s °C dari awal sesi. Kemungkinan perangkat menurunkan frekuensi karena panas (throttling termal).</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS turun dari %2$d ke %3$d selama %4$d detik (frame terlama %5$d ms). Adegan berat yang berlangsung lama: CPU atau GPU bekerja di batasnya.</string>
+    <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · Penurunan singkat dari %2$d ke %3$d FPS selama %4$d detik (frame terlama %5$d ms), lalu pulih.</string>
+
+    <!-- Session insights -->
+    <string name="fps_insight_no_data">Belum cukup frame untuk dianalisis.</string>
+    <string name="fps_insight_stable" tools:ignore="PluralsCandidate">Sangat stabil: %1$d%% waktu berada dalam ±10%% dari median %2$d FPS.</string>
+    <string name="fps_insight_mostly_stable" tools:ignore="PluralsCandidate">Cukup stabil: %1$d%% waktu berada dalam ±10%% dari median %2$d FPS, dengan beberapa penurunan.</string>
+    <string name="fps_insight_unstable" tools:ignore="PluralsCandidate">Tidak stabil: hanya %1$d%% waktu dekat median %2$d FPS; FPS berayun ±%3$d dari detik ke detik.</string>
+    <string name="fps_insight_capped" tools:ignore="PluralsCandidate">FPS tampak dikunci di %1$d sementara layar berjalan %2$d Hz. Jika game menyediakan opsi frame rate lebih tinggi, aktifkan untuk memakai refresh penuh.</string>
+    <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low hanya %1$d FPS dibanding rata-rata %2$d: ada patah-patah sesekali yang terasa meski rata-rata tinggi.</string>
+    <string name="fps_insight_pacing">Frame pacing tidak rata: jarak antar frame bervariasi ±%1$s ms dari rata-rata %2$s ms, terasa sebagai mikro-stutter.</string>
+    <string name="fps_insight_thermal_decline">FPS turun %1$d%% di sepertiga akhir sesi sementara suhu baterai naik %2$s °C: indikasi throttling termal.</string>
+    <string name="fps_insight_decline">FPS turun %1$d%% di sepertiga akhir sesi dibanding awal, tanpa kenaikan suhu yang berarti: kemungkinan adegan yang lebih berat.</string>
+    <plurals name="fps_insight_stutters">
+        <item quantity="other">%1$d kali patah lebih dari 100 ms (terlama %2$d ms) yang terlihat oleh mata.</item>
+    </plurals>
+    <string name="fps_insight_jank_rate" tools:ignore="PluralsCandidate">Sekitar %1$d jank per menit: frame yang melewatkan iramanya sendiri lebih dari dua kali lipat.</string>
+    <string name="fps_insight_power">Daya rata-rata %1$s W, suhu baterai tertinggi %2$s °C selama sesi.</string>
+    <string name="fps_insight_all_good">Tidak ada masalah performa berarti di sesi ini.</string>
+
+    <!-- FPS recorder notification -->
+    <string name="fps_notif_channel">Perekam FPS</string>
+    <string name="fps_notif_channel_desc">Merekam FPS game dan aplikasi yang Anda pilih</string>
+    <string name="fps_notif_title">Perekam FPS aktif</string>
+    <string name="fps_notif_waiting">Menunggu aplikasi yang dipantau dibuka</string>
+    <!-- %1$s: app name -->
+    <string name="fps_notif_recording">Merekam %1$s</string>
+    <string name="fps_notif_stop">Hentikan</string>
+    <!-- FPS screen -->
+    <string name="fps_screen_title">Monitor FPS</string>
+    <string name="fps_auto_title">Perekam otomatis</string>
+    <string name="fps_auto_off">Nyalakan agar FPS direkam otomatis setiap kali aplikasi yang dipantau dibuka.</string>
+    <string name="fps_auto_no_apps">Tambahkan minimal satu aplikasi di bawah untuk mulai merekam.</string>
+    <string name="fps_auto_connecting">Menghubungkan ke zperfd (butuh modul Zairenkai dan akses root)…</string>
+    <string name="fps_auto_waiting">Menunggu aplikasi yang dipantau dibuka.</string>
+    <string name="fps_auto_recording">Sedang merekam. Sesi disimpan saat aplikasi ditutup.</string>
+    <plurals name="fps_frames_recorded">
+        <item quantity="other">%1$d frame terekam</item>
+    </plurals>
+    <string name="fps_watch_title">Aplikasi dipantau</string>
+    <string name="fps_watch_sub">Game dan aplikasi yang FPS-nya direkam</string>
+    <string name="fps_watch_add">Tambah</string>
+    <string name="fps_watch_remove">Hapus dari pantauan</string>
+    <string name="fps_watch_empty">Belum ada aplikasi. Ketuk Tambah untuk memilih game atau aplikasi.</string>
+    <string name="fps_picker_title">Pilih aplikasi</string>
+    <string name="fps_picker_search">Cari aplikasi</string>
+    <string name="fps_overview_title">Ringkasan</string>
+    <string name="fps_overview_sessions">Sesi</string>
+    <string name="fps_overview_time">Total waktu</string>
+    <string name="fps_sessions_title">Sesi terekam</string>
+    <string name="fps_sessions_empty_title">Belum ada sesi</string>
+    <string name="fps_sessions_empty_body">Nyalakan perekam otomatis, lalu mainkan game yang dipantau minimal 10 detik. Hasilnya muncul di sini lengkap dengan analisisnya.</string>
+    <string name="fps_avg_short">FPS rata-rata</string>
+    <!-- %1$s: FPS value -->
+    <string name="fps_pill_low1">1%% low %1$s</string>
+    <!-- %1$s: percent value -->
+    <string name="fps_pill_stability">Stabil %1$s%%</string>
+    <plurals name="fps_pill_stutters">
+        <item quantity="other">%1$d patah</item>
+    </plurals>
+    <string name="fps_clear_all">Hapus semua sesi</string>
+    <string name="fps_clear_confirm">Semua sesi FPS yang terekam akan dihapus. Daftar aplikasi yang dipantau tetap disimpan.</string>
+    <string name="fps_delete">Hapus</string>
+
+    <!-- FPS session detail -->
+    <string name="fps_session_title">Sesi FPS</string>
+    <string name="fps_session_missing">Sesi ini sudah tidak ada.</string>
+    <!-- %1$s: refresh rate, %2$s: frame source -->
+    <string name="fps_session_meta">Layar %1$s Hz · sumber %2$s</string>
+    <string name="fps_delete_title">Hapus sesi?</string>
+    <!-- %1$s: app name -->
+    <string name="fps_delete_confirm">Sesi %1$s ini akan dihapus permanen.</string>
+    <string name="fps_stat_avg">FPS rata-rata</string>
+    <string name="fps_stat_stability">stabil</string>
+    <string name="fps_stat_median">Median</string>
+    <string name="fps_stat_low1" formatted="false">1% low</string>
+    <string name="fps_stat_low01" formatted="false">0,1% low</string>
+    <string name="fps_stat_low5" formatted="false">5% low</string>
+    <string name="fps_stat_min">FPS minimum</string>
+    <string name="fps_stat_max">FPS maksimum</string>
+    <string name="fps_stat_frames">Total frame</string>
+    <string name="fps_stat_jank">Jank</string>
+    <string name="fps_stat_stutter">Patah &gt;100 ms</string>
+    <string name="fps_stat_dropped">Frame terlewat</string>
+    <string name="fps_stat_duration">Durasi aktif</string>
+    <string name="fps_stat_power">Daya rata-rata</string>
+    <string name="fps_stat_frame_avg">Rata-rata</string>
+    <string name="fps_stat_frame_p95">Persentil 95</string>
+    <string name="fps_stat_frame_p99">Persentil 99</string>
+    <string name="fps_stat_frame_max">Terlama</string>
+    <string name="fps_stat_pacing">Frame pacing</string>
+    <string name="fps_stat_fps_sd">Variasi FPS</string>
+    <string name="fps_timeline_title">FPS per detik</string>
+    <string name="fps_timeline_sub">Area merah menandai penurunan FPS</string>
+    <string name="fps_legend_drop">Penurunan</string>
+    <string name="fps_legend_refresh">Refresh layar</string>
+    <string name="fps_temp_title">Suhu baterai selama sesi</string>
+    <string name="fps_insights_title">Analisis sesi</string>
+    <string name="fps_insights_sub">Dibaca dari data sesi ini</string>
+    <string name="fps_drops_title">Penurunan FPS</string>
+    <!-- %1$d: number of drop events -->
+    <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d kejadian, dengan penjelasannya</string>
+    <string name="fps_drops_none">Tidak ada penurunan FPS berarti di sesi ini.</string>
+    <string name="fps_cause_hitch">PATAH</string>
+    <string name="fps_cause_thermal">TERMAL</string>
+    <string name="fps_cause_sustained">BERAT</string>
+    <string name="fps_cause_brief">SINGKAT</string>
+    <string name="fps_frametime_title">Waktu frame</string>
+    <string name="fps_frametime_sub">Jarak antar frame; makin kecil dan rata makin mulus</string>
+    <string name="fps_dist_title">Sebaran FPS</string>
+    <string name="fps_dist_sub">Berapa detik sesi berada di tiap rentang FPS</string>
+    <string name="fps_full_stats_title">Statistik lengkap</string>
+    <string name="fps_stats_note">FPS dihitung dari waktu frame yang benar-benar ditampilkan Android untuk aplikasi ini (SurfaceFlinger atau gfxinfo), bukan perkiraan.</string>
+</resources>

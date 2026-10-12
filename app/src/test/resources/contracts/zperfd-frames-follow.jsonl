@@ -1,0 +1,3 @@
+{"t_ms":1791790190000,"fg":"com.android.launcher3","watched":false,"source":null,"refresh_hz":120.0,"frames":[]}
+{"t_ms":1791790191000,"fg":"com.game.demo","watched":true,"source":"surfaceflinger-frametimeline","refresh_hz":120.0,"frames":[[1000000000,8333,0],[1008333333,8100,0],[1016666666,7900,0],[1058333333,41000,1],[1066666666,8000,0]]}
+{"t_ms":1791790192000,"fg":"com.game.demo","watched":true,"source":"surfaceflinger-frametimeline","refresh_hz":120.0,"frames":[]}

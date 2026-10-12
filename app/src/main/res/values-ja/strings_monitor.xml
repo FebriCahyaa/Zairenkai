@@ -1,64 +1,177 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Sampling state (MonitorViewModel) -->
     <string name="monitor_error_no_response">zkfctlが応答しません</string>
 
-    <!-- Header -->
+    <!-- Hub header -->
     <string name="monitor_title">モニター</string>
     <string name="monitor_subtitle">デバイスのパフォーマンスをリアルタイムで表示</string>
     <string name="monitor_status_paused">一時停止</string>
     <string name="monitor_status_live">LIVE</string>
-    <string name="monitor_status_unavailable">利用不可</string>
     <string name="monitor_status_connecting">接続中</string>
-    <!-- %1$s: display refresh rate, e.g. "120 Hz" -->
-    <string name="monitor_display_refresh">ディスプレイ %1$s</string>
+    <!-- Root telemetry missing: only Android data (battery, RAM) is live. -->
+    <string name="mon_status_basic">基本データ</string>
     <string name="monitor_open_history">使用履歴</string>
 
-    <!-- %1$s: engine detail, %2$d: attempt number -->
-    <string name="monitor_telemetry_unavailable">CPU、GPU、サーマルのテレメトリを利用できません: %1$s\n自動で再試行しています（%2$d回目）。下のFPSは引き続きUIから計測されます。</string>
+    <!-- Missing Zairenkai module (no root telemetry) -->
+    <string name="mon_needs_module">Zairenkai モジュールが必要です</string>
+    <string name="mon_needs_module_detail">CPU、GPU、サーマルのデータは root 経由で読み取ります。バッテリーと RAM はモジュールなしでも表示されます。</string>
+    <string name="mon_banner_module">CPU、GPU、サーマルには Zairenkai モジュールが必要です。バッテリー、RAM、FPS は引き続き監視されます。</string>
+    <string name="mon_banner_dismiss">閉じる</string>
 
-    <!-- FPS card -->
-    <string name="monitor_fps_title">モニターUIのFPS</string>
-    <!-- %1$s: panel refresh rate, e.g. "120 Hz" -->
-    <string name="monitor_panel_refresh">パネルのリフレッシュレート %1$s</string>
-    <string name="monitor_samples_stable">サンプル安定</string>
-    <string name="monitor_samples_collecting">サンプルを収集中</string>
-    <string name="monitor_waiting_frames">フレームのサンプルを待機中</string>
-    <string name="monitor_chart_after_data">データが揃うとグラフが表示されます</string>
-    <string name="monitor_fps_avg">平均</string>
-    <!-- No format args: getString() returns it verbatim, so the % is literal. -->
-    <string name="monitor_fps_low5" formatted="false">5% LOW</string>
-    <string name="monitor_fps_jank">ジャンク</string>
-
-    <!-- CPU / GPU metric cards -->
-    <string name="monitor_value_na">n/a</string>
-    <plurals name="monitor_cores_read">
-        <item quantity="other">%1$dコアを読み取り</item>
-    </plurals>
-    <string name="monitor_unavailable">利用不可</string>
+    <!-- Generic -->
     <string name="monitor_waiting_first_sample">最初のサンプルを待機中</string>
-    <string name="monitor_sensor_not_read">センサーをまだ読み取れていません</string>
-    <string name="monitor_gpu_util_read">使用率を読み取り済み</string>
     <string name="monitor_sensor_unavailable">センサーを利用できません</string>
-    <string name="monitor_chart_initial">初期サンプル</string>
-    <string name="monitor_chart_unavailable">まだ利用できません</string>
+    <string name="monitor_gpu_util_read">使用率を読み取り済み</string>
+    <string name="mon_stat_min">最小</string>
+    <string name="mon_stat_avg">平均</string>
+    <string name="mon_stat_max">最大</string>
+    <string name="mon_yes">はい</string>
+    <string name="mon_no">いいえ</string>
+    <!-- %1$d hours, %2$d minutes -->
+    <string name="mon_duration_hm">%1$d時間 %2$d分</string>
+    <string name="mon_duration_m" tools:ignore="PluralsCandidate">%1$d分</string>
 
-    <!-- Per-core activity -->
-    <string name="monitor_cores_title">コアごとのアクティビティ</string>
+    <!-- Hub: FPS card -->
+    <string name="mon_fps_card_title">FPS モニター</string>
+    <string name="mon_fps_card_empty">ゲームをモニタリング</string>
+    <!-- %1$s: app name -->
+    <string name="mon_fps_card_recording">%1$s を記録中</string>
+    <string name="mon_fps_card_waiting">レコーダー有効、監視対象アプリの起動を待機中</string>
+    <!-- %1$s: app name, %2$s: 1% low FPS -->
+    <string name="mon_fps_card_last">前回のセッション: %1$s · 1%% low %2$s FPS</string>
+    <string name="mon_fps_card_hint">ゲームやアプリを選ぶと、プレイするたびに詳しい FPS 分析を確認できます。</string>
+    <string name="mon_fps_auto_on">自動</string>
+    <plurals name="mon_fps_watched">
+        <item quantity="other">%1$d アプリ</item>
+    </plurals>
+    <plurals name="mon_fps_sessions">
+        <item quantity="other">%1$d セッション</item>
+    </plurals>
+
+    <!-- Hub: CPU / thermal / memory cards -->
+    <!-- %1$d: online cores, %2$s: highest frequency -->
+    <plurals name="mon_cpu_card_detail">
+        <item quantity="other">%1$dコア · ピーク %2$s</item>
+    </plurals>
+    <plurals name="mon_thermal_zones">
+        <item quantity="other">サーマルゾーン %1$d 個</item>
+    </plurals>
+    <string name="mon_memory_title">メモリ</string>
+    <!-- %1$s used GB, %2$s total GB -->
+    <string name="mon_memory_used">%1$s / %2$s GB 使用中</string>
+
+    <!-- CPU / GPU / thermal screen -->
+    <string name="mon_cpu_screen_title">CPU &amp; GPU</string>
+    <string name="mon_cpu_load">負荷</string>
+    <string name="mon_cpu_cores">コア</string>
     <!-- %1$d: online cores, %2$d: detected cores -->
-    <string name="monitor_cores_count">%1$dオンライン · %2$d検出</string>
-    <string name="monitor_cores_collapse">折りたたむ</string>
-    <string name="monitor_cores_expand">詳細を表示</string>
+    <string name="monitor_cores_count" tools:ignore="PluralsCandidate">%1$dオンライン · %2$d検出</string>
+    <string name="mon_cpu_clusters">クラスター</string>
+    <string name="mon_cpu_peak">ピーク周波数</string>
+    <string name="mon_cpu_load_history">CPU 平均負荷</string>
+    <string name="mon_cpu_clusters_title">CPU クラスター</string>
+    <string name="mon_cpu_clusters_sub">各クラスターのハードウェア範囲内での現在の周波数</string>
+    <!-- %1$s: load, e.g. "42%" -->
+    <string name="mon_cpu_cluster_load">負荷 %1$s</string>
+    <!-- %1$d: core count, %2$s: core list -->
+    <plurals name="mon_cpu_cluster_cores">
+        <item quantity="other">%1$dコア · %2$s</item>
+    </plurals>
+    <string name="mon_cpu_freq_history">クラスター周波数の履歴</string>
+    <string name="mon_cluster_all">全コア</string>
+    <string name="mon_cluster_efficiency">高効率</string>
+    <string name="mon_cluster_balanced">バランス</string>
+    <string name="mon_cluster_performance">パフォーマンス</string>
+    <string name="mon_cluster_prime">プライム</string>
+    <string name="monitor_cores_title">コアごとのアクティビティ</string>
+    <string name="mon_cpu_cores_sub">各コアの負荷と周波数（色はクラスター別）</string>
     <string name="monitor_core_off">OFF</string>
     <string name="monitor_core_freq_na">周波数 n/a</string>
-
-    <!-- Thermal -->
+    <string name="mon_cpu_platform">プラットフォーム</string>
+    <string name="mon_cpu_kernel">カーネル</string>
+    <string name="mon_cpu_policies">cpufreq ポリシー</string>
+    <string name="mon_cpu_governors">Governor</string>
+    <string name="mon_gpu_busy">ビジー</string>
+    <string name="mon_gpu_freq">周波数</string>
+    <string name="mon_gpu_range">範囲</string>
+    <string name="mon_gpu_of_max">最大比</string>
+    <string name="mon_gpu_busy_history">GPU 使用率</string>
+    <string name="mon_gpu_freq_history">GPU 周波数</string>
+    <string name="mon_gpu_info">GPU 情報</string>
+    <string name="mon_gpu_driver">周波数プロバイダー</string>
+    <string name="mon_gpu_opps">周波数ステップ (OPP)</string>
+    <string name="mon_gpu_min">最小周波数</string>
+    <string name="mon_gpu_max">最大周波数</string>
     <string name="monitor_thermal_title">サーマル</string>
-    <string name="monitor_thermal_subtitle">デバイスの温度センサー</string>
+    <string name="mon_thermal_hottest">最高温ゾーン</string>
     <string name="monitor_thermal_empty_title">読み取り値がありません</string>
     <string name="monitor_thermal_empty_detail">カーネルまたはベンダーが有効なサーマルゾーンを公開していません。</string>
     <string name="monitor_thermal_zone_fallback">サーマルゾーン</string>
+    <string name="mon_thermal_note">色は目安にすぎません。サーマルの上限はデバイスごとに異なり、カーネルとベンダーによって設定されます。</string>
+
+    <!-- Battery screen -->
+    <string name="mon_battery_title">バッテリー</string>
+    <string name="mon_battery_charging">充電中</string>
+    <!-- %1$s: duration until full -->
+    <string name="mon_battery_charging_eta">充電中 · %1$s で満充電</string>
+    <string name="mon_battery_discharging">放電中</string>
+    <string name="mon_battery_full">満充電</string>
+    <string name="mon_battery_not_charging">接続済み、充電停止中</string>
+    <string name="mon_battery_unknown">不明</string>
+    <string name="mon_battery_power">電力</string>
+    <string name="mon_battery_current">電流</string>
+    <string name="mon_battery_level">残量</string>
+    <string name="mon_battery_temp">温度</string>
+    <string name="mon_battery_voltage">電圧</string>
+    <string name="mon_battery_remaining">残り容量</string>
+    <!-- %1$s: signed current in mA -->
+    <string name="mon_battery_current_value">%1$s mA</string>
+    <!-- %1$d: health percent -->
+    <string name="mon_battery_health_short">健全性 %1$d%%</string>
+    <plurals name="mon_battery_cycles_short">
+        <item quantity="other">%1$d サイクル</item>
+    </plurals>
+    <string name="mon_battery_chart_title">充電グラフ</string>
+    <plurals name="mon_battery_chart_sub">
+        <item quantity="other">直近 %1$d 分</item>
+    </plurals>
+    <string name="mon_battery_chart_sub_seconds">直近 1 分未満</string>
+    <string name="mon_battery_chart_sub_empty">データを収集中</string>
+    <string name="mon_plug_ac">AC 充電器</string>
+    <string name="mon_plug_usb">USB</string>
+    <string name="mon_plug_wireless">ワイヤレス</string>
+    <string name="mon_plug_dock">ドック</string>
+    <string name="mon_plug_none">未接続</string>
+    <string name="mon_charger_title">充電器</string>
+    <string name="mon_charger_input_w">入力電力</string>
+    <string name="mon_charger_to_battery">バッテリーへ</string>
+    <string name="mon_charger_input_v">入力電圧</string>
+    <string name="mon_charger_input_a">入力電流</string>
+    <string name="mon_charger_phase">充電フェーズ</string>
+    <string name="mon_charger_not_reported">このデバイスは充電器の電圧と電流を報告しません。</string>
+    <string name="mon_charger_needs_module">充電器の電力、電圧、電流は Zairenkai モジュール経由で読み取ります。</string>
+    <string name="mon_health_title">バッテリーの健全性</string>
+    <string name="mon_health_sub">現在の満充電容量と設計容量の比較</string>
+    <!-- %1$d full-charge mAh, %2$d design mAh -->
+    <string name="mon_health_capacity">設計容量 %2$d mAh のうち %1$d mAh</string>
+    <plurals name="mon_health_cycles_label">
+        <item quantity="other">充電サイクル</item>
+    </plurals>
+    <string name="mon_health_not_reported">このデバイスはバッテリーの設計容量を報告しません。</string>
+    <string name="mon_health_needs_module">満充電容量と設計容量は Zairenkai モジュール経由で読み取ります。</string>
+    <string name="mon_health_status">ステータス</string>
+    <string name="mon_health_cycles">サイクル数</string>
+    <string name="mon_health_tech">種類</string>
+    <string name="mon_health_good">良好</string>
+    <string name="mon_health_overheat">過熱</string>
+    <string name="mon_health_dead">故障</string>
+    <string name="mon_health_over_voltage">過電圧</string>
+    <string name="mon_health_cold">低温</string>
+    <string name="mon_health_failure">異常</string>
+    <string name="mon_electrical_title">電気特性</string>
+    <string name="mon_battery_note">電流と電力はカーネルから毎秒読み取ります。一部のデバイスは平均値を報告したり、数秒ごとに更新したりします。</string>
 
     <!-- ZKFC runtime -->
     <string name="monitor_zkfc_title">ZKFCランタイム</string>

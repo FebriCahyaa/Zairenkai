@@ -267,7 +267,7 @@ struct ProcStat {
     start_time_ticks: u64,
 }
 
-fn find_package_pid(s: &Sysroot, package: &str) -> Option<i32> {
+pub(crate) fn find_package_pid(s: &Sysroot, package: &str) -> Option<i32> {
     let mut best = None;
     for entry in s.list_dir("/proc") {
         let Ok(pid) = entry.parse::<i32>() else {
@@ -372,9 +372,11 @@ fn elapsed_bps(prev: Option<u64>, current: u64, elapsed: Duration) -> Option<u64
     Some((current.saturating_sub(prev) as f64 / secs) as u64)
 }
 
+/// CPU sets in either kernel spelling: cpulist ranges (`0-3,7`, cpusets)
+/// or space-separated ids (`0 1 2 3`, cpufreq related_cpus/affected_cpus).
 pub fn parse_cpu_list(input: &str) -> Vec<usize> {
     let mut out = Vec::new();
-    for token in input.trim().split(',') {
+    for token in input.trim().split(|c: char| c == ',' || c.is_whitespace()) {
         let token = token.trim();
         if token.is_empty() {
             continue;
@@ -474,6 +476,9 @@ mod tests {
     #[test]
     fn parses_linux_cpu_ranges() {
         assert_eq!(parse_cpu_list("0-3,6,8-9"), vec![0, 1, 2, 3, 6, 8, 9]);
+        // cpufreq related_cpus/affected_cpus are space separated.
+        assert_eq!(parse_cpu_list("0 1 2 3\n"), vec![0, 1, 2, 3]);
+        assert_eq!(parse_cpu_list("4 5 6 "), vec![4, 5, 6]);
     }
 
     #[test]

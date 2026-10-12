@@ -11,6 +11,8 @@
  */
 package com.zairenkai.app.data
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.serialization.json.Json
 
 class ZperfClient(
@@ -61,6 +63,24 @@ class ZperfClient(
         val r = RootShell.run("${shellQuote(bin)} --json modes", 6000)
         if (!r.ok) return null
         return parseModes(r.stdout)
+    }
+
+    /** Battery and charger power supplies (read-only sysfs snapshot). */
+    suspend fun battery(): BatteryReport? {
+        val r = RootShell.run("${shellQuote(bin)} battery", 5000)
+        if (!r.ok) return null
+        return parseBattery(r.stdout)
+    }
+
+    /**
+     * Frame stream for the foreground app while it is one of [watch] (read
+     * only). The root process lives as long as the collector.
+     */
+    fun frames(watch: List<String>, intervalMs: Int = 1000): Flow<FrameBatch> {
+        val packages = watch.filter { PACKAGE.matches(it) }.joinToString(",")
+        val interval = intervalMs.coerceIn(250, 5000)
+        return RootShell.stream("${shellQuote(bin)} --interval $interval frames --follow --watch ${shellQuote(packages)}")
+            .mapNotNull(::parseFrameBatch)
     }
 
     /** Stored custom profiles, the built-in modes they can derive from, and their values. */
@@ -176,6 +196,18 @@ class ZperfClient(
         }
 
         private fun quote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
+
+        private val PACKAGE = Regex("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")
+
+        fun parseBattery(stdout: String): BatteryReport? {
+            val line = firstJsonLine(stdout) ?: return null
+            return runCatching { parser.decodeFromString<BatteryReport>(line) }.getOrNull()?.takeIf { it.ok }
+        }
+
+        fun parseFrameBatch(line: String): FrameBatch? {
+            val trimmed = line.trim().takeIf { it.startsWith("{") } ?: return null
+            return runCatching { parser.decodeFromString<FrameBatch>(trimmed) }.getOrNull()
+        }
 
         fun parseCustomList(stdout: String): CustomListResult? {
             val line = firstJsonLine(stdout) ?: return null

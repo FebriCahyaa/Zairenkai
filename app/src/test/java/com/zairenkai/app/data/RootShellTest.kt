@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -63,4 +65,20 @@ class RootShellTest {
 
     private fun processAlive(pid: String): Boolean =
         ProcessHandle.of(pid.toLong()).map { it.isAlive }.orElse(false)
+
+    @Test
+    fun streamEmitsLinesAndKillsTheChildWhenTheCollectorStops() = runBlocking {
+        val marker = File.createTempFile("zk-rootstream", ".pid").apply { deleteOnExit() }
+        val started = System.nanoTime()
+        val lines = RootShell.streamWith(sh, "echo \$\$ > ${marker.path}; echo one; echo; echo two; exec sleep 30")
+            .take(2).toList()
+        assertEquals(listOf("one", "two"), lines)
+        assertTrue("collector must not wait for the child", (System.nanoTime() - started) / 1_000_000 < 5_000)
+        assertFalse("child must be gone", processAlive(marker.readText().trim()))
+    }
+
+    @Test
+    fun streamEndsWhenTheChildExits() = runBlocking {
+        assertEquals(listOf("a", "b"), RootShell.streamWith(sh, "printf 'a\\nb\\n'").toList())
+    }
 }

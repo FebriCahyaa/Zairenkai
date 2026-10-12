@@ -13,6 +13,11 @@ import com.zairenkai.app.data.ZkfcRepository
 import com.zairenkai.app.data.ZperfClient
 import com.zairenkai.app.data.AppRuntimeClients
 import com.zairenkai.app.core.runtime.RuntimeSnapshotRepository
+import com.zairenkai.app.data.fps.FpsSessionStore
+import com.zairenkai.app.data.monitor.LiveMonitor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 class AppContainer(app: Application) {
     val appContext: Context = app.applicationContext
@@ -22,6 +27,11 @@ class AppContainer(app: Application) {
     val runtime = RuntimeSnapshotRepository(runtimeClients)
     val settings = SettingsStore(app)
     val usageStore = UsageSessionStore(app)
+    val fpsStore = FpsSessionStore(app)
+
+    /** Process-wide scope for samplers shared across screens. */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val live = LiveMonitor(app, repository, zperf, appScope)
 }
 
 class ZairenkaiApp : Application() {

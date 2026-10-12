@@ -11,6 +11,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ZperfPolicy(
     val name: String = "",
+    /** CPUs this cpufreq policy governs (one cluster). */
+    val cpus: List<Int> = emptyList(),
+    val governor: String? = null,
     @SerialName("min_hw") val minHw: Long = 0,
     @SerialName("max_hw") val maxHw: Long = 0,
     val opps: Int = 0,
@@ -21,6 +24,8 @@ data class ZperfPolicy(
 @Serializable
 data class ZperfGpu(
     val kind: String = "",
+    /** GPU frequency provider zperfd found (kgsl, mali devfreq...). */
+    val provider: String = "",
     val opps: Int = 0,
     val min: Long = 0,
     val max: Long = 0,
@@ -195,3 +200,59 @@ data class ThermalStatus(
     val temperatureCelsius: Float? get() = hottestMdeg?.div(1000f)
     val headroomFraction: Float? get() = headroomPermille?.coerceIn(0, 1000)?.div(1000f)
 }
+
+/** `zperfd battery`: raw power-supply values (kernel units; null = not exposed). */
+@Serializable
+data class BatterySupply(
+    val name: String = "",
+    val capacity: Int? = null,
+    val status: String? = null,
+    val health: String? = null,
+    val technology: String? = null,
+    @SerialName("cycle_count") val cycleCount: Int? = null,
+    @SerialName("charge_full_uah") val chargeFullUah: Long? = null,
+    @SerialName("charge_full_design_uah") val chargeFullDesignUah: Long? = null,
+    @SerialName("charge_counter_uah") val chargeCounterUah: Long? = null,
+    @SerialName("current_now_ua") val currentNowUa: Long? = null,
+    @SerialName("current_avg_ua") val currentAvgUa: Long? = null,
+    @SerialName("voltage_now_uv") val voltageNowUv: Long? = null,
+    @SerialName("voltage_max_uv") val voltageMaxUv: Long? = null,
+    @SerialName("temp_decic") val tempDecic: Int? = null,
+    @SerialName("charge_type") val chargeType: String? = null,
+    @SerialName("constant_charge_current_max_ua") val constantChargeCurrentMaxUa: Long? = null,
+    @SerialName("time_to_full_s") val timeToFullS: Long? = null,
+)
+
+@Serializable
+data class ChargerSupply(
+    val name: String = "",
+    val type: String? = null,
+    @SerialName("real_type") val realType: String? = null,
+    val online: Boolean = false,
+    @SerialName("voltage_now_uv") val voltageNowUv: Long? = null,
+    @SerialName("current_now_ua") val currentNowUa: Long? = null,
+    @SerialName("current_max_ua") val currentMaxUa: Long? = null,
+    @SerialName("input_current_limit_ua") val inputCurrentLimitUa: Long? = null,
+)
+
+@Serializable
+data class BatteryReport(
+    val ok: Boolean = false,
+    val battery: BatterySupply? = null,
+    val chargers: List<ChargerSupply> = emptyList(),
+)
+
+/**
+ * One `zperfd frames --follow` line: the foreground app and, when it is
+ * watched, the frames presented since the previous line as
+ * `[present_ns, render_us, jank]` rows.
+ */
+@Serializable
+data class FrameBatch(
+    @SerialName("t_ms") val tMs: Long = 0,
+    val fg: String? = null,
+    val watched: Boolean = false,
+    val source: String? = null,
+    @SerialName("refresh_hz") val refreshHz: Float? = null,
+    val frames: List<List<Long>> = emptyList(),
+)

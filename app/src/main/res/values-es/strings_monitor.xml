@@ -1,66 +1,193 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Sampling state (MonitorViewModel) -->
     <string name="monitor_error_no_response">zkfctl no responde</string>
 
-    <!-- Header -->
+    <!-- Hub header -->
     <string name="monitor_title">Monitor</string>
     <string name="monitor_subtitle">Rendimiento del dispositivo en tiempo real</string>
     <string name="monitor_status_paused">EN PAUSA</string>
     <string name="monitor_status_live">EN VIVO</string>
-    <string name="monitor_status_unavailable">NO DISPONIBLE</string>
     <string name="monitor_status_connecting">CONECTANDO</string>
-    <!-- %1$s: display refresh rate, e.g. "120 Hz" -->
-    <string name="monitor_display_refresh">PANTALLA %1$s</string>
+    <!-- Root telemetry missing: only Android data (battery, RAM) is live. -->
+    <string name="mon_status_basic">DATOS BÁSICOS</string>
     <string name="monitor_open_history">Historial de uso</string>
 
-    <!-- %1$s: engine detail, %2$d: attempt number -->
-    <string name="monitor_telemetry_unavailable">Telemetría de CPU, GPU y térmica no disponible: %1$s\nReintentando automáticamente (intento %2$d). Los FPS de abajo se siguen midiendo desde la UI.</string>
+    <!-- Missing Zairenkai module (no root telemetry) -->
+    <string name="mon_needs_module">Requiere el módulo Zairenkai</string>
+    <string name="mon_needs_module_detail">Los datos de CPU, GPU y temperatura se leen con root. La batería y la RAM se muestran sin el módulo.</string>
+    <string name="mon_banner_module">CPU, GPU y temperatura requieren el módulo Zairenkai. La batería, la RAM y los FPS se siguen monitorizando.</string>
+    <string name="mon_banner_dismiss">Cerrar</string>
 
-    <!-- FPS card -->
-    <string name="monitor_fps_title">FPS DE LA UI DEL MONITOR</string>
-    <!-- %1$s: panel refresh rate, e.g. "120 Hz" -->
-    <string name="monitor_panel_refresh">Frecuencia del panel: %1$s</string>
-    <string name="monitor_samples_stable">Muestras estables</string>
-    <string name="monitor_samples_collecting">Recopilando muestras</string>
-    <string name="monitor_waiting_frames">Esperando muestras de fotogramas</string>
-    <string name="monitor_chart_after_data">El gráfico aparecerá cuando haya datos</string>
-    <string name="monitor_fps_avg">PROMEDIO</string>
-    <!-- No format args: getString() returns it verbatim, so the % is literal. -->
-    <string name="monitor_fps_low5" formatted="false">5% BAJO</string>
-    <string name="monitor_fps_jank">JANK</string>
-
-    <!-- CPU / GPU metric cards -->
-    <string name="monitor_value_na">n/d</string>
-    <plurals name="monitor_cores_read">
-        <item quantity="one">%1$d núcleo leído</item>
-        <item quantity="many">%1$d núcleos leídos</item>
-        <item quantity="other">%1$d núcleos leídos</item>
-    </plurals>
-    <string name="monitor_unavailable">No disponible</string>
+    <!-- Generic -->
     <string name="monitor_waiting_first_sample">Esperando la primera muestra</string>
-    <string name="monitor_sensor_not_read">Sensor aún sin leer</string>
-    <string name="monitor_gpu_util_read">Uso leído</string>
     <string name="monitor_sensor_unavailable">Sensor no disponible</string>
-    <string name="monitor_chart_initial">Muestras iniciales</string>
-    <string name="monitor_chart_unavailable">Aún no disponible</string>
+    <string name="monitor_gpu_util_read">Uso leído</string>
+    <string name="mon_stat_min">Mínimo</string>
+    <string name="mon_stat_avg">Media</string>
+    <string name="mon_stat_max">Máximo</string>
+    <string name="mon_yes">Sí</string>
+    <string name="mon_no">No</string>
+    <!-- %1$d hours, %2$d minutes -->
+    <string name="mon_duration_hm">%1$d h %2$d min</string>
+    <string name="mon_duration_m" tools:ignore="PluralsCandidate">%1$d min</string>
 
-    <!-- Per-core activity -->
-    <string name="monitor_cores_title">Actividad por núcleo</string>
+    <!-- Hub: FPS card -->
+    <string name="mon_fps_card_title">MONITOR DE FPS</string>
+    <string name="mon_fps_card_empty">Monitoriza tus juegos</string>
+    <!-- %1$s: app name -->
+    <string name="mon_fps_card_recording">Grabando %1$s ahora</string>
+    <string name="mon_fps_card_waiting">Grabador activo, esperando a que se abra una app monitorizada</string>
+    <!-- %1$s: app name, %2$s: 1% low FPS -->
+    <string name="mon_fps_card_last">Última sesión: %1$s · 1%% low %2$s FPS</string>
+    <string name="mon_fps_card_hint">Elige un juego o una app y obtén un análisis completo de FPS cada vez que juegues.</string>
+    <string name="mon_fps_auto_on">Automático</string>
+    <plurals name="mon_fps_watched">
+        <item quantity="one">%1$d app</item>
+        <item quantity="many">%1$d apps</item>
+        <item quantity="other">%1$d apps</item>
+    </plurals>
+    <plurals name="mon_fps_sessions">
+        <item quantity="one">%1$d sesión</item>
+        <item quantity="many">%1$d sesiones</item>
+        <item quantity="other">%1$d sesiones</item>
+    </plurals>
+
+    <!-- Hub: CPU / thermal / memory cards -->
+    <!-- %1$d: online cores, %2$s: highest frequency -->
+    <plurals name="mon_cpu_card_detail">
+        <item quantity="one">%1$d núcleo · pico %2$s</item>
+        <item quantity="many">%1$d núcleos · pico %2$s</item>
+        <item quantity="other">%1$d núcleos · pico %2$s</item>
+    </plurals>
+    <plurals name="mon_thermal_zones">
+        <item quantity="one">%1$d zona térmica</item>
+        <item quantity="many">%1$d zonas térmicas</item>
+        <item quantity="other">%1$d zonas térmicas</item>
+    </plurals>
+    <string name="mon_memory_title">Memoria</string>
+    <!-- %1$s used GB, %2$s total GB -->
+    <string name="mon_memory_used">%1$s / %2$s GB en uso</string>
+
+    <!-- CPU / GPU / thermal screen -->
+    <string name="mon_cpu_screen_title">CPU y GPU</string>
+    <string name="mon_cpu_load">carga</string>
+    <string name="mon_cpu_cores">Núcleos</string>
     <!-- %1$d: online cores, %2$d: detected cores -->
-    <string name="monitor_cores_count">%1$d en línea · %2$d detectados</string>
-    <string name="monitor_cores_collapse">Contraer</string>
-    <string name="monitor_cores_expand">Ver detalles</string>
+    <string name="monitor_cores_count" tools:ignore="PluralsCandidate">%1$d en línea · %2$d detectados</string>
+    <string name="mon_cpu_clusters">Clústeres</string>
+    <string name="mon_cpu_peak">Frecuencia pico</string>
+    <string name="mon_cpu_load_history">Carga media de CPU</string>
+    <string name="mon_cpu_clusters_title">Clústeres de CPU</string>
+    <string name="mon_cpu_clusters_sub">Frecuencia actual dentro del rango de hardware de cada clúster</string>
+    <!-- %1$s: load, e.g. "42%" -->
+    <string name="mon_cpu_cluster_load">carga %1$s</string>
+    <!-- %1$d: core count, %2$s: core list -->
+    <plurals name="mon_cpu_cluster_cores">
+        <item quantity="one">%1$d núcleo · %2$s</item>
+        <item quantity="many">%1$d núcleos · %2$s</item>
+        <item quantity="other">%1$d núcleos · %2$s</item>
+    </plurals>
+    <string name="mon_cpu_freq_history">Historial de frecuencia por clúster</string>
+    <string name="mon_cluster_all">Todos los núcleos</string>
+    <string name="mon_cluster_efficiency">Eficiencia</string>
+    <string name="mon_cluster_balanced">Equilibrio</string>
+    <string name="mon_cluster_performance">Rendimiento</string>
+    <string name="mon_cluster_prime">Prime</string>
+    <string name="monitor_cores_title">Actividad por núcleo</string>
+    <string name="mon_cpu_cores_sub">Carga y frecuencia de cada núcleo, con el color de su clúster</string>
     <string name="monitor_core_off">OFF</string>
     <string name="monitor_core_freq_na">Frecuencia n/d</string>
-
-    <!-- Thermal -->
+    <string name="mon_cpu_platform">Plataforma</string>
+    <string name="mon_cpu_kernel">Kernel</string>
+    <string name="mon_cpu_policies">Políticas cpufreq</string>
+    <string name="mon_cpu_governors">Governors</string>
+    <string name="mon_gpu_busy">ocupada</string>
+    <string name="mon_gpu_freq">Frecuencia</string>
+    <string name="mon_gpu_range">Rango</string>
+    <string name="mon_gpu_of_max">Del máximo</string>
+    <string name="mon_gpu_busy_history">Uso de GPU</string>
+    <string name="mon_gpu_freq_history">Frecuencia de GPU</string>
+    <string name="mon_gpu_info">Info de GPU</string>
+    <string name="mon_gpu_driver">Proveedor de frecuencia</string>
+    <string name="mon_gpu_opps">Pasos de frecuencia (OPP)</string>
+    <string name="mon_gpu_min">Frecuencia mínima</string>
+    <string name="mon_gpu_max">Frecuencia máxima</string>
     <string name="monitor_thermal_title">Térmico</string>
-    <string name="monitor_thermal_subtitle">Sensores de temperatura del dispositivo</string>
+    <string name="mon_thermal_hottest">Zona más caliente</string>
     <string name="monitor_thermal_empty_title">Aún no hay lecturas</string>
     <string name="monitor_thermal_empty_detail">El kernel o el fabricante aún no exponen zonas térmicas válidas.</string>
     <string name="monitor_thermal_zone_fallback">Zona térmica</string>
+    <string name="mon_thermal_note">Los colores son solo una guía visual. Los límites térmicos varían según el dispositivo y los definen el kernel y el fabricante.</string>
+
+    <!-- Battery screen -->
+    <string name="mon_battery_title">Batería</string>
+    <string name="mon_battery_charging">Cargando</string>
+    <!-- %1$s: duration until full -->
+    <string name="mon_battery_charging_eta">Cargando · llena en %1$s</string>
+    <string name="mon_battery_discharging">Sin cargar</string>
+    <string name="mon_battery_full">Llena</string>
+    <string name="mon_battery_not_charging">Conectado, sin cargar</string>
+    <string name="mon_battery_unknown">Desconocido</string>
+    <string name="mon_battery_power">Potencia</string>
+    <string name="mon_battery_current">Corriente</string>
+    <string name="mon_battery_level">Nivel</string>
+    <string name="mon_battery_temp">Temperatura</string>
+    <string name="mon_battery_voltage">Voltaje</string>
+    <string name="mon_battery_remaining">Carga restante</string>
+    <!-- %1$s: signed current in mA -->
+    <string name="mon_battery_current_value">%1$s mA</string>
+    <!-- %1$d: health percent -->
+    <string name="mon_battery_health_short">Salud %1$d%%</string>
+    <plurals name="mon_battery_cycles_short">
+        <item quantity="one">%1$d ciclo</item>
+        <item quantity="many">%1$d ciclos</item>
+        <item quantity="other">%1$d ciclos</item>
+    </plurals>
+    <string name="mon_battery_chart_title">Gráfico de carga</string>
+    <plurals name="mon_battery_chart_sub">
+        <item quantity="one">Último %1$d minuto</item>
+        <item quantity="many">Últimos %1$d minutos</item>
+        <item quantity="other">Últimos %1$d minutos</item>
+    </plurals>
+    <string name="mon_battery_chart_sub_seconds">Menos de un minuto</string>
+    <string name="mon_battery_chart_sub_empty">Recopilando datos</string>
+    <string name="mon_plug_ac">Cargador de pared (CA)</string>
+    <string name="mon_plug_usb">USB</string>
+    <string name="mon_plug_wireless">Inalámbrico</string>
+    <string name="mon_plug_dock">Base</string>
+    <string name="mon_plug_none">Desconectado</string>
+    <string name="mon_charger_title">Cargador</string>
+    <string name="mon_charger_input_w">Potencia de entrada</string>
+    <string name="mon_charger_to_battery">A la batería</string>
+    <string name="mon_charger_input_v">Voltaje de entrada</string>
+    <string name="mon_charger_input_a">Corriente de entrada</string>
+    <string name="mon_charger_phase">Fase de carga</string>
+    <string name="mon_charger_not_reported">Este dispositivo no informa del voltaje ni la corriente del cargador.</string>
+    <string name="mon_charger_needs_module">La potencia, el voltaje y la corriente del cargador se leen con el módulo Zairenkai.</string>
+    <string name="mon_health_title">Salud de la batería</string>
+    <string name="mon_health_sub">Capacidad completa actual frente a la capacidad de diseño</string>
+    <!-- %1$d full-charge mAh, %2$d design mAh -->
+    <string name="mon_health_capacity">%1$d mAh de %2$d mAh de capacidad de diseño</string>
+    <plurals name="mon_health_cycles_label">
+        <item quantity="one">ciclo de carga</item>
+        <item quantity="many">ciclos de carga</item>
+        <item quantity="other">ciclos de carga</item>
+    </plurals>
+    <string name="mon_health_not_reported">Este dispositivo no informa de la capacidad de diseño de la batería.</string>
+    <string name="mon_health_needs_module">La capacidad completa y la de diseño se leen con el módulo Zairenkai.</string>
+    <string name="mon_health_status">Estado</string>
+    <string name="mon_health_cycles">Número de ciclos</string>
+    <string name="mon_health_tech">Tecnología</string>
+    <string name="mon_health_good">Buena</string>
+    <string name="mon_health_overheat">Sobrecalentada</string>
+    <string name="mon_health_dead">Dañada</string>
+    <string name="mon_health_over_voltage">Sobrevoltaje</string>
+    <string name="mon_health_cold">Demasiado fría</string>
+    <string name="mon_health_failure">Fallo</string>
+    <string name="mon_electrical_title">Parámetros eléctricos</string>
+    <string name="mon_battery_note">La corriente y la potencia se leen del kernel cada segundo. Algunos dispositivos informan de un promedio o lo actualizan cada pocos segundos.</string>
 
     <!-- ZKFC runtime -->
     <string name="monitor_zkfc_title">Runtime de ZKFC</string>

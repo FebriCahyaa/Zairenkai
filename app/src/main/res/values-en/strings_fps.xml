@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
+    <string name="fps_drop_hitch">%1$s · Brief hitch: one frame was held for %2$d ms. This usually happens while the game loads assets, compiles shaders or frees memory.</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS fell from %2$d to %3$d for %4$d s while battery temperature had risen %5$s °C since the session started. The device likely lowered its clocks because of heat (thermal throttling).</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS fell from %2$d to %3$d for %4$d s (longest frame %5$d ms). A long, heavy scene: the CPU or GPU was working at its limit.</string>
+    <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · Short dip from %2$d to %3$d FPS for %4$d s (longest frame %5$d ms), then recovered.</string>
+
+    <!-- Session insights -->
+    <string name="fps_insight_no_data">Not enough frames to analyze yet.</string>
+    <string name="fps_insight_stable" tools:ignore="PluralsCandidate">Very stable: %1$d%% of the time within ±10%% of the %2$d FPS median.</string>
+    <string name="fps_insight_mostly_stable" tools:ignore="PluralsCandidate">Fairly stable: %1$d%% of the time within ±10%% of the %2$d FPS median, with a few dips.</string>
+    <string name="fps_insight_unstable" tools:ignore="PluralsCandidate">Unstable: only %1$d%% of the time near the %2$d FPS median; FPS swings ±%3$d from second to second.</string>
+    <string name="fps_insight_capped" tools:ignore="PluralsCandidate">FPS appears capped at %1$d while the display runs at %2$d Hz. If the game offers a higher frame rate option, turn it on to use the full refresh rate.</string>
+    <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low is only %1$d FPS versus a %2$d average: occasional hitches you can feel even though the average is high.</string>
+    <string name="fps_insight_pacing">Uneven frame pacing: frame intervals vary by ±%1$s ms around a %2$s ms average, which feels like micro-stutter.</string>
+    <string name="fps_insight_thermal_decline">FPS dropped %1$d%% in the last third of the session while battery temperature rose %2$s °C: a sign of thermal throttling.</string>
+    <string name="fps_insight_decline">FPS dropped %1$d%% in the last third of the session compared with the start, with no significant temperature rise: likely heavier scenes.</string>
+    <plurals name="fps_insight_stutters">
+        <item quantity="one">%1$d visible hitch over 100 ms (%2$d ms).</item>
+        <item quantity="other">%1$d visible hitches over 100 ms (longest %2$d ms).</item>
+    </plurals>
+    <string name="fps_insight_jank_rate" tools:ignore="PluralsCandidate">About %1$d jank per minute: frames that took more than twice as long as their own recent pace.</string>
+    <string name="fps_insight_power">Average power %1$s W, peak battery temperature %2$s °C during the session.</string>
+    <string name="fps_insight_all_good">No significant performance issues in this session.</string>
+
+    <!-- FPS recorder notification -->
+    <string name="fps_notif_channel">FPS recorder</string>
+    <string name="fps_notif_channel_desc">Records FPS for the games and apps you choose</string>
+    <string name="fps_notif_title">FPS recorder active</string>
+    <string name="fps_notif_waiting">Waiting for a watched app to open</string>
+    <!-- %1$s: app name -->
+    <string name="fps_notif_recording">Recording %1$s</string>
+    <string name="fps_notif_stop">Stop</string>
+    <!-- FPS screen -->
+    <string name="fps_screen_title">FPS monitor</string>
+    <string name="fps_auto_title">Auto recorder</string>
+    <string name="fps_auto_off">Turn on to record FPS automatically every time a watched app opens.</string>
+    <string name="fps_auto_no_apps">Add at least one app below to start recording.</string>
+    <string name="fps_auto_connecting">Connecting to zperfd (requires the Zairenkai module and root access)…</string>
+    <string name="fps_auto_waiting">Waiting for a watched app to open.</string>
+    <string name="fps_auto_recording">Recording. The session is saved when the app closes.</string>
+    <plurals name="fps_frames_recorded">
+        <item quantity="one">%1$d frame recorded</item>
+        <item quantity="other">%1$d frames recorded</item>
+    </plurals>
+    <string name="fps_watch_title">Watched apps</string>
+    <string name="fps_watch_sub">Games and apps whose FPS is recorded</string>
+    <string name="fps_watch_add">Add</string>
+    <string name="fps_watch_remove">Stop watching</string>
+    <string name="fps_watch_empty">No apps yet. Tap Add to pick a game or app.</string>
+    <string name="fps_picker_title">Choose apps</string>
+    <string name="fps_picker_search">Search apps</string>
+    <string name="fps_overview_title">Overview</string>
+    <string name="fps_overview_sessions">Sessions</string>
+    <string name="fps_overview_time">Total time</string>
+    <string name="fps_sessions_title">Recorded sessions</string>
+    <string name="fps_sessions_empty_title">No sessions yet</string>
+    <string name="fps_sessions_empty_body">Turn on the auto recorder, then play a watched game for at least 10 seconds. The results appear here with a full analysis.</string>
+    <string name="fps_avg_short">Avg FPS</string>
+    <!-- %1$s: FPS value -->
+    <string name="fps_pill_low1">1%% low %1$s</string>
+    <!-- %1$s: percent value -->
+    <string name="fps_pill_stability">Stable %1$s%%</string>
+    <plurals name="fps_pill_stutters">
+        <item quantity="one">%1$d hitch</item>
+        <item quantity="other">%1$d hitches</item>
+    </plurals>
+    <string name="fps_clear_all">Delete all sessions</string>
+    <string name="fps_clear_confirm">All recorded FPS sessions will be deleted. Your list of watched apps is kept.</string>
+    <string name="fps_delete">Delete</string>
+
+    <!-- FPS session detail -->
+    <string name="fps_session_title">FPS session</string>
+    <string name="fps_session_missing">This session no longer exists.</string>
+    <!-- %1$s: refresh rate, %2$s: frame source -->
+    <string name="fps_session_meta">Display %1$s Hz · source %2$s</string>
+    <string name="fps_delete_title">Delete session?</string>
+    <!-- %1$s: app name -->
+    <string name="fps_delete_confirm">This %1$s session will be permanently deleted.</string>
+    <string name="fps_stat_avg">Average FPS</string>
+    <string name="fps_stat_stability">stable</string>
+    <string name="fps_stat_median">Median</string>
+    <string name="fps_stat_low1" formatted="false">1% low</string>
+    <string name="fps_stat_low01" formatted="false">0.1% low</string>
+    <string name="fps_stat_low5" formatted="false">5% low</string>
+    <string name="fps_stat_min">Minimum FPS</string>
+    <string name="fps_stat_max">Maximum FPS</string>
+    <string name="fps_stat_frames">Total frames</string>
+    <string name="fps_stat_jank">Jank</string>
+    <string name="fps_stat_stutter">Hitches &gt;100 ms</string>
+    <string name="fps_stat_dropped">Dropped frames</string>
+    <string name="fps_stat_duration">Active time</string>
+    <string name="fps_stat_power">Average power</string>
+    <string name="fps_stat_frame_avg">Average</string>
+    <string name="fps_stat_frame_p95">95th percentile</string>
+    <string name="fps_stat_frame_p99">99th percentile</string>
+    <string name="fps_stat_frame_max">Longest</string>
+    <string name="fps_stat_pacing">Frame pacing</string>
+    <string name="fps_stat_fps_sd">FPS variation</string>
+    <string name="fps_timeline_title">FPS per second</string>
+    <string name="fps_timeline_sub">Red areas mark FPS drops</string>
+    <string name="fps_legend_drop">Drop</string>
+    <string name="fps_legend_refresh">Display refresh</string>
+    <string name="fps_temp_title">Battery temperature during the session</string>
+    <string name="fps_insights_title">Session analysis</string>
+    <string name="fps_insights_sub">Derived from this session\'s data</string>
+    <string name="fps_drops_title">FPS drops</string>
+    <!-- %1$d: number of drop events -->
+    <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d events, with explanations</string>
+    <string name="fps_drops_none">No significant FPS drops in this session.</string>
+    <string name="fps_cause_hitch">HITCH</string>
+    <string name="fps_cause_thermal">THERMAL</string>
+    <string name="fps_cause_sustained">HEAVY</string>
+    <string name="fps_cause_brief">BRIEF</string>
+    <string name="fps_frametime_title">Frame time</string>
+    <string name="fps_frametime_sub">Time between frames; lower and more even is smoother</string>
+    <string name="fps_dist_title">FPS distribution</string>
+    <string name="fps_dist_sub">How many seconds of the session fell in each FPS range</string>
+    <string name="fps_full_stats_title">Full statistics</string>
+    <string name="fps_stats_note">FPS is calculated from the frame times Android actually presented for this app (SurfaceFlinger or gfxinfo), not estimated.</string>
+</resources>

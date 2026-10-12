@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- British spellings; every other key falls back to values-en. -->
+    <string name="fps_insight_no_data">Not enough frames to analyse yet.</string>
+</resources>

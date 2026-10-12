@@ -31,6 +31,10 @@ import androidx.navigation.compose.rememberNavController
 import com.zairenkai.app.AppContainer
 import com.zairenkai.app.R
 import com.zairenkai.app.ui.screens.*
+import com.zairenkai.app.ui.screens.monitor.BatteryScreen
+import com.zairenkai.app.ui.screens.monitor.CpuGpuScreen
+import com.zairenkai.app.ui.screens.monitor.FpsScreen
+import com.zairenkai.app.ui.screens.monitor.FpsSessionScreen
 
 enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVector) {
     DASHBOARD("dashboard", R.string.nav_dashboard, Icons.Rounded.Dashboard),
@@ -61,7 +65,10 @@ fun ZairenkaiRoot(container: AppContainer) {
                 windowInsets = NavigationBarDefaults.windowInsets,
             ) {
                 bottomDests.forEach { dest ->
-                    val selected = current?.hierarchy?.any { it.route == dest.route } == true
+                    // Detail routes ("monitor/battery") keep their tab highlighted.
+                    val selected = current?.hierarchy?.any {
+                        it.route == dest.route || it.route?.startsWith(dest.route + "/") == true
+                    } == true
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
@@ -101,7 +108,35 @@ fun ZairenkaiRoot(container: AppContainer) {
         ) {
             composable(Dest.DASHBOARD.route) { DashboardScreen(factory, onOpenSettings = { nav.navigate("settings") }) }
             composable(Dest.MONITOR.route) {
-                MonitorScreen(factory, onOpenHistory = { nav.navigate("usage") })
+                MonitorScreen(
+                    factory,
+                    onOpenHistory = { nav.navigate("usage") },
+                    onOpenCpu = { tab -> nav.navigate("monitor/cpu/$tab") },
+                    onOpenBattery = { nav.navigate("monitor/battery") },
+                    onOpenFps = { nav.navigate("monitor/fps") },
+                )
+            }
+            composable("monitor/cpu/{tab}") { entry ->
+                CpuGpuScreen(
+                    factory,
+                    initialTab = entry.arguments?.getString("tab")?.toIntOrNull() ?: 0,
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable("monitor/battery") { BatteryScreen(factory, onBack = { nav.popBackStack() }) }
+            composable("monitor/fps") {
+                FpsScreen(
+                    factory,
+                    onBack = { nav.popBackStack() },
+                    onOpenSession = { id -> nav.navigate("monitor/fps/$id") },
+                )
+            }
+            composable("monitor/fps/{id}") { entry ->
+                FpsSessionScreen(
+                    factory,
+                    sessionId = entry.arguments?.getString("id").orEmpty(),
+                    onBack = { nav.popBackStack() },
+                )
             }
             composable("usage") {
                 UsageHistoryScreen(

@@ -15,6 +15,7 @@ class VmFactory(private val c: AppContainer) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(OverviewViewModel::class.java) -> OverviewViewModel(c)
         modelClass.isAssignableFrom(MonitorViewModel::class.java) -> MonitorViewModel(c)
+        modelClass.isAssignableFrom(FpsViewModel::class.java) -> FpsViewModel(c)
         modelClass.isAssignableFrom(UsageHistoryViewModel::class.java) -> UsageHistoryViewModel(c)
         modelClass.isAssignableFrom(TweaksViewModel::class.java) -> TweaksViewModel(c)
         modelClass.isAssignableFrom(ProfilesViewModel::class.java) -> ProfilesViewModel(c)

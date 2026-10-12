@@ -16,6 +16,9 @@ engine's output that the app does not understand fails the unit tests.
 | `zperfd-set-framework-unavailable.json` | `zperfd --root <fixture> --state <tmp> --json set fast` on a host without `/dev/zkfc` |
 | `zperfd-modes.json` | `zperfd --state <tmp> --json modes` (built-in generic profile, no custom profiles) |
 | `zperfd-core.json` | `zperfd core --json` |
+| `zperfd-battery.json` | `zperfd --root <power fixture> battery` (battery 78 %, charging at -1.85 A raw, 4.1 of 5.0 Ah design on a separate `bms` gauge, 312 cycles, USB-PD 9 V / 2 A online, wireless offline) |
+| `zperfd-probe-clusters.json` | `zperfd --root <power fixture> --state <tmp> --json probe` with three cpufreq policies (0-3 schedutil, 4-6 schedutil, 7 performance; space-separated `related_cpus` as the kernel prints them) |
+| `zperfd-frames-follow.jsonl` | `zperfd frames --follow --watch com.game.demo` line format, exactly as asserted by `observe.rs` (`Batch::json`): an unwatched launcher line, a watched batch (one 41 ms janky frame), and an empty heartbeat. Frames need a device, so the values are the test vectors, not a capture |
 | `zperfd-custom-put.json` | `zperfd --state <tmp> custom put custom-game-cool <def>` (`base = "fast"`, `cpu.max_perf_pct = 85`, `cpu.governor = ["schedutil"]`, `mem.swappiness = 60`) |
 | `zperfd-custom-put-rejected.json` | same state, `custom put custom-bad` with `mem.swappiness = 300` |
 | `zperfd-custom-list.json` | same state plus a hand-added `custom-old` entry with `base = "turbo"`, `--json custom list` |

@@ -37,7 +37,19 @@ zperfd custom list [--json] | put custom-ID FILE.toml | delete custom-ID
 zperfd reset                               # restore the boot baseline (mode = stock)
 zperfd daemon [--state DIR] [--interval MS]
 zperfd adaptive [--json]                  # inspect current scene/FAS decision
+zperfd battery                             # read-only power-supply snapshot (JSON)
+zperfd [--interval MS] frames [--watch PKG,...] [--follow] [--duration S]
+                                           # read-only presented-frame stream (JSONL)
 ```
+
+`battery` and `frames` only read: `battery` prints the battery supply
+(capacity, cycle count, full/design charge, current, voltage, temperature,
+charge type, time to full) and the online chargers. `frames` prints one JSON
+line per interval while a watched package is in the foreground, on a
+foreground change, and as a 10 s heartbeat: `t_ms`, `fg`, `watched`,
+`source` (`surfaceflinger` or `gfxinfo`), `refresh_hz` and only the frames
+not sent before as `[present_ns, render_us, jank]`. It exits when stdout
+closes. The interval is clamped to 250–5000 ms.
 
 Every managed write is read back before the transaction commits. Exact
 nodes (governors, I/O scheduler, sysctl, uclamp percent, schedtune) must

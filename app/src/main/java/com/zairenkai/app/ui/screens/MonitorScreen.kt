@@ -1,32 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * Expressive live performance monitor: frame cadence, CPU/GPU telemetry,
- * per-core activity, and thermal readings.
+ * Monitor hub: one card per subsystem, each opening its own screen (FPS
+ * recorder, CPU/GPU/thermal, battery). Battery and memory come from Android
+ * and always show; CPU, GPU and thermal need the Zairenkai module and fall
+ * back to a compact state without it.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import com.zairenkai.app.ui.icons.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,184 +27,124 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.R
-import com.zairenkai.app.core.text.asString
-import com.zairenkai.app.data.CpuSample
-import com.zairenkai.app.data.ThermalSample
+import com.zairenkai.app.data.cpu.CpuClusters
+import com.zairenkai.app.data.monitor.LiveState
+import com.zairenkai.app.data.power.ChargeStatus
+import com.zairenkai.app.ui.FpsViewModel
 import com.zairenkai.app.ui.MonitorViewModel
 import com.zairenkai.app.ui.PLAUSIBLE_CELSIUS
 import com.zairenkai.app.ui.VmFactory
-import com.zairenkai.app.ui.components.FpsGraph
-import com.zairenkai.app.ui.components.LineChart
-import com.zairenkai.app.ui.components.MeterBar
-import com.zairenkai.app.ui.components.rememberFrameStats
-import com.zairenkai.app.ui.theme.ZkBad
-import com.zairenkai.app.ui.theme.ZkCpu
-import com.zairenkai.app.ui.theme.ZkFps
-import com.zairenkai.app.ui.theme.ZkFpsDrop
-import com.zairenkai.app.ui.theme.ZkGood
-import com.zairenkai.app.ui.theme.ZkGpu
-import com.zairenkai.app.ui.theme.ZkTemp
-import com.zairenkai.app.ui.theme.ZkWarn
+import com.zairenkai.app.ui.components.RingGauge
+import com.zairenkai.app.ui.components.Sparkline
+import com.zairenkai.app.ui.icons.*
+import com.zairenkai.app.ui.screens.monitor.*
+import com.zairenkai.app.ui.theme.*
 
 @Composable
-fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
+fun MonitorScreen(
+    factory: VmFactory,
+    onOpenHistory: () -> Unit,
+    onOpenCpu: (tab: Int) -> Unit,
+    onOpenBattery: () -> Unit,
+    onOpenFps: () -> Unit,
+) {
     val vm: MonitorViewModel = viewModel(factory = factory)
-    val ui by vm.ui.collectAsState()
+    val fpsVm: FpsViewModel = viewModel(factory = factory)
+    val s by vm.state.collectAsState()
+    val live by fpsVm.live.collectAsState()
+    val sessions by fpsVm.sessions.collectAsState()
+    val watch by fpsVm.watch.collectAsState()
     DisposableEffect(Unit) {
         vm.start()
         onDispose { vm.stop() }
     }
 
-    val view = LocalView.current
-    val refreshHz = remember(view) {
-        runCatching { view.display?.refreshRate ?: 60f }.getOrDefault(60f).coerceAtLeast(1f)
-    }
-    val frame = rememberFrameStats(refreshHz)
-    var showCores by rememberSaveable { mutableStateOf(false) }
-
-    val coreSamples = ui.latest?.cpu.orEmpty()
-    val validCores = coreSamples.filter { it.online && it.loadPct >= 0 }
-    val cpuHasData = validCores.isNotEmpty()
-    val cpuNow = if (cpuHasData) validCores.sumOf { it.loadPct } / validCores.size else null
-    val gpuNow = ui.latest?.gpu?.busyPct?.takeIf { it in 0..100 }
-    val gpuFreqMhz = ui.latest?.gpu?.curFreq?.takeIf { it > 0 }?.div(1_000_000L)
-    val thermalZones = ui.latest?.thermal.orEmpty().filter { it.celsius in PLAUSIBLE_CELSIUS }
-    val hottest = thermalZones.maxOfOrNull { it.celsius }
-
     Column(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp)
+            .padding(horizontal = 16.dp)
             .padding(top = 18.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        MonitorHeader(
-            isRunning = ui.running,
-            hasSample = ui.latest != null,
-            unavailable = ui.error != null,
-            refreshHz = refreshHz,
-            onOpenHistory = onOpenHistory,
-        )
+        HubHeader(s, onOpenHistory)
 
-        ui.error?.let { error ->
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    stringResource(R.string.monitor_telemetry_unavailable, error.asString(), ui.failures),
-                    modifier = Modifier.padding(14.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
+        AnimatedVisibility(s.rootTelemetryMissing && !s.moduleBannerDismissed) {
+            ModuleBanner(onDismiss = vm::dismissModuleBanner)
         }
 
-        FpsHeroCard(
-            frame = frame,
-            refreshHz = refreshHz,
-            hasSamples = frame.fps.size >= 2,
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        // FPS recorder
+        val last = sessions?.firstOrNull()
+        MonitorCard(
+            shape = HeroShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            onClick = onOpenFps,
+            padding = 20.dp,
         ) {
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                title = "CPU",
-                value = cpuNow?.let { "$it%" } ?: "—",
-                detail = when {
-                    cpuNow != null -> pluralStringResource(R.plurals.monitor_cores_read, validCores.size, validCores.size)
-                    ui.error != null -> stringResource(R.string.monitor_unavailable)
-                    ui.latest == null -> stringResource(R.string.monitor_waiting_first_sample)
-                    else -> stringResource(R.string.monitor_sensor_not_read)
-                },
-                icon = Icons.Rounded.Memory,
-                accent = ZkCpu,
-                samples = ui.cpuHistory.map { it.toFloat() },
-                hasCurrentValue = cpuNow != null,
-            )
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                title = "GPU",
-                value = gpuNow?.let { "$it%" } ?: stringResource(R.string.monitor_value_na),
-                detail = when {
-                    gpuFreqMhz != null -> "$gpuFreqMhz MHz"
-                    gpuNow != null -> stringResource(R.string.monitor_gpu_util_read)
-                    ui.error != null -> stringResource(R.string.monitor_unavailable)
-                    ui.latest == null -> stringResource(R.string.monitor_waiting_first_sample)
-                    else -> stringResource(R.string.monitor_sensor_unavailable)
-                },
-                icon = Icons.Rounded.DeveloperBoard,
-                accent = ZkGpu,
-                samples = ui.gpuHistory.map { it.toFloat() },
-                hasCurrentValue = gpuNow != null,
-            )
-        }
-
-        if (coreSamples.isNotEmpty()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().animateContentSize(),
-                shape = RoundedCornerShape(28.dp, 28.dp, 28.dp, 20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-            ) {
-                Column(Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.monitor_cores_title), style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                stringResource(R.string.monitor_cores_count, coreSamples.count { it.online }, coreSamples.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        TextButton(onClick = { showCores = !showCores }) {
-                            Text(stringResource(if (showCores) R.string.monitor_cores_collapse else R.string.monitor_cores_expand))
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                if (showCores) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
+            val on = MaterialTheme.colorScheme.onPrimaryContainer
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.mon_fps_card_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = on.copy(alpha = 0.8f),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    when {
+                        live.recording != null -> BigValue(live.fps?.toString() ?: "—", "FPS", on)
+                        last != null -> BigValue(fmt0(last.stats.avgFps), "FPS", on)
+                        else -> Text(
+                            stringResource(R.string.mon_fps_card_empty),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = on,
+                        )
                     }
-                    AnimatedVisibility(
-                        visible = showCores,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                    ) {
-                        Column(Modifier.padding(top = 14.dp)) {
-                            CoreGrid(coreSamples)
-                        }
-                    }
+                }
+                IconBadge(Icons.Rounded.SportsEsports, on, size = 26.dp)
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                when {
+                    live.recording != null -> stringResource(R.string.mon_fps_card_recording, live.recordingLabel ?: live.recording!!)
+                    live.running -> stringResource(R.string.mon_fps_card_waiting)
+                    last != null -> stringResource(R.string.mon_fps_card_last, last.label, fmt0(last.stats.low1Fps))
+                    else -> stringResource(R.string.mon_fps_card_hint)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = on.copy(alpha = 0.85f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Pill(
+                    pluralStringResource(R.plurals.mon_fps_watched, watch.size, watch.size),
+                    on.copy(alpha = 0.1f), on,
+                )
+                val n = sessions?.size ?: 0
+                Pill(pluralStringResource(R.plurals.mon_fps_sessions, n, n), on.copy(alpha = 0.1f), on)
+                if (live.running) {
+                    Pill(stringResource(R.string.mon_fps_auto_on), ZkGood.copy(alpha = 0.18f), on, dot = ZkGood)
                 }
             }
         }
 
-        ThermalCard(
-            zones = thermalZones,
-            hottest = hottest,
-            history = ui.tempHistory,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CpuCard(s, Modifier.weight(1f)) { onOpenCpu(0) }
+            GpuCard(s, Modifier.weight(1f)) { onOpenCpu(1) }
+        }
 
-        val zkfc = ui.latest?.zkfc
-        if (zkfc != null) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
+        BatteryCard(s, onOpenBattery)
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ThermalCard(s, Modifier.weight(1f)) { onOpenCpu(2) }
+            MemoryCard(s, Modifier.weight(1f))
+        }
+
+        s.monitor.latest?.zkfc?.let { zkfc ->
+            MonitorCard(shape = TileShape, color = MaterialTheme.colorScheme.surfaceContainerLow, padding = 14.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(
                         if (zkfc.thermalTripped) Icons.Rounded.Shield else Icons.Rounded.VerifiedUser,
                         contentDescription = null,
@@ -221,11 +153,13 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.monitor_zkfc_title), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            when {
-                                zkfc.thermalTripped -> stringResource(R.string.monitor_zkfc_thermal_tripped)
-                                zkfc.inputBoostActive -> stringResource(R.string.monitor_zkfc_input_boost)
-                                else -> stringResource(R.string.monitor_zkfc_normal)
-                            },
+                            stringResource(
+                                when {
+                                    zkfc.thermalTripped -> R.string.monitor_zkfc_thermal_tripped
+                                    zkfc.inputBoostActive -> R.string.monitor_zkfc_input_boost
+                                    else -> R.string.monitor_zkfc_normal
+                                },
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -243,529 +177,235 @@ fun MonitorScreen(factory: VmFactory, onOpenHistory: () -> Unit = {}) {
 }
 
 @Composable
-private fun MonitorHeader(
-    isRunning: Boolean,
-    hasSample: Boolean,
-    unavailable: Boolean,
-    refreshHz: Float,
-    onOpenHistory: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+private fun HubHeader(s: LiveState, onOpenHistory: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.monitor_title),
                 style = MaterialTheme.typography.displaySmall.copy(letterSpacing = (-0.7).sp),
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(2.dp))
             Text(
                 stringResource(R.string.monitor_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LiveStatusPill(
-                    label = when {
-                        !isRunning -> stringResource(R.string.monitor_status_paused)
-                        hasSample -> stringResource(R.string.monitor_status_live)
-                        unavailable -> stringResource(R.string.monitor_status_unavailable)
-                        else -> stringResource(R.string.monitor_status_connecting)
-                    },
-                    dotColor = when {
-                        !isRunning -> MaterialTheme.colorScheme.outline
-                        hasSample -> ZkGood
-                        unavailable -> MaterialTheme.colorScheme.error
-                        else -> ZkWarn
-                    },
-                    containerColor = when {
-                        !isRunning -> MaterialTheme.colorScheme.surfaceContainerHigh
-                        hasSample -> ZkGood.copy(alpha = 0.13f)
-                        unavailable -> MaterialTheme.colorScheme.errorContainer
-                        else -> ZkWarn.copy(alpha = 0.13f)
-                    },
-                )
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ) {
-                    Text(
-                        stringResource(R.string.monitor_display_refresh, refreshHzLabel(refreshHz)),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            val live = s.monitor.latest != null
+            val dot = when {
+                !s.running -> MaterialTheme.colorScheme.outline
+                live -> ZkGood
+                s.rootTelemetryMissing -> MaterialTheme.colorScheme.outline
+                else -> ZkWarn
             }
+            Pill(
+                stringResource(
+                    when {
+                        !s.running -> R.string.monitor_status_paused
+                        live -> R.string.monitor_status_live
+                        s.rootTelemetryMissing -> R.string.mon_status_basic
+                        else -> R.string.monitor_status_connecting
+                    },
+                ),
+                dot.copy(alpha = 0.14f),
+                MaterialTheme.colorScheme.onSurface,
+                dot = dot,
+            )
         }
-        FilledTonalIconButton(
-            onClick = onOpenHistory,
-            modifier = Modifier.size(52.dp),
-        ) {
+        FilledTonalIconButton(onClick = onOpenHistory, modifier = Modifier.size(52.dp)) {
             Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.monitor_open_history))
         }
     }
 }
 
-private fun refreshHzLabel(value: Float): String = "%.0f Hz".format(value.coerceAtLeast(1f))
-
 @Composable
-private fun LiveStatusPill(
-    label: String,
-    dotColor: Color,
-    containerColor: Color,
-) {
-    Surface(shape = CircleShape, color = containerColor) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Box(Modifier.size(7.dp).clip(CircleShape).background(dotColor))
-            Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-private fun FpsHeroCard(
-    frame: com.zairenkai.app.ui.components.FrameStats,
-    refreshHz: Float,
-    hasSamples: Boolean,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(32.dp, 32.dp, 32.dp, 22.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-    ) {
-        Column(Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text(
-                        stringResource(R.string.monitor_fps_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            if (frame.current > 0f) "%.0f".format(frame.current) else "—",
-                            style = MaterialTheme.typography.displayLarge.copy(letterSpacing = (-1.5).sp),
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "FPS",
-                            modifier = Modifier.padding(bottom = 9.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                        )
-                    }
-                }
-                Surface(
-                    shape = RoundedCornerShape(22.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.08f),
-                ) {
-                    Icon(
-                        Icons.Rounded.Timeline,
-                        contentDescription = null,
-                        modifier = Modifier.padding(14.dp).size(28.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icons.Rounded.Speed,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.monitor_panel_refresh, refreshHzLabel(refreshHz)),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    stringResource(if (hasSamples) R.string.monitor_samples_stable else R.string.monitor_samples_collecting),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
-                )
-            }
-
-            if (hasSamples) {
-                FpsGraph(
-                    fps = frame.fps,
-                    drops = frame.drops,
-                    target = refreshHz,
-                    lineColor = ZkFps,
-                    dropColor = ZkFpsDrop,
-                    modifier = Modifier.fillMaxWidth().height(112.dp),
-                )
-            } else {
-                ChartEmptyState(
-                    modifier = Modifier.fillMaxWidth().height(86.dp),
-                    title = stringResource(R.string.monitor_waiting_frames),
-                    detail = stringResource(R.string.monitor_chart_after_data),
-                    compact = true,
-                    foreground = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(top = 16.dp, bottom = 14.dp),
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FpsStat(
-                    label = stringResource(R.string.monitor_fps_avg),
-                    value = frame.avgFps.takeIf { it > 0f }?.let { "%.0f".format(it) } ?: "—",
-                    modifier = Modifier.weight(1f),
-                )
-                FpsStat(
-                    label = stringResource(R.string.monitor_fps_low5),
-                    value = frame.low5Fps.takeIf { it > 0f }?.let { "%.0f".format(it) } ?: "—",
-                    modifier = Modifier.weight(1f),
-                )
-                FpsStat(
-                    label = stringResource(R.string.monitor_fps_jank),
-                    value = if (frame.totalFrames > 0) "${frame.jankCount}" else "—",
-                    modifier = Modifier.weight(1f),
-                    valueColor = if (frame.jankCount > 0) ZkFpsDrop else MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FpsStat(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    valueColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-) {
-    Column(modifier) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.68f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(3.dp))
-        Text(value, style = MaterialTheme.typography.titleLarge, color = valueColor, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun MetricCard(
-    modifier: Modifier,
-    title: String,
-    value: String,
-    detail: String,
-    icon: ImageVector,
-    accent: Color,
-    samples: List<Float>,
-    hasCurrentValue: Boolean,
-) {
-    Surface(
-        modifier = modifier.animateContentSize(),
-        shape = RoundedCornerShape(28.dp, 28.dp, 28.dp, 20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Column(Modifier.padding(15.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Surface(shape = RoundedCornerShape(13.dp), color = accent.copy(alpha = 0.14f)) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp).size(18.dp),
-                        tint = accent,
-                    )
-                }
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            Spacer(Modifier.height(12.dp))
+private fun CpuCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
+    val m = s.monitor.latest
+    val online = m?.cpu.orEmpty().filter { it.online && it.loadPct in 0..100 }
+    val load = online.takeIf { it.isNotEmpty() }?.let { c -> c.sumOf { it.loadPct } / c.size }
+    MonitorCard(modifier, onClick = onClick, padding = 16.dp) {
+        CardHeaderSmall(Icons.Rounded.Memory, ZkCpu, "CPU")
+        Spacer(Modifier.height(10.dp))
+        if (load == null) {
+            if (s.rootTelemetryMissing) ModuleNeeded() else WaitingText()
+        } else {
+            BigValue("$load", "%", ZkCpu, MaterialTheme.typography.headlineLarge)
+            val clusters = CpuClusters.group(s.probe?.policies.orEmpty(), m!!.cpu)
+            val top = clusters.mapNotNull { it.curKhz }.maxOrNull()
             Text(
-                value,
-                style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.6).sp),
-                fontWeight = FontWeight.Bold,
-                color = if (hasCurrentValue) accent else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-            )
-            Text(
-                detail,
-                modifier = Modifier.heightIn(min = 32.dp),
+                pluralStringResource(R.plurals.mon_cpu_card_detail, online.size, online.size, freqLabel(top)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(8.dp))
-            if (hasCurrentValue && samples.size >= 2) {
-                LineChart(
-                    data = samples,
-                    color = accent,
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
-                )
-            } else {
-                ChartEmptyState(
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
-                    title = stringResource(if (hasCurrentValue) R.string.monitor_chart_initial else R.string.monitor_chart_unavailable),
-                    detail = null,
-                    compact = true,
-                    foreground = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Sparkline(s.monitor.cpuHistory.map { it.toFloat() }, ZkCpu, Modifier.fillMaxWidth().height(40.dp), capacity = 60)
         }
     }
 }
 
 @Composable
-private fun ThermalCard(
-    zones: List<ThermalSample>,
-    hottest: Float?,
-    history: List<Float>,
-) {
-    val sortedZones = zones.sortedByDescending { it.celsius }.take(5)
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp, 28.dp, 28.dp, 20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Column(Modifier.padding(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Surface(shape = RoundedCornerShape(14.dp), color = ZkTemp.copy(alpha = 0.15f)) {
-                    Icon(
-                        Icons.Rounded.DeviceThermostat,
-                        contentDescription = null,
-                        modifier = Modifier.padding(9.dp).size(20.dp),
-                        tint = ZkTemp,
-                    )
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.monitor_thermal_title), style = MaterialTheme.typography.titleMedium)
+private fun GpuCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
+    val g = s.monitor.latest?.gpu
+    val busy = g?.busyPct?.takeIf { it in 0..100 }
+    val mhz = g?.curFreq?.takeIf { it > 0 }?.let { it / 1_000_000f }
+    MonitorCard(modifier, onClick = onClick, padding = 16.dp) {
+        CardHeaderSmall(Icons.Rounded.DeveloperBoard, ZkGpu, "GPU")
+        Spacer(Modifier.height(10.dp))
+        if (busy == null && mhz == null) {
+            if (s.rootTelemetryMissing) ModuleNeeded() else WaitingText(R.string.monitor_sensor_unavailable.takeIf { s.monitor.latest != null })
+        } else {
+            BigValue(busy?.toString() ?: "—", "%", ZkGpu, MaterialTheme.typography.headlineLarge)
+            Text(
+                mhz?.let { mhzLabel(it) } ?: stringResource(R.string.monitor_gpu_util_read),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            Sparkline(s.monitor.gpuHistory.map { it.toFloat() }, ZkGpu, Modifier.fillMaxWidth().height(40.dp), capacity = 60)
+        }
+    }
+}
+
+@Composable
+private fun BatteryCard(s: LiveState, onClick: () -> Unit) {
+    val b = s.battery
+    val charging = b?.status == ChargeStatus.CHARGING
+    val accent = when {
+        charging -> ZkGood
+        (b?.levelPct ?: 100) <= 15 -> ZkBad
+        else -> ZkAqua
+    }
+    MonitorCard(onClick = onClick, shape = CardShape) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            RingGauge(b?.levelPct?.div(100f), accent, Modifier.size(96.dp), stroke = 10.dp) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        stringResource(R.string.monitor_thermal_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (hottest != null) {
-                    Text(
-                        "%.1f°".format(hottest),
+                        b?.levelPct?.let { "$it%" } ?: "—",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = thermalColor(hottest),
                     )
-                }
-            }
-
-            if (zones.isEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
                     Icon(
-                        Icons.Rounded.SensorsOff,
+                        if (charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryStd,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
+                        tint = accent,
+                        modifier = Modifier.size(16.dp),
                     )
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.monitor_thermal_empty_title), style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            stringResource(R.string.monitor_thermal_empty_detail),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            } else {
-                if (history.size >= 2) {
-                    Spacer(Modifier.height(12.dp))
-                    LineChart(
-                        data = history,
-                        color = ZkTemp,
-                        modifier = Modifier.fillMaxWidth().height(76.dp),
-                        minV = 20f,
-                        maxV = 90f,
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                sortedZones.forEachIndexed { index, zone ->
-                    ThermalZoneRow(zone = zone, isLast = index == sortedZones.lastIndex)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ThermalZoneRow(zone: ThermalSample, isLast: Boolean) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(7.dp).clip(CircleShape).background(thermalColor(zone.celsius)))
-        Spacer(Modifier.width(10.dp))
-        val zoneFallback = stringResource(R.string.monitor_thermal_zone_fallback)
-        Text(
-            zone.type.ifBlank { zone.zone.ifBlank { zoneFallback } },
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            "%.1f °C".format(zone.celsius),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = thermalColor(zone.celsius),
-        )
-    }
-    if (!isLast) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-}
-
-private fun thermalColor(celsius: Float): Color = when {
-    celsius >= 48f -> ZkBad
-    celsius >= 42f -> ZkWarn
-    else -> ZkGood
-}
-
-@Composable
-private fun ChartEmptyState(
-    modifier: Modifier,
-    title: String,
-    detail: String?,
-    compact: Boolean,
-    foreground: Color,
-) {
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(if (compact) 16.dp else 20.dp))
-            .background(foreground.copy(alpha = 0.045f))
-            .padding(horizontal = if (compact) 8.dp else 14.dp, vertical = if (compact) 6.dp else 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            Icons.Rounded.Timeline,
-            contentDescription = null,
-            modifier = Modifier.size(if (compact) 17.dp else 22.dp),
-            tint = foreground.copy(alpha = 0.72f),
-        )
-        Spacer(Modifier.width(8.dp))
-        Column {
-            Text(
-                title,
-                style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.titleSmall,
-                color = foreground.copy(alpha = 0.88f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (detail != null) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.mon_battery_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    detail,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = foreground.copy(alpha = 0.65f),
+                    batteryStatusText(b?.status, b?.timeToFullMin),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    MiniStat(stringResource(R.string.mon_battery_power), b?.powerW?.let { "%.1f W".format(kotlin.math.abs(it)) } ?: "—", accent)
+                    MiniStat(stringResource(R.string.mon_battery_current), b?.currentMa?.let { "%.0f mA".format(it) } ?: "—")
+                    MiniStat(stringResource(R.string.mon_battery_temp), b?.tempC?.let { "%.1f°".format(it) } ?: "—", tempColor(b?.tempC))
+                }
+            }
+        }
+        val extra = listOfNotNull(
+            b?.healthPct?.let { stringResource(R.string.mon_battery_health_short, it.toInt()) },
+            b?.cycleCount?.let { pluralStringResource(R.plurals.mon_battery_cycles_short, it, it) },
+        )
+        if (extra.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                extra.forEach { Pill(it, MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.onSurface) }
             }
         }
     }
 }
 
 @Composable
-private fun CoreGrid(cores: List<CpuSample>) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        cores.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { core ->
-                    val hasLoad = core.online && core.loadPct >= 0
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text("CPU ${core.cpu}", style = MaterialTheme.typography.labelLarge)
-                                Text(
-                                    when {
-                                        !core.online -> stringResource(R.string.monitor_core_off)
-                                        hasLoad -> "${core.loadPct}%"
-                                        else -> "—"
-                                    },
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = when {
-                                        !core.online -> MaterialTheme.colorScheme.onSurfaceVariant
-                                        hasLoad -> ZkCpu
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            }
-                            Spacer(Modifier.height(9.dp))
-                            MeterBar(
-                                fraction = if (hasLoad) core.loadPct / 100f else 0f,
-                                color = ZkCpu,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Spacer(Modifier.height(7.dp))
-                            Text(
-                                if (core.curKhz > 0) "${core.curKhz / 1000} MHz" else stringResource(R.string.monitor_core_freq_na),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
+private fun ThermalCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
+    val zones = s.monitor.latest?.thermal.orEmpty().filter { it.celsius in PLAUSIBLE_CELSIUS }
+    val hottest = zones.maxOfOrNull { it.celsius }
+    MonitorCard(modifier, onClick = onClick, padding = 16.dp) {
+        CardHeaderSmall(Icons.Rounded.DeviceThermostat, ZkTemp, stringResource(R.string.monitor_thermal_title))
+        Spacer(Modifier.height(10.dp))
+        if (hottest == null) {
+            if (s.rootTelemetryMissing) ModuleNeeded() else WaitingText()
+        } else {
+            BigValue("%.1f".format(hottest), "°C", tempColor(hottest), MaterialTheme.typography.headlineLarge)
+            Text(
+                pluralStringResource(R.plurals.mon_thermal_zones, zones.size, zones.size),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            Sparkline(s.monitor.tempHistory, ZkTemp, Modifier.fillMaxWidth().height(40.dp), minV = 20f, maxV = 90f, capacity = 60)
         }
     }
 }
+
+@Composable
+private fun MemoryCard(s: LiveState, modifier: Modifier) {
+    val mem = s.memory
+    MonitorCard(modifier, padding = 16.dp) {
+        CardHeaderSmall(Icons.Rounded.Storage, ZkIndigo, stringResource(R.string.mon_memory_title))
+        Spacer(Modifier.height(10.dp))
+        if (mem == null) {
+            WaitingText()
+        } else {
+            BigValue("${mem.usedPct}", "%", loadColor(mem.usedPct), MaterialTheme.typography.headlineLarge)
+            Text(
+                stringResource(R.string.mon_memory_used, gb(mem.usedMb), gb(mem.totalMb)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            Sparkline(s.memHistory, ZkIndigo, Modifier.fillMaxWidth().height(40.dp), capacity = 60)
+        }
+    }
+}
+
+@Composable
+private fun CardHeaderSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        IconBadge(icon, accent, size = 18.dp)
+        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun MiniStat(label: String, value: String, color: Color = MaterialTheme.colorScheme.onSurface) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = color, maxLines = 1)
+    }
+}
+
+@Composable
+private fun WaitingText(res: Int? = null) {
+    Text(
+        stringResource(res ?: R.string.monitor_waiting_first_sample),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.heightIn(min = 40.dp),
+    )
+}
+
+@Composable
+internal fun batteryStatusText(status: ChargeStatus?, ttfMin: Int?): String = when (status) {
+    ChargeStatus.CHARGING -> ttfMin?.let { stringResource(R.string.mon_battery_charging_eta, durationText(it)) }
+        ?: stringResource(R.string.mon_battery_charging)
+    ChargeStatus.DISCHARGING -> stringResource(R.string.mon_battery_discharging)
+    ChargeStatus.FULL -> stringResource(R.string.mon_battery_full)
+    ChargeStatus.NOT_CHARGING -> stringResource(R.string.mon_battery_not_charging)
+    else -> stringResource(R.string.mon_battery_unknown)
+}
+
+@Composable
+internal fun durationText(min: Int): String =
+    if (min >= 60) stringResource(R.string.mon_duration_hm, min / 60, min % 60) else stringResource(R.string.mon_duration_m, min)
+
+private fun gb(mb: Long): String = "%.1f".format(mb / 1024f)

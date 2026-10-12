@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.zairenkai.app.domain.ProfileId
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +35,8 @@ data class AppSettings(
     val glassOpacity: Float = 0.6f,     // 0.35 .. 0.95
     val glassBlur: Float = 18f,         // 0 .. 40 (dp)
     val glassTint: Float = 0.12f,       // 0 .. 0.4 accent tint
+    // FPS monitor
+    val fpsWatch: Set<String> = emptySet(),   // packages recorded while in the foreground
 )
 
 class SettingsStore(private val context: Context) {
@@ -51,6 +54,7 @@ class SettingsStore(private val context: Context) {
         val GLASS_OPACITY = floatPreferencesKey("glass_opacity")
         val GLASS_BLUR = floatPreferencesKey("glass_blur")
         val GLASS_TINT = floatPreferencesKey("glass_tint")
+        val FPS_WATCH = stringSetPreferencesKey("fps_watch")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -68,6 +72,7 @@ class SettingsStore(private val context: Context) {
             glassOpacity = p[Keys.GLASS_OPACITY] ?: 0.6f,
             glassBlur = p[Keys.GLASS_BLUR] ?: 18f,
             glassTint = p[Keys.GLASS_TINT] ?: 0.12f,
+            fpsWatch = p[Keys.FPS_WATCH] ?: emptySet(),
         )
     }
 
@@ -86,4 +91,5 @@ class SettingsStore(private val context: Context) {
     suspend fun setGlassOpacity(v: Float) = context.dataStore.edit { it[Keys.GLASS_OPACITY] = v }
     suspend fun setGlassBlur(v: Float) = context.dataStore.edit { it[Keys.GLASS_BLUR] = v }
     suspend fun setGlassTint(v: Float) = context.dataStore.edit { it[Keys.GLASS_TINT] = v }
+    suspend fun setFpsWatch(v: Set<String>) = context.dataStore.edit { it[Keys.FPS_WATCH] = v }
 }

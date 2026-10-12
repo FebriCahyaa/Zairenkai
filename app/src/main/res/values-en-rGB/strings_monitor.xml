@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources>
-    <!-- CPU / GPU metric cards -->
+    <!-- British spellings; every other key falls back to values-en. -->
     <string name="monitor_gpu_util_read">Utilisation read</string>
+    <string name="mon_cpu_cores_sub">Load and frequency of each core, coloured by cluster</string>
+    <string name="mon_gpu_busy_history">GPU utilisation</string>
+    <string name="mon_thermal_note">Colours are only a visual guide. Thermal limits differ per device and are set by the kernel and vendor.</string>
 </resources>

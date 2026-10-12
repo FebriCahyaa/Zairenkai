@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Frame-drop events. %1$s = time in the session (m:ss). -->
+    <string name="fps_drop_hitch">%1$s · 瞬间卡顿：一帧卡住了 %2$d ms。通常发生在游戏加载资源、编译着色器或清理内存时。</string>
+    <string name="fps_drop_thermal" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 降至 %3$d，持续 %4$d 秒，此时电池温度较会话开始时升高了 %5$s °C。设备可能因发热而降低频率（温控降频）。</string>
+    <string name="fps_drop_sustained" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 降至 %3$d，持续 %4$d 秒（最长帧 %5$d ms）。长时间的高负载场景：CPU 或 GPU 已达到极限。</string>
+    <string name="fps_drop_brief" tools:ignore="PluralsCandidate">%1$s · FPS 从 %2$d 短暂降至 %3$d，持续 %4$d 秒（最长帧 %5$d ms），随后恢复。</string>
+
+    <!-- Session insights -->
+    <string name="fps_insight_no_data">帧数不足，暂无法分析。</string>
+    <string name="fps_insight_stable" tools:ignore="PluralsCandidate">非常稳定：%1$d%% 的时间处于中位数 %2$d FPS 的 ±10%% 以内。</string>
+    <string name="fps_insight_mostly_stable" tools:ignore="PluralsCandidate">较为稳定：%1$d%% 的时间处于中位数 %2$d FPS 的 ±10%% 以内，偶有下降。</string>
+    <string name="fps_insight_unstable" tools:ignore="PluralsCandidate">不稳定：仅 %1$d%% 的时间接近中位数 %2$d FPS；FPS 每秒波动 ±%3$d。</string>
+    <string name="fps_insight_capped" tools:ignore="PluralsCandidate">FPS 似乎被锁定在 %1$d，而屏幕刷新率为 %2$d Hz。如果游戏提供更高帧率选项，开启后即可用满刷新率。</string>
+    <string name="fps_insight_low_lows" tools:ignore="PluralsCandidate">1%% low 仅 %1$d FPS，而平均为 %2$d：即使平均帧率很高，仍能感觉到偶发卡顿。</string>
+    <string name="fps_insight_pacing">帧间隔不均：帧间隔在平均 %2$s ms 上下波动 ±%1$s ms，表现为微卡顿。</string>
+    <string name="fps_insight_thermal_decline">会话最后三分之一时段 FPS 下降了 %1$d%%，同时电池温度升高 %2$s °C：表明出现温控降频。</string>
+    <string name="fps_insight_decline">会话最后三分之一时段 FPS 比开头下降了 %1$d%%，且温度无明显上升：可能是场景负载更重。</string>
+    <plurals name="fps_insight_stutters">
+        <item quantity="other">出现 %1$d 次超过 100 ms 的肉眼可见卡顿（最长 %2$d ms）。</item>
+    </plurals>
+    <string name="fps_insight_jank_rate" tools:ignore="PluralsCandidate">每分钟约 %1$d 次 Jank：即耗时超过自身正常节奏两倍以上的帧。</string>
+    <string name="fps_insight_power">会话期间平均功率 %1$s W，电池最高温度 %2$s °C。</string>
+    <string name="fps_insight_all_good">本次会话未发现明显的性能问题。</string>
+
+    <!-- FPS recorder notification -->
+    <string name="fps_notif_channel">FPS 录制器</string>
+    <string name="fps_notif_channel_desc">录制你所选游戏和应用的 FPS</string>
+    <string name="fps_notif_title">FPS 录制器已启用</string>
+    <string name="fps_notif_waiting">等待打开受监控的应用</string>
+    <!-- %1$s: app name -->
+    <string name="fps_notif_recording">正在录制 %1$s</string>
+    <string name="fps_notif_stop">停止</string>
+    <!-- FPS screen -->
+    <string name="fps_screen_title">FPS 监控</string>
+    <string name="fps_auto_title">自动录制</string>
+    <string name="fps_auto_off">开启后，每次打开受监控的应用都会自动录制 FPS。</string>
+    <string name="fps_auto_no_apps">请在下方至少添加一个应用以开始录制。</string>
+    <string name="fps_auto_connecting">正在连接 zperfd（需要 Zairenkai 模块和 root 权限）…</string>
+    <string name="fps_auto_waiting">等待打开受监控的应用。</string>
+    <string name="fps_auto_recording">正在录制。应用关闭后会话将被保存。</string>
+    <plurals name="fps_frames_recorded">
+        <item quantity="other">已录制 %1$d 帧</item>
+    </plurals>
+    <string name="fps_watch_title">受监控的应用</string>
+    <string name="fps_watch_sub">录制 FPS 的游戏和应用</string>
+    <string name="fps_watch_add">添加</string>
+    <string name="fps_watch_remove">移出监控</string>
+    <string name="fps_watch_empty">尚无应用。点按“添加”以选择游戏或应用。</string>
+    <string name="fps_picker_title">选择应用</string>
+    <string name="fps_picker_search">搜索应用</string>
+    <string name="fps_overview_title">概览</string>
+    <string name="fps_overview_sessions">会话</string>
+    <string name="fps_overview_time">总时长</string>
+    <string name="fps_sessions_title">已录制的会话</string>
+    <string name="fps_sessions_empty_title">暂无会话</string>
+    <string name="fps_sessions_empty_body">开启自动录制，然后运行受监控的游戏至少 10 秒。结果及其分析将显示在这里。</string>
+    <string name="fps_avg_short">平均 FPS</string>
+    <!-- %1$s: FPS value -->
+    <string name="fps_pill_low1">1%% low %1$s</string>
+    <!-- %1$s: percent value -->
+    <string name="fps_pill_stability">稳定 %1$s%%</string>
+    <plurals name="fps_pill_stutters">
+        <item quantity="other">%1$d 次卡顿</item>
+    </plurals>
+    <string name="fps_clear_all">删除所有会话</string>
+    <string name="fps_clear_confirm">所有已录制的 FPS 会话都将被删除。受监控的应用列表会保留。</string>
+    <string name="fps_delete">删除</string>
+
+    <!-- FPS session detail -->
+    <string name="fps_session_title">FPS 会话</string>
+    <string name="fps_session_missing">此会话已不存在。</string>
+    <!-- %1$s: refresh rate, %2$s: frame source -->
+    <string name="fps_session_meta">屏幕 %1$s Hz · 来源 %2$s</string>
+    <string name="fps_delete_title">删除会话？</string>
+    <!-- %1$s: app name -->
+    <string name="fps_delete_confirm">此 %1$s 会话将被永久删除。</string>
+    <string name="fps_stat_avg">平均 FPS</string>
+    <string name="fps_stat_stability">稳定</string>
+    <string name="fps_stat_median">中位数</string>
+    <string name="fps_stat_low1" formatted="false">1% low</string>
+    <string name="fps_stat_low01" formatted="false">0.1% low</string>
+    <string name="fps_stat_low5" formatted="false">5% low</string>
+    <string name="fps_stat_min">最低 FPS</string>
+    <string name="fps_stat_max">最高 FPS</string>
+    <string name="fps_stat_frames">总帧数</string>
+    <string name="fps_stat_jank">Jank</string>
+    <string name="fps_stat_stutter">卡顿 &gt;100 ms</string>
+    <string name="fps_stat_dropped">丢帧</string>
+    <string name="fps_stat_duration">有效时长</string>
+    <string name="fps_stat_power">平均功率</string>
+    <string name="fps_stat_frame_avg">平均</string>
+    <string name="fps_stat_frame_p95">95 百分位</string>
+    <string name="fps_stat_frame_p99">99 百分位</string>
+    <string name="fps_stat_frame_max">最长</string>
+    <string name="fps_stat_pacing">帧间隔</string>
+    <string name="fps_stat_fps_sd">FPS 波动</string>
+    <string name="fps_timeline_title">每秒 FPS</string>
+    <string name="fps_timeline_sub">红色区域表示 FPS 下降</string>
+    <string name="fps_legend_drop">下降</string>
+    <string name="fps_legend_refresh">屏幕刷新率</string>
+    <string name="fps_temp_title">会话期间电池温度</string>
+    <string name="fps_insights_title">会话分析</string>
+    <string name="fps_insights_sub">基于本次会话数据</string>
+    <string name="fps_drops_title">FPS 下降</string>
+    <!-- %1$d: number of drop events -->
+    <string name="fps_drops_sub" tools:ignore="PluralsCandidate">%1$d 次事件及其原因</string>
+    <string name="fps_drops_none">本次会话未出现明显的 FPS 下降。</string>
+    <string name="fps_cause_hitch">卡顿</string>
+    <string name="fps_cause_thermal">温控</string>
+    <string name="fps_cause_sustained">高负载</string>
+    <string name="fps_cause_brief">短暂</string>
+    <string name="fps_frametime_title">帧时间</string>
+    <string name="fps_frametime_sub">帧与帧之间的间隔；越小越均匀，画面越流畅</string>
+    <string name="fps_dist_title">FPS 分布</string>
+    <string name="fps_dist_sub">会话在各 FPS 区间停留的秒数</string>
+    <string name="fps_full_stats_title">完整统计</string>
+    <string name="fps_stats_note">FPS 根据 Android 为此应用实际显示的帧时间计算（SurfaceFlinger 或 gfxinfo），而非估算。</string>
+</resources>
