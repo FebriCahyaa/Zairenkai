@@ -7,8 +7,8 @@
  */
 package com.zairenkai.app.ui.components
 
-import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.core.graphics.createBitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
@@ -36,7 +36,7 @@ private fun Drawable.toImageBitmap(px: Int = 108): ImageBitmap {
     (this as? BitmapDrawable)?.bitmap?.let { return it.asImageBitmap() }
     val w = if (intrinsicWidth > 0) intrinsicWidth else px
     val h = if (intrinsicHeight > 0) intrinsicHeight else px
-    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    val bmp = createBitmap(w, h)
     val canvas = Canvas(bmp)
     setBounds(0, 0, canvas.width, canvas.height)
     draw(canvas)

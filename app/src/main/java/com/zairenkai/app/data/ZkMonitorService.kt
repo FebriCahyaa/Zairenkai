@@ -90,7 +90,7 @@ class ZkMonitorService : Service() {
 
     private fun startForegroundSafe() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(CHANNEL) == null) {
+        if (nm.getNotificationChannel(CHANNEL) == null) {
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL, "Monitor penggunaan", NotificationManager.IMPORTANCE_LOW).apply {
                     description = "Merekam riwayat daya & penggunaan aplikasi"
@@ -113,11 +113,7 @@ class ZkMonitorService : Service() {
     }
 
     private fun stopForegroundCompat() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION") stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     companion object {
@@ -132,11 +128,7 @@ class ZkMonitorService : Service() {
 
         fun start(context: Context) {
             val i = Intent(context, ZkMonitorService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(i)
-            } else {
-                context.startService(i)
-            }
+            context.startForegroundService(i)
         }
 
         fun stop(context: Context) {

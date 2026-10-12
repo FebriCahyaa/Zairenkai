@@ -6,7 +6,6 @@
  */
 package com.zairenkai.app.ui.screens
 
-import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -86,18 +85,17 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
 
             Card(shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(18.dp)) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Warna dinamis", style = MaterialTheme.typography.titleMedium)
-                                Text("Ikuti wallpaper (Material You)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Switch(checked = s.dynamicColor, onCheckedChange = { vm.setDynamicColor(it) })
+                    // minSdk 31: dynamic color (Android 12) is always available.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Warna dinamis", style = MaterialTheme.typography.titleMedium)
+                            Text("Ikuti wallpaper (Material You)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Switch(checked = s.dynamicColor, onCheckedChange = { vm.setDynamicColor(it) })
                     }
+                    Spacer(Modifier.height(12.dp))
                     Text("Aksen", style = MaterialTheme.typography.titleMedium,
                         color = if (s.dynamicColor) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(12.dp))
