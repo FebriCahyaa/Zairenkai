@@ -46,7 +46,9 @@ class UpdateManifestTest {
     }
 
     @Test fun urlsPointAtTheChannel() {
-        assertTrue(UpdateChannel.RELEASE.manifestUrl().endsWith("/releases/download/release/version-release.json"))
+        // RELEASE resolves through /releases/latest/download so a versioned tag
+        // (v1.2.0, …) still maps to a stable URL; DEBUG stays on "preview".
+        assertTrue(UpdateChannel.RELEASE.manifestUrl().endsWith("/releases/latest/download/version-release.json"))
         assertTrue(UpdateChannel.DEBUG.manifestUrl().endsWith("/releases/download/preview/version-debug.json"))
         assertTrue(UpdateChannel.RELEASE.pageUrl().endsWith("/releases/latest"))
         assertTrue(UpdateChannel.DEBUG.pageUrl().endsWith("/releases/tag/preview"))

@@ -22,8 +22,11 @@ val keystorePropsFile = rootProject.file("keystore.properties")
 val keystoreProps = Properties().apply {
     if (keystorePropsFile.exists()) FileInputStream(keystorePropsFile).use { load(it) }
 }
+// CI secrets and shells often carry a trailing newline or stray whitespace
+// (e.g. `echo "$pw" | gh secret set`). An invisible "\n" on the keystore
+// password reads to the signer as "password was incorrect", so trim here.
 fun secret(env: String, prop: String): String? =
-    System.getenv(env) ?: keystoreProps.getProperty(prop)
+    (System.getenv(env) ?: keystoreProps.getProperty(prop))?.trim()?.takeIf { it.isNotEmpty() }
 
 // The spoofed variant only changes the package name; override with
 // -PspoofedAppId=<id>. Default stays within our own namespace.
@@ -47,13 +50,16 @@ android {
 
     signingConfigs {
         create("release") {
-            val b64 = System.getenv("ZK_KEYSTORE_BASE64")
+            val b64 = System.getenv("ZK_KEYSTORE_BASE64")?.takeIf { it.isNotBlank() }
             val ksPath = secret("ZK_KEYSTORE_FILE", "storeFile")
             when {
                 b64 != null -> {
                     val out = layout.buildDirectory.file("zk-release.jks").get().asFile
                     out.parentFile.mkdirs()
-                    out.writeBytes(Base64.getDecoder().decode(b64.trim()))
+                    // MIME decoder tolerates line-wrapped base64 (e.g. plain
+                    // `base64 keystore.jks` without -w0), which the strict
+                    // decoder would reject.
+                    out.writeBytes(Base64.getMimeDecoder().decode(b64))
                     storeFile = out
                 }
                 ksPath != null -> storeFile = file(ksPath)

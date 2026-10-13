@@ -25,9 +25,17 @@ enum class UpdateChannel(val tag: String, val manifestAsset: String, val apkAsse
     /** Debug-signed preview build, published as a GitHub prerelease. */
     DEBUG("preview", "version-debug.json", "Zairenkai-debug.apk");
 
+    /** Stable download base for this channel's assets. RELEASE uses
+     *  /releases/latest/download/, which GitHub resolves to the newest
+     *  (non-prerelease) release whatever its version tag; the DEBUG prerelease
+     *  stays on the fixed "preview" tag. */
+    fun downloadBase(repo: String = REPO): String = when (this) {
+        RELEASE -> "https://github.com/$repo/releases/latest/download"
+        DEBUG -> "https://github.com/$repo/releases/download/$tag"
+    }
+
     /** Raw download URL of this channel's manifest. */
-    fun manifestUrl(repo: String = REPO): String =
-        "https://github.com/$repo/releases/download/$tag/$manifestAsset"
+    fun manifestUrl(repo: String = REPO): String = "${downloadBase(repo)}/$manifestAsset"
 
     /** Human-facing releases page for this channel (browser fallback). */
     fun pageUrl(repo: String = REPO): String = when (this) {
@@ -68,7 +76,7 @@ data class ReleaseManifest(
             val name = o["versionName"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotEmpty() } ?: return null
             if (code < 0) return null
             val apk = o["apkUrl"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
-                ?: "https://github.com/$repo/releases/download/${channel.tag}/${channel.apkAsset}"
+                ?: "${channel.downloadBase(repo)}/${channel.apkAsset}"
             return ReleaseManifest(
                 versionCode = code,
                 versionName = name,

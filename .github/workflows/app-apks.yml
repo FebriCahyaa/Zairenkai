@@ -10,7 +10,9 @@
 # name, so the in-app "Update app" screen can check and download without
 # scraping a release page:
 #   debug   -> .../releases/download/preview/{Zairenkai-debug.apk, version-debug.json}
-#   release -> .../releases/download/release/{Zairenkai-release.apk, version-release.json}
+#   release -> .../releases/latest/download/{Zairenkai-release.apk, version-release.json}
+# The release is tagged with its version (v1.1.0, …); /releases/latest/download
+# keeps the updater's URL stable across versions.
 name: App APKs
 
 on:
@@ -208,11 +210,14 @@ jobs:
           echo "$SHA  $APK" > "$APK.sha256"
           VNAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           VCODE=$(grep -m1 'versionCode' app/build.gradle.kts | sed -E 's/[^0-9]*([0-9]+).*/\1/')
+          # The APK lives on a versioned tag, but the updater fetches it through
+          # /releases/latest/download/, which GitHub resolves to the newest
+          # (non-prerelease) release regardless of its tag name — a stable URL.
           cat > version-release.json <<EOF
           {
             "versionCode": $VCODE,
             "versionName": "$VNAME",
-            "apkUrl": "https://github.com/FebriCahyaa/Zairenkai/releases/download/release/$APK",
+            "apkUrl": "https://github.com/FebriCahyaa/Zairenkai/releases/latest/download/$APK",
             "sha256": "$SHA"
           }
           EOF
@@ -222,9 +227,12 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v3.0.2
         with:
-          tag_name: release
-          name: "Zairenkai release build"
+          # Versioned tag (e.g. v1.1.0). softprops creates it with GITHUB_TOKEN,
+          # which does not re-trigger the v*-tag release.yml workflow.
+          tag_name: v${{ steps.stage.outputs.ver }}
+          name: "Zairenkai v${{ steps.stage.outputs.ver }}"
           prerelease: false
+          make_latest: true
           body: |
             **Release build** — a complete module: the stable, officially signed
             manager APK plus the flashable kernel module (`zkfc.ko` per KMI +
