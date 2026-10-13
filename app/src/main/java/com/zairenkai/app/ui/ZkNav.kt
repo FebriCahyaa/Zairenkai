@@ -11,13 +11,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,8 +24,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -42,6 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kotlin.math.roundToInt
 import com.zairenkai.app.AppContainer
 import com.zairenkai.app.R
 import com.zairenkai.app.ui.screens.*
@@ -108,22 +105,28 @@ fun ZairenkaiRoot(container: AppContainer) {
             // Pushed detail screens (monitor/battery, settings, about, …) have
             // their own back button, so the bar would just get in the way there.
             val onTopLevel = bottomDests.any { it.route == current?.route }
-            if (!onTopLevel) {
-                // Keep the bottom system-bar inset so detail content is never
-                // drawn under the gesture bar now that the nav bar is gone.
-                Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars))
-            } else
+            // Detail screens (monitor/battery, settings, …) show no bottom bar at
+            // all — and reserve no space for one, so hiding it leaves no empty
+            // box. Their own CollapsingScaffold supplies the bottom inset.
+            if (onTopLevel)
             NavigationBar(
                 containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
                     MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass,
                 ),
                 tonalElevation = 0.dp,
                 windowInsets = NavigationBarDefaults.windowInsets,
-                // Kept in the layout at all times; only slid down out of view, so
-                // the scaffold's bottom inset never changes while scrolling.
+                // Collapse the bar's RESERVED height as it hides (not just a
+                // translate inside a fixed slot, which left an empty box): the
+                // full-height bar is drawn in a shrinking, bottom-anchored box so
+                // it slides off-screen while the content fills the reclaimed space.
                 modifier = Modifier
-                    .onSizeChanged { barHeightPx = it.height }
-                    .graphicsLayer { translationY = barOffsetPx },
+                    .onSizeChanged { if (it.height > 0) barHeightPx = it.height }
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val visible = (placeable.height - barOffsetPx).roundToInt()
+                            .coerceIn(0, placeable.height)
+                        layout(placeable.width, visible) { placeable.place(0, 0) }
+                    },
             ) {
                 bottomDests.forEach { dest ->
                     // Detail routes ("monitor/battery") keep their tab highlighted.

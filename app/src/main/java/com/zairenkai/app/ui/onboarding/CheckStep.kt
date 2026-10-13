@@ -25,6 +25,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -121,14 +123,20 @@ internal fun CheckStep(probe: SetupProbe, checks: List<SetupCheck>, onRecheck: (
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
+            var showDetails by rememberSaveable { mutableStateOf(false) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilledTonalButton(onClick = onRecheck, shape = CircleShape) {
                     Icon(ZkIcons.Refresh, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.setup_recheck))
                 }
-                if (!allOk) TechnicalDetails(probe)
+                if (!allOk) TextButton(onClick = { showDetails = !showDetails }) {
+                    Text(stringResource(if (showDetails) R.string.dashboard_details_hide else R.string.dashboard_details_show))
+                }
             }
+            // The diagnostics panel is full width BELOW the row — never a sibling
+            // of the button in the row, where it would be squeezed to a sliver.
+            if (!allOk && showDetails) TechnicalDetails(probe)
         }
     }
 }
@@ -150,21 +158,20 @@ internal fun AlertCard(warning: Boolean, title: String, body: String, modifier: 
     }
 }
 
-/** Raw probe output for support, behind a toggle; never shown as a reason. */
+/** Raw probe output for support; rendered full width by the caller, never as a
+ *  reason. Horizontally scrollable so long monospace lines are not wrapped. */
 @Composable
 internal fun TechnicalDetails(probe: SetupProbe) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    TextButton(onClick = { open = !open }) {
-        Text(stringResource(if (open) R.string.dashboard_details_hide else R.string.dashboard_details_show))
-    }
-    if (open) {
-        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Text(
-                diagnosticsReport(probe, BuildConfig.VERSION_NAME),
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-            )
-        }
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            diagnosticsReport(probe, BuildConfig.VERSION_NAME),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(12.dp),
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        )
     }
 }
 
