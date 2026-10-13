@@ -105,7 +105,7 @@ android {
             // SHA-256 of the official Zairenkai release certificate.
             buildConfigField(
                 "String", "EXPECTED_CERT_SHA256",
-                "\"DE78314BD8E048B859085DAFE98BBBAC1D5EEBD2F4903E0FA81DD95741178FEC\"",
+                "\"de78314bd8e048b859085dafe98bbbac1d5eebd2f4903e0fa81dd95741178fec\"",
             )
         }
         debug {
