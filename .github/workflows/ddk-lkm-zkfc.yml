@@ -1,0 +1,122 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Build the ZKFC loadable kernel module (zkfc.ko) for one KMI, the KernelSU-Next
+# way: inside a prebuilt DDK (Driver Development Kit) container image that already
+# carries the GKI kernel KDIR + clang, so there is no full kernel build. This is
+# why the old "fetch AOSP with repo and compile the whole kernel" approach was
+# replaced — it could not fit a GitHub runner.
+name: Build ZKFC Kernel Module
+
+on:
+  workflow_call:
+    inputs:
+      kmi:
+        description: 'KMI version (e.g. android15-6.6)'
+        required: true
+        type: string
+      ddk_release:
+        description: 'ddk-min image release tag'
+        required: false
+        default: '20260828'
+        type: string
+  workflow_dispatch:
+    inputs:
+      kmi:
+        description: 'KMI version (e.g. android15-6.6)'
+        required: true
+        type: string
+      ddk_release:
+        description: 'ddk-min image release tag'
+        required: false
+        default: '20260828'
+        type: string
+
+jobs:
+  build-zkfc-ko:
+    name: Build zkfc.ko for ${{ inputs.kmi }}
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ylarod/ddk-min:${{ inputs.kmi }}-${{ inputs.ddk_release }}
+      options: --privileged
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Build zkfc.ko (aarch64)
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          cd kernel
+          echo "=== Building zkfc.ko (aarch64) for KMI: ${{ inputs.kmi }} ==="
+          CONFIG_ZKFC=m CC=clang make modules
+          echo "=== Build completed ==="
+
+          OUT_DIR=/github/workspace/out/aarch64
+          mkdir -p "$OUT_DIR"
+          OUTPUT_NAME="${{ inputs.kmi }}_zkfc.ko"
+          cp zkfc.ko "$OUT_DIR/$OUTPUT_NAME"
+          ls -la "$OUT_DIR/$OUTPUT_NAME"
+          echo "Size: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
+          llvm-strip -d "$OUT_DIR/$OUTPUT_NAME"
+          echo "Size after stripping: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
+
+      - name: Upload aarch64 zkfc.ko artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: aarch64-${{ inputs.kmi }}-zkfc-lkm
+          path: /github/workspace/out/aarch64/${{ inputs.kmi }}_zkfc.ko
+          if-no-files-found: error
+
+      - name: Build zkfc.ko (x86_64)
+        run: |
+          set -euo pipefail
+          cd kernel
+          make clean || true
+
+          echo "=== Preparing x86_64 KDIR ==="
+          mkdir -p /opt/ddk/kdir-x64
+          unset ARCH CROSS_COMPILE || true
+          export ARCH=x86_64
+          kmi=${{ inputs.kmi }}
+          pushd /opt/ddk/src/$kmi
+          export KDIR=/opt/ddk/kdir-x64/$kmi
+
+          # The ddk-min source tarball's modpost is not patched for a fresh x86
+          # kdir; keep these edits idempotent so re-runs and pre-patched images
+          # both work (mirrors KernelSU-Next's ddk flow).
+          MODPOST=scripts/mod/modpost.c
+          sed -i -E 's/^([[:space:]]*)check_exports\(mod\);/\1\/\/ check_exports(mod);/' "$MODPOST" || true
+          sed -i -E 's/^([[:space:]]*)s->module = exp->module;/\1\/\/ s->module = exp->module;/' "$MODPOST" || true
+          sed -i 's/^static void check_exports(/static void __attribute__((unused)) check_exports(/' "$MODPOST" || true
+
+          make O=$KDIR gki_defconfig
+          scripts/config --file $KDIR/.config -d LTO_CLANG -e LTO_NONE -d LTO_CLANG_THIN -d LTO_CLANG_FULL -d THINLTO
+          if [ "$kmi" = "android16-6.12" ] || [ "$kmi" = "android17-6.18" ]; then
+            scripts/config --file $KDIR/.config -e CONFIG_CFI_ICALL_NORMALIZE_INTEGERS
+          fi
+          make O=$KDIR modules_prepare
+          make O=$KDIR security/selinux/built-in.a || true
+          popd
+
+          echo "=== Building x86_64 zkfc.ko for KMI: $kmi ==="
+          MDIR=$(realpath .)
+          if [ "$kmi" = "android17-6.18" ]; then
+            make -C $KDIR M=$MDIR MO=$MDIR modules CONFIG_ZKFC=m
+          else
+            make -C $KDIR M=$MDIR src=$MDIR modules CONFIG_ZKFC=m
+          fi
+          echo "=== Build completed ==="
+
+          OUT_DIR=/github/workspace/out/x86_64
+          mkdir -p "$OUT_DIR"
+          OUTPUT_NAME="${{ inputs.kmi }}_zkfc.ko"
+          cp zkfc.ko "$OUT_DIR/$OUTPUT_NAME"
+          llvm-strip -d "$OUT_DIR/$OUTPUT_NAME"
+          echo "Size after stripping: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
+
+      - name: Upload x86_64 zkfc.ko artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: x86_64-${{ inputs.kmi }}-zkfc-lkm
+          path: /github/workspace/out/x86_64/${{ inputs.kmi }}_zkfc.ko
+          if-no-files-found: error

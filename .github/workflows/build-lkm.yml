@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Build the ZKFC loadable kernel module for every supported KMI, the
+# KernelSU-Next way (DDK container per KMI). Reusable: other workflows call it
+# and then collect the per-KMI zkfc.ko artifacts.
+name: Build LKM
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-lkm-zkfc:
+    strategy:
+      fail-fast: false
+      matrix:
+        kmi:
+          - android12-5.10
+          - android13-5.10
+          - android13-5.15
+          - android14-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+          - android17-6.18
+    uses: ./.github/workflows/ddk-lkm-zkfc.yml
+    with:
+      kmi: ${{ matrix.kmi }}

@@ -54,12 +54,23 @@ ccflags-y += -DZKFC_EMBEDDED_CRL
 endif
 
 # Out-of-tree convenience targets.
+#
+# The CI builds this against a prebuilt GKI KDIR inside the ddk-min container
+# images (ghcr.io/ylarod/ddk-min:<kmi>-<release>), the same way KernelSU-Next
+# builds its module — $(KDIR) is provided by the image, no full kernel build.
+# android17-6.18's Kbuild wants MO= for an external module; older KMIs use M=.
 KDIR ?= /lib/modules/$(shell uname -r)/build
+ZKFC_KMI := $(notdir $(patsubst %/,%,$(KDIR)))
+ifeq ($(ZKFC_KMI),android17-6.18)
+ZKFC_KBUILD := M=$(CURDIR) MO=$(CURDIR)
+else
+ZKFC_KBUILD := M=$(CURDIR)
+endif
 
 modules:
-	$(MAKE) -C $(KDIR) M=$(CURDIR) CONFIG_ZKFC=m modules
+	$(MAKE) -C $(KDIR) $(ZKFC_KBUILD) CONFIG_ZKFC=m modules
 
 clean:
-	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
+	$(MAKE) -C $(KDIR) $(ZKFC_KBUILD) clean
 
 .PHONY: modules clean
