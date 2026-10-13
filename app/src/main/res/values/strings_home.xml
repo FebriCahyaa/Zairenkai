@@ -41,4 +41,22 @@
     <string name="home_band_unknown">Belum diketahui</string>
 
     <string name="home_licensee">Pemegang lisensi</string>
+    <string name="home_install_title">Zairenkai belum terpasang</string>
+    <string name="home_install_body">Pasang modul kernel Zairenkai untuk mengaktifkan framework ZKFC dan engine. Berlaku untuk kernel GKI.</string>
+    <string name="home_install_action">Cara pasang</string>
+    <string name="install_sheet_title">Pasang Zairenkai</string>
+    <string name="install_sheet_sub">Zairenkai berjalan sebagai modul kernel. Pemasangan ini untuk kernel GKI.</string>
+    <string name="install_method_file">Pilih berkas modul (.zip)</string>
+    <string name="install_method_file_sub">Paket modul Zairenkai atau AnyKernel.</string>
+    <string name="install_method_direct">Pasang langsung (disarankan)</string>
+    <string name="install_method_direct_sub">Pasang ke slot aktif pada kernel GKI.</string>
+    <string name="install_method_inactive">Pasang ke slot nonaktif (setelah OTA)</string>
+    <string name="install_method_inactive_sub">Setelah pembaruan sistem, pasang ke slot berikutnya.</string>
+    <string name="install_method_anykernel">Pasang AnyKernel (.zip)</string>
+    <string name="install_method_anykernel_sub">Flash paket AnyKernel berisi Zairenkai.</string>
+    <string name="install_pick">Pilih berkas .zip</string>
+    <string name="install_picked">Terpilih: %1$s</string>
+    <string name="install_continue">Lanjutkan</string>
+    <string name="install_steps">Demi keamanan, Zairenkai tidak mem-flash kernel langsung dari aplikasi. Setelah memilih berkas, lanjutkan di pengelola root/modul kamu untuk mem-flash, lalu reboot.</string>
+    <string name="install_no_handler">Tidak ada aplikasi yang bisa membuka berkas ini. Flash manual lewat pengelola modul, lalu reboot.</string>
 </resources>

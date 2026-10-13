@@ -39,4 +39,22 @@
     <string name="home_band_unknown">Not known yet</string>
 
     <string name="home_licensee">Licensee</string>
+    <string name="home_install_title">Zairenkai is not installed</string>
+    <string name="home_install_body">Install the Zairenkai kernel module to enable the ZKFC framework and engine. For GKI kernels.</string>
+    <string name="home_install_action">How to install</string>
+    <string name="install_sheet_title">Install Zairenkai</string>
+    <string name="install_sheet_sub">Zairenkai runs as a kernel module. This install is for GKI kernels.</string>
+    <string name="install_method_file">Select module file (.zip)</string>
+    <string name="install_method_file_sub">A Zairenkai module or AnyKernel package.</string>
+    <string name="install_method_direct">Direct install (recommended)</string>
+    <string name="install_method_direct_sub">Install to the active slot on a GKI kernel.</string>
+    <string name="install_method_inactive">Install to inactive slot (after OTA)</string>
+    <string name="install_method_inactive_sub">After a system update, install to the next slot.</string>
+    <string name="install_method_anykernel">Install AnyKernel (.zip)</string>
+    <string name="install_method_anykernel_sub">Flash an AnyKernel package that bundles Zairenkai.</string>
+    <string name="install_pick">Select a .zip file</string>
+    <string name="install_picked">Selected: %1$s</string>
+    <string name="install_continue">Continue</string>
+    <string name="install_steps">For safety, Zairenkai does not flash the kernel from the app. After picking a file, continue in your root/module manager to flash it, then reboot.</string>
+    <string name="install_no_handler">No app can open this file. Flash it manually through your module manager, then reboot.</string>
 </resources>

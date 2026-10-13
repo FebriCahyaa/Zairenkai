@@ -135,8 +135,11 @@ fun HomeScreen(
             Spacer(Modifier.height(4.dp))
             val ready = summary == HomeSummary.Ready
             if (!ready) StatusCard(s, compact = false, onRetry = onRetry, modifier = Modifier.reveal(1))
+            // Not installed: the ZKFC framework is absent once the checks settle.
+            val notInstalled = checks.settled() && checks.firstOrNull { it.id == CheckId.ZKFC }?.state == CheckState.MISSING
+            if (notInstalled) InstallCard(Modifier.reveal(2))
             if (s.rootAvailable && !s.loading) {
-                var order = 2
+                var order = 3
                 if (s.safeMode) {
                     Banner(
                         stringResource(R.string.dashboard_safe_mode_title), stringResource(R.string.dashboard_safe_mode_body),

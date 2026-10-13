@@ -38,4 +38,22 @@
     <string name="home_band_unknown">暂未知</string>
 
     <string name="home_licensee">授权持有人</string>
+    <string name="home_install_title">尚未安装 Zairenkai</string>
+    <string name="home_install_body">安装 Zairenkai 内核模块以启用 ZKFC 框架和引擎。适用于 GKI 内核。</string>
+    <string name="home_install_action">如何安装</string>
+    <string name="install_sheet_title">安装 Zairenkai</string>
+    <string name="install_sheet_sub">Zairenkai 以内核模块运行。此安装适用于 GKI 内核。</string>
+    <string name="install_method_file">选择模块文件（.zip）</string>
+    <string name="install_method_file_sub">Zairenkai 模块或 AnyKernel 包。</string>
+    <string name="install_method_direct">直接安装（推荐）</string>
+    <string name="install_method_direct_sub">安装到 GKI 内核的活动槽。</string>
+    <string name="install_method_inactive">安装到非活动槽（OTA 后）</string>
+    <string name="install_method_inactive_sub">系统更新后，安装到下一个槽。</string>
+    <string name="install_method_anykernel">安装 AnyKernel（.zip）</string>
+    <string name="install_method_anykernel_sub">刷入包含 Zairenkai 的 AnyKernel 包。</string>
+    <string name="install_pick">选择 .zip 文件</string>
+    <string name="install_picked">已选择：%1$s</string>
+    <string name="install_continue">继续</string>
+    <string name="install_steps">为安全起见，Zairenkai 不从应用直接刷入内核。选择文件后，请在 root/模块管理器中刷入，然后重启。</string>
+    <string name="install_no_handler">没有应用可以打开此文件。请通过模块管理器手动刷入，然后重启。</string>
 </resources>

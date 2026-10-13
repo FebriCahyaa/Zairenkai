@@ -40,4 +40,22 @@
     <string name="home_band_unknown">Aún desconocido</string>
 
     <string name="home_licensee">Titular de la licencia</string>
+    <string name="home_install_title">Zairenkai no está instalado</string>
+    <string name="home_install_body">Instala el módulo de kernel Zairenkai para activar el framework ZKFC y el motor. Para kernels GKI.</string>
+    <string name="home_install_action">Cómo instalar</string>
+    <string name="install_sheet_title">Instalar Zairenkai</string>
+    <string name="install_sheet_sub">Zairenkai funciona como módulo de kernel. Esta instalación es para kernels GKI.</string>
+    <string name="install_method_file">Seleccionar archivo del módulo (.zip)</string>
+    <string name="install_method_file_sub">Un módulo Zairenkai o paquete AnyKernel.</string>
+    <string name="install_method_direct">Instalación directa (recomendada)</string>
+    <string name="install_method_direct_sub">Instalar en la ranura activa en un kernel GKI.</string>
+    <string name="install_method_inactive">Instalar en la ranura inactiva (tras OTA)</string>
+    <string name="install_method_inactive_sub">Tras una actualización del sistema, instalar en la siguiente ranura.</string>
+    <string name="install_method_anykernel">Instalar AnyKernel (.zip)</string>
+    <string name="install_method_anykernel_sub">Flashear un paquete AnyKernel que incluye Zairenkai.</string>
+    <string name="install_pick">Seleccionar un archivo .zip</string>
+    <string name="install_picked">Seleccionado: %1$s</string>
+    <string name="install_continue">Continuar</string>
+    <string name="install_steps">Por seguridad, Zairenkai no flashea el kernel desde la app. Tras elegir un archivo, continúa en tu gestor de root/módulos para flashearlo y reinicia.</string>
+    <string name="install_no_handler">Ninguna app puede abrir este archivo. Fláshealo manualmente con tu gestor de módulos y reinicia.</string>
 </resources>

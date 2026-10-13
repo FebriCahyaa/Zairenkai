@@ -38,4 +38,22 @@
     <string name="home_band_unknown">まだ不明</string>
 
     <string name="home_licensee">ライセンス保持者</string>
+    <string name="home_install_title">Zairenkai は未インストール</string>
+    <string name="home_install_body">ZKFC フレームワークとエンジンを有効にするには Zairenkai カーネルモジュールをインストールします。GKI カーネル向け。</string>
+    <string name="home_install_action">インストール方法</string>
+    <string name="install_sheet_title">Zairenkai をインストール</string>
+    <string name="install_sheet_sub">Zairenkai はカーネルモジュールとして動作します。このインストールは GKI カーネル向けです。</string>
+    <string name="install_method_file">モジュールファイルを選択（.zip）</string>
+    <string name="install_method_file_sub">Zairenkai モジュールまたは AnyKernel パッケージ。</string>
+    <string name="install_method_direct">直接インストール（推奨）</string>
+    <string name="install_method_direct_sub">GKI カーネルのアクティブスロットにインストール。</string>
+    <string name="install_method_inactive">非アクティブスロットにインストール（OTA 後）</string>
+    <string name="install_method_inactive_sub">システム更新後、次のスロットにインストール。</string>
+    <string name="install_method_anykernel">AnyKernel をインストール（.zip）</string>
+    <string name="install_method_anykernel_sub">Zairenkai を含む AnyKernel パッケージをフラッシュ。</string>
+    <string name="install_pick">.zip ファイルを選択</string>
+    <string name="install_picked">選択済み: %1$s</string>
+    <string name="install_continue">続行</string>
+    <string name="install_steps">安全のため、Zairenkai はアプリからカーネルをフラッシュしません。ファイルを選択後、root/モジュールマネージャーでフラッシュして再起動してください。</string>
+    <string name="install_no_handler">このファイルを開けるアプリがありません。モジュールマネージャーで手動フラッシュして再起動してください。</string>
 </resources>
