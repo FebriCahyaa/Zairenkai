@@ -304,13 +304,7 @@ impl Zkfc {
     pub fn version(&self) -> io::Result<VersionInfo> {
         let mut v = VersionInfo::default();
         // SAFETY: fd is valid; &mut v points at a correctly sized buffer.
-        let rc = unsafe {
-            libc::ioctl(
-                self.fd,
-                IOC_GET_VERSION as _,
-                &mut v as *mut VersionInfo,
-            )
-        };
+        let rc = unsafe { libc::ioctl(self.fd, IOC_GET_VERSION as _, &mut v as *mut VersionInfo) };
         if rc < 0 {
             return Err(io::Error::last_os_error());
         }
@@ -384,13 +378,7 @@ impl Zkfc {
             applied: 0,
             reserved: 0,
         };
-        let rc = unsafe {
-            libc::ioctl(
-                self.fd,
-                IOC_TASK_BOOST as _,
-                &mut req as *mut TaskBoost,
-            )
-        };
+        let rc = unsafe { libc::ioctl(self.fd, IOC_TASK_BOOST as _, &mut req as *mut TaskBoost) };
         if rc < 0 {
             return Err(io::Error::last_os_error());
         }
@@ -411,13 +399,7 @@ impl Zkfc {
             max_khz,
             flags,
         };
-        let rc = unsafe {
-            libc::ioctl(
-                self.fd,
-                IOC_CPUFREQ_QOS as _,
-                &req as *const CpufreqQos,
-            )
-        };
+        let rc = unsafe { libc::ioctl(self.fd, IOC_CPUFREQ_QOS as _, &req as *const CpufreqQos) };
         if rc < 0 {
             return Err(io::Error::last_os_error());
         }
@@ -444,13 +426,7 @@ impl Zkfc {
             req.cluster_cpu[i] = cpu;
             req.min_khz[i] = min_khz;
         }
-        let rc = unsafe {
-            libc::ioctl(
-                self.fd,
-                IOC_INPUT_BOOST as _,
-                &req as *const InputBoost,
-            )
-        };
+        let rc = unsafe { libc::ioctl(self.fd, IOC_INPUT_BOOST as _, &req as *const InputBoost) };
         if rc < 0 {
             return Err(io::Error::last_os_error());
         }
@@ -487,13 +463,8 @@ impl Zkfc {
                 "thermal guard requires at least one zone",
             ));
         }
-        let rc = unsafe {
-            libc::ioctl(
-                self.fd,
-                IOC_THERMAL_GUARD as _,
-                &cfg as *const ThermalGuard,
-            )
-        };
+        let rc =
+            unsafe { libc::ioctl(self.fd, IOC_THERMAL_GUARD as _, &cfg as *const ThermalGuard) };
         if rc < 0 {
             return Err(io::Error::last_os_error());
         }
