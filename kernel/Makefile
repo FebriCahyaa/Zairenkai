@@ -43,7 +43,10 @@ ZKFC_GIT := $(shell git -C $(ZKFC_SRC) describe --tags --always --dirty 2>/dev/n
 ccflags-y += -DZKFC_BUILD_ID=\"zkfc-$(if $(ZKFC_GIT),$(ZKFC_GIT),local)\"
 
 # Optional build-time token / revocation list issued by the Owner.
-ifneq ($(wildcard $(ZKFC_SRC)/license/zkfc_license.inc),)
+# A delegated bundle (subkey cert + token) takes precedence over a bare token.
+ifneq ($(wildcard $(ZKFC_SRC)/license/zkfc_bundle.inc),)
+ccflags-y += -DZKFC_EMBEDDED_BUNDLE
+else ifneq ($(wildcard $(ZKFC_SRC)/license/zkfc_license.inc),)
 ccflags-y += -DZKFC_EMBEDDED_LICENSE
 endif
 ifneq ($(wildcard $(ZKFC_SRC)/license/zkfc_crl.inc),)

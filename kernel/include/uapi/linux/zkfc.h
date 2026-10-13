@@ -148,6 +148,46 @@ struct zkfc_license_token {
 	__u8 signature[ZKFC_SIG_SIZE];	/* Ed25519 over payload */
 };
 
+/* ------------------------------------------------------------------------
+ * Delegated issuance (subordinate keys)
+ *
+ * The Owner may delegate token issuance to a per-builder subordinate key by
+ * signing a subkey certificate that caps what that key may grant (features,
+ * flags, kernel scope, API major, validity). The builder then signs tokens
+ * with the subordinate key, and ships a bundle = { owner-signed cert, token }.
+ * The kernel verifies the whole chain against the Owner key: cert <- Owner,
+ * token <- subkey, token grant <= cert grant. The Owner key never leaves the
+ * Owner, and nothing here weakens the direct owner-signed token path.
+ * ------------------------------------------------------------------------ */
+#define ZKFC_SUBKEY_MAGIC	0x4b534b5aU	/* "ZKSK" */
+#define ZKFC_SUBKEY_FORMAT	1
+#define ZKFC_HOLDER_SIZE	64
+
+struct zkfc_subkey_payload {
+	__le32 magic;			/* ZKFC_SUBKEY_MAGIC */
+	__le16 format;			/* ZKFC_SUBKEY_FORMAT */
+	__le16 api_major;		/* API major this subkey may issue for */
+	__le64 subkey_id;		/* unique, revocable via the CRL */
+	__le64 issued_at;		/* unix seconds */
+	__le64 expires_at;		/* unix seconds, 0 = never */
+	__le32 max_features;		/* upper bound on a token's features */
+	__le32 flags_mask;		/* flags a token may carry */
+	__u8 binding[ZKFC_BINDING_SIZE];	/* kernel scope, 0 = any */
+	__u8 subkey_pub[32];		/* Ed25519 public key that signs tokens */
+	char holder[ZKFC_HOLDER_SIZE];	/* NUL padded, informational */
+};
+
+struct zkfc_subkey_cert {
+	struct zkfc_subkey_payload payload;
+	__u8 owner_sig[ZKFC_SIG_SIZE];	/* Ed25519 by the Owner over payload */
+};
+
+/* A delegated token: the owner-signed subkey cert plus the subkey-signed token. */
+struct zkfc_license_bundle {
+	struct zkfc_subkey_cert cert;
+	struct zkfc_license_token token;
+};
+
 /* Certificate revocation list, signed by the Owner. */
 struct zkfc_crl_payload {
 	__le32 magic;			/* ZKFC_CRL_MAGIC */
@@ -174,6 +214,7 @@ enum zkfc_license_state {
 	ZKFC_LIC_NO_OWNER_KEY = 7,	/* kernel built without the Owner key */
 	ZKFC_LIC_REVOKED = 8,
 	ZKFC_LIC_API_INCOMPATIBLE = 9,	/* token targets another API major */
+	ZKFC_LIC_SUBKEY_SCOPE = 10,	/* delegated token exceeds the subkey's grant */
 };
 
 /* ------------------------------------------------------------------------

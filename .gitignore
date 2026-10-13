@@ -28,3 +28,4 @@ secring.*
 .kotlin/
 
 /rust/target/
+__pycache__/

@@ -79,6 +79,31 @@ tokens:
 tools/zkfc-license/zkfc_license.py revoke --serial 2 <license_id>
 ```
 
+## Delegated issuance (subordinate keys)
+
+So the owner never has to share the owner signing key, issuance can be
+delegated to a per-builder subordinate key. The owner signs a **subkey
+certificate** that caps what the key may grant (features, flags, kernel scope,
+API major, validity); the builder then signs tokens with the subkey and ships a
+**bundle** = { owner-signed cert, subkey-signed token }.
+
+```sh
+# owner, once per builder (writes acme.zksub — give it to the builder, keep 0600)
+tools/zkfc-license/zkfc_license.py issue-subkey --holder "Acme" --tag <tag> \
+    --features input_boost,task_boost --days 365
+
+# builder, per kernel (writes *.inc -> kernel/license/zkfc_bundle.inc)
+tools/zkfc-license/zkfc_license.py issue --subkey acme.zksub --licensee "Acme" --tag <tag>
+```
+
+The kernel verifies the chain against the owner public key: the owner signature
+over the cert, then the subkey signature over the token, and that the token
+never grants more than the cert (features, flags, expiry, kernel scope). A token
+is bound to the API major, so it stops being valid when the API major changes
+and a fresh one must be issued. Revoke a leaked subkey by its id, exactly like a
+token: `zkfc_license.py revoke --serial N <subkey_id>`. The offline chain test
+is `tools/zkfc-license/test_chain.py`.
+
 ## States the app can show
 
 | State            | Meaning                                              |
@@ -86,8 +111,9 @@ tools/zkfc-license/zkfc_license.py revoke --serial 2 <license_id>
 | `valid`          | token verified, features unlocked                    |
 | `missing`        | no token installed                                   |
 | `no_owner_key`   | kernel built without the owner public key            |
-| `bad_signature`  | token not signed by this owner key                   |
+| `bad_signature`  | token (or subkey cert) not signed by the right key   |
 | `wrong_binding`  | token issued for a different kernel tag              |
 | `api_outdated`   | kernel API newer than the token — update the kernel  |
-| `expired`        | token past its expiry                                |
-| `revoked`        | token disabled by a revocation list                  |
+| `expired`        | token or subkey past its expiry                      |
+| `revoked`        | token or subkey disabled by a revocation list        |
+| `subkey_scope`   | delegated token exceeds what its subkey allows       |

@@ -34,6 +34,9 @@ int main(void)
     EXPECT_SIZE(struct zkfc_version_info, 160);
     EXPECT_SIZE(struct zkfc_license_payload, 136);
     EXPECT_SIZE(struct zkfc_license_token, 200);
+    EXPECT_SIZE(struct zkfc_subkey_payload, 168);
+    EXPECT_SIZE(struct zkfc_subkey_cert, 232);
+    EXPECT_SIZE(struct zkfc_license_bundle, 432);
     EXPECT_SIZE(struct zkfc_crl_payload, 536);
     EXPECT_SIZE(struct zkfc_crl, 600);
     EXPECT_SIZE(struct zkfc_policy_entry, 16);

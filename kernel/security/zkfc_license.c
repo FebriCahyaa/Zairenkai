@@ -32,6 +32,12 @@ static const u8 zkfc_embedded_license[] __aligned(8) = {
 };
 #endif
 
+#ifdef ZKFC_EMBEDDED_BUNDLE
+static const u8 zkfc_embedded_bundle[] __aligned(8) = {
+#include "../license/zkfc_bundle.inc"
+};
+#endif
+
 #ifdef ZKFC_EMBEDDED_CRL
 static const u8 zkfc_embedded_crl[] __aligned(8) = {
 #include "../license/zkfc_crl.inc"
@@ -44,6 +50,10 @@ static const u8 zkfc_embedded_crl[] __aligned(8) = {
 static DEFINE_MUTEX(zkfc_lic_mutex);
 static struct zkfc_license_token zkfc_tok;
 static bool zkfc_have_tok;
+/* When the active token was issued by a subordinate key, its owner-signed
+ * certificate is kept so the whole chain is re-checked on every commit. */
+static struct zkfc_subkey_cert zkfc_cert;
+static bool zkfc_chained;
 static u32 zkfc_lic_state = ZKFC_LIC_MISSING;
 static u32 zkfc_lic_feat;
 static u64 zkfc_lic_expires;
@@ -71,7 +81,7 @@ static void zkfc_compute_binding(void)
 	memcpy(zkfc_binding, digest, ZKFC_BINDING_SIZE);
 }
 
-static int zkfc_verify_sig(const void *payload, size_t len, const u8 *sig)
+static int zkfc_verify_sig(const void *payload, size_t len, const u8 *sig, const u8 *pub)
 {
 	struct zk_ed25519_ws *ws;
 	int ret;
@@ -79,7 +89,7 @@ static int zkfc_verify_sig(const void *payload, size_t len, const u8 *sig)
 	ws = kzalloc(sizeof(*ws), GFP_KERNEL);
 	if (!ws)
 		return -ENOMEM;
-	ret = zk_ed25519_verify(sig, payload, len, zkfc_owner_pubkey, ws);
+	ret = zk_ed25519_verify(sig, payload, len, pub, ws);
 	kfree(ws);
 	return ret ? -EKEYREJECTED : 0;
 }
@@ -104,8 +114,18 @@ static bool zkfc_binding_is_any(const u8 *b)
 	return acc == 0;
 }
 
-/* Called with zkfc_lic_mutex held. */
-static u32 zkfc_evaluate(const struct zkfc_license_token *t)
+#define ZKFC_LICF_ALL (ZKFC_LICF_DEVELOPER | ZKFC_LICF_COMMERCIAL | ZKFC_LICF_OWNER)
+
+/*
+ * Evaluate a token against the key that must have signed it and the grant it
+ * is allowed to carry. For a direct owner token the grant is unrestricted
+ * (cap_features/cap_flags = all, no scope, no cap on expiry). For a delegated
+ * token the grant comes from the subordinate key's certificate, so the token
+ * can never widen what the Owner delegated. Called with zkfc_lic_mutex held.
+ */
+static u32 zkfc_eval_token(const struct zkfc_license_token *t, const u8 *pub,
+			   u32 cap_features, u32 cap_flags,
+			   const u8 *scope, u64 cap_expires)
 {
 	const struct zkfc_license_payload *p = &t->payload;
 	time64_t now = ktime_get_real_seconds();
@@ -117,7 +137,7 @@ static u32 zkfc_evaluate(const struct zkfc_license_token *t)
 	    le16_to_cpu(p->format) != ZKFC_LICENSE_FORMAT)
 		return ZKFC_LIC_MALFORMED;
 
-	if (le32_to_cpu(p->flags) & ~(ZKFC_LICF_DEVELOPER | ZKFC_LICF_COMMERCIAL | ZKFC_LICF_OWNER))
+	if (le32_to_cpu(p->flags) & ~ZKFC_LICF_ALL)
 		return ZKFC_LIC_MALFORMED;
 	if (le32_to_cpu(p->features) & ~ZKFC_FEAT_ALL)
 		return ZKFC_LIC_MALFORMED;
@@ -129,7 +149,20 @@ static u32 zkfc_evaluate(const struct zkfc_license_token *t)
 	    le64_to_cpu(p->expires_at) <= le64_to_cpu(p->issued_at))
 		return ZKFC_LIC_MALFORMED;
 
-	ret = zkfc_verify_sig(p, sizeof(*p), t->signature);
+	/* A delegated token may not grant more than its subkey was allowed. */
+	if (le32_to_cpu(p->features) & ~cap_features)
+		return ZKFC_LIC_SUBKEY_SCOPE;
+	if (le32_to_cpu(p->flags) & ~cap_flags)
+		return ZKFC_LIC_SUBKEY_SCOPE;
+	if (cap_expires && (!le64_to_cpu(p->expires_at) ||
+			    le64_to_cpu(p->expires_at) > cap_expires))
+		return ZKFC_LIC_SUBKEY_SCOPE;
+	/* A kernel-scoped subkey only issues tokens for that same kernel. */
+	if (scope && !zkfc_binding_is_any(scope) &&
+	    memcmp(p->binding, scope, ZKFC_BINDING_SIZE))
+		return ZKFC_LIC_SUBKEY_SCOPE;
+
+	ret = zkfc_verify_sig(p, sizeof(*p), t->signature, pub);
 	if (ret == -ENOMEM)
 		return ZKFC_LIC_MALFORMED;
 	if (ret)
@@ -153,10 +186,83 @@ static u32 zkfc_evaluate(const struct zkfc_license_token *t)
 	return ZKFC_LIC_VALID;
 }
 
+/* A direct owner-signed token carries the full owner grant. */
+static u32 zkfc_evaluate(const struct zkfc_license_token *t)
+{
+	return zkfc_eval_token(t, zkfc_owner_pubkey, ZKFC_FEAT_ALL,
+			       ZKFC_LICF_ALL, NULL, 0);
+}
+
+/* Verify an Owner-signed subordinate-key certificate. */
+static u32 zkfc_eval_cert(const struct zkfc_subkey_cert *c)
+{
+	const struct zkfc_subkey_payload *p = &c->payload;
+	time64_t now = ktime_get_real_seconds();
+	int ret;
+
+	if (!ZKFC_OWNER_KEY_PROVISIONED)
+		return ZKFC_LIC_NO_OWNER_KEY;
+	if (le32_to_cpu(p->magic) != ZKFC_SUBKEY_MAGIC ||
+	    le16_to_cpu(p->format) != ZKFC_SUBKEY_FORMAT)
+		return ZKFC_LIC_MALFORMED;
+	if (le32_to_cpu(p->max_features) & ~ZKFC_FEAT_ALL)
+		return ZKFC_LIC_MALFORMED;
+	if (le32_to_cpu(p->flags_mask) & ~ZKFC_LICF_ALL)
+		return ZKFC_LIC_MALFORMED;
+	if (le64_to_cpu(p->subkey_id) == 0)
+		return ZKFC_LIC_MALFORMED;
+	if (!le64_to_cpu(p->issued_at))
+		return ZKFC_LIC_MALFORMED;
+	if (le64_to_cpu(p->expires_at) &&
+	    le64_to_cpu(p->expires_at) <= le64_to_cpu(p->issued_at))
+		return ZKFC_LIC_MALFORMED;
+
+	ret = zkfc_verify_sig(p, sizeof(*p), c->owner_sig, zkfc_owner_pubkey);
+	if (ret == -ENOMEM)
+		return ZKFC_LIC_MALFORMED;
+	if (ret)
+		return ZKFC_LIC_BAD_SIGNATURE;
+
+	if (le16_to_cpu(p->api_major) < ZKFC_API_MAJOR)
+		return ZKFC_LIC_API_OUTDATED;
+	if (le16_to_cpu(p->api_major) > ZKFC_API_MAJOR)
+		return ZKFC_LIC_API_INCOMPATIBLE;
+	if (zkfc_is_revoked(le64_to_cpu(p->subkey_id)))
+		return ZKFC_LIC_REVOKED;
+
+	zkfc_clock_trusted = now >= ZKFC_EPOCH_SANE;
+	if (p->expires_at && zkfc_clock_trusted &&
+	    (u64)now >= le64_to_cpu(p->expires_at))
+		return ZKFC_LIC_EXPIRED;
+
+	return ZKFC_LIC_VALID;
+}
+
+/* Evaluate the active installation, re-checking the whole chain when delegated. */
+static u32 zkfc_eval_active(void)
+{
+	const struct zkfc_subkey_payload *cp;
+	u32 st;
+
+	if (!zkfc_have_tok)
+		return ZKFC_LIC_MISSING;
+	if (!zkfc_chained)
+		return zkfc_evaluate(&zkfc_tok);
+
+	st = zkfc_eval_cert(&zkfc_cert);
+	if (st != ZKFC_LIC_VALID)
+		return st;
+	cp = &zkfc_cert.payload;
+	return zkfc_eval_token(&zkfc_tok, cp->subkey_pub,
+			       le32_to_cpu(cp->max_features),
+			       le32_to_cpu(cp->flags_mask),
+			       cp->binding, le64_to_cpu(cp->expires_at));
+}
+
 /* Called with zkfc_lic_mutex held. */
 static void zkfc_commit(void)
 {
-	u32 state = zkfc_have_tok ? zkfc_evaluate(&zkfc_tok) : ZKFC_LIC_MISSING;
+	u32 state = zkfc_eval_active();
 	u32 feat = 0;
 
 	if (state == ZKFC_LIC_VALID)
@@ -244,6 +350,7 @@ int zkfc_license_install(const struct zkfc_license_token *tok)
 	if (state == ZKFC_LIC_VALID) {
 		zkfc_tok = *tok;
 		zkfc_have_tok = true;
+		zkfc_chained = false;
 		zkfc_lic_fails = 0;
 		zkfc_commit();
 	} else if (++zkfc_lic_fails >= ZKFC_LIC_FAIL_MAX) {
@@ -264,6 +371,44 @@ out:
 	return state == ZKFC_LIC_VALID ? 0 : -EKEYREJECTED;
 }
 
+/*
+ * Install a delegated bundle (owner-signed subkey cert + subkey-signed token).
+ * Used by the build-time embed path. The whole chain is verified against the
+ * Owner key and the token may not exceed what the certificate delegated; a
+ * bundle that does not verify never replaces a working installation.
+ */
+int zkfc_license_install_bundle(const struct zkfc_license_bundle *b)
+{
+	u32 state;
+
+	mutex_lock(&zkfc_lic_mutex);
+	state = zkfc_eval_cert(&b->cert);
+	if (state == ZKFC_LIC_VALID) {
+		const struct zkfc_subkey_payload *cp = &b->cert.payload;
+
+		state = zkfc_eval_token(&b->token, cp->subkey_pub,
+					le32_to_cpu(cp->max_features),
+					le32_to_cpu(cp->flags_mask),
+					cp->binding, le64_to_cpu(cp->expires_at));
+	}
+	if (state == ZKFC_LIC_VALID) {
+		zkfc_cert = b->cert;
+		zkfc_tok = b->token;
+		zkfc_have_tok = true;
+		zkfc_chained = true;
+		zkfc_commit();
+	}
+	mutex_unlock(&zkfc_lic_mutex);
+
+	if (state == ZKFC_LIC_VALID)
+		zkfc_i("delegated API token %llx installed (subkey %llx) for '%.32s'",
+		       le64_to_cpu(b->token.payload.license_id),
+		       le64_to_cpu(b->cert.payload.subkey_id), b->token.payload.licensee);
+	else
+		zkfc_w("delegated API token rejected (state %u)", state);
+	return state == ZKFC_LIC_VALID ? 0 : -EKEYREJECTED;
+}
+
 int zkfc_license_install_crl(const struct zkfc_crl *crl)
 {
 	const struct zkfc_crl_payload *p = &crl->payload;
@@ -278,7 +423,7 @@ int zkfc_license_install_crl(const struct zkfc_crl *crl)
 	    le16_to_cpu(p->format) != ZKFC_LICENSE_FORMAT ||
 	    count > ZKFC_CRL_MAX_IDS)
 		return -EINVAL;
-	ret = zkfc_verify_sig(p, sizeof(*p), crl->signature);
+	ret = zkfc_verify_sig(p, sizeof(*p), crl->signature, zkfc_owner_pubkey);
 	if (ret)
 		return ret;
 
@@ -309,7 +454,10 @@ int zkfc_license_init(void)
 		zkfc_w("embedded revocation list rejected");
 #endif
 
-#ifdef ZKFC_EMBEDDED_LICENSE
+#if defined(ZKFC_EMBEDDED_BUNDLE)
+	BUILD_BUG_ON(sizeof(zkfc_embedded_bundle) != sizeof(struct zkfc_license_bundle));
+	zkfc_license_install_bundle((const struct zkfc_license_bundle *)zkfc_embedded_bundle);
+#elif defined(ZKFC_EMBEDDED_LICENSE)
 	BUILD_BUG_ON(sizeof(zkfc_embedded_license) != sizeof(struct zkfc_license_token));
 	zkfc_license_install((const struct zkfc_license_token *)zkfc_embedded_license);
 #else
@@ -325,7 +473,9 @@ void zkfc_license_exit(void)
 {
 	mutex_lock(&zkfc_lic_mutex);
 	memzero_explicit(&zkfc_tok, sizeof(zkfc_tok));
+	memzero_explicit(&zkfc_cert, sizeof(zkfc_cert));
 	zkfc_have_tok = false;
+	zkfc_chained = false;
 	WRITE_ONCE(zkfc_lic_feat, 0);
 	WRITE_ONCE(zkfc_lic_state, ZKFC_LIC_MISSING);
 	mutex_unlock(&zkfc_lic_mutex);

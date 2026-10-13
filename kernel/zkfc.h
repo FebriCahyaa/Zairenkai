@@ -59,6 +59,7 @@ u32 zkfc_license_state(void);
 u32 zkfc_license_features(void);
 void zkfc_license_status(struct zkfc_license_status *st);
 int zkfc_license_install(const struct zkfc_license_token *tok);
+int zkfc_license_install_bundle(const struct zkfc_license_bundle *b);
 int zkfc_license_install_crl(const struct zkfc_crl *crl);
 void zkfc_kernel_binding(u8 out[ZKFC_BINDING_SIZE]);
 
