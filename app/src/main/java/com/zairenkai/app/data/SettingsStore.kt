@@ -45,6 +45,9 @@ data class AppSettings(
     val legalAccepted: Int = 0,
     /** When they were accepted (epoch ms); 0 when not. */
     val legalAcceptedAt: Long = 0L,
+    /** Check GitHub for a newer build when the Update screen opens. On by
+     *  default; turning it off keeps the app from reaching the network at all. */
+    val autoUpdateCheck: Boolean = true,
 )
 
 class SettingsStore(private val context: Context) {
@@ -66,6 +69,7 @@ class SettingsStore(private val context: Context) {
         val FPS_WATCH = stringSetPreferencesKey("fps_watch")
         val LEGAL = intPreferencesKey("legal_accepted")
         val LEGAL_AT = longPreferencesKey("legal_accepted_at")
+        val AUTO_UPDATE = booleanPreferencesKey("auto_update_check")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -87,6 +91,7 @@ class SettingsStore(private val context: Context) {
             fpsWatch = p[Keys.FPS_WATCH] ?: emptySet(),
             legalAccepted = p[Keys.LEGAL] ?: 0,
             legalAcceptedAt = p[Keys.LEGAL_AT] ?: 0L,
+            autoUpdateCheck = p[Keys.AUTO_UPDATE] ?: true,
         )
     }
 
@@ -111,4 +116,5 @@ class SettingsStore(private val context: Context) {
         it[Keys.LEGAL] = version
         it[Keys.LEGAL_AT] = atMs
     }
+    suspend fun setAutoUpdateCheck(v: Boolean) = context.dataStore.edit { it[Keys.AUTO_UPDATE] = v }
 }

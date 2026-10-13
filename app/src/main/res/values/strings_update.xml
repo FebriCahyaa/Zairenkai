@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Update app screen -->
+    <string name="update_title">Update app</string>
+    <string name="settings_update_title">Update app</string>
+    <string name="settings_update_sub">Get a newer build and read what changed</string>
+    <string name="update_installed">Installed version</string>
+    <string name="update_channel_of">Updates from the %1$s channel</string>
+    <string name="update_channel_release">release</string>
+    <string name="update_channel_debug">debug</string>
+
+    <!-- In-app check / download / install -->
+    <string name="update_status_idle">Check GitHub for a newer build.</string>
+    <string name="update_check_now">Check for updates</string>
+    <string name="update_check_again">Check again</string>
+    <string name="update_status_checking">Checking for updates…</string>
+    <string name="update_status_uptodate">You\'re on the latest build (%1$s).</string>
+    <string name="update_status_available">Update available: %1$s</string>
+    <string name="update_download_install">Download and install</string>
+    <string name="update_status_downloading">Downloading %1$s…</string>
+    <string name="update_status_ready">Downloaded %1$s — ready to install.</string>
+    <string name="update_install">Install</string>
+    <string name="update_retry">Try again</string>
+    <string name="update_open_browser">Open in browser instead</string>
+    <string name="update_download_failed">Download failed, or the file did not match its checksum. Try again.</string>
+    <string name="update_fail_network">Couldn\'t reach GitHub. Check your connection and try again.</string>
+    <string name="update_fail_notpublished">No build is published on this channel yet.</string>
+    <string name="update_fail_manifest">The update information couldn\'t be read.</string>
+
+    <string name="update_auto_title">Check for updates automatically</string>
+    <string name="update_auto_sub">When on, the app checks GitHub each time this screen opens. Turn off to keep the app fully offline.</string>
+
+    <string name="update_browser_title">Prefer the browser?</string>
+
+    <string name="update_release_title">Release build</string>
+    <string name="update_release_body">The stable, optimised and signed build. Recommended for everyday use. Opens the latest release on GitHub.</string>
+    <string name="update_open_release">Open the release page</string>
+
+    <string name="update_debug_title">Debug build</string>
+    <string name="update_debug_body">The preview build, published early so you can try the newest changes. Less tested than the release. Opens the preview on GitHub.</string>
+    <string name="update_open_debug">Open the preview page</string>
+
+    <string name="update_privacy_note">The app only contacts GitHub when you check or download — it sends no identifiers and never polls in the background. Downloads are verified against their published SHA-256 before install.</string>
+
+    <string name="update_changelog_title">What\'s new</string>
+    <string name="update_changelog_version">Version %1$s</string>
+
+    <!-- Changelog highlights (user-facing, short) -->
+    <string name="changelog_1_1_0_nav">The bottom navigation now slides away as you scroll down and returns when you scroll up, and scrolling is smoother everywhere.</string>
+    <string name="changelog_1_1_0_redesign">Home, Monitor, Tweaks, Profiles and System were redesigned with a calmer, grouped layout.</string>
+    <string name="changelog_1_1_0_monitor">Monitor adds battery usage by app, RAM and ZRAM detail, and a ZKFC log you can export as a .zip.</string>
+    <string name="changelog_1_1_0_language">Per-app language, new theme controls and brand-aware device identity.</string>
+    <string name="changelog_1_1_0_update">This Update app screen, offering a debug and a release build, plus this changelog.</string>
+
+    <string name="changelog_1_0_0_first">First release of Zairenkai.</string>
+    <string name="changelog_1_0_0_engine">Loads the matching GKI module at boot and re-applies your saved profile.</string>
+</resources>

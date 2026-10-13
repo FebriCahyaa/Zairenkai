@@ -1,0 +1,242 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# One run, both builds, kept apart — and each build is a complete module, like
+# KSU-Next: the manager APK *and* the flashable kernel module (zkfc.ko per KMI
+# + zperfd/zkfctl). The debug build goes out as a GitHub *prerelease* (tag
+# "preview"); the release build goes out as a full GitHub *release* (tag
+# "release"). The release job only runs when the signing secrets exist, so
+# forks and branch pushes still get a debug build.
+#
+# Each channel also publishes a small version-<channel>.json with a stable APK
+# name, so the in-app "Update app" screen can check and download without
+# scraping a release page:
+#   debug   -> .../releases/download/preview/{Zairenkai-debug.apk, version-debug.json}
+#   release -> .../releases/download/release/{Zairenkai-release.apk, version-release.json}
+name: App APKs
+
+on:
+  push:
+    branches: [ccr-076d8b15-osiupp]
+    paths:
+      - "app/**"
+      - "rust/**"
+      - "userspace/**"
+      - "kernel/**"
+      - "module/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/app-apks.yml"
+      - ".github/workflows/build-module.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-apks
+  cancel-in-progress: true
+
+jobs:
+  # Do the release signing secrets exist? Job-level `if` cannot read secrets
+  # directly, so resolve it once here and let the release job depend on it.
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      has_signing: ${{ steps.c.outputs.has_signing }}
+    steps:
+      - id: c
+        env:
+          KS: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "has_signing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_signing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The .ko half: build the flashable module once; both channels bundle it.
+  module:
+    uses: ./.github/workflows/build-module.yml
+
+  # --- Debug channel: installable debug-signed APK + module -> prerelease -----
+  debug:
+    name: Debug build (prerelease)
+    needs: module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools
+      - name: Install SDK platform 37
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.4.0
+
+      - name: Unit tests
+        run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
+
+      # Optimized, debug-signed, NOT debuggable — safe to hand out, ~4 MB.
+      - name: Build debug-signed APK
+        run: ./gradlew :app:assembleStandardPreview --stacktrace
+
+      - name: Download module artifact
+        uses: actions/download-artifact@v8.0.0
+        with:
+          name: module-zip
+
+      - name: Stage APK, manifest and checksums
+        id: stage
+        run: |
+          set -euo pipefail
+          SRC=$(find app/build/outputs/apk/standard/preview -name '*.apk' | head -1)
+          APK="Zairenkai-debug.apk"            # stable name for the in-app updater
+          cp "$SRC" "$APK"
+          unzip -t "$APK" >/dev/null            # reject a bad zip before publishing
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "$SHA  $APK" > "$APK.sha256"
+          VNAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
+          VCODE=$(grep -m1 'versionCode' app/build.gradle.kts | sed -E 's/[^0-9]*([0-9]+).*/\1/')
+          cat > version-debug.json <<EOF
+          {
+            "versionCode": $VCODE,
+            "versionName": "$VNAME",
+            "apkUrl": "https://github.com/FebriCahyaa/Zairenkai/releases/download/preview/$APK",
+            "sha256": "$SHA"
+          }
+          EOF
+          echo "ver=$VNAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Publish debug prerelease
+        uses: softprops/action-gh-release@v3.0.2
+        with:
+          tag_name: preview
+          name: "Zairenkai debug build"
+          prerelease: true
+          body: |
+            **Debug build** — a complete module: the debug-signed manager APK
+            (installs without the release keystore) plus the flashable kernel
+            module (`zkfc.ko` per KMI + zperfd/zkfctl) in `Zairenkai-module.zip`.
+            Optimized like release but published early and less tested.
+
+            Version: `${{ steps.stage.outputs.ver }}`
+            APK SHA-256: `${{ steps.stage.outputs.sha }}`
+
+            Verify before installing: `sha256sum Zairenkai-debug.apk`
+          files: |
+            Zairenkai-debug.apk
+            Zairenkai-debug.apk.sha256
+            version-debug.json
+            Zairenkai-module.zip
+            SHA256SUMS
+
+  # --- Release channel: signed release APK + module -> full release -----------
+  release:
+    name: Release build (release)
+    needs: [config, module]
+    if: needs.config.outputs.has_signing == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools
+      - name: Install SDK platform 37
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.4.0
+
+      - name: Unit tests
+        run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
+
+      - name: Build and sign release APK
+        env:
+          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleStandardRelease --stacktrace
+
+      - name: Verify release certificate
+        run: |
+          set -euo pipefail
+          APK=$(find app/build/outputs/apk/standard/release -name '*.apk' | head -1)
+          BT="$ANDROID_HOME/build-tools/37.0.0"
+          "$BT/apksigner" verify --verbose "$APK"
+          EXPECTED='02B4596737261F5C154CCC323B27467A483034A5880A9DB0822EEED66FAC1944'
+          ACTUAL=$(
+            "$BT/apksigner" verify --print-certs "$APK" |
+              sed -n 's/Signer #1 certificate SHA-256 digest: //p' |
+              head -1 | tr -d '[:space:]' | tr 'a-f' 'A-F'
+          )
+          test "$ACTUAL" = "$EXPECTED"
+
+      - name: Download module artifact
+        uses: actions/download-artifact@v8.0.0
+        with:
+          name: module-zip
+
+      - name: Stage APK, manifest and checksums
+        id: stage
+        run: |
+          set -euo pipefail
+          SRC=$(find app/build/outputs/apk/standard/release -name '*.apk' | head -1)
+          APK="Zairenkai-release.apk"           # stable name for the in-app updater
+          cp "$SRC" "$APK"
+          unzip -t "$APK" >/dev/null
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "$SHA  $APK" > "$APK.sha256"
+          VNAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
+          VCODE=$(grep -m1 'versionCode' app/build.gradle.kts | sed -E 's/[^0-9]*([0-9]+).*/\1/')
+          cat > version-release.json <<EOF
+          {
+            "versionCode": $VCODE,
+            "versionName": "$VNAME",
+            "apkUrl": "https://github.com/FebriCahyaa/Zairenkai/releases/download/release/$APK",
+            "sha256": "$SHA"
+          }
+          EOF
+          echo "ver=$VNAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v3.0.2
+        with:
+          tag_name: release
+          name: "Zairenkai release build"
+          prerelease: false
+          body: |
+            **Release build** — a complete module: the stable, officially signed
+            manager APK plus the flashable kernel module (`zkfc.ko` per KMI +
+            zperfd/zkfctl) in `Zairenkai-module.zip`. Recommended for everyday use.
+
+            Version: `${{ steps.stage.outputs.ver }}`
+            APK SHA-256: `${{ steps.stage.outputs.sha }}`
+
+            Verify before installing: `sha256sum Zairenkai-release.apk`
+          files: |
+            Zairenkai-release.apk
+            Zairenkai-release.apk.sha256
+            version-release.json
+            Zairenkai-module.zip
+            SHA256SUMS

@@ -1,0 +1,143 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Reusable: build the flashable Zairenkai module — the per-KMI GKI kernel
+# modules (zkfc.ko), the zperfd/zkfctl userspace binaries, the zperf catalog
+# and a checksum manifest — and hand it back as the `module-zip` artifact
+# (Zairenkai-module.zip + SHA256SUMS). Callers add the APK and publish.
+# This is the ".ko half" of a KSU-Next-style release: manager APK + kernel
+# module, built together in CI.
+name: Build module
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  gki-lkm:
+    name: GKI LKM / ${{ matrix.kmi }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        kmi:
+          - android12-5.10
+          - android13-5.10
+          - android13-5.15
+          - android14-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+          - android17-6.18
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install GKI build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q bc bison build-essential ccache flex git libelf-dev libssl-dev
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod +x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Build ZKFC vendor module
+        run: |
+          set -euo pipefail
+          bash kernel/gki/build_lkm.sh "${{ matrix.kmi }}" --arch arm64
+          mkdir -p "module/lkm/${{ matrix.kmi }}-arm64"
+          cp "out/lkm/${{ matrix.kmi }}-arm64/zkfc.ko" "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko"
+          sha256sum "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko" | tee "module/lkm/${{ matrix.kmi }}-arm64/zkfc.ko.sha256"
+
+      - name: Upload LKM
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: zairenkai-lkm-${{ matrix.kmi }}
+          path: module/lkm/${{ matrix.kmi }}-arm64/
+          if-no-files-found: error
+
+  package:
+    name: Package flashable module
+    needs: gki-lkm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Set up Rust
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup component add rustfmt clippy --toolchain 1.99.0
+          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools
+      - name: Install NDK
+        run: sdkmanager "ndk;30.0.16248370"
+
+      - name: Build zperfd and validate workspace
+        working-directory: rust
+        env:
+          NDK: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
+        run: |
+          set -euo pipefail
+          cargo fmt --check
+          cargo test --workspace --all-targets --locked
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TC/aarch64-linux-android31-clang"
+          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$TC/x86_64-linux-android31-clang"
+          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            target="${t%%:*}"; abi="${t##*:}"
+            cargo build -p zperfd --release --target "$target" --locked
+            mkdir -p "../module/bin/$abi"
+            cp "target/$target/release/zperfd" "../module/bin/$abi/zperfd"
+            "$TC/llvm-strip" "../module/bin/$abi/zperfd"
+          done
+
+      - name: Build zkfctl userspace
+        run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/30.0.16248370"
+          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            triple="${t%%:*}"; abi="${t##*:}"
+            mkdir -p "module/bin/$abi"
+            "$TC/${triple}31-clang" -std=c11 -O2 -Wall -Wextra -Werror \
+              -fstack-protector-strong -fPIE -pie \
+              -I kernel/include/uapi -I userspace/include -I userspace/lib \
+              userspace/lib/*.c userspace/zkfctl/main.c -o "module/bin/$abi/zkfctl"
+            "$TC/llvm-strip" "module/bin/$abi/zkfctl"
+          done
+
+      - name: Stage zperf catalog
+        run: |
+          set -euo pipefail
+          mkdir -p module/zperf/catalog
+          cp rust/zperfd/profiles/*.toml module/zperf/catalog/
+
+      - name: Download GKI LKM artifacts
+        uses: actions/download-artifact@v8.0.0
+        with:
+          pattern: zairenkai-lkm-*
+          merge-multiple: true
+          path: module/lkm
+
+      - name: Package module + checksum manifest
+        run: |
+          set -euo pipefail
+          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
+          : > module/SHA256SUMS
+          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
+          (cd module && zip -r9 ../Zairenkai-module.zip . -x '*.git*')
+          cp module/SHA256SUMS SHA256SUMS
+          sha256sum Zairenkai-module.zip
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: module-zip
+          path: |
+            Zairenkai-module.zip
+            SHA256SUMS
+          if-no-files-found: error

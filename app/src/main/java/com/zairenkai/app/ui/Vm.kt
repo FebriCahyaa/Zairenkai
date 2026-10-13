@@ -22,6 +22,7 @@ class VmFactory(private val c: AppContainer) : ViewModelProvider.Factory {
         modelClass.isAssignableFrom(SystemViewModel::class.java) -> SystemViewModel(c)
         modelClass.isAssignableFrom(RuntimeViewModel::class.java) -> RuntimeViewModel(c)
         modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(c)
+        modelClass.isAssignableFrom(UpdateViewModel::class.java) -> UpdateViewModel(c)
         modelClass.isAssignableFrom(com.zairenkai.app.ui.onboarding.OnboardingViewModel::class.java) ->
             com.zairenkai.app.ui.onboarding.OnboardingViewModel(c)
         else -> throw IllegalArgumentException("unknown VM $modelClass")

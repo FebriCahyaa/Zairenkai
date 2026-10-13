@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- アプリ更新画面 -->
+    <string name="update_title">アプリを更新</string>
+    <string name="settings_update_title">アプリを更新</string>
+    <string name="settings_update_sub">新しいビルドを入手し、変更点を確認します</string>
+    <string name="update_installed">インストール済みバージョン</string>
+    <string name="update_channel_of">%1$s チャンネルから更新</string>
+    <string name="update_channel_release">リリース</string>
+    <string name="update_channel_debug">デバッグ</string>
+
+    <!-- アプリ内での確認・ダウンロード・インストール -->
+    <string name="update_status_idle">GitHub で新しいビルドを確認します。</string>
+    <string name="update_check_now">更新を確認</string>
+    <string name="update_check_again">もう一度確認</string>
+    <string name="update_status_checking">更新を確認中…</string>
+    <string name="update_status_uptodate">最新のビルドです（%1$s）。</string>
+    <string name="update_status_available">更新があります：%1$s</string>
+    <string name="update_download_install">ダウンロードしてインストール</string>
+    <string name="update_status_downloading">%1$s をダウンロード中…</string>
+    <string name="update_status_ready">%1$s をダウンロードしました。インストールできます。</string>
+    <string name="update_install">インストール</string>
+    <string name="update_retry">再試行</string>
+    <string name="update_open_browser">代わりにブラウザで開く</string>
+    <string name="update_download_failed">ダウンロードに失敗したか、ファイルがチェックサムと一致しませんでした。再試行してください。</string>
+    <string name="update_fail_network">GitHub に接続できませんでした。接続を確認して再試行してください。</string>
+    <string name="update_fail_notpublished">このチャンネルにはまだビルドが公開されていません。</string>
+    <string name="update_fail_manifest">更新情報を読み取れませんでした。</string>
+
+    <string name="update_auto_title">更新を自動で確認</string>
+    <string name="update_auto_sub">オンのとき、この画面を開くたびに GitHub を確認します。オフにするとアプリは完全にオフラインのままになります。</string>
+
+    <string name="update_browser_title">ブラウザを使いますか？</string>
+
+    <string name="update_release_title">リリースビルド</string>
+    <string name="update_release_body">安定した、最適化・署名済みのビルドです。日常利用に推奨します。GitHub の最新リリースを開きます。</string>
+    <string name="update_open_release">リリースページを開く</string>
+
+    <string name="update_debug_title">デバッグビルド</string>
+    <string name="update_debug_body">プレビュービルドです。最新の変更を早めに試せるよう公開されています。リリースより検証は少なめです。GitHub のプレビューを開きます。</string>
+    <string name="update_open_debug">プレビューページを開く</string>
+
+    <string name="update_privacy_note">アプリは確認またはダウンロードのときだけ GitHub に接続します。識別子は送信せず、バックグラウンドで確認することもありません。ダウンロードはインストール前に公開された SHA-256 と照合されます。</string>
+
+    <string name="update_changelog_title">新着情報</string>
+    <string name="update_changelog_version">バージョン %1$s</string>
+
+    <!-- 変更履歴のハイライト（利用者向け・簡潔） -->
+    <string name="changelog_1_1_0_nav">下部ナビゲーションは下にスクロールすると隠れ、上にスクロールすると再び表示されるようになり、どの画面でもスクロールがより滑らかになりました。</string>
+    <string name="changelog_1_1_0_redesign">ホーム・モニター・調整・プロファイル・システムを、落ち着いたグループ化レイアウトに刷新しました。</string>
+    <string name="changelog_1_1_0_monitor">モニターにアプリ別のバッテリー使用量、RAM と ZRAM の詳細、.zip でエクスポートできる ZKFC ログを追加しました。</string>
+    <string name="changelog_1_1_0_language">アプリごとの言語、新しいテーマ設定、ブランドを認識する端末情報。</string>
+    <string name="changelog_1_1_0_update">デバッグとリリースのビルドを提供するこのアプリ更新画面と、この変更履歴。</string>
+
+    <string name="changelog_1_0_0_first">Zairenkai の初回リリース。</string>
+    <string name="changelog_1_0_0_engine">起動時に対応する GKI モジュールを読み込み、保存したプロファイルを再適用します。</string>
+</resources>

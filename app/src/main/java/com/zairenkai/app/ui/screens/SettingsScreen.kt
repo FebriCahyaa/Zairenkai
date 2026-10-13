@@ -98,6 +98,7 @@ fun SettingsScreen(
     onOpenLegal: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
     onOpenLogs: () -> Unit = {},
+    onOpenUpdate: () -> Unit = {},
 ) {
     val vm: SettingsViewModel = viewModel(factory = factory)
     val settings by vm.settings.collectAsState(initial = AppSettings())
@@ -108,6 +109,7 @@ fun SettingsScreen(
         settings, permissions,
         onOpenTheme = onOpenTheme, onOpenAbout = onOpenAbout, onOpenAboutPhone = onOpenAboutPhone,
         onOpenLegal = onOpenLegal, onOpenLicenses = onOpenLicenses, onOpenLogs = onOpenLogs,
+        onOpenUpdate = onOpenUpdate,
         onLanguage = { showLanguage = true }, onPermissions = { showPermissions = true },
         onDynamic = { vm.setDynamicColor(it) }, onLite = { vm.setLite(it) }, onMitigation = { vm.setMitigation(it) },
     )
@@ -133,6 +135,7 @@ internal fun SettingsContent(
     onOpenLegal: () -> Unit,
     onOpenLicenses: () -> Unit,
     onOpenLogs: () -> Unit,
+    onOpenUpdate: () -> Unit,
     onLanguage: () -> Unit,
     onPermissions: () -> Unit,
     onDynamic: (Boolean) -> Unit,
@@ -200,6 +203,8 @@ internal fun SettingsContent(
             item { Header(R.string.settings_section_about) }
             item {
                 Group {
+                    NavRow(ZkIcons.Rocket, stringResource(R.string.settings_update_title), stringResource(R.string.settings_update_sub), onOpenUpdate)
+                    Divider()
                     NavRow(ZkIcons.Document, stringResource(R.string.legal_title), stringResource(R.string.settings_legal_sub), onOpenLegal)
                     Divider()
                     NavRow(ZkIcons.Package, stringResource(R.string.oss_title), stringResource(R.string.legal_third_party_summary), onOpenLicenses)

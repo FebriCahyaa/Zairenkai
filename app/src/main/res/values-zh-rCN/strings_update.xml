@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- 应用更新界面 -->
+    <string name="update_title">更新应用</string>
+    <string name="settings_update_title">更新应用</string>
+    <string name="settings_update_sub">获取更新的版本并查看更改内容</string>
+    <string name="update_installed">已安装版本</string>
+    <string name="update_channel_of">来自 %1$s 通道的更新</string>
+    <string name="update_channel_release">正式</string>
+    <string name="update_channel_debug">调试</string>
+
+    <!-- 应用内检查 / 下载 / 安装 -->
+    <string name="update_status_idle">在 GitHub 上检查是否有更新的版本。</string>
+    <string name="update_check_now">检查更新</string>
+    <string name="update_check_again">再次检查</string>
+    <string name="update_status_checking">正在检查更新…</string>
+    <string name="update_status_uptodate">你已是最新版本（%1$s）。</string>
+    <string name="update_status_available">有可用更新：%1$s</string>
+    <string name="update_download_install">下载并安装</string>
+    <string name="update_status_downloading">正在下载 %1$s…</string>
+    <string name="update_status_ready">%1$s 已下载，可以安装。</string>
+    <string name="update_install">安装</string>
+    <string name="update_retry">重试</string>
+    <string name="update_open_browser">改为在浏览器中打开</string>
+    <string name="update_download_failed">下载失败，或文件与校验和不一致。请重试。</string>
+    <string name="update_fail_network">无法连接 GitHub。请检查网络后重试。</string>
+    <string name="update_fail_notpublished">此通道尚未发布任何版本。</string>
+    <string name="update_fail_manifest">无法读取更新信息。</string>
+
+    <string name="update_auto_title">自动检查更新</string>
+    <string name="update_auto_sub">开启后，每次打开此界面时应用都会检查 GitHub。关闭则让应用完全离线。</string>
+
+    <string name="update_browser_title">更想用浏览器？</string>
+
+    <string name="update_release_title">正式版</string>
+    <string name="update_release_body">稳定、经过优化并已签名的版本，推荐日常使用。将打开 GitHub 上的最新发布。</string>
+    <string name="update_open_release">打开发布页面</string>
+
+    <string name="update_debug_title">调试版</string>
+    <string name="update_debug_body">预览版本，提前发布以便你体验最新更改，测试程度不如正式版。将打开 GitHub 上的预览。</string>
+    <string name="update_open_debug">打开预览页面</string>
+
+    <string name="update_privacy_note">应用只有在你检查或下载时才会连接 GitHub——不发送任何标识符，也从不在后台检查。下载的文件会在安装前与公布的 SHA-256 校验。</string>
+
+    <string name="update_changelog_title">更新内容</string>
+    <string name="update_changelog_version">版本 %1$s</string>
+
+    <!-- 更新日志要点（面向用户、简短） -->
+    <string name="changelog_1_1_0_nav">底部导航栏现在会在向下滚动时隐藏、向上滚动时重新出现，各处滚动都更加流畅。</string>
+    <string name="changelog_1_1_0_redesign">首页、监控、微调、配置和系统均采用更简洁的分组布局重新设计。</string>
+    <string name="changelog_1_1_0_monitor">监控新增按应用统计的电池用量、RAM 与 ZRAM 详情，以及可导出为 .zip 的 ZKFC 日志。</string>
+    <string name="changelog_1_1_0_language">按应用设置语言、全新的主题控制，以及能识别品牌的设备标识。</string>
+    <string name="changelog_1_1_0_update">提供调试版和正式版的本「更新应用」界面，以及此更新日志。</string>
+
+    <string name="changelog_1_0_0_first">Zairenkai 首次发布。</string>
+    <string name="changelog_1_0_0_engine">在开机时加载匹配的 GKI 模块，并重新应用你保存的配置。</string>
+</resources>

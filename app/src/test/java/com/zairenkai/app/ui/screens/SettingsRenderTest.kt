@@ -40,6 +40,7 @@ class SettingsRenderTest {
                     AppSettings(liteMode = true), mapOf(AppPermission.NOTIFICATIONS to true, AppPermission.USAGE_ACCESS to false, AppPermission.BATTERY to false),
                     onOpenTheme = { calls += "theme" }, onOpenAbout = { calls += "about" }, onOpenAboutPhone = { calls += "phone" },
                     onOpenLegal = { calls += "legal" }, onOpenLicenses = { calls += "licenses" }, onOpenLogs = { calls += "logs" },
+                    onOpenUpdate = { calls += "update" },
                     onLanguage = { calls += "language" }, onPermissions = { calls += "permissions" },
                     onDynamic = { calls += "dynamic:$it" }, onLite = { calls += "lite:$it" }, onMitigation = { calls += "mitigation:$it" },
                 )

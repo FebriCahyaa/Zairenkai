@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<!-- The updater downloads APKs to cacheDir/updates and shares them from there. -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>

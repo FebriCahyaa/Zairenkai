@@ -28,6 +28,7 @@ class AppContainer(app: Application) {
     val settings = SettingsStore(app)
     val usageStore = UsageSessionStore(app)
     val fpsStore = FpsSessionStore(app)
+    val updater = com.zairenkai.app.data.update.Updater(app.applicationContext)
 
     /** Process-wide scope for samplers shared across screens. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

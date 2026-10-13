@@ -6,14 +6,10 @@
 package com.zairenkai.app.ui
 
 import com.zairenkai.app.ui.icons.ZkIcons
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -22,16 +18,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -65,19 +63,30 @@ fun ZairenkaiRoot(container: AppContainer) {
 
     val glass = com.zairenkai.app.ui.theme.LocalGlass.current
 
-    // The bottom navigation hides as content scrolls up (reading down the page)
-    // and returns on the first upward scroll, so long lists get the full height.
+    // The bottom navigation slides out of view as content scrolls up (reading
+    // down the page) and slides back on the first upward scroll, so long lists
+    // get the full height. The bar stays in the layout the whole time — only its
+    // translationY changes — so the scaffold padding never moves. That is what
+    // keeps scrolling smooth: an earlier version toggled the bar in and out of
+    // the layout, which relaid out the content on every toggle and fed back into
+    // the scroll, causing the flicker and jitter.
     val backStack by nav.currentBackStackEntryAsState()
     val currentDest = backStack?.destination
-    var barVisible by remember { mutableStateOf(true) }
-    val hideThreshold = with(LocalDensity.current) { 6.dp.toPx() }
+    // How far the bar is pushed down out of view, in px (0 = fully shown,
+    // barHeightPx = fully hidden). Measured from the bar itself via onSizeChanged.
+    var barOffsetPx by remember { mutableFloatStateOf(0f) }
+    var barHeightPx by remember { mutableIntStateOf(0) }
     // A new screen always starts with the bar shown.
-    LaunchedEffect(currentDest?.route) { barVisible = true }
+    LaunchedEffect(currentDest?.route) { barOffsetPx = 0f }
     val barScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y < -hideThreshold) barVisible = false       // content moving up → scrolling down
-                else if (available.y > hideThreshold) barVisible = true    // content moving down → scrolling up
+                // available.y < 0 → content moving up (scrolling down) → hide;
+                // available.y > 0 → scrolling up → reveal. 1:1 tracking, no
+                // threshold, so the bar follows the finger without snapping.
+                if (barHeightPx > 0) {
+                    barOffsetPx = (barOffsetPx - available.y).coerceIn(0f, barHeightPx.toFloat())
+                }
                 return Offset.Zero
             }
         }
@@ -91,17 +100,17 @@ fun ZairenkaiRoot(container: AppContainer) {
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             val current = currentDest
-            AnimatedVisibility(
-                visible = barVisible,
-                enter = slideInVertically(spring(stiffness = 700f)) { it },
-                exit = slideOutVertically(spring(stiffness = 700f)) { it },
-            ) {
             NavigationBar(
                 containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
                     MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass,
                 ),
                 tonalElevation = 0.dp,
                 windowInsets = NavigationBarDefaults.windowInsets,
+                // Kept in the layout at all times; only slid down out of view, so
+                // the scaffold's bottom inset never changes while scrolling.
+                modifier = Modifier
+                    .onSizeChanged { barHeightPx = it.height }
+                    .graphicsLayer { translationY = barOffsetPx },
             ) {
                 bottomDests.forEach { dest ->
                     // Detail routes ("monitor/battery") keep their tab highlighted.
@@ -128,7 +137,6 @@ fun ZairenkaiRoot(container: AppContainer) {
                         ),
                     )
                 }
-            }
             }
         },
     ) { inner ->
@@ -223,6 +231,7 @@ fun ZairenkaiRoot(container: AppContainer) {
                     onOpenLegal = { nav.navigate("legal") },
                     onOpenLicenses = { nav.navigate("licenses") },
                     onOpenLogs = { nav.navigate("logs") },
+                    onOpenUpdate = { nav.navigate("update") },
                 )
             }
             composable("theme") { ThemeScreen(factory, onBack = { nav.popBackStack() }) }
@@ -232,6 +241,7 @@ fun ZairenkaiRoot(container: AppContainer) {
             }
             composable("licenses") { com.zairenkai.app.ui.legal.OssLicensesScreen(onBack = { nav.popBackStack() }) }
             composable("logs") { LogsScreen(factory, onBack = { nav.popBackStack() }) }
+            composable("update") { UpdateScreen(factory, onBack = { nav.popBackStack() }) }
         }
     }
 }

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Layar Update aplikasi -->
+    <string name="update_title">Update aplikasi</string>
+    <string name="settings_update_title">Update aplikasi</string>
+    <string name="settings_update_sub">Dapatkan build terbaru dan baca perubahannya</string>
+    <string name="update_installed">Versi terpasang</string>
+    <string name="update_channel_of">Pembaruan dari kanal %1$s</string>
+    <string name="update_channel_release">rilis</string>
+    <string name="update_channel_debug">debug</string>
+
+    <!-- Periksa / unduh / pasang di dalam aplikasi -->
+    <string name="update_status_idle">Periksa GitHub untuk build yang lebih baru.</string>
+    <string name="update_check_now">Periksa pembaruan</string>
+    <string name="update_check_again">Periksa lagi</string>
+    <string name="update_status_checking">Memeriksa pembaruan…</string>
+    <string name="update_status_uptodate">Kamu memakai build terbaru (%1$s).</string>
+    <string name="update_status_available">Pembaruan tersedia: %1$s</string>
+    <string name="update_download_install">Unduh dan pasang</string>
+    <string name="update_status_downloading">Mengunduh %1$s…</string>
+    <string name="update_status_ready">%1$s terunduh — siap dipasang.</string>
+    <string name="update_install">Pasang</string>
+    <string name="update_retry">Coba lagi</string>
+    <string name="update_open_browser">Buka di peramban saja</string>
+    <string name="update_download_failed">Unduhan gagal, atau berkas tidak cocok dengan checksum-nya. Coba lagi.</string>
+    <string name="update_fail_network">Tidak bisa menjangkau GitHub. Periksa koneksimu lalu coba lagi.</string>
+    <string name="update_fail_notpublished">Belum ada build yang dipublikasikan di kanal ini.</string>
+    <string name="update_fail_manifest">Informasi pembaruan tidak bisa dibaca.</string>
+
+    <string name="update_auto_title">Periksa pembaruan otomatis</string>
+    <string name="update_auto_sub">Bila aktif, aplikasi memeriksa GitHub setiap layar ini dibuka. Matikan agar aplikasi tetap sepenuhnya luring.</string>
+
+    <string name="update_browser_title">Lebih suka peramban?</string>
+
+    <string name="update_release_title">Build rilis</string>
+    <string name="update_release_body">Build stabil, teroptimasi, dan tertandatangani. Disarankan untuk pemakaian sehari-hari. Membuka rilis terbaru di GitHub.</string>
+    <string name="update_open_release">Buka halaman rilis</string>
+
+    <string name="update_debug_title">Build debug</string>
+    <string name="update_debug_body">Build pratinjau, dirilis lebih awal agar kamu bisa mencoba perubahan terbaru. Lebih sedikit diuji daripada rilis. Membuka pratinjau di GitHub.</string>
+    <string name="update_open_debug">Buka halaman pratinjau</string>
+
+    <string name="update_privacy_note">Aplikasi hanya menghubungi GitHub saat kamu memeriksa atau mengunduh — tidak mengirim identitas apa pun dan tidak pernah memeriksa di latar belakang. Unduhan diverifikasi terhadap SHA-256 yang dipublikasikan sebelum dipasang.</string>
+
+    <string name="update_changelog_title">Yang baru</string>
+    <string name="update_changelog_version">Versi %1$s</string>
+
+    <!-- Sorotan changelog (menghadap pengguna, ringkas) -->
+    <string name="changelog_1_1_0_nav">Navigasi bawah kini menghilang saat digulir ke bawah dan muncul lagi saat digulir ke atas, dan gulir terasa lebih mulus di mana saja.</string>
+    <string name="changelog_1_1_0_redesign">Beranda, Monitor, Tweak, Profil, dan Sistem dirombak dengan tata letak berkelompok yang lebih tenang.</string>
+    <string name="changelog_1_1_0_monitor">Monitor menambahkan penggunaan baterai per aplikasi, detail RAM dan ZRAM, serta log ZKFC yang bisa diekspor sebagai .zip.</string>
+    <string name="changelog_1_1_0_language">Bahasa per aplikasi, kontrol tema baru, dan identitas perangkat yang mengenali merek.</string>
+    <string name="changelog_1_1_0_update">Layar Update aplikasi ini, yang menyediakan build debug dan rilis, beserta changelog ini.</string>
+
+    <string name="changelog_1_0_0_first">Rilis pertama Zairenkai.</string>
+    <string name="changelog_1_0_0_engine">Memuat modul GKI yang cocok saat boot dan menerapkan kembali profil tersimpanmu.</string>
+</resources>
