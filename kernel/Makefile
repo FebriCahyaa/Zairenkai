@@ -29,6 +29,12 @@ zkfc-y := core/zkfc_main.o \
 
 ZKFC_SRC := $(if $(filter /%,$(src)),$(src),$(srctree)/$(src))
 
+# GKI 5.10/5.15 still build with -Werror=declaration-after-statement (a C89
+# rule the kernel itself dropped in 5.18 when it moved to -std=gnu11). The ZKFC
+# sources are shared across every KMI, so relax just this style check for the
+# module; all other warnings stay fatal.
+ccflags-y += -Wno-declaration-after-statement
+
 # Out-of-tree builds have no Kconfig: default to hybrid hooks.
 ifeq ($(CONFIG_ZKFC_HOOK_HYBRID)$(CONFIG_ZKFC_HOOK_MANUAL)$(CONFIG_ZKFC_HOOK_NONE),)
 ccflags-y += -DCONFIG_ZKFC_HOOK_HYBRID=1

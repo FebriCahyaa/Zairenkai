@@ -88,6 +88,10 @@ jobs:
           sed -i -E 's/^([[:space:]]*)check_exports\(mod\);/\1\/\/ check_exports(mod);/' "$MODPOST" || true
           sed -i -E 's/^([[:space:]]*)s->module = exp->module;/\1\/\/ s->module = exp->module;/' "$MODPOST" || true
           sed -i 's/^static void check_exports(/static void __attribute__((unused)) check_exports(/' "$MODPOST" || true
+          # Newer modpost emits an empty __version_ext_names initializer for an
+          # external module, which makes the generated zkfc.mod.c fail to
+          # compile ("expected expression"); give it an empty string instead.
+          sed -i 's/__version_ext_names\\") =\\n/__version_ext_names\\") = \\"\\"\\n/' "$MODPOST" || true
 
           make O=$KDIR gki_defconfig
           scripts/config --file $KDIR/.config -d LTO_CLANG -e LTO_NONE -d LTO_CLANG_THIN -d LTO_CLANG_FULL -d THINLTO

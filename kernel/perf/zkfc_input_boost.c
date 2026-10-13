@@ -107,10 +107,11 @@ static void zkfc_ib_event(struct input_handle *handle, unsigned int type,
 			  unsigned int code, int value)
 {
 	unsigned long flags;
+	bool kick = false;
+
 	(void)handle;
 	(void)code;
 	(void)value;
-	bool kick = false;
 
 	if (!zkfc_ib_event_allowed(handle, type, code, value))
 		return;
