@@ -10,14 +10,17 @@
  */
 package com.zairenkai.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -31,7 +34,21 @@ import com.zairenkai.app.core.text.asString
 import com.zairenkai.app.data.Tweak
 import com.zairenkai.app.ui.TweaksViewModel
 import com.zairenkai.app.ui.VmFactory
+import com.zairenkai.app.ui.components.CollapsingScaffold
+import com.zairenkai.app.ui.icons.ZkIcons
 import kotlin.math.roundToLong
+
+/** An icon for each tweak category; a generic tune icon otherwise. */
+private fun categoryIcon(cat: String): ImageVector = when (cat.lowercase()) {
+    "cpu" -> ZkIcons.Memory
+    "gpu" -> ZkIcons.Chip
+    "vm", "memory", "mem" -> ZkIcons.Storage
+    "io", "i/o", "storage" -> ZkIcons.Storage
+    "net", "network" -> ZkIcons.Globe
+    "display", "screen" -> ZkIcons.Sun
+    "thermal" -> ZkIcons.Thermometer
+    else -> ZkIcons.Tune
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,12 +57,12 @@ fun TweaksScreen(factory: VmFactory) {
     val ui by vm.ui.collectAsState()
     var editing by remember { mutableStateOf<Tweak?>(null) }
 
-    Scaffold(containerColor = Color.Transparent, topBar = { TopAppBar(title = { Text(stringResource(R.string.tweaks_title)) }) }) { inner ->
+    CollapsingScaffold(stringResource(R.string.tweaks_title), onBack = null) { inner ->
         if (ui.loading) {
             Box(Modifier.fillMaxSize().padding(inner), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            return@Scaffold
+            return@CollapsingScaffold
         }
         val available = ui.tweaks.filter { it.available }
         val grouped = available.groupBy { it.category }
@@ -88,13 +105,20 @@ fun TweaksScreen(factory: VmFactory) {
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             grouped.forEach { (cat, list) ->
+                item { CategoryHeader(cat) }
                 item {
-                    Text(cat.uppercase(), style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp))
-                }
-                items(list, key = { it.id }) { t ->
-                    val editable = ui.writable && t.lockedReason == null && ui.busyId == null
-                    TweakRow(t, busy = ui.busyId == t.id, editable = editable) { editing = t }
+                    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                        Column(Modifier.padding(vertical = 4.dp)) {
+                            list.forEachIndexed { i, t ->
+                                val editable = ui.writable && t.lockedReason == null && ui.busyId == null
+                                TweakRow(t, busy = ui.busyId == t.id, editable = editable) { editing = t }
+                                if (i != list.lastIndex) HorizontalDivider(
+                                    Modifier.padding(start = 16.dp, end = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -122,34 +146,47 @@ private fun Banner(message: String, container: Color, content: Color, onDismiss:
 }
 
 @Composable
+private fun CategoryHeader(cat: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
+            Icon(categoryIcon(cat), null, Modifier.padding(7.dp).size(16.dp))
+        }
+        Text(cat.uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
 private fun TweakRow(t: Tweak, busy: Boolean, editable: Boolean, onClick: () -> Unit) {
     val shownValue = t.value ?: stringResource(R.string.tweaks_a11y_value_unread)
     val description = t.lockedReason?.let { stringResource(R.string.tweaks_a11y_row_locked, t.title, shownValue, it) }
         ?: stringResource(R.string.tweaks_a11y_row, t.title, shownValue)
-    Surface(
-        onClick = onClick,
-        enabled = editable,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.semantics { contentDescription = description },
+    val clickMod = if (editable) Modifier.clickable(onClick = onClick) else Modifier
+    Row(
+        Modifier.fillMaxWidth().then(clickMod).semantics { contentDescription = description }.heightIn(min = 60.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(t.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                Text(t.id, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                t.lockedReason?.let {
-                    Text(stringResource(R.string.tweaks_locked, it), style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary)
-                }
+        Column(Modifier.weight(1f)) {
+            Text(t.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(t.id, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            t.lockedReason?.let {
+                Text(stringResource(R.string.tweaks_locked, it), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
             }
-            if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            else Text(t.value ?: "—", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
         }
+        when {
+            busy -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            else -> Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)) {
+                Text(
+                    t.value ?: "—", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                )
+            }
+        }
+        if (editable) Icon(ZkIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
     }
 }
 
