@@ -100,6 +100,7 @@
     <string name="license_state_wrong_binding">已绑定到其他设备/内核</string>
     <string name="license_state_api_outdated">适用于旧版 API</string>
     <string name="license_state_api_incompatible">与 ZKFC API 不兼容</string>
+    <string name="license_state_subkey_scope">超出委托密钥的授权范围</string>
     <string name="license_state_malformed">已损坏</string>
     <string name="license_state_no_owner_key">缺少所有者密钥（内核尚未配置）</string>
     <string name="license_state_revoked">已吊销</string>

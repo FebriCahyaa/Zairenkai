@@ -65,6 +65,7 @@ private val LICENSE_STATES = mapOf(
     "malformed" to R.string.license_state_malformed,
     "no_owner_key" to R.string.license_state_no_owner_key,
     "revoked" to R.string.license_state_revoked,
+    "subkey_scope" to R.string.license_state_subkey_scope,
 )
 
 fun licenseLabel(state: String): UiText = LICENSE_STATES[state]?.let { uiText(it) } ?: UiText.Raw(state)

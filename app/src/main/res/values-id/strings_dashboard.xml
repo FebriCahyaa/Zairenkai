@@ -23,6 +23,7 @@
     <string name="dashboard_license_expired">Kedaluwarsa</string>
     <string name="dashboard_license_no_owner_key">Tanpa kunci</string>
     <string name="dashboard_license_revoked">Dicabut</string>
+    <string name="dashboard_license_subkey_scope">Di luar cakupan</string>
 
     <!-- Device section -->
     <string name="dashboard_device">Perangkat</string>

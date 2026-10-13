@@ -147,6 +147,7 @@ impl VersionInfo {
     }
     pub fn license_state_name(&self) -> &'static str {
         match self.license_state {
+            0 => "missing",
             1 => "valid",
             2 => "bad_signature",
             3 => "expired",
@@ -156,7 +157,8 @@ impl VersionInfo {
             7 => "no_owner_key",
             8 => "revoked",
             9 => "api_incompatible",
-            _ => "missing",
+            10 => "subkey_scope",
+            _ => "unknown",
         }
     }
     pub fn build_id_str(&self) -> String {

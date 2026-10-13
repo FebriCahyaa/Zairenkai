@@ -568,6 +568,7 @@ private fun licenseLabel(state: String): String = when (state) {
     "expired" -> stringResource(R.string.dashboard_license_expired)
     "no_owner_key" -> stringResource(R.string.dashboard_license_no_owner_key)
     "revoked" -> stringResource(R.string.dashboard_license_revoked)
+    "subkey_scope" -> stringResource(R.string.dashboard_license_subkey_scope)
     else -> state
 }
 

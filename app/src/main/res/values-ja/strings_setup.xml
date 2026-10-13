@@ -100,6 +100,7 @@
     <string name="license_state_wrong_binding">別のデバイス/カーネルに紐付け</string>
     <string name="license_state_api_outdated">古い API 向け</string>
     <string name="license_state_api_incompatible">ZKFC API と互換性なし</string>
+    <string name="license_state_subkey_scope">委任された鍵の範囲を超えています</string>
     <string name="license_state_malformed">破損</string>
     <string name="license_state_no_owner_key">オーナーキーがカーネルにプロビジョニングされていません</string>
     <string name="license_state_revoked">失効</string>

@@ -101,6 +101,7 @@
     <string name="license_state_wrong_binding">bound to another device/kernel</string>
     <string name="license_state_api_outdated">is for an older API</string>
     <string name="license_state_api_incompatible">incompatible with the ZKFC API</string>
+    <string name="license_state_subkey_scope">beyond the delegated key scope</string>
     <string name="license_state_malformed">malformed</string>
     <string name="license_state_no_owner_key">owner key not provisioned in the kernel</string>
     <string name="license_state_revoked">revoked</string>

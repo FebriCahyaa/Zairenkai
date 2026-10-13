@@ -23,6 +23,7 @@
     <string name="dashboard_license_expired">Caducada</string>
     <string name="dashboard_license_no_owner_key">Sin clave</string>
     <string name="dashboard_license_revoked">Revocada</string>
+    <string name="dashboard_license_subkey_scope">Fuera de alcance</string>
 
     <!-- Device section -->
     <string name="dashboard_device">Dispositivo</string>

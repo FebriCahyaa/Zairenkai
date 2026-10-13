@@ -101,6 +101,7 @@
     <string name="license_state_wrong_binding">terikat ke perangkat/kernel lain</string>
     <string name="license_state_api_outdated">untuk API yang lebih lama</string>
     <string name="license_state_api_incompatible">tidak kompatibel dengan API ZKFC</string>
+    <string name="license_state_subkey_scope">melampaui cakupan kunci yang didelegasikan</string>
     <string name="license_state_malformed">rusak</string>
     <string name="license_state_no_owner_key">kunci pemilik belum diprovisikan di kernel</string>
     <string name="license_state_revoked">dicabut</string>

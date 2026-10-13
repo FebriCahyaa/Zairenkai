@@ -23,6 +23,7 @@
     <string name="dashboard_license_expired">期限切れ</string>
     <string name="dashboard_license_no_owner_key">キーなし</string>
     <string name="dashboard_license_revoked">失効</string>
+    <string name="dashboard_license_subkey_scope">範囲外</string>
 
     <!-- Device section -->
     <string name="dashboard_device">デバイス</string>

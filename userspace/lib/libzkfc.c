@@ -159,6 +159,7 @@ const char *zkfc_license_state_str(uint32_t s)
 	case ZKFC_LIC_NO_OWNER_KEY: return "no_owner_key";
 	case ZKFC_LIC_REVOKED: return "revoked";
 	case ZKFC_LIC_API_INCOMPATIBLE: return "api_incompatible";
+	case ZKFC_LIC_SUBKEY_SCOPE: return "subkey_scope";
 	default: return "unknown";
 	}
 }

@@ -6,7 +6,19 @@ name: Build LKM
 
 on:
   workflow_call:
+    inputs:
+      ddk_release:
+        description: 'ddk-min image release tag (e.g. 20260828)'
+        required: false
+        default: '20260828'
+        type: string
   workflow_dispatch:
+    inputs:
+      ddk_release:
+        description: 'ddk-min image release tag (e.g. 20260828)'
+        required: false
+        default: '20260828'
+        type: string
 
 jobs:
   build-lkm-zkfc:
@@ -25,3 +37,4 @@ jobs:
     uses: ./.github/workflows/ddk-lkm-zkfc.yml
     with:
       kmi: ${{ matrix.kmi }}
+      ddk_release: ${{ inputs.ddk_release || '20260828' }}
