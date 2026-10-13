@@ -56,4 +56,11 @@
     <string name="install_continue">続行</string>
     <string name="install_steps">安全のため、Zairenkai はアプリからカーネルをフラッシュしません。ファイルを選択後、root/モジュールマネージャーでフラッシュして再起動してください。</string>
     <string name="install_no_handler">このファイルを開けるアプリがありません。モジュールマネージャーで手動フラッシュして再起動してください。</string>
+    <string name="boot_patch_title">boot.img をパッチ（実験的）</string>
+    <string name="boot_patch_body">純正の boot.img を選んでください。Zairenkai はパッチ前にイメージをバイト単位で再構築できるか確認し、できなければ拒否します。結果のフラッシュは recovery であなたが行います—アプリがカーネルをフラッシュすることはありません。</string>
+    <string name="boot_patch_pick">boot.img を選択</string>
+    <string name="boot_patch_ok">読み取り可—ヘッダ v%1$d、ページ %2$d バイト。再構築チェック合格。</string>
+    <string name="boot_patch_sizes">カーネル %1$s · ramdisk %2$s</string>
+    <string name="boot_patch_unsupported">Zairenkai はこのイメージを正確に再構築できないため、パッチしません（安全な拒否）。</string>
+    <string name="boot_patch_notboot">そのファイルは Android boot image ではありません。</string>
 </resources>

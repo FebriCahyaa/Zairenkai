@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.zairenkai.app.R
 import com.zairenkai.app.ui.icons.ZkIcons
+import kotlinx.coroutines.launch
 
 /** The install methods offered; wording mirrors a kernel installer's choices. */
 private enum class InstallMethod(val title: Int, val sub: Int) {
@@ -165,6 +166,59 @@ private fun InstallSheet(onDismiss: () -> Unit) {
                     Spacer(Modifier.width(10.dp))
                     Text(stringResource(R.string.install_steps), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+
+            BootPatchSection()
+        }
+    }
+}
+
+/**
+ * Experimental GKI boot.img inspection. Reads the chosen boot image with the
+ * original codec and reports whether Zairenkai can rebuild it byte-for-byte —
+ * the gate the patch flow would use. Flashing is the user's own step; the app
+ * never flashes the kernel.
+ */
+@Composable
+private fun BootPatchSection() {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var result by remember { mutableStateOf<String?>(null) }
+    val notBoot = stringResource(R.string.boot_patch_notboot)
+    val unsupported = stringResource(R.string.boot_patch_unsupported)
+    val okFmt = stringResource(R.string.boot_patch_ok)
+    val sizeFmt = stringResource(R.string.boot_patch_sizes)
+
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val bytes = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                    ?: return@withContext notBoot
+                val boot = com.zairenkai.app.data.boot.BootImage.parse(bytes) ?: return@withContext notBoot
+                if (!boot.roundTrips(bytes)) return@withContext unsupported
+                val sizes = sizeFmt.format(
+                    android.text.format.Formatter.formatShortFileSize(context, (boot.kernel?.size ?: 0).toLong()),
+                    android.text.format.Formatter.formatShortFileSize(context, (boot.ramdisk?.size ?: 0).toLong()),
+                )
+                okFmt.format(boot.headerVersion, boot.pageSize) + "\n" + sizes
+            }
+        }
+    }
+
+    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(Modifier.padding(16.dp)) {
+            Text(stringResource(R.string.boot_patch_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+            Text(stringResource(R.string.boot_patch_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(onClick = { picker.launch(arrayOf("application/octet-stream", "*/*")) }) {
+                Icon(ZkIcons.Memory, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.boot_patch_pick))
+            }
+            result?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
             }
         }
     }

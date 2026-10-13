@@ -58,4 +58,11 @@
     <string name="install_continue">Continuar</string>
     <string name="install_steps">Por seguridad, Zairenkai no flashea el kernel desde la app. Tras elegir un archivo, continúa en tu gestor de root/módulos para flashearlo y reinicia.</string>
     <string name="install_no_handler">Ninguna app puede abrir este archivo. Fláshealo manualmente con tu gestor de módulos y reinicia.</string>
+    <string name="boot_patch_title">Parchear boot.img (experimental)</string>
+    <string name="boot_patch_body">Elige tu boot.img de fábrica. Zairenkai comprueba que puede reconstruir la imagen byte a byte antes de parchear; si no puede, se niega. Tú flasheas el resultado por recovery — la app nunca flashea el kernel.</string>
+    <string name="boot_patch_pick">Seleccionar boot.img</string>
+    <string name="boot_patch_ok">Legible — cabecera v%1$d, página de %2$d bytes. Verificación de reconstrucción superada.</string>
+    <string name="boot_patch_sizes">kernel %1$s · ramdisk %2$s</string>
+    <string name="boot_patch_unsupported">Zairenkai no puede reconstruir esta imagen con exactitud, así que no se parcheará (rechazo seguro).</string>
+    <string name="boot_patch_notboot">Ese archivo no es una imagen boot de Android.</string>
 </resources>

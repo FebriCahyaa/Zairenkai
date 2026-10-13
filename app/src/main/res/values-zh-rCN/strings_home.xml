@@ -56,4 +56,11 @@
     <string name="install_continue">继续</string>
     <string name="install_steps">为安全起见，Zairenkai 不从应用直接刷入内核。选择文件后，请在 root/模块管理器中刷入，然后重启。</string>
     <string name="install_no_handler">没有应用可以打开此文件。请通过模块管理器手动刷入，然后重启。</string>
+    <string name="boot_patch_title">修补 boot.img（实验性）</string>
+    <string name="boot_patch_body">选择你的原厂 boot.img。Zairenkai 会在修补前检查能否逐字节重建镜像；若不能则拒绝。结果由你通过 recovery 刷入——应用绝不刷入内核。</string>
+    <string name="boot_patch_pick">选择 boot.img</string>
+    <string name="boot_patch_ok">可读——头 v%1$d，页 %2$d 字节。重建检查通过。</string>
+    <string name="boot_patch_sizes">内核 %1$s · ramdisk %2$s</string>
+    <string name="boot_patch_unsupported">Zairenkai 无法精确重建此镜像，因此不会修补（安全拒绝）。</string>
+    <string name="boot_patch_notboot">该文件不是 Android boot 镜像。</string>
 </resources>

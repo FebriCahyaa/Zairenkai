@@ -56,4 +56,11 @@
     <string name="install_continue">Lanjutkan</string>
     <string name="install_steps">Demi keamanan, Zairenkai tidak mem-flash kernel langsung dari aplikasi. Setelah memilih berkas, lanjutkan di pengelola root/modul kamu untuk mem-flash, lalu reboot.</string>
     <string name="install_no_handler">Tidak ada aplikasi yang bisa membuka berkas ini. Flash manual lewat pengelola modul, lalu reboot.</string>
+    <string name="boot_patch_title">Patch boot.img (eksperimental)</string>
+    <string name="boot_patch_body">Pilih boot.img bawaanmu. Zairenkai memastikan bisa membangun ulang image byte-per-byte sebelum mem-patch; kalau tidak bisa, ia menolak. Kamu yang mem-flash hasilnya via recovery — aplikasi tidak pernah mem-flash kernel.</string>
+    <string name="boot_patch_pick">Pilih boot.img</string>
+    <string name="boot_patch_ok">Terbaca — header v%1$d, page %2$d byte. Cek bangun-ulang lolos.</string>
+    <string name="boot_patch_sizes">kernel %1$s · ramdisk %2$s</string>
+    <string name="boot_patch_unsupported">Zairenkai tidak bisa membangun ulang image ini persis, jadi tidak akan dipatch (penolakan aman).</string>
+    <string name="boot_patch_notboot">Berkas itu bukan boot image Android.</string>
 </resources>

@@ -60,4 +60,11 @@
     <string name="install_continue">Continue</string>
     <string name="install_steps">For safety, Zairenkai does not flash the kernel from the app. After picking a file, continue in your root/module manager to flash it, then reboot.</string>
     <string name="install_no_handler">No app can open this file. Flash it manually through your module manager, then reboot.</string>
+    <string name="boot_patch_title">Patch boot.img (experimental)</string>
+    <string name="boot_patch_body">Pick your stock boot.img. Zairenkai checks it can rebuild the image byte-for-byte before any patch; if it cannot, it refuses. You flash the result via recovery yourself — the app never flashes the kernel.</string>
+    <string name="boot_patch_pick">Select boot.img</string>
+    <string name="boot_patch_ok">Readable — header v%1$d, %2$d-byte page. Rebuild check passed.</string>
+    <string name="boot_patch_sizes">kernel %1$s · ramdisk %2$s</string>
+    <string name="boot_patch_unsupported">Zairenkai can’t rebuild this image exactly, so it won’t be patched (safe refusal).</string>
+    <string name="boot_patch_notboot">That file is not an Android boot image.</string>
 </resources>
