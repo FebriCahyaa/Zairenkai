@@ -71,4 +71,7 @@
         <item quantity="one">%1$d baris</item>
         <item quantity="other">%1$d baris</item>
     </plurals>
+    <string name="theme_amoled">Hitam pekat (AMOLED)</string>
+    <string name="theme_amoled_sub">Latar hitam total saat mode gelap, hemat daya di layar OLED.</string>
+    <string name="theme_amoled_dark_only">Berlaku saat mode gelap aktif.</string>
 </resources>

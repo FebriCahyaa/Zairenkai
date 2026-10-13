@@ -33,6 +33,8 @@ data class AppSettings(
     // Theme
     val themeMode: String = "system",   // system | light | dark
     val accent: String = "indigo",      // indigo | violet | aqua | amber | rose | mono
+    /** Pure-black backgrounds in dark mode (AMOLED). */
+    val amoled: Boolean = false,
     val glass: Boolean = false,
     val glassOpacity: Float = 0.6f,     // 0.35 .. 0.95
     val glassBlur: Float = 18f,         // 0 .. 40 (dp)
@@ -56,6 +58,7 @@ class SettingsStore(private val context: Context) {
         val DYNAMIC = booleanPreferencesKey("dynamic_color")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val ACCENT = stringPreferencesKey("accent")
+        val AMOLED = booleanPreferencesKey("amoled")
         val GLASS = booleanPreferencesKey("glass")
         val GLASS_OPACITY = floatPreferencesKey("glass_opacity")
         val GLASS_BLUR = floatPreferencesKey("glass_blur")
@@ -76,6 +79,7 @@ class SettingsStore(private val context: Context) {
             dynamicColor = p[Keys.DYNAMIC] ?: true,
             themeMode = p[Keys.THEME_MODE] ?: "system",
             accent = p[Keys.ACCENT] ?: "indigo",
+            amoled = p[Keys.AMOLED] ?: false,
             glass = p[Keys.GLASS] ?: false,
             glassOpacity = p[Keys.GLASS_OPACITY] ?: 0.6f,
             glassBlur = p[Keys.GLASS_BLUR] ?: 18f,
@@ -97,6 +101,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setDynamicColor(v: Boolean) = context.dataStore.edit { it[Keys.DYNAMIC] = v }
     suspend fun setThemeMode(v: String) = context.dataStore.edit { it[Keys.THEME_MODE] = v }
     suspend fun setAccent(v: String) = context.dataStore.edit { it[Keys.ACCENT] = v }
+    suspend fun setAmoled(v: Boolean) = context.dataStore.edit { it[Keys.AMOLED] = v }
     suspend fun setGlass(v: Boolean) = context.dataStore.edit { it[Keys.GLASS] = v }
     suspend fun setGlassOpacity(v: Float) = context.dataStore.edit { it[Keys.GLASS_OPACITY] = v }
     suspend fun setGlassBlur(v: Float) = context.dataStore.edit { it[Keys.GLASS_BLUR] = v }

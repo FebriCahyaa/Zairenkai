@@ -68,4 +68,7 @@
     <plurals name="settings_log_count">
         <item quantity="other">%1$d 行</item>
     </plurals>
+    <string name="theme_amoled">真の黒（AMOLED）</string>
+    <string name="theme_amoled_sub">ダークモードで背景を完全な黒にし、OLED 画面に優しい。</string>
+    <string name="theme_amoled_dark_only">ダークモードが有効なときに適用。</string>
 </resources>

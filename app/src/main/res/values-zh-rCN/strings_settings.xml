@@ -68,4 +68,7 @@
     <plurals name="settings_log_count">
         <item quantity="other">%1$d 行</item>
     </plurals>
+    <string name="theme_amoled">纯黑（AMOLED）</string>
+    <string name="theme_amoled_sub">深色模式下纯黑背景，对 OLED 屏幕更友好。</string>
+    <string name="theme_amoled_dark_only">在深色模式开启时生效。</string>
 </resources>

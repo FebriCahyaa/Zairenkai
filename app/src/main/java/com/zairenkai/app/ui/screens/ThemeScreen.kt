@@ -56,17 +56,28 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
             Card(shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(18.dp)) {
                     Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(10.dp))
-                    val modes = listOf("system" to R.string.theme_mode_system, "light" to R.string.theme_mode_light, "dark" to R.string.theme_mode_dark)
-                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        modes.forEachIndexed { i, (id, label) ->
-                            SegmentedButton(
-                                selected = s.themeMode == id,
-                                onClick = { vm.setThemeMode(id) },
-                                shape = SegmentedButtonDefaults.itemShape(i, modes.size),
-                                label = { Text(stringResource(label)) },
+                    Spacer(Modifier.height(12.dp))
+                    val modes = listOf(
+                        Triple("system", R.string.theme_mode_system, ZkIcons.Contrast),
+                        Triple("light", R.string.theme_mode_light, ZkIcons.Sun),
+                        Triple("dark", R.string.theme_mode_dark, ZkIcons.Moon),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        modes.forEach { (id, label, icon) ->
+                            ModeCard(stringResource(label), icon, s.themeMode == id, Modifier.weight(1f)) { vm.setThemeMode(id) }
+                        }
+                    }
+                    val dark = s.themeMode == "dark" || (s.themeMode == "system" && androidx.compose.foundation.isSystemInDarkTheme())
+                    Spacer(Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.theme_amoled), style = MaterialTheme.typography.titleSmall, color = if (dark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                stringResource(if (dark) R.string.theme_amoled_sub else R.string.theme_amoled_dark_only),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        Switch(checked = s.amoled, enabled = dark, onCheckedChange = { vm.setAmoled(it) })
                     }
                 }
             }
@@ -140,6 +151,24 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+/** A selectable mode tile with an icon and label. */
+@Composable
+private fun ModeCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = if (selected) cs.primaryContainer else cs.surfaceContainerHigh,
+        contentColor = if (selected) cs.onPrimaryContainer else cs.onSurface,
+        border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, cs.primary) else null,
+        modifier = modifier.clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick),
+    ) {
+        Column(Modifier.padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(icon, null)
+            Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
         }
     }
 }

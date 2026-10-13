@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
                 themeMode = s?.themeMode ?: "system",
                 accentId = s?.accent ?: "indigo",
                 dynamicColor = s?.dynamicColor ?: true,
+                amoled = s?.amoled ?: false,
                 glass = GlassConfig(
                     enabled = s?.glass ?: false,
                     opacity = s?.glassOpacity ?: 0.6f,

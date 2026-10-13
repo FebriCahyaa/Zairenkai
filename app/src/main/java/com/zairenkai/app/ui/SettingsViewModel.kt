@@ -28,6 +28,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     fun setDynamicColor(v: Boolean) = viewModelScope.launch { c.settings.setDynamicColor(v) }
     fun setThemeMode(v: String) = viewModelScope.launch { c.settings.setThemeMode(v) }
     fun setAccent(v: String) = viewModelScope.launch { c.settings.setAccent(v) }
+    fun setAmoled(v: Boolean) = viewModelScope.launch { c.settings.setAmoled(v) }
     fun setGlass(v: Boolean) = viewModelScope.launch { c.settings.setGlass(v) }
     fun setGlassOpacity(v: Float) = viewModelScope.launch { c.settings.setGlassOpacity(v) }
     fun setGlassBlur(v: Float) = viewModelScope.launch { c.settings.setGlassBlur(v) }

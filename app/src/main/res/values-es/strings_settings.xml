@@ -70,4 +70,7 @@
         <item quantity="many">%1$d líneas</item>
         <item quantity="other">%1$d líneas</item>
     </plurals>
+    <string name="theme_amoled">Negro puro (AMOLED)</string>
+    <string name="theme_amoled_sub">Fondos de negro puro en modo oscuro, mejor para pantallas OLED.</string>
+    <string name="theme_amoled_dark_only">Se aplica cuando el modo oscuro está activo.</string>
 </resources>

@@ -101,6 +101,7 @@ fun ZairenkaiTheme(
     themeMode: String = "system",
     accentId: String = "indigo",
     dynamicColor: Boolean = true,
+    amoled: Boolean = false,
     glass: GlassConfig = GlassConfig(),
     content: @Composable () -> Unit,
 ) {
@@ -110,12 +111,25 @@ fun ZairenkaiTheme(
         else -> isSystemInDarkTheme()
     }
     val context = LocalContext.current
-    val colorScheme = when {
+    val base = when {
         // minSdk is 31 (S), so dynamic color is always supported.
         dynamicColor ->
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         else -> schemeFor(accentById(accentId), dark)
     }
+    // AMOLED: pure-black backgrounds in dark mode. Containers stay a hair above
+    // black so cards remain legible; text/accent colours are untouched.
+    val colorScheme = if (dark && amoled) {
+        base.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceContainerLow = Color(0xFF0A0A0B),
+            surfaceContainer = Color(0xFF111113),
+            surfaceContainerHigh = Color(0xFF17171A),
+            surfaceContainerHighest = Color(0xFF1E1E22),
+        )
+    } else base
     SystemBarsEffect(dark)
     MaterialTheme(
         colorScheme = colorScheme,

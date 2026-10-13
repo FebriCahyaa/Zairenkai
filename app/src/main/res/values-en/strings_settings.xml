@@ -69,4 +69,7 @@
         <item quantity="one">%1$d line</item>
         <item quantity="other">%1$d lines</item>
     </plurals>
+    <string name="theme_amoled">Pure black (AMOLED)</string>
+    <string name="theme_amoled_sub">True-black backgrounds in dark mode, easier on OLED screens.</string>
+    <string name="theme_amoled_dark_only">Applies while dark mode is on.</string>
 </resources>
