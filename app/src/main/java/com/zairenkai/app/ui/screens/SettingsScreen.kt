@@ -9,6 +9,8 @@
  */
 package com.zairenkai.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,10 +30,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -39,11 +44,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,6 +63,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.BuildConfig
@@ -63,6 +71,10 @@ import com.zairenkai.app.R
 import com.zairenkai.app.data.AppSettings
 import com.zairenkai.app.ui.SettingsViewModel
 import com.zairenkai.app.ui.VmFactory
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import kotlinx.coroutines.launch
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import com.zairenkai.app.ui.device.DeviceEntryCard
 import com.zairenkai.app.ui.icons.ZkIcons
@@ -387,16 +399,42 @@ private fun SettingDetailSheet(detail: SettingDetail, checked: Boolean, onToggle
     }
 }
 
-/** Settings → ZKFC log: the level the kernel records, and the live log. */
+/** Settings → ZKFC log: the record level, a live log with a level filter, and
+ * actions to copy it or export a diagnostics .zip bundle. */
 @Composable
 fun LogsScreen(factory: VmFactory, onBack: () -> Unit) {
     val vm: SettingsViewModel = viewModel(factory = factory)
     val settings by vm.settings.collectAsState(initial = AppSettings())
     val log by vm.log.collectAsState()
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
     DisposableEffect(Unit) {
         vm.startLog()
         onDispose { vm.stopLog() }
     }
+
+    var filter by rememberSaveable { mutableStateOf("all") }
+    var status by remember { mutableStateOf<String?>(null) }
+    var bundle by remember { mutableStateOf<java.io.File?>(null) }
+    val savedMsg = stringResource(R.string.settings_log_saved)
+    val failMsg = stringResource(R.string.settings_log_save_failed)
+    val saver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        val file = bundle
+        if (uri != null && file != null) scope.launch {
+            status = runCatching {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } }
+                }
+                savedMsg
+            }.getOrDefault(failMsg)
+        }
+    }
+    val copiedMsg = stringResource(R.string.settings_log_copied)
+    val buildingMsg = stringResource(R.string.settings_log_building)
+
+    val shown = remember(log, filter) { if (filter == "all") log else log.filter { it.level == filter } }
+
     CollapsingScaffold(stringResource(R.string.settings_logs_title), onBack = onBack) { inner ->
         LazyColumn(
             Modifier.fillMaxSize().padding(inner),
@@ -405,7 +443,7 @@ fun LogsScreen(factory: VmFactory, onBack: () -> Unit) {
         ) {
             item {
                 Group {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(stringResource(R.string.settings_log_level_title), style = MaterialTheme.typography.titleSmall)
                         Text(stringResource(R.string.settings_log_level_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         @OptIn(ExperimentalMaterial3Api::class)
@@ -419,17 +457,65 @@ fun LogsScreen(factory: VmFactory, onBack: () -> Unit) {
                                 )
                             }
                         }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FilledTonalButton(
+                                onClick = {
+                                    scope.launch {
+                                        status = buildingMsg
+                                        val f = runCatching { vm.buildLogBundle() }.getOrNull()
+                                        if (f == null) { status = failMsg; return@launch }
+                                        bundle = f
+                                        status = null
+                                        saver.launch(f.name)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(ZkIcons.Package, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.settings_log_generate), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            OutlinedButton(onClick = { clipboard.setText(AnnotatedString(vm.logText())); status = copiedMsg }) {
+                                Icon(ZkIcons.Copy, null, Modifier.size(18.dp))
+                            }
+                        }
+                        status?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
                     }
                 }
             }
-            item { Text(stringResource(R.string.settings_live_log), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
-            if (log.isEmpty()) item {
+            item {
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.settings_live_log), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(
+                        pluralStringResource(R.plurals.settings_log_count, shown.size, shown.size),
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val options = listOf("all") + logLevels
+                    options.forEach { lvl ->
+                        FilterChip(
+                            selected = filter == lvl,
+                            onClick = { filter = lvl },
+                            label = { Text(if (lvl == "all") stringResource(R.string.settings_log_filter_all) else lvl.replaceFirstChar { it.uppercase() }) },
+                        )
+                    }
+                }
+            }
+            if (shown.isEmpty()) item {
                 Text(stringResource(R.string.settings_log_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            items(log.reversed(), key = { it.seq }) { rec ->
+            items(shown.reversed(), key = { it.seq }) { rec ->
                 Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
                     Row(Modifier.fillMaxWidth().padding(10.dp)) {
-                        Text(rec.level.take(1).uppercase(), style = MaterialTheme.typography.labelLarge, color = levelColor(rec.level))
+                        Surface(shape = RoundedCornerShape(6.dp), color = levelColor(rec.level).copy(alpha = 0.16f)) {
+                            Text(
+                                rec.level.take(1).uppercase(), style = MaterialTheme.typography.labelLarge, color = levelColor(rec.level),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
                         Spacer(Modifier.width(10.dp))
                         Text(rec.msg, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                     }

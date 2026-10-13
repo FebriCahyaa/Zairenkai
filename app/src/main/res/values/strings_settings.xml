@@ -61,4 +61,14 @@
     <string name="settings_mitigation_detail_b2">Menghormati batas termal dan daya pabrik — Zairenkai tidak memaksa melewati pembatasan vendor.</string>
     <string name="settings_mitigation_detail_b3">Tidak menyentuh thermal guard kernel; pengaman kernel tetap yang menentukan.</string>
     <string name="settings_mitigation_detail_note">Ditujukan untuk stabilitas pada perangkat kelas menengah atau mudah panas. Bisa dimatikan kapan saja.</string>
+    <string name="settings_log_generate">Buat paket (.zip)</string>
+    <string name="settings_log_filter_all">Semua</string>
+    <string name="settings_log_copied">Log disalin</string>
+    <string name="settings_log_building">Menyiapkan paket…</string>
+    <string name="settings_log_saved">Paket tersimpan</string>
+    <string name="settings_log_save_failed">Gagal menyimpan paket</string>
+    <plurals name="settings_log_count">
+        <item quantity="one">%1$d baris</item>
+        <item quantity="other">%1$d baris</item>
+    </plurals>
 </resources>

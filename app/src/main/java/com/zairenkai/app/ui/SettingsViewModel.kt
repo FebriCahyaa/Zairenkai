@@ -55,4 +55,13 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     }
 
     fun stopLog() { streaming = false }
+
+    /** Build the diagnostics .zip and return the file in the app cache. */
+    suspend fun buildLogBundle(): java.io.File =
+        com.zairenkai.app.data.diag.LogBundle.build(
+            c.appContext, c.repository, com.zairenkai.app.BuildConfig.VERSION_NAME, _log.value,
+        )
+
+    /** The buffered log as plain text, for copy/share. */
+    fun logText(): String = _log.value.joinToString("\n") { com.zairenkai.app.data.diag.LogBundle.formatRecord(it) }
 }

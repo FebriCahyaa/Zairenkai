@@ -59,4 +59,15 @@
     <string name="settings_mitigation_detail_b2">Respeta los límites de fábrica de calor y energía: Zairenkai nunca fuerza por encima de los topes del fabricante.</string>
     <string name="settings_mitigation_detail_b3">No toca el thermal guard del kernel; las protecciones del kernel siguen al mando.</string>
     <string name="settings_mitigation_detail_note">Pensado para la estabilidad en dispositivos de gama media o propensos al calor. Desactívalo cuando quieras.</string>
+    <string name="settings_log_generate">Exportar (.zip)</string>
+    <string name="settings_log_filter_all">Todos</string>
+    <string name="settings_log_copied">Registro copiado</string>
+    <string name="settings_log_building">Preparando el paquete…</string>
+    <string name="settings_log_saved">Paquete guardado</string>
+    <string name="settings_log_save_failed">No se pudo guardar el paquete</string>
+    <plurals name="settings_log_count">
+        <item quantity="one">%1$d línea</item>
+        <item quantity="many">%1$d líneas</item>
+        <item quantity="other">%1$d líneas</item>
+    </plurals>
 </resources>

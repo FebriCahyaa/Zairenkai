@@ -59,4 +59,13 @@
     <string name="settings_mitigation_detail_b2">工場出荷時の熱と電力の制限を尊重します—ベンダーの上限を強制突破しません。</string>
     <string name="settings_mitigation_detail_b3">カーネルのサーマルガードには触れず、カーネルの安全機構が引き続き優先されます。</string>
     <string name="settings_mitigation_detail_note">ミドルレンジや発熱しやすい端末での安定性向けです。いつでもオフにできます。</string>
+    <string name="settings_log_generate">書き出し (.zip)</string>
+    <string name="settings_log_filter_all">すべて</string>
+    <string name="settings_log_copied">ログをコピーしました</string>
+    <string name="settings_log_building">パッケージを準備中…</string>
+    <string name="settings_log_saved">パッケージを保存しました</string>
+    <string name="settings_log_save_failed">パッケージを保存できませんでした</string>
+    <plurals name="settings_log_count">
+        <item quantity="other">%1$d 行</item>
+    </plurals>
 </resources>

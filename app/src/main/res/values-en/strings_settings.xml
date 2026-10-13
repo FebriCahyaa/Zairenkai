@@ -59,4 +59,14 @@
     <string name="settings_mitigation_detail_b2">Respects the factory thermal and power limits — Zairenkai never forces past the vendor’s caps.</string>
     <string name="settings_mitigation_detail_b3">Does not touch the kernel thermal guard; the kernel safeguards stay in charge.</string>
     <string name="settings_mitigation_detail_note">Meant for stability on mid-range or heat-prone devices. Turn it off any time.</string>
+    <string name="settings_log_generate">Export (.zip)</string>
+    <string name="settings_log_filter_all">All</string>
+    <string name="settings_log_copied">Log copied</string>
+    <string name="settings_log_building">Preparing bundle…</string>
+    <string name="settings_log_saved">Bundle saved</string>
+    <string name="settings_log_save_failed">Could not save the bundle</string>
+    <plurals name="settings_log_count">
+        <item quantity="one">%1$d line</item>
+        <item quantity="other">%1$d lines</item>
+    </plurals>
 </resources>

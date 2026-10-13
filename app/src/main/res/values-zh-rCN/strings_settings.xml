@@ -59,4 +59,13 @@
     <string name="settings_mitigation_detail_b2">尊重出厂的热和功耗限制——Zairenkai 绝不强行突破厂商上限。</string>
     <string name="settings_mitigation_detail_b3">不触碰内核的 thermal guard；内核保护仍然主导。</string>
     <string name="settings_mitigation_detail_note">适用于中端或易发热设备的稳定性。可随时关闭。</string>
+    <string name="settings_log_generate">导出 (.zip)</string>
+    <string name="settings_log_filter_all">全部</string>
+    <string name="settings_log_copied">日志已复制</string>
+    <string name="settings_log_building">正在准备包…</string>
+    <string name="settings_log_saved">包已保存</string>
+    <string name="settings_log_save_failed">无法保存包</string>
+    <plurals name="settings_log_count">
+        <item quantity="other">%1$d 行</item>
+    </plurals>
 </resources>
