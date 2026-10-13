@@ -307,7 +307,7 @@ impl Zkfc {
         let rc = unsafe {
             libc::ioctl(
                 self.fd,
-                IOC_GET_VERSION as libc::c_ulong,
+                IOC_GET_VERSION as _,
                 &mut v as *mut VersionInfo,
             )
         };
@@ -323,7 +323,7 @@ impl Zkfc {
         let rc = unsafe {
             libc::ioctl(
                 self.fd,
-                IOC_GET_CAPABILITIES as libc::c_ulong,
+                IOC_GET_CAPABILITIES as _,
                 &mut c as *mut CapabilityInfo,
             )
         };
@@ -338,7 +338,7 @@ impl Zkfc {
         let rc = unsafe {
             libc::ioctl(
                 self.fd,
-                IOC_GET_LICENSE as libc::c_ulong,
+                IOC_GET_LICENSE as _,
                 &mut status as *mut LicenseStatus,
             )
         };
@@ -387,7 +387,7 @@ impl Zkfc {
         let rc = unsafe {
             libc::ioctl(
                 self.fd,
-                IOC_TASK_BOOST as libc::c_ulong,
+                IOC_TASK_BOOST as _,
                 &mut req as *mut TaskBoost,
             )
         };
@@ -414,7 +414,7 @@ impl Zkfc {
         let rc = unsafe {
             libc::ioctl(
                 self.fd,
-                IOC_CPUFREQ_QOS as libc::c_ulong,
+                IOC_CPUFREQ_QOS as _,
                 &req as *const CpufreqQos,
             )
         };
@@ -447,7 +447,7 @@ impl Zkfc {
         let rc = unsafe {
             libc::ioctl(
                 self.fd,
-                IOC_INPUT_BOOST as libc::c_ulong,
+                IOC_INPUT_BOOST as _,
                 &req as *const InputBoost,
             )
         };
@@ -490,7 +490,7 @@ impl Zkfc {
         let rc = unsafe {
             libc::ioctl(
                 self.fd,
-                IOC_THERMAL_GUARD as libc::c_ulong,
+                IOC_THERMAL_GUARD as _,
                 &cfg as *const ThermalGuard,
             )
         };
