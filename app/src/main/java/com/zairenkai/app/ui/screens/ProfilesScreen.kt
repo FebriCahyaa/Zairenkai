@@ -43,6 +43,9 @@ import com.zairenkai.app.data.text
 import com.zairenkai.app.ui.ProfilesUi
 import com.zairenkai.app.ui.ProfilesViewModel
 import com.zairenkai.app.ui.VmFactory
+import com.zairenkai.app.ui.components.CollapsingScaffold
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.zairenkai.app.ui.holdMessage
 import com.zairenkai.app.ui.modeSummaryLine
 
@@ -54,12 +57,12 @@ fun ProfilesScreen(factory: VmFactory) {
     val busy = ui.busy
     val status = ui.status
 
-    Scaffold(containerColor = Color.Transparent, topBar = { TopAppBar(title = { Text(stringResource(R.string.profiles_title)) }) }) { inner ->
+    CollapsingScaffold(stringResource(R.string.profiles_title), onBack = null) { inner ->
         if (ui.loading) {
             Box(Modifier.fillMaxSize().padding(inner), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            return@Scaffold
+            return@CollapsingScaffold
         }
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -196,19 +199,23 @@ private fun ProfileCard(
     enabled: Boolean,
     onApply: () -> Unit,
 ) {
-    val container = if (active) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer
+    val cs = MaterialTheme.colorScheme
+    val container = if (active) cs.secondaryContainer else cs.surfaceContainer
     val name = stringResource(profile.nameRes)
     val activeSuffix = stringResource(R.string.a11y_suffix_active)
     val unsupportedSuffix = stringResource(R.string.a11y_suffix_unsupported)
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = container,
+        border = if (active) BorderStroke(1.5.dp, cs.primary) else null,
         modifier = Modifier.semantics {
             contentDescription = name + (if (active) activeSuffix else "") + (if (unsupported) unsupportedSuffix else "")
         },
     ) {
-        Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(iconFor(profile.icon), null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(16.dp), color = if (active) cs.primary.copy(alpha = 0.16f) else cs.surfaceContainerHighest) {
+                Icon(iconFor(profile.icon), null, Modifier.padding(11.dp).size(26.dp), tint = cs.primary)
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
