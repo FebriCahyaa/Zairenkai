@@ -38,7 +38,10 @@ class TweaksViewModel(private val c: AppContainer) : ViewModel() {
     init { load() }
 
     fun load() = viewModelScope.launch {
-        val lite = c.settings.settings.first().liteMode
+        // Device mitigation keeps the engine on the same conservative tweak set
+        // as lite mode, so either setting requests the filtered list.
+        val s = c.settings.settings.first()
+        val lite = s.liteMode || s.deviceMitigation
         _ui.value = _ui.value.copy(loading = true, lite = lite)
         if (!c.repository.rootAvailable()) {
             _ui.value = TweaksUi(loading = false, lite = lite, loadError = uiText(R.string.tweaks_load_no_root))

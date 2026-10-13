@@ -54,11 +54,15 @@ class SettingsRenderTest {
     fun rowsReachTheirActions() {
         show(false)
         rule.onRoot().captureRoboImage(shotPath("settings_light.png"))
-        for (id in listOf(R.string.theme_title, R.string.language_title, R.string.settings_lite_title, R.string.settings_permissions_title,
+        for (id in listOf(R.string.theme_title, R.string.language_title, R.string.settings_permissions_title,
             R.string.settings_logs_title, R.string.legal_title, R.string.oss_title)) {
             rule.onNodeWithText(str(id)).performScrollTo().performClick()
         }
-        assertEquals(listOf("theme", "language", "lite:false", "permissions", "logs", "legal", "licenses"), calls)
+        // The lite row opens a detail sheet; its toggle is what reaches onLite.
+        rule.onNodeWithText(str(R.string.settings_lite_title)).performScrollTo().performClick()
+        rule.onNodeWithText(str(R.string.settings_detail_what_happens)).assertExists()
+        rule.onNodeWithText(str(R.string.settings_detail_on)).performClick()
+        assertEquals(listOf("theme", "language", "permissions", "logs", "legal", "licenses", "lite:false"), calls)
     }
 
     @Test

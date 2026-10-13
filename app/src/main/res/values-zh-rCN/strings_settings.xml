@@ -45,4 +45,18 @@
     <string name="about_license_title">许可与致谢</string>
     <string name="about_license_body">ZKFC 内核采用 GPL-2.0 许可。应用、引擎、模块和工具采用 Zairenkai Proprietary 许可。字体为 Google Sans Flex（OFL-1.1）。Ed25519/SHA-512 校验器基于 TweetNaCl（公有领域）。</string>
     <string name="about_copyright">© 2026 FebriCahyaa 保留所有权利。</string>
+    <string name="settings_detail_open">查看详情</string>
+    <string name="settings_detail_what_happens">会发生什么</string>
+    <string name="settings_detail_on">开</string>
+    <string name="settings_detail_off">关</string>
+    <string name="settings_lite_detail_summary">简化调校：仅显示和应用较安全的选项，隐藏重型调校。</string>
+    <string name="settings_lite_detail_b1">隐藏重型／激进的调校——如调度器加速、GPU 强制锁频、zram 设置、LMK minfree、I/O 亲和性、TCP 低延迟和屏幕色彩。</string>
+    <string name="settings_lite_detail_b2">仅安全子集可通过 zperfd 引擎读写。</string>
+    <string name="settings_lite_detail_b3">不更改当前的配置文件或模式——仅限制手动调校列表。</string>
+    <string name="settings_lite_detail_note">不禁用任何保护。可随时关闭以恢复所有调校。</string>
+    <string name="settings_mitigation_detail_summary">针对易发热或耗电敏感的设备：让 Zairenkai 保持在保守的调校集合。</string>
+    <string name="settings_mitigation_detail_b1">对调校列表应用与精简模式相同的保守过滤。</string>
+    <string name="settings_mitigation_detail_b2">尊重出厂的热和功耗限制——Zairenkai 绝不强行突破厂商上限。</string>
+    <string name="settings_mitigation_detail_b3">不触碰内核的 thermal guard；内核保护仍然主导。</string>
+    <string name="settings_mitigation_detail_note">适用于中端或易发热设备的稳定性。可随时关闭。</string>
 </resources>

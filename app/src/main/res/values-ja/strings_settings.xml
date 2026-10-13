@@ -45,4 +45,18 @@
     <string name="about_license_title">ライセンス &amp; クレジット</string>
     <string name="about_license_body">ZKFC カーネルは GPL-2.0 でライセンスされています。アプリ、エンジン、モジュール、ツールは Zairenkai Proprietary でライセンスされています。フォントは Google Sans Flex（OFL-1.1）。Ed25519/SHA-512 検証機能は TweetNaCl（パブリックドメイン）に基づいています。</string>
     <string name="about_copyright">© 2026 FebriCahyaa. All rights reserved.</string>
+    <string name="settings_detail_open">詳細を見る</string>
+    <string name="settings_detail_what_happens">何が起こるか</string>
+    <string name="settings_detail_on">オン</string>
+    <string name="settings_detail_off">オフ</string>
+    <string name="settings_lite_detail_summary">Tweaks を簡素化します。より安全な設定のみを表示・適用し、重い調整は隠します。</string>
+    <string name="settings_lite_detail_b1">重い／攻撃的な調整（スケジューラブースト、GPU 強制クロック、zram 設定、LMK minfree、I/O アフィニティ、TCP 低レイテンシ、画面色など）を隠します。</string>
+    <string name="settings_lite_detail_b2">安全なサブセットのみを zperfd エンジン経由で読み書きできます。</string>
+    <string name="settings_lite_detail_b3">有効なプロファイルやモードは変更せず、手動調整リストを制限するだけです。</string>
+    <string name="settings_lite_detail_note">何の安全機構も無効化しません。いつでもオフにして全調整を戻せます。</string>
+    <string name="settings_mitigation_detail_summary">発熱や電力に敏感な端末向け：Zairenkai を保守的な調整セットに保ちます。</string>
+    <string name="settings_mitigation_detail_b1">ライトモードと同じ保守的なフィルタリングを調整リストに適用します。</string>
+    <string name="settings_mitigation_detail_b2">工場出荷時の熱と電力の制限を尊重します—ベンダーの上限を強制突破しません。</string>
+    <string name="settings_mitigation_detail_b3">カーネルのサーマルガードには触れず、カーネルの安全機構が引き続き優先されます。</string>
+    <string name="settings_mitigation_detail_note">ミドルレンジや発熱しやすい端末での安定性向けです。いつでもオフにできます。</string>
 </resources>

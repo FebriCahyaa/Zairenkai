@@ -128,6 +128,7 @@ internal fun SettingsContent(
     onMitigation: (Boolean) -> Unit,
 ) {
     val granted = permissions.count { it.value }
+    var detail by rememberSaveable { mutableStateOf<SettingDetail?>(null) }
     CollapsingScaffold(stringResource(R.string.settings_title), onBack = null) { inner ->
         LazyColumn(
             Modifier.fillMaxSize().padding(inner),
@@ -152,9 +153,15 @@ internal fun SettingsContent(
             item { Header(R.string.settings_section_performance) }
             item {
                 Group {
-                    ToggleRow(ZkIcons.Bolt, stringResource(R.string.settings_lite_title), stringResource(R.string.settings_lite_sub), settings.liteMode, onLite)
+                    DetailToggleRow(
+                        ZkIcons.Bolt, stringResource(R.string.settings_lite_title), stringResource(R.string.settings_lite_sub),
+                        settings.liteMode, onLite, onDetail = { detail = SettingDetail.LITE },
+                    )
                     Divider()
-                    ToggleRow(ZkIcons.Thermometer, stringResource(R.string.settings_mitigation_title), stringResource(R.string.settings_mitigation_sub), settings.deviceMitigation, onMitigation)
+                    DetailToggleRow(
+                        ZkIcons.Thermometer, stringResource(R.string.settings_mitigation_title), stringResource(R.string.settings_mitigation_sub),
+                        settings.deviceMitigation, onMitigation, onDetail = { detail = SettingDetail.MITIGATION },
+                    )
                 }
             }
 
@@ -186,6 +193,14 @@ internal fun SettingsContent(
                     NavRow(ZkIcons.Package, stringResource(R.string.oss_title), stringResource(R.string.legal_third_party_summary), onOpenLicenses)
                 }
             }
+        }
+        detail?.let { which ->
+            SettingDetailSheet(
+                detail = which,
+                checked = if (which == SettingDetail.LITE) settings.liteMode else settings.deviceMitigation,
+                onToggle = if (which == SettingDetail.LITE) onLite else onMitigation,
+                onDismiss = { detail = null },
+            )
         }
     }
 }
@@ -270,6 +285,105 @@ private fun ToggleRow(icon: ImageVector, title: String, sub: String, checked: Bo
         }
         Spacer(Modifier.width(8.dp))
         Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+/** The two performance settings whose effect is explained in a detail sheet. */
+private enum class SettingDetail(
+    val icon: ImageVector,
+    val title: Int,
+    val summary: Int,
+    val bullets: List<Int>,
+    val note: Int,
+) {
+    LITE(
+        ZkIcons.Bolt, R.string.settings_lite_title, R.string.settings_lite_detail_summary,
+        listOf(R.string.settings_lite_detail_b1, R.string.settings_lite_detail_b2, R.string.settings_lite_detail_b3),
+        R.string.settings_lite_detail_note,
+    ),
+    MITIGATION(
+        ZkIcons.Thermometer, R.string.settings_mitigation_title, R.string.settings_mitigation_detail_summary,
+        listOf(R.string.settings_mitigation_detail_b1, R.string.settings_mitigation_detail_b2, R.string.settings_mitigation_detail_b3),
+        R.string.settings_mitigation_detail_note,
+    ),
+}
+
+/** A toggle row with an info button that opens the setting's detail sheet. */
+@Composable
+private fun DetailToggleRow(
+    icon: ImageVector,
+    title: String,
+    sub: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    onDetail: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(Modifier.weight(1f).clickable(onClick = onDetail), verticalAlignment = Alignment.CenterVertically) {
+            IconTile(icon)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f, fill = false))
+                    Spacer(Modifier.width(6.dp))
+                    Icon(ZkIcons.Info, stringResource(R.string.settings_detail_open), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingDetailSheet(detail: SettingDetail, checked: Boolean, onToggle: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconTile(detail.icon)
+                Spacer(Modifier.width(14.dp))
+                Text(stringResource(detail.title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            }
+            Text(stringResource(detail.summary), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.settings_detail_what_happens), style = MaterialTheme.typography.titleSmall)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                detail.bullets.forEach { b ->
+                    Row {
+                        Icon(ZkIcons.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp).padding(top = 2.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(stringResource(b), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(ZkIcons.Shield, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(stringResource(detail.note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch) { onToggle(it) },
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(if (checked) R.string.settings_detail_on else R.string.settings_detail_off),
+                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
+                    )
+                    Switch(checked = checked, onCheckedChange = null)
+                }
+            }
+        }
     }
 }
 

@@ -47,4 +47,18 @@
     <string name="about_license_body">Kernel ZKFC berlisensi GPL-2.0. Aplikasi, engine, modul, dan tools berlisensi Zairenkai Proprietary. Font Google Sans Flex (OFL-1.1). Verifier Ed25519/SHA-512 berbasis TweetNaCl (domain publik).</string>
     <string name="about_copyright">© 2026 FebriCahyaa. Hak cipta dilindungi.</string>
     <string name="about_tagline" translatable="false">Tweaks Suite • Material 3 Expressive</string>
+    <string name="settings_detail_open">Lihat detail</string>
+    <string name="settings_detail_what_happens">Apa yang terjadi</string>
+    <string name="settings_detail_on">Aktif</string>
+    <string name="settings_detail_off">Nonaktif</string>
+    <string name="settings_lite_detail_summary">Menyederhanakan Tweaks: hanya kontrol yang lebih aman yang ditampilkan dan diterapkan; tweak berat disembunyikan.</string>
+    <string name="settings_lite_detail_b1">Menyembunyikan tweak berat/agresif — mis. scheduler boost, GPU force clock, penyetelan zram, LMK minfree, I/O affinity, TCP low latency, dan warna layar.</string>
+    <string name="settings_lite_detail_b2">Hanya subset aman yang bisa dibaca dan ditulis melalui engine zperfd.</string>
+    <string name="settings_lite_detail_b3">Tidak mengubah profil atau mode yang sedang aktif — hanya membatasi daftar tweak manual.</string>
+    <string name="settings_lite_detail_note">Tidak menonaktifkan pengaman apa pun. Bisa dimatikan kapan saja untuk membuka kembali semua tweak.</string>
+    <string name="settings_mitigation_detail_summary">Untuk perangkat yang mudah panas atau boros daya: menjaga Zairenkai tetap pada set penyetelan konservatif.</string>
+    <string name="settings_mitigation_detail_b1">Menerapkan penyaringan konservatif yang sama seperti mode Lite pada daftar tweak.</string>
+    <string name="settings_mitigation_detail_b2">Menghormati batas termal dan daya pabrik — Zairenkai tidak memaksa melewati pembatasan vendor.</string>
+    <string name="settings_mitigation_detail_b3">Tidak menyentuh thermal guard kernel; pengaman kernel tetap yang menentukan.</string>
+    <string name="settings_mitigation_detail_note">Ditujukan untuk stabilitas pada perangkat kelas menengah atau mudah panas. Bisa dimatikan kapan saja.</string>
 </resources>

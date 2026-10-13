@@ -45,4 +45,18 @@
     <string name="about_license_title">Licencias y créditos</string>
     <string name="about_license_body">El kernel ZKFC tiene licencia GPL-2.0. La app, el motor, el módulo y las herramientas tienen licencia Zairenkai Proprietary. Fuente Google Sans Flex (OFL-1.1). Verificador Ed25519/SHA-512 basado en TweetNaCl (dominio público).</string>
     <string name="about_copyright">© 2026 FebriCahyaa. Todos los derechos reservados.</string>
+    <string name="settings_detail_open">Ver detalle</string>
+    <string name="settings_detail_what_happens">Qué ocurre</string>
+    <string name="settings_detail_on">Activado</string>
+    <string name="settings_detail_off">Desactivado</string>
+    <string name="settings_lite_detail_summary">Simplifica los Ajustes: solo se muestran y aplican los controles más seguros; los ajustes pesados se ocultan.</string>
+    <string name="settings_lite_detail_b1">Oculta los ajustes pesados o agresivos: p. ej. boost del planificador, GPU force clock, tamaño de zram, LMK minfree, afinidad de E/S, TCP de baja latencia y color de pantalla.</string>
+    <string name="settings_lite_detail_b2">Solo el subconjunto seguro puede leerse y escribirse a través del motor zperfd.</string>
+    <string name="settings_lite_detail_b3">No cambia el perfil ni el modo activo: solo limita la lista de ajustes manuales.</string>
+    <string name="settings_lite_detail_note">No desactiva ninguna protección. Desactívalo cuando quieras para recuperar todos los ajustes.</string>
+    <string name="settings_mitigation_detail_summary">Para dispositivos sensibles al calor o al consumo: mantiene Zairenkai en un conjunto de ajustes conservador.</string>
+    <string name="settings_mitigation_detail_b1">Aplica a la lista de ajustes el mismo filtrado conservador que el modo ligero.</string>
+    <string name="settings_mitigation_detail_b2">Respeta los límites de fábrica de calor y energía: Zairenkai nunca fuerza por encima de los topes del fabricante.</string>
+    <string name="settings_mitigation_detail_b3">No toca el thermal guard del kernel; las protecciones del kernel siguen al mando.</string>
+    <string name="settings_mitigation_detail_note">Pensado para la estabilidad en dispositivos de gama media o propensos al calor. Desactívalo cuando quieras.</string>
 </resources>

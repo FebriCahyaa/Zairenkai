@@ -13,4 +13,18 @@
 
     <!-- About screen -->
     <string name="about_license_title">Licences &amp; credits</string>
+    <string name="settings_detail_open">See detail</string>
+    <string name="settings_detail_what_happens">What happens</string>
+    <string name="settings_detail_on">On</string>
+    <string name="settings_detail_off">Off</string>
+    <string name="settings_lite_detail_summary">Simplifies Tweaks: only the safer controls are shown and applied; the heavy tweaks are hidden.</string>
+    <string name="settings_lite_detail_b1">Hides the heavy/aggressive tweaks — e.g. scheduler boost, GPU force clock, zram sizing, LMK minfree, I/O affinity, TCP low latency and display colour.</string>
+    <string name="settings_lite_detail_b2">Only the safe subset can be read and written through the zperfd engine.</string>
+    <string name="settings_lite_detail_b3">Does not change the active profile or mode — it only limits the manual tweak list.</string>
+    <string name="settings_lite_detail_note">Disables no safeguard. Turn it off any time to bring back every tweak.</string>
+    <string name="settings_mitigation_detail_summary">For heat- or power-sensitive devices: keeps Zairenkai on a conservative set of tweaks.</string>
+    <string name="settings_mitigation_detail_b1">Applies the same conservative filtering to the tweak list as lite mode.</string>
+    <string name="settings_mitigation_detail_b2">Respects the factory thermal and power limits — Zairenkai never forces past the vendor’s caps.</string>
+    <string name="settings_mitigation_detail_b3">Does not touch the kernel thermal guard; the kernel safeguards stay in charge.</string>
+    <string name="settings_mitigation_detail_note">Meant for stability on mid-range or heat-prone devices. Turn it off any time.</string>
 </resources>
