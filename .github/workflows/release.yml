@@ -50,7 +50,7 @@ jobs:
           APK=$(find app/build/outputs/apk/standard/release -name '*.apk' | head -1)
           BT="$ANDROID_HOME/build-tools/37.0.0"
           "$BT/apksigner" verify --verbose "$APK"
-          EXPECTED='02B4596737261F5C154CCC323B27467A483034A5880A9DB0822EEED66FAC1944'
+          EXPECTED='D7E8314BD8E04B8B8598D5AFE98BBAC1D5EB2DF4930EA0F81D95741778FEC'
           ACTUAL=$(
             "$BT/apksigner" verify --print-certs "$APK" |
               sed -n 's/Signer #1 certificate SHA-256 digest: //p' |
