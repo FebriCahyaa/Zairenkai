@@ -28,14 +28,7 @@
     <string name="system_label_key_fingerprint">Sidik kunci</string>
     <string name="system_label_kernel_binding">Binding kernel</string>
     <string name="system_label_licensee">Pemegang lisensi</string>
-    <string name="system_install_token">Pasang token (.zkl)</string>
-    <string name="system_license_note">Token API hanya diterbitkan oleh pemilik Zairenkai atas permintaan. Lihat docs/security/API_TOKENS.md.</string>
-    <string name="system_token_read_failed">Gagal membaca file token.</string>
-    <!-- %1$s: licensee name from the token, or system_token_this_device -->
-    <string name="system_token_installed">Token terpasang untuk %1$s.</string>
-    <string name="system_token_this_device">perangkat</string>
-    <!-- %1$s: raw license state reported by the engine -->
-    <string name="system_token_rejected">Ditolak: %1$s</string>
+    <string name="system_license_note">Token API ditanam di kernel saat build dan diverifikasi di sana (tanda tangan Ed25519 pemilik). Aplikasi hanya membaca statusnya — kamu tidak perlu memasukkan token apa pun.</string>
 
     <!-- Caller identity -->
     <string name="system_caller_title">Identitas pemanggil</string>

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
  * System: identity (UID/GID/groups), API security reports, ZKFC license and
- * access policy. Includes ZKFC API Token install.
+ * access policy. The API token is embedded in the kernel at build time and
+ * verified there (Ed25519); the app only reads and reports its status — it
+ * never asks the user to supply or install a token.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.screens
 
 import com.zairenkai.app.ui.components.CollapsingScaffold
-import android.content.Context
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,9 +20,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.R
-import com.zairenkai.app.core.text.UiText
-import com.zairenkai.app.core.text.asString
-import com.zairenkai.app.core.text.uiText
 import com.zairenkai.app.data.SignatureGuard
 import com.zairenkai.app.data.SignatureState
 import com.zairenkai.app.ui.SystemViewModel
@@ -32,11 +28,6 @@ import com.zairenkai.app.ui.components.SectionCard
 import com.zairenkai.app.ui.theme.ZkBad
 import com.zairenkai.app.ui.theme.ZkGood
 import com.zairenkai.app.ui.theme.ZkWarn
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,28 +35,6 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
     val vm: SystemViewModel = viewModel(factory = factory)
     val ui by vm.ui.collectAsState()
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var tokenMsg by remember { mutableStateOf<UiText?>(null) }
-
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            val path = withContext(Dispatchers.IO) { copyToCache(ctx, uri) }
-            if (path == null) { tokenMsg = uiText(R.string.system_token_read_failed); return@launch }
-            val res = try {
-                vm.installToken(path)
-            } finally {
-                // The engine keeps its own persistent copy; never leave token
-                // material behind in the app cache.
-                withContext(NonCancellable + Dispatchers.IO) { File(path).delete() }
-            }
-            tokenMsg = if (res.state == "valid") {
-                uiText(R.string.system_token_installed, res.token?.licensee ?: uiText(R.string.system_token_this_device))
-            } else {
-                uiText(R.string.system_token_rejected, res.state)
-            }
-            vm.refresh()
-        }
-    }
 
     CollapsingScaffold(stringResource(R.string.system_title), onBack = null) { inner ->
         Column(
@@ -109,17 +78,11 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
                     LabeledRow(stringResource(R.string.system_label_kernel_binding), it.take(16) + "…")
                 }
                 lic?.token?.let { LabeledRow(stringResource(R.string.system_label_licensee), it.licensee) }
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = { picker.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.system_install_token)) }
-                tokenMsg?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                }
                 Text(
                     stringResource(R.string.system_license_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier.padding(top = 10.dp),
                 )
             }
 
@@ -194,17 +157,4 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
             }
         }
     }
-}
-
-private fun copyToCache(ctx: Context, uri: android.net.Uri): String? = try {
-    val dir = File(ctx.cacheDir, "token").apply { mkdirs() }
-    val out = File(dir, "import.zkl")
-    ctx.contentResolver.openInputStream(uri)?.use { input ->
-        out.outputStream().use { input.copyTo(it) }
-    }
-    // App-private files are owner-only (0600); root reads them without the
-    // file being exposed to other apps, so it is never made world-readable.
-    out.absolutePath
-} catch (e: Exception) {
-    null
 }

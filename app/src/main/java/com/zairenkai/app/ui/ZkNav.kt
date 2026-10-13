@@ -6,21 +6,32 @@
 package com.zairenkai.app.ui
 
 import com.zairenkai.app.ui.icons.ZkIcons
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -53,6 +64,25 @@ fun ZairenkaiRoot(container: AppContainer) {
     val factory = remember(container) { VmFactory(container) }
 
     val glass = com.zairenkai.app.ui.theme.LocalGlass.current
+
+    // The bottom navigation hides as content scrolls up (reading down the page)
+    // and returns on the first upward scroll, so long lists get the full height.
+    val backStack by nav.currentBackStackEntryAsState()
+    val currentDest = backStack?.destination
+    var barVisible by remember { mutableStateOf(true) }
+    val hideThreshold = with(LocalDensity.current) { 6.dp.toPx() }
+    // A new screen always starts with the bar shown.
+    LaunchedEffect(currentDest?.route) { barVisible = true }
+    val barScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -hideThreshold) barVisible = false       // content moving up → scrolling down
+                else if (available.y > hideThreshold) barVisible = true    // content moving down → scrolling up
+                return Offset.Zero
+            }
+        }
+    }
+
     // Inset ownership: this scaffold handles only the bottom (its navigation
     // bar draws behind the system navigation bar). Each screen owns the top —
     // its top app bar draws behind the status bar — so it is never padded twice.
@@ -60,8 +90,12 @@ fun ZairenkaiRoot(container: AppContainer) {
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
-            val backStack by nav.currentBackStackEntryAsState()
-            val current = backStack?.destination
+            val current = currentDest
+            AnimatedVisibility(
+                visible = barVisible,
+                enter = slideInVertically(spring(stiffness = 700f)) { it },
+                exit = slideOutVertically(spring(stiffness = 700f)) { it },
+            ) {
             NavigationBar(
                 containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
                     MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass,
@@ -95,12 +129,13 @@ fun ZairenkaiRoot(container: AppContainer) {
                     )
                 }
             }
+            }
         },
     ) { inner ->
         NavHost(
             navController = nav,
             startDestination = Dest.DASHBOARD.route,
-            modifier = Modifier.padding(inner).consumeWindowInsets(inner),
+            modifier = Modifier.padding(inner).consumeWindowInsets(inner).nestedScroll(barScroll),
             // Smooth, springy cross-fade + subtle zoom between tabs.
             enterTransition = {
                 fadeIn(spring(stiffness = 600f)) + scaleIn(spring(stiffness = 500f), initialScale = 0.96f)

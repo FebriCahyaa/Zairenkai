@@ -28,14 +28,7 @@
     <string name="system_label_key_fingerprint">Key fingerprint</string>
     <string name="system_label_kernel_binding">Kernel binding</string>
     <string name="system_label_licensee">Licensee</string>
-    <string name="system_install_token">Install token (.zkl)</string>
-    <string name="system_license_note">API tokens are only issued by the Zairenkai owner on request. See docs/security/API_TOKENS.md.</string>
-    <string name="system_token_read_failed">Failed to read the token file.</string>
-    <!-- %1$s: licensee name from the token, or system_token_this_device -->
-    <string name="system_token_installed">Token installed for %1$s.</string>
-    <string name="system_token_this_device">this device</string>
-    <!-- %1$s: raw license state reported by the engine -->
-    <string name="system_token_rejected">Rejected: %1$s</string>
+    <string name="system_license_note">The API token is embedded in the kernel at build time and verified there (the owner’s Ed25519 signature). The app only reads its status — you never enter a token.</string>
 
     <!-- Caller identity -->
     <string name="system_caller_title">Caller identity</string>

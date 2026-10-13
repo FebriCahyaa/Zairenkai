@@ -28,14 +28,7 @@
     <string name="system_label_key_fingerprint">キーのフィンガープリント</string>
     <string name="system_label_kernel_binding">カーネルバインディング</string>
     <string name="system_label_licensee">ライセンシー</string>
-    <string name="system_install_token">トークンをインストール（.zkl）</string>
-    <string name="system_license_note">APIトークンは、リクエストに応じて Zairenkai のオーナーのみが発行します。docs/security/API_TOKENS.md を参照してください。</string>
-    <string name="system_token_read_failed">トークンファイルを読み取れませんでした。</string>
-    <!-- %1$s: licensee name from the token, or system_token_this_device -->
-    <string name="system_token_installed">%1$s 向けのトークンをインストールしました。</string>
-    <string name="system_token_this_device">このデバイス</string>
-    <!-- %1$s: raw license state reported by the engine -->
-    <string name="system_token_rejected">拒否: %1$s</string>
+    <string name="system_license_note">API トークンはビルド時にカーネルに埋め込まれ、そこで検証されます（所有者の Ed25519 署名）。アプリは状態を読むだけで、トークンを入力する必要はありません。</string>
 
     <!-- Caller identity -->
     <string name="system_caller_title">呼び出し元の識別情報</string>

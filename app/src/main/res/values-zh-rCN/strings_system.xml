@@ -28,14 +28,7 @@
     <string name="system_label_key_fingerprint">密钥指纹</string>
     <string name="system_label_kernel_binding">内核绑定</string>
     <string name="system_label_licensee">被许可人</string>
-    <string name="system_install_token">安装令牌（.zkl）</string>
-    <string name="system_license_note">API 令牌仅由 Zairenkai 所有者应请求签发。详见 docs/security/API_TOKENS.md。</string>
-    <string name="system_token_read_failed">读取令牌文件失败。</string>
-    <!-- %1$s: licensee name from the token, or system_token_this_device -->
-    <string name="system_token_installed">已为 %1$s 安装令牌。</string>
-    <string name="system_token_this_device">本设备</string>
-    <!-- %1$s: raw license state reported by the engine -->
-    <string name="system_token_rejected">已拒绝：%1$s</string>
+    <string name="system_license_note">API 令牌在构建时嵌入内核并在内核中验证（所有者的 Ed25519 签名）。应用仅读取其状态——无需输入任何令牌。</string>
 
     <!-- Caller identity -->
     <string name="system_caller_title">调用方身份</string>

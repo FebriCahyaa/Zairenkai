@@ -40,10 +40,4 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
             zperf = runCatching { c.zperf.probe() }.getOrNull(),
         )
     }
-
-    /** Install an API token staged at [path]; malformed engine output is a rejection, not a crash. */
-    suspend fun installToken(path: String): LicenseResult =
-        runCatching { c.repository.installToken(path) }.getOrElse {
-            LicenseResult(ok = false, state = "engine_error", error = it.message)
-        }
 }
