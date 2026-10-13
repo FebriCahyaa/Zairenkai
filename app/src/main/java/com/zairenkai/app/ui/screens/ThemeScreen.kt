@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -21,10 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import com.zairenkai.app.ui.icons.Bolt
-import com.zairenkai.app.ui.icons.ChevronLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -104,7 +101,7 @@ fun ThemeScreen(factory: VmFactory, onBack: () -> Unit) {
                                     .clickable(enabled = !s.dynamicColor) { vm.setAccent(a.id) },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                if (selected) Icon(Icons.Rounded.Check, null, tint = Color.White)
+                                if (selected) Icon(ZkIcons.Check, null, tint = Color.White)
                             }
                         }
                     }
@@ -187,7 +184,7 @@ private fun ThemePreview(s: AppSettings) {
             color = Color.White.copy(alpha = 0.14f + 0.14f * lift),
         ) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Bolt, null, tint = Color.White)
+                Icon(ZkIcons.Bolt, null, tint = Color.White)
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text("Zairenkai", color = Color.White, fontWeight = FontWeight.Bold,

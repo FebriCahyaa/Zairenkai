@@ -114,11 +114,13 @@ grep -q 'profile.base_of(&effective) != "powersave"' rust/zperfd/src/main.rs
 grep -q 'custom put' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
 ! grep -q 'custom.toml' app/src/main/java/com/zairenkai/app/data/ZperfClient.kt
 
-# Setup wizard: the system check is read-only and probes each layer; a first
-# profile is applied through zperfd only (never a direct write).
+# Setup wizard: the system check is read-only and probes each layer; setup
+# applies nothing (profiles are applied through zperfd from the Profiles tab),
+# and Next is held until the legal terms are accepted.
 grep -q 'fun setupChecks' app/src/main/java/com/zairenkai/app/ui/onboarding/SetupChecks.kt
-grep -q 'c.zperf.apply(profile.mode)' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
-! grep -q 'RootShell.run' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
+! grep -q 'zperf.apply\|RootShell.run' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
+grep -q 'c.zperf.apply(mode)' app/src/main/java/com/zairenkai/app/ui/ProfilesViewModel.kt
+grep -q 'SetupStep.LEGAL -> legalChecked' app/src/main/java/com/zairenkai/app/ui/onboarding/OnboardingViewModel.kt
 
 # Monitor redesign: battery and frame telemetry are read-only zperfd
 # commands, the FPS recorder only streams them, and the Monitor no longer
@@ -136,7 +138,20 @@ test ! -e app/src/main/java/com/zairenkai/app/ui/components/FrameMonitor.kt
 for q in values-en values-en-rGB values-ja values-es values-zh-rCN; do test -d "app/src/main/res/$q"; done
 grep -q 'android:localeConfig="@xml/locales_config"' app/src/main/AndroidManifest.xml
 tmp_lottie="$(mktemp -d)"; python3 tools/lottie/gen_setup_animations.py --out "$tmp_lottie" >/dev/null
-diff -qr "$tmp_lottie" app/src/main/res/raw >/dev/null
+for f in "$tmp_lottie"/setup_*.json; do diff -q "$f" "app/src/main/res/raw/$(basename "$f")" >/dev/null; done
+# Every setup_*.json in res/raw comes from the generator (no stale files).
+test "$(ls app/src/main/res/raw/setup_*.json | wc -l)" -eq "$(ls "$tmp_lottie"/setup_*.json | wc -l)"
+# The mascot: one Lottie per state from the owner's poses (tools/lottie/gen_mascot.py).
+for s in welcome idle inspecting ready warning celebrating; do
+  test -f "art/mascot/$s.png"
+  grep -q '"refId"' "app/src/main/res/raw/mascot_$s.json"
+done
+# Icons are the app's own: no Material icon library or vendored copies.
+! grep -R -q 'androidx.compose.material.icons' app/src/main/java
+! grep -q 'material-icons' app/build.gradle.kts gradle/libs.versions.toml
+# Open-source licences: metadata and the bundled licence texts exist.
+test -s tools/licenses/libraries.json
+for t in Apache-2.0 MIT BSD-3-Clause OFL-1.1; do test -s "tools/licenses/texts/$t.txt"; done
 # The launcher icon and splash mark are reproducible from their generator.
 tmp_icon="$(mktemp -d)"; python3 tools/icon/gen_app_icon.py --out "$tmp_icon" >/dev/null
 for f in ic_launcher_background ic_launcher_foreground ic_launcher_monochrome ic_zk_logo; do

@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * First-run setup: welcome, a live system check of every layer the app
- * depends on (root, ZKFC, zperfd, API token), an optional first profile
- * applied through zperfd, and an honest summary.
+ * First-run setup, in order:
+ *   1. Welcome     the mascot pops in; "Halo" types itself into
+ *                  "Kenali Zairenkai" and a gradient tagline (ColorOS-style).
+ *   2. Legal       terms, risks, privacy, licences, trademarks; the user
+ *                  must tick the consent box to continue.
+ *   3. Appearance  theme mode, accent and dynamic colour with a live preview
+ *                  of the app, and the features as swipeable cards.
+ *   4. Check       root, ZKFC, zperfd and the token, probed read-only, with
+ *                  animated status badges and plain alerts.
+ *   5. Permissions notifications, usage access, battery optimisation.
+ *   6. Done        the celebrating mascot inside the signature line
+ *                  sequence, a summary, and Start.
  *
- * Character (see SetupVisuals.kt): a pastel backdrop with a breathing arc, a
- * greeting that types itself, gradient line art (res/raw/setup_*.json) that
- * bursts, orbits and resolves into the Zairenkai mark, and content that rises
- * in, in reading order. The language and device-info buttons live at the
- * bottom of the welcome page only; later, language is in Settings.
- * Insets: the header owns the status bar/cutout, the action bar owns the
- * navigation bar; the backdrop draws edge to edge behind both.
+ * Steps slide and fade (emphasized decelerate); content rises in, in order.
+ * Language and device info sit at the bottom of the welcome page.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.onboarding
@@ -22,63 +26,86 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.RawRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.compose.LottieAnimation
@@ -89,38 +116,21 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.zairenkai.app.AppContainer
-import com.zairenkai.app.BuildConfig
 import com.zairenkai.app.R
 import com.zairenkai.app.core.text.asString
-import com.zairenkai.app.domain.Profile
-import com.zairenkai.app.domain.ProfileId
-import com.zairenkai.app.domain.Profiles
 import com.zairenkai.app.ui.VmFactory
-import com.zairenkai.app.ui.icons.Android
-import com.zairenkai.app.ui.icons.AutoMode
-import com.zairenkai.app.ui.icons.Balance
-import com.zairenkai.app.ui.icons.BatterySaver
-import com.zairenkai.app.ui.icons.ContentCopy
-import com.zairenkai.app.ui.icons.DeveloperBoard
-import com.zairenkai.app.ui.icons.Memory
-import com.zairenkai.app.ui.icons.PhoneAndroid
-import com.zairenkai.app.ui.icons.Shield
-import com.zairenkai.app.ui.icons.Speed
-import com.zairenkai.app.ui.icons.SportsEsports
-import com.zairenkai.app.ui.icons.Storage
-import com.zairenkai.app.ui.icons.Terminal
-import com.zairenkai.app.ui.icons.Timeline
-import com.zairenkai.app.ui.icons.Tune
+import com.zairenkai.app.ui.device.DeviceHero
+import com.zairenkai.app.ui.device.rememberDeviceInfo
 import com.zairenkai.app.ui.icons.ZkIcons
+import com.zairenkai.app.ui.legal.LegalSections
+import com.zairenkai.app.ui.legal.OssLicensesContent
+import com.zairenkai.app.ui.legal.rememberOssCatalog
 import com.zairenkai.app.ui.locale.LanguageSheet
+import com.zairenkai.app.ui.mascot.Mascot
+import com.zairenkai.app.ui.mascot.MascotState
 import com.zairenkai.app.ui.theme.GreetingStyle
-import com.zairenkai.app.ui.theme.ZkBad
-import com.zairenkai.app.ui.theme.ZkGood
-import com.zairenkai.app.ui.theme.ZkWarn
-import com.zairenkai.app.ui.theme.statusInk
 
-/** Shared motion: page changes slide a short distance and fade; no bounce. */
-private const val PAGE_MS = 360
+internal const val PAGE_MS = 360
 
 @Composable
 fun Onboarding(container: AppContainer, onDone: () -> Unit) {
@@ -129,22 +139,29 @@ fun Onboarding(container: AppContainer, onDone: () -> Unit) {
     val ui by vm.ui.collectAsState()
     var showLanguage by rememberSaveable { mutableStateOf(false) }
     var showInfo by rememberSaveable { mutableStateOf(false) }
+    var showLicenses by rememberSaveable { mutableStateOf(false) }
+    val (permissions, onPermission) = rememberPermissions()
 
     SetupFlow(
         ui = ui,
+        permissions = permissions,
         onLanguage = { showLanguage = true },
         onInfo = { showInfo = true },
-        onSkip = { vm.finish(onDone) },
         onBack = { vm.back() },
         onNext = { vm.next() },
+        onLegalChecked = vm::setLegalChecked,
+        onOpenLicenses = { showLicenses = true },
+        onThemeMode = { vm.setThemeMode(it) },
+        onAccent = { vm.setAccent(it) },
+        onDynamic = { vm.setDynamicColor(it) },
         onRecheck = vm::runChecks,
-        onChoose = { vm.choose(it) },
-        onApply = { ui.choice?.let { vm.applyChoice(Profiles.byId(it)) } },
+        onPermission = onPermission,
         onFinish = { vm.finish(onDone) },
     )
 
     if (showLanguage) LanguageSheet(onDismiss = { showLanguage = false })
     if (showInfo) InfoSheet(onDismiss = { showInfo = false })
+    if (showLicenses) LicensesDialog(onDismiss = { showLicenses = false })
 }
 
 /**
@@ -154,26 +171,27 @@ fun Onboarding(container: AppContainer, onDone: () -> Unit) {
 @Composable
 internal fun SetupFlow(
     ui: OnboardingUi,
+    permissions: Map<AppPermission, Boolean>,
     onLanguage: () -> Unit,
     onInfo: () -> Unit,
-    onSkip: () -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
+    onLegalChecked: (Boolean) -> Unit,
+    onOpenLicenses: () -> Unit,
+    onThemeMode: (String) -> Unit,
+    onAccent: (String) -> Unit,
+    onDynamic: (Boolean) -> Unit,
     onRecheck: () -> Unit,
-    onChoose: (ProfileId?) -> Unit,
-    onApply: () -> Unit,
+    onPermission: (AppPermission) -> Unit,
     onFinish: () -> Unit,
 ) {
     val checks = ui.checks
-    val settled = checks.settled()
-    val ready = checks.profilesReady()
-    // System back follows the on-screen Back button: only between the
-    // middle steps, and never while a profile is being applied.
-    BackHandler(enabled = (ui.step == SetupStep.CHECK || ui.step == SetupStep.PROFILE) && !ui.applying) { onBack() }
+    // System back follows the on-screen Back button (every step between welcome and done).
+    BackHandler(enabled = ui.step != SetupStep.WELCOME && ui.step != SetupStep.DONE) { onBack() }
 
     SetupBackdrop(ui.step, Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            SetupHeader(step = ui.step, onSkip = if (ui.step == SetupStep.WELCOME) onSkip else null)
+            SetupHeader(step = ui.step)
             AnimatedContent(
                 targetState = ui.step,
                 transitionSpec = {
@@ -185,87 +203,65 @@ internal fun SetupFlow(
                 label = "setupStep",
             ) { step ->
                 Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp),
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     when (step) {
                         SetupStep.WELCOME -> WelcomeStep()
+                        SetupStep.LEGAL -> LegalStep(ui.legalChecked, onLegalChecked, onOpenLicenses)
+                        SetupStep.THEME -> ThemeStep(ui, onThemeMode, onAccent, onDynamic)
                         SetupStep.CHECK -> CheckStep(ui.probe, checks, onRecheck = onRecheck)
-                        SetupStep.PROFILE -> ProfileStep(ui, checks, ready, onChoose = onChoose)
-                        SetupStep.DONE -> DoneStep(ui, checks)
+                        SetupStep.PERMISSIONS -> PermissionsStep(permissions, onPermission)
+                        SetupStep.DONE -> DoneStep(checks, permissions)
                     }
                     Spacer(Modifier.height(8.dp))
                 }
             }
-            SetupActions(
-                ui = ui,
-                checksSettled = settled,
-                profilesReady = ready,
-                onLanguage = onLanguage,
-                onInfo = onInfo,
-                onBack = onBack,
-                onNext = onNext,
-                onApply = onApply,
-                onFinish = onFinish,
-            )
+            SetupActions(ui, onLanguage, onInfo, onBack, onNext, onFinish)
         }
     }
 }
 
 /* ---------------- frame ---------------- */
 
-/** Progress (hidden on the welcome page, like a greeting card) and Skip. */
+/** Progress segments and the step's name (hidden on the welcome page, like a greeting card). */
 @Composable
-private fun SetupHeader(step: SetupStep, onSkip: (() -> Unit)?) {
+private fun SetupHeader(step: SetupStep) {
     val total = SetupStep.entries.size
     val label = stringResource(R.string.setup_step_label, step.ordinal + 1, total, stringResource(step.title))
     Column(
         Modifier.fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-            .padding(start = 28.dp, end = 16.dp, top = 12.dp)
-            .heightIn(min = 52.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 14.dp)
+            .heightIn(min = 44.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AnimatedVisibility(step != SetupStep.WELCOME, Modifier.weight(1f), enter = fadeIn(tween(300)), exit = fadeOut(tween(150))) {
-                Column(Modifier.semantics(mergeDescendants = true) { contentDescription = label }) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        SetupStep.entries.forEach { s ->
-                            val weight by animateFloatAsState(
-                                if (s == step) 2.6f else 1f, spring(stiffness = Spring.StiffnessMediumLow), label = "segW",
-                            )
-                            val color by animateColorAsState(
-                                if (s.ordinal <= step.ordinal) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                tween(250), label = "segC",
-                            )
-                            Box(Modifier.weight(weight).height(4.dp).clip(CircleShape).background(color))
-                        }
+        AnimatedVisibility(step != SetupStep.WELCOME, enter = fadeIn(tween(300)), exit = fadeOut(tween(150))) {
+            Column(Modifier.semantics(mergeDescendants = true) { contentDescription = label }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SetupStep.entries.forEach { s ->
+                        val weight by animateFloatAsState(if (s == step) 2.6f else 1f, spring(stiffness = Spring.StiffnessMediumLow), label = "segW")
+                        val color by animateColorAsState(
+                            if (s.ordinal <= step.ordinal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            tween(250), label = "segC",
+                        )
+                        Box(Modifier.weight(weight).height(4.dp).clip(CircleShape).background(color))
                     }
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        stringResource(step.title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
+                Spacer(Modifier.height(10.dp))
+                Text(stringResource(step.title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (step == SetupStep.WELCOME) Spacer(Modifier.weight(1f))
-            if (onSkip != null) TextButton(onClick = onSkip) { Text(stringResource(R.string.action_skip)) }
         }
     }
 }
 
-/** Pill actions. Welcome: language and info on the left, a compact start pill on the right. */
+/** Pill actions. Welcome: language and info on the left, the start pill on the right; done: one centred Start. */
 @Composable
 private fun SetupActions(
     ui: OnboardingUi,
-    checksSettled: Boolean,
-    profilesReady: Boolean,
     onLanguage: () -> Unit,
     onInfo: () -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
-    onApply: () -> Unit,
     onFinish: () -> Unit,
 ) {
     Row(
@@ -273,63 +269,43 @@ private fun SetupActions(
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (ui.step == SetupStep.DONE) Arrangement.Center else Arrangement.Start,
     ) {
         val colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.inverseSurface,
             contentColor = MaterialTheme.colorScheme.inverseOnSurface,
         )
-        if (ui.step == SetupStep.WELCOME) {
-            BottomIcon(ZkIcons.Globe, stringResource(R.string.setup_language), onLanguage)
-            Spacer(Modifier.width(4.dp))
-            BottomIcon(ZkIcons.Info, stringResource(R.string.setup_info), onInfo)
-            Spacer(Modifier.weight(1f))
-            PillButton(stringResource(R.string.setup_start), Modifier.height(56.dp), colors, onClick = onNext)
-            return@Row
-        }
-        val showBack = ui.step == SetupStep.CHECK || ui.step == SetupStep.PROFILE
-        AnimatedVisibility(
-            visible = showBack,
-            enter = expandHorizontally(tween(PAGE_MS)) + fadeIn(tween(PAGE_MS)),
-            exit = shrinkHorizontally(tween(PAGE_MS)) + fadeOut(tween(150)),
-        ) {
-            Row {
-                OutlinedButton(
-                    onClick = onBack,
-                    enabled = !ui.applying,
-                    shape = CircleShape,
-                    modifier = Modifier.height(56.dp),
-                    contentPadding = PaddingValues(horizontal = 22.dp),
-                ) { Text(stringResource(R.string.action_back)) }
-                Spacer(Modifier.width(12.dp))
-            }
-        }
-        val primary = Modifier.weight(1f).height(56.dp)
         when (ui.step) {
-            SetupStep.WELCOME -> Unit
-            SetupStep.CHECK -> PillButton(
-                stringResource(if (checksSettled) R.string.action_next else R.string.setup_checking),
-                primary, colors, enabled = checksSettled, busy = !checksSettled, onClick = onNext,
-            )
-            SetupStep.PROFILE -> {
-                val choice = ui.choice
-                if (profilesReady && choice != null) {
-                    PillButton(
-                        stringResource(
-                            if (ui.applying) R.string.setup_applying else R.string.setup_apply_profile,
-                            stringResource(Profiles.byId(choice).nameRes),
-                        ),
-                        primary, colors, enabled = !ui.applying, busy = ui.applying, arrow = false, onClick = onApply,
-                    )
-                } else {
-                    PillButton(stringResource(R.string.setup_skip_for_now), primary, colors, onClick = onNext)
-                }
+            SetupStep.WELCOME -> {
+                BottomIcon(ZkIcons.Globe, stringResource(R.string.setup_language), onLanguage)
+                Spacer(Modifier.width(4.dp))
+                BottomIcon(ZkIcons.Info, stringResource(R.string.setup_info), onInfo)
+                Spacer(Modifier.weight(1f))
+                PillButton(stringResource(R.string.setup_start), Modifier.height(56.dp), colors, onClick = onNext)
             }
-            SetupStep.DONE -> PillButton(stringResource(R.string.setup_enter_app), primary, colors, icon = Icons.Rounded.Check, onClick = onFinish)
+            SetupStep.DONE -> PillButton(stringResource(R.string.setup_start_app), Modifier.height(56.dp).widthIn(min = 200.dp), colors, icon = ZkIcons.Check, onClick = onFinish)
+            else -> {
+                OutlinedButton(onClick = onBack, shape = CircleShape, modifier = Modifier.height(56.dp), contentPadding = PaddingValues(horizontal = 22.dp)) {
+                    Text(stringResource(R.string.action_back))
+                }
+                Spacer(Modifier.width(12.dp))
+                val checking = ui.step == SetupStep.CHECK && !ui.checks.settled()
+                PillButton(
+                    stringResource(
+                        when {
+                            checking -> R.string.setup_checking
+                            ui.step == SetupStep.LEGAL -> R.string.setup_agree_continue
+                            else -> R.string.action_next
+                        },
+                    ),
+                    Modifier.weight(1f).height(56.dp), colors, enabled = ui.canContinue, busy = checking, onClick = onNext,
+                )
+            }
         }
     }
 }
 
-/** Round, quiet button for the welcome page's language and info actions (48 dp target). */
+/** Round, quiet button for the welcome page's language and info actions (52 dp target). */
 @Composable
 private fun BottomIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     FilledTonalIconButton(
@@ -343,19 +319,25 @@ private fun BottomIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PillButton(
+internal fun PillButton(
     label: String,
     modifier: Modifier,
     colors: ButtonColors,
     enabled: Boolean = true,
     busy: Boolean = false,
     arrow: Boolean = true,
-    icon: ImageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+    icon: ImageVector = ZkIcons.ArrowForward,
     onClick: () -> Unit,
 ) {
+    // Pressed feedback: a quick, small squeeze (120 ms), read in graphicsLayer.
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.96f else 1f, tween(if (pressed) 120 else 200), label = "press")
     Button(
-        onClick = onClick, enabled = enabled, shape = CircleShape, colors = colors, modifier = modifier,
+        onClick = onClick, enabled = enabled, shape = CircleShape, colors = colors,
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
         contentPadding = PaddingValues(horizontal = 22.dp),
+        interactionSource = interaction,
     ) {
         // Fixed-size slots: a spinner while busy, an arrow otherwise, so the label never jumps.
         if (busy) {
@@ -371,20 +353,15 @@ private fun PillButton(
 }
 
 @Composable
-private fun StepTitle(title: String, body: String, large: Boolean = false, order: Int = 0) {
+internal fun StepTitle(title: String, body: String, order: Int = 0) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             title,
-            style = if (large) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.semantics { heading() }.reveal(order),
         )
-        Text(
-            body,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.reveal(order + 1),
-        )
+        Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.reveal(order + 1))
     }
 }
 
@@ -406,11 +383,7 @@ private fun rememberSchemeColors() = MaterialTheme.colorScheme.let { cs ->
 internal fun SetupAnimation(@RawRes res: Int, loop: Boolean, modifier: Modifier = Modifier) {
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(res))
     val still = reducedMotion()
-    val progress by animateLottieCompositionAsState(
-        composition,
-        iterations = if (loop) LottieConstants.IterateForever else 1,
-        isPlaying = !still,
-    )
+    val progress by animateLottieCompositionAsState(composition, iterations = if (loop) LottieConstants.IterateForever else 1, isPlaying = !still)
     val roles = rememberSchemeColors()
     val properties = roles.flatMap { (role, color) ->
         listOf(
@@ -432,26 +405,17 @@ internal fun SetupAnimation(@RawRes res: Int, loop: Boolean, modifier: Modifier 
     )
 }
 
-/** Line art floating on the backdrop (no disc), cross-fading when the state changes. */
-@Composable
-private fun Emblem(@RawRes res: Int, loop: Boolean, size: Int = 180) {
-    Box(Modifier.fillMaxWidth().padding(top = 8.dp).height((size + 8).dp), contentAlignment = Alignment.Center) {
-        Crossfade(targetState = res to loop, animationSpec = tween(350), label = "emblem") { (r, l) ->
-            SetupAnimation(r, l, Modifier.size(size.dp))
-        }
-    }
-}
-
 /* ---------------- 1. welcome ---------------- */
 
 @Composable
 private fun WelcomeStep() {
     var greeted by rememberSaveable { mutableStateOf(false) }
-    Spacer(Modifier.height(56.dp))
-    SetupAnimation(R.raw.setup_welcome, loop = true, modifier = Modifier.size(64.dp).reveal(0))
+    Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
+        Mascot(MascotState.WELCOME, size = 220.dp)
+    }
     TypewriterGreeting(
         hello = stringResource(R.string.setup_greeting_hello),
-        brand = stringResource(R.string.app_name),
+        brand = stringResource(R.string.setup_welcome_title),
         tagline = stringResource(R.string.setup_greeting_tagline),
         style = GreetingStyle,
         onFinished = { greeted = true },
@@ -462,262 +426,74 @@ private fun WelcomeStep() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.reveal(0, start = greeted),
     )
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(top = 4.dp)) {
-        Feature(Icons.Rounded.Timeline, R.string.setup_feature_monitor_title, R.string.setup_feature_monitor_body, Modifier.reveal(1, start = greeted))
-        Feature(Icons.Rounded.Tune, R.string.setup_feature_verified_title, R.string.setup_feature_verified_body, Modifier.reveal(2, start = greeted))
-        Feature(Icons.Rounded.Shield, R.string.setup_feature_safety_title, R.string.setup_feature_safety_body, Modifier.reveal(3, start = greeted))
-    }
     Text(
         stringResource(R.string.setup_welcome_note),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.reveal(4, start = greeted),
+        modifier = Modifier.reveal(1, start = greeted),
     )
 }
 
-/** A light row (no card): icon chip, title, one line of detail. */
-@Composable
-private fun Feature(icon: ImageVector, title: Int, body: Int, modifier: Modifier = Modifier) {
-    Row(modifier, verticalAlignment = Alignment.Top) {
-        Box(
-            Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary) }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
+/* ---------------- 2. legal ---------------- */
 
 @Composable
-private fun IconTile(icon: ImageVector, container: Color, content: Color) {
-    Surface(shape = RoundedCornerShape(14.dp), color = container) {
-        Icon(icon, null, Modifier.padding(10.dp).size(22.dp), tint = content)
-    }
-}
-
-/* ---------------- 2. system check ---------------- */
-
-@Composable
-private fun CheckStep(probe: SetupProbe, checks: List<SetupCheck>, onRecheck: () -> Unit) {
-    val settled = checks.settled()
-    val ready = checks.profilesReady()
-    Emblem(
-        when {
-            !settled -> R.raw.setup_scan
-            ready -> R.raw.setup_success
-            else -> R.raw.setup_attention
-        },
-        loop = !settled,
-    )
-    StepTitle(stringResource(R.string.setup_check_title), stringResource(R.string.setup_check_body))
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.94f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.reveal(2),
-    ) {
-        Column(Modifier.padding(vertical = 6.dp)) {
-            checks.forEachIndexed { i, c ->
-                CheckRow(c, Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
-                if (i != checks.lastIndex) HorizontalDivider(Modifier.padding(start = 66.dp, end = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            }
-        }
-    }
-    AnimatedVisibility(settled, enter = fadeIn(tween(250)) + expandVertically(tween(PAGE_MS)), exit = fadeOut(tween(150)) + shrinkVertically(tween(200))) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                stringResource(
-                    when {
-                        checks.all { it.state == CheckState.OK } -> R.string.setup_check_all_ok
-                        ready -> R.string.setup_check_ready_with_notes
-                        else -> R.string.setup_check_not_ready
-                    },
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalButton(onClick = onRecheck, shape = CircleShape) {
-                    Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.setup_recheck))
-                }
-                if (!checks.all { it.state == CheckState.OK }) TechnicalDetails(probe)
-            }
-        }
-    }
-}
-
-/** Raw probe output for support, kept out of the way behind a toggle. */
-@Composable
-private fun TechnicalDetails(probe: SetupProbe) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
-    TextButton(onClick = { open = true }) { Text(stringResource(R.string.dashboard_details_show)) }
-    if (open) {
-        val report = diagnosticsReport(probe, BuildConfig.VERSION_NAME)
-        AlertDialog(
-            onDismissRequest = { open = false },
-            title = { Text(stringResource(R.string.dashboard_details_show)) },
-            text = {
-                Text(
-                    report,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    context.getSystemService(ClipboardManager::class.java)
-                        ?.setPrimaryClip(ClipData.newPlainText("Zairenkai diagnostics", report))
-                    open = false
-                }) { Text(stringResource(R.string.dashboard_copy_diagnostics)) }
-            },
-            dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.action_close)) } },
-        )
-    }
-}
-
-private data class StateLook(val icon: ImageVector?, val color: Color, val label: Int)
-
-@Composable
-private fun look(state: CheckState): StateLook = when (state) {
-    CheckState.CHECKING -> StateLook(null, MaterialTheme.colorScheme.primary, R.string.setup_state_checking)
-    CheckState.OK -> StateLook(Icons.Rounded.CheckCircle, statusInk(ZkGood), R.string.setup_state_ok)
-    CheckState.WARN -> StateLook(Icons.Rounded.Warning, statusInk(ZkWarn), R.string.setup_state_warn)
-    CheckState.MISSING -> StateLook(Icons.Rounded.Close, statusInk(ZkBad), R.string.setup_state_missing)
-}
-
-/** One readiness row; the state badge cross-fades as the probe answers. Shared with the Dashboard. */
-@Composable
-internal fun CheckRow(check: SetupCheck, modifier: Modifier = Modifier) {
-    val l = look(check.state)
-    val title = stringResource(check.id.title)
-    val detail = check.detail.asString()
-    val a11y = stringResource(R.string.setup_check_a11y, title, stringResource(l.label), detail)
-    Row(modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = a11y }) {
-        val bg by animateColorAsState(l.color.copy(alpha = 0.14f), tween(250), label = "badge")
-        Box(Modifier.size(36.dp).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
-            Crossfade(targetState = check.state, animationSpec = tween(250), label = "state") { st ->
-                val sl = look(st)
-                if (sl.icon == null) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else Icon(sl.icon, null, Modifier.size(20.dp), tint = sl.color)
-            }
-        }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f).animateContentSize(tween(250)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            check.fix?.let { Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface) }
-        }
-    }
-}
-
-/* ---------------- 3. first profile ---------------- */
-
-@Composable
-private fun ProfileStep(ui: OnboardingUi, checks: List<SetupCheck>, ready: Boolean, onChoose: (ProfileId?) -> Unit) {
-    Emblem(R.raw.setup_tune, loop = true, size = 150)
-    StepTitle(stringResource(R.string.setup_profile_title), stringResource(R.string.setup_profile_body))
-    if (!ready) {
-        val blockers = checks.filterNot { it.allowsProfiles() }.map { stringResource(it.id.title) }
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.reveal(2),
-        ) {
-            Row(Modifier.fillMaxWidth().padding(16.dp)) {
-                Icon(Icons.Rounded.Info, null)
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.setup_profile_blocked, blockers.joinToString(", ")), style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Profiles.all.forEachIndexed { i, p ->
-            ProfileOption(p, selected = ui.choice == p.id, enabled = ready && !ui.applying, modifier = Modifier.reveal(3 + i)) {
-                onChoose(if (ui.choice == p.id) null else p.id)
-            }
-        }
-    }
-    AnimatedVisibility(ui.applyFailed && ui.applyMessage != null, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
-        Text(
-            ui.applyMessage?.asString().orEmpty(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        )
-    }
-}
-
-private fun profileIcon(p: Profile): ImageVector = when (p.id) {
-    ProfileId.BATTERY -> Icons.Rounded.BatterySaver
-    ProfileId.BALANCED -> Icons.Rounded.Balance
-    ProfileId.PERFORMANCE -> Icons.Rounded.Speed
-    ProfileId.GAME -> Icons.Rounded.SportsEsports
-    ProfileId.AUTO -> Icons.Rounded.AutoMode
-}
-
-@Composable
-private fun ProfileOption(profile: Profile, selected: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun LegalStep(checked: Boolean, onChecked: (Boolean) -> Unit, onOpenLicenses: () -> Unit) {
+    StepTitle(stringResource(R.string.legal_title), stringResource(R.string.legal_intro))
+    LegalSections(onOpenLicenses, Modifier.reveal(2))
     val cs = MaterialTheme.colorScheme
-    val border by animateColorAsState(if (selected) cs.primary else cs.outlineVariant.copy(alpha = 0.6f), tween(200), label = "profileBorder")
-    val container by animateColorAsState(
-        if (selected) cs.primaryContainer else cs.surfaceContainerLow.copy(alpha = 0.94f), tween(200), label = "profileBg",
-    )
-    val content = if (!enabled) cs.outline else if (selected) cs.onPrimaryContainer else cs.onSurface
-    val scale by animateFloatAsState(if (selected) 1.0f else 0.985f, spring(stiffness = Spring.StiffnessMedium), label = "profileScale")
-    val shape = RoundedCornerShape(22.dp)
+    val border by animateColorAsState(if (checked) cs.primary else cs.outlineVariant, tween(200), label = "consent")
     Surface(
-        shape = shape,
-        color = container,
-        contentColor = content,
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayerScale(scale)
-            .clip(shape)
-            .border(if (selected) 2.dp else 1.dp, border, shape)
-            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = if (checked) cs.primaryContainer.copy(alpha = 0.6f) else cs.surfaceContainerLow.copy(alpha = 0.94f),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, border),
+        modifier = Modifier.reveal(3),
     ) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(profileIcon(profile), null, Modifier.size(24.dp), tint = if (enabled && !selected) cs.primary else content)
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(profile.nameRes), style = MaterialTheme.typography.titleSmall)
-                Text(
-                    stringResource(profile.taglineRes), style = MaterialTheme.typography.bodySmall,
-                    color = if (selected) cs.onPrimaryContainer.copy(alpha = 0.8f) else cs.onSurfaceVariant,
-                )
-            }
-            RadioButton(selected = selected, onClick = null, enabled = enabled)
+        Row(
+            Modifier.fillMaxWidth().toggleable(checked, role = Role.Checkbox, onValueChange = onChecked).padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = checked, onCheckedChange = null)
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.legal_consent), style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
         }
     }
 }
 
-private fun Modifier.graphicsLayerScale(s: Float): Modifier = graphicsLayer { scaleX = s; scaleY = s }
+/** The open-source licences over the setup, full screen. */
+@Composable
+private fun LicensesDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
+                Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.IconButton(onClick = onDismiss) { Icon(ZkIcons.ArrowBack, stringResource(R.string.action_back)) }
+                    Text(stringResource(R.string.oss_title), style = MaterialTheme.typography.titleLarge)
+                }
+                OssLicensesContent(rememberOssCatalog())
+            }
+        }
+    }
+}
 
-/* ---------------- 4. done ---------------- */
+/* ---------------- 6. done ---------------- */
 
 @Composable
-private fun DoneStep(ui: OnboardingUi, checks: List<SetupCheck>) {
+private fun DoneStep(checks: List<SetupCheck>, permissions: Map<AppPermission, Boolean>) {
     val allOk = checks.all { it.state == CheckState.OK }
-    // The signature sequence (burst, bundle, orbit, coil, mark) or, with work left, the attention mark.
-    Emblem(if (allOk) R.raw.setup_success else R.raw.setup_attention, loop = false, size = 200)
+    val state = doneMascotState(checks)
+    // The celebrating mascot inside the signature line sequence (rays, bundle, orbit, coil).
+    Box(Modifier.fillMaxWidth().height(260.dp), contentAlignment = Alignment.Center) {
+        if (allOk) SetupAnimation(R.raw.setup_success, loop = false, modifier = Modifier.size(260.dp).graphicsLayer { alpha = 0.9f })
+        Mascot(state, size = 210.dp)
+    }
     TypewriterLine(
         stringResource(if (allOk) R.string.setup_done_ready_title else R.string.setup_done_partial_title),
         MaterialTheme.typography.displaySmall,
+        modifier = Modifier.fillMaxWidth(),
+        caretWhenDone = false,
     )
     Text(
-        when {
-            ui.applied != null -> ui.applyMessage?.asString() ?: stringResource(R.string.setup_done_applied, ui.applied.asString())
-            allOk -> stringResource(R.string.setup_done_ready_body)
-            else -> stringResource(R.string.setup_done_partial_body)
-        },
+        stringResource(if (allOk) R.string.setup_done_ready_body else R.string.setup_done_partial_body),
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.reveal(1),
@@ -730,16 +506,17 @@ private fun DoneStep(ui: OnboardingUi, checks: List<SetupCheck>) {
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             checks.forEach { c ->
-                val l = look(c.state)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (l.icon == null) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Icon(l.icon, null, Modifier.size(18.dp), tint = l.color)
+                    StatusBadge(c.state, size = 26.dp)
                     Spacer(Modifier.width(10.dp))
-                    Text(
-                        stringResource(R.string.setup_check_summary_row, stringResource(c.id.title), stringResource(l.label)),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Text(stringResource(c.id.title), style = MaterialTheme.typography.bodyMedium)
                 }
+            }
+            val granted = permissions.count { it.value }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusBadge(if (granted == permissions.size) CheckState.OK else CheckState.WARN, size = 26.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(pluralStringResource(R.plurals.setup_done_permissions, permissions.size, granted, permissions.size), style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -747,11 +524,17 @@ private fun DoneStep(ui: OnboardingUi, checks: List<SetupCheck>) {
     if (todo.isNotEmpty()) {
         Column(Modifier.reveal(3), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.setup_next_steps), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            todo.forEach {
-                Text("• " + it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            todo.forEach { Text("• " + it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
+}
+
+/** Completion: celebrate a full setup, acknowledge a usable one, flag one with work left. */
+internal fun doneMascotState(checks: List<SetupCheck>): MascotState = when {
+    !checks.settled() -> MascotState.INSPECTING
+    checks.all { it.state == CheckState.OK } -> MascotState.CELEBRATING
+    checks.profilesReady() -> MascotState.READY
+    else -> MascotState.WARNING
 }
 
 /* ---------------- info sheet ---------------- */
@@ -760,49 +543,51 @@ private fun DoneStep(ui: OnboardingUi, checks: List<SetupCheck>) {
 @Composable
 private fun InfoSheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val info = remember { DeviceInfo.read(context) }
+    // Read off the main thread (getprop); the hero shows a spinner until then.
+    val info = rememberDeviceInfo()
     fun size(bytes: Long) = Formatter.formatFileSize(context, bytes)
-    val rows = listOf(
-        Triple(Icons.Rounded.Info, stringResource(R.string.info_app_version),
-            stringResource(R.string.info_app_version_value, info.appVersion, info.appBuild, info.buildType)),
-        Triple(Icons.Rounded.PhoneAndroid, stringResource(R.string.info_device), info.deviceLine),
-        Triple(Icons.Rounded.Android, stringResource(R.string.info_android),
-            stringResource(R.string.info_android_value, info.androidRelease, info.sdk, info.securityPatch)),
-        Triple(Icons.Rounded.DeveloperBoard, stringResource(R.string.info_soc),
-            pluralStringResource(R.plurals.info_soc_value, info.cores, info.soc, info.cores, info.abis.firstOrNull().orEmpty())),
-        Triple(Icons.Rounded.Memory, stringResource(R.string.info_ram),
-            stringResource(R.string.info_ram_value, size(info.ramTotal), size(info.ramAvailable))),
-        Triple(Icons.Rounded.Storage, stringResource(R.string.info_storage),
-            stringResource(R.string.info_storage_value, size(info.storageTotal), size(info.storageFree))),
-        Triple(Icons.Rounded.Terminal, stringResource(R.string.info_kernel), info.kernel),
-    )
+    val rows = info?.let {
+        listOf(
+            Triple(ZkIcons.Info, stringResource(R.string.info_app_version),
+                stringResource(R.string.info_app_version_value, it.appVersion, it.appBuild, it.buildType)),
+            Triple(ZkIcons.Android, stringResource(R.string.info_android),
+                stringResource(R.string.info_android_value, it.androidRelease, it.sdk, it.securityPatch)),
+            Triple(ZkIcons.Chip, stringResource(R.string.info_soc),
+                pluralStringResource(R.plurals.info_soc_value, it.cores, it.soc, it.cores, it.abis.firstOrNull().orEmpty())),
+            Triple(ZkIcons.Memory, stringResource(R.string.info_ram),
+                stringResource(R.string.info_ram_value, size(it.ramTotal), size(it.ramAvailable))),
+            Triple(ZkIcons.Storage, stringResource(R.string.info_storage),
+                stringResource(R.string.info_storage_value, size(it.storageTotal), size(it.storageFree))),
+            Triple(ZkIcons.Terminal, stringResource(R.string.info_kernel), it.kernel),
+        )
+    }.orEmpty()
     var copied by remember { mutableStateOf(false) }
     val title = stringResource(R.string.info_title)
+    val deviceLabel = stringResource(R.string.info_device)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 24.dp),
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                FilledTonalButton(onClick = {
-                    val text = (listOf(title) + rows.map { "${it.second}: ${it.third}" }).joinToString("\n")
-                    context.getSystemService(ClipboardManager::class.java)
-                        ?.setPrimaryClip(ClipData.newPlainText(title, text))
+                FilledTonalButton(enabled = info != null, onClick = {
+                    val device = info?.let { "$deviceLabel: ${it.deviceLine} (${it.model}, ${it.codename})" }
+                    val text = (listOfNotNull(title, device) + rows.map { "${it.second}: ${it.third}" }).joinToString("\n")
+                    context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText(title, text))
                     copied = true
                 }) {
-                    Icon(Icons.Rounded.ContentCopy, null, Modifier.size(18.dp))
+                    Icon(ZkIcons.Copy, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.info_copy))
                 }
             }
             if (copied) {
-                Text(stringResource(R.string.info_copied), style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.info_copied), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
-            rows.forEachIndexed { i, (icon, label, value) ->
-                InfoRow(icon, label, value, accent = i % 3)
-            }
+            // The brand-aware hero: who made this phone and what it is called.
+            DeviceHero(info)
+            rows.forEachIndexed { i, (icon, label, value) -> InfoRow(icon, label, value, accent = i % 3) }
         }
     }
 }
@@ -816,11 +601,10 @@ private fun InfoRow(icon: ImageVector, label: String, value: String, accent: Int
         else -> cs.tertiaryContainer to cs.onTertiaryContainer
     }
     Surface(shape = RoundedCornerShape(20.dp), color = cs.surfaceContainer) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp).semantics(mergeDescendants = true) {},
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconTile(icon, container, content)
+        Row(Modifier.fillMaxWidth().padding(14.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(14.dp), color = container) {
+                Icon(icon, null, Modifier.padding(10.dp).size(22.dp), tint = content)
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)

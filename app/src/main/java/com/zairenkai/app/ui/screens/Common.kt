@@ -5,9 +5,8 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import com.zairenkai.app.ui.icons.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,7 +40,7 @@ fun RootUnavailable(modifier: Modifier = Modifier, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(Icons.Rounded.Shield, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.error)
+        Icon(ZkIcons.Shield, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.system_root_required_title), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))

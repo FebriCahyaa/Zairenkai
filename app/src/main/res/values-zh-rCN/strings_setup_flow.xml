@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="setup_step_legal">法律信息</string>
+    <string name="setup_step_theme">外观</string>
+    <string name="setup_step_permissions">应用权限</string>
+    <string name="setup_alert_notes_title">可以使用，但有提示</string>
+    <string name="setup_alert_missing_title">部分组件尚未就绪</string>
+    <string name="setup_start_app">开始</string>
+    <string name="setup_agree_continue">同意并继续</string>
+    <string name="setup_theme_title">选择你的外观</string>
+    <string name="setup_theme_body">设置模式和颜色，并在预览中即时查看效果。之后可随时在设置中更改。</string>
+    <string name="setup_theme_mode">显示模式</string>
+    <string name="setup_theme_dynamic">动态取色</string>
+    <string name="setup_theme_dynamic_sub">跟随壁纸颜色（Material You）</string>
+    <string name="setup_theme_accent">强调色</string>
+    <string name="setup_theme_accent_off">强调色（关闭动态取色后可选择）</string>
+    <string name="setup_theme_preview">Zairenkai 预览</string>
+    <string name="setup_features_title">你可以做什么</string>
+    <string name="setup_feature_fps_title">FPS 记录器</string>
+    <string name="setup_feature_fps_body">在后台记录所选游戏的 FPS，然后查看图表、稳定性和每个游戏的会话。</string>
+    <string name="setup_feature_device_title">了解你的设备</string>
+    <string name="setup_feature_device_body">“关于手机”展示品牌标识、芯片、屏幕、内存和存储。</string>
+    <string name="setup_perm_title">应用权限</string>
+    <string name="setup_perm_body">只有 Zairenkai 的功能真正用到的权限。你可以随时在 Android 设置中更改。</string>
+    <string name="setup_perm_note">所有权限均为可选。未授予时，需要它的功能会在打开时再次请求。root 权限由 root 管理器授予，不在此处。</string>
+    <string name="perm_notifications_title">通知</string>
+    <string name="perm_notifications_body">FPS 记录器和历史记录器以后台服务运行，Android 要求其运行时显示通知。</string>
+    <string name="perm_usage_title">使用情况访问权限</string>
+    <string name="perm_usage_body">用于了解当前打开的应用：按应用配置、自动模式和使用记录会用到。</string>
+    <string name="perm_battery_title">电池优化</string>
+    <string name="perm_battery_body">将 Zairenkai 排除在外，以免 Android 停止后台记录器。选择 Zairenkai，然后选择“不优化”。</string>
+    <string name="perm_granted">已允许</string>
+    <string name="perm_not_granted">尚未允许</string>
+    <string name="perm_needed">功能需要</string>
+    <string name="perm_recommended">建议</string>
+    <string name="perm_allow">允许</string>
+    <string name="perm_open_settings">打开设置</string>
+    <plurals name="setup_done_permissions">
+        <item quantity="other">应用权限：已允许 %1$d/%2$d 项</item>
+    </plurals>
+</resources>

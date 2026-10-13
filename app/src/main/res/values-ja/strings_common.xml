@@ -12,7 +12,6 @@
     <string name="action_save">保存</string>
     <string name="action_back">戻る</string>
     <string name="action_next">次へ</string>
-    <string name="action_skip">スキップ</string>
     <string name="state_active">有効</string>
     <string name="a11y_suffix_active">、有効</string>
     <string name="a11y_suffix_unsupported">、このデバイスでは利用できません</string>

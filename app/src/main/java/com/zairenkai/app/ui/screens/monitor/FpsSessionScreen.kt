@@ -7,12 +7,8 @@
  */
 package com.zairenkai.app.ui.screens.monitor
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +32,6 @@ import com.zairenkai.app.ui.components.RingGauge
 import com.zairenkai.app.ui.components.TimeSeriesChart
 import com.zairenkai.app.ui.components.formatClock
 import com.zairenkai.app.ui.components.formatDuration
-import com.zairenkai.app.ui.icons.*
 import com.zairenkai.app.ui.theme.*
 import kotlin.math.ceil
 import kotlin.math.max
@@ -53,7 +48,7 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
         onBack,
         actions = {
             if (rec != null) {
-                IconButton(onClick = { confirm = true }) { Icon(Icons.Rounded.Delete, stringResource(R.string.fps_delete)) }
+                IconButton(onClick = { confirm = true }) { Icon(ZkIcons.Delete, stringResource(R.string.fps_delete)) }
             }
         },
     ) {
@@ -115,7 +110,7 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.Timeline, ZkFps, stringResource(R.string.fps_timeline_title), stringResource(R.string.fps_timeline_sub))
+                CardHeader(ZkIcons.Pulse, ZkFps, stringResource(R.string.fps_timeline_title), stringResource(R.string.fps_timeline_sub))
                 Spacer(Modifier.height(12.dp))
                 val fps = rec.seconds.map { it.fps }
                 val top = max(max(rec.refreshHz, st.maxFps), 30f) * 1.08f
@@ -157,7 +152,7 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.Insights, ZkIndigo, stringResource(R.string.fps_insights_title), stringResource(R.string.fps_insights_sub))
+                CardHeader(ZkIcons.Insights, ZkIndigo, stringResource(R.string.fps_insights_title), stringResource(R.string.fps_insights_sub))
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     insights.forEach { InsightRow(it) }
@@ -167,7 +162,7 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.TrendingDown, ZkFpsDrop, stringResource(R.string.fps_drops_title), stringResource(R.string.fps_drops_sub, drops.size))
+                CardHeader(ZkIcons.TrendingDown, ZkFpsDrop, stringResource(R.string.fps_drops_title), stringResource(R.string.fps_drops_sub, drops.size))
                 Spacer(Modifier.height(12.dp))
                 if (drops.isEmpty()) {
                     Text(stringResource(R.string.fps_drops_none), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -200,7 +195,7 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.Speed, ZkCpu, stringResource(R.string.fps_frametime_title), stringResource(R.string.fps_frametime_sub))
+                CardHeader(ZkIcons.Speed, ZkCpu, stringResource(R.string.fps_frametime_title), stringResource(R.string.fps_frametime_sub))
                 Spacer(Modifier.height(12.dp))
                 StatGrid(
                     listOf(
@@ -217,7 +212,7 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.BarChart, ZkFps, stringResource(R.string.fps_dist_title), stringResource(R.string.fps_dist_sub))
+                CardHeader(ZkIcons.Chart, ZkFps, stringResource(R.string.fps_dist_title), stringResource(R.string.fps_dist_sub))
                 Spacer(Modifier.height(12.dp))
                 val (counts, labels, edges) = distribution(rec)
                 Histogram(
@@ -232,7 +227,7 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.SportsEsports, ZkAqua, stringResource(R.string.fps_full_stats_title))
+                CardHeader(ZkIcons.Gamepad, ZkAqua, stringResource(R.string.fps_full_stats_title))
                 Spacer(Modifier.height(12.dp))
                 StatGrid(
                     listOf(
@@ -287,10 +282,10 @@ private fun HeroStat(label: String, value: String, on: Color, modifier: Modifier
 @Composable
 private fun InsightRow(i: FpsAnalysis.Insight) {
     val (icon, color) = when (i.severity) {
-        FpsAnalysis.Severity.GOOD -> Icons.Rounded.CheckCircle to ZkGood
-        FpsAnalysis.Severity.INFO -> Icons.Rounded.Info to ZkCpu
-        FpsAnalysis.Severity.WARN -> Icons.Rounded.Warning to ZkWarn
-        FpsAnalysis.Severity.BAD -> Icons.Rounded.Warning to ZkBad
+        FpsAnalysis.Severity.GOOD -> ZkIcons.CheckCircle to ZkGood
+        FpsAnalysis.Severity.INFO -> ZkIcons.Info to ZkCpu
+        FpsAnalysis.Severity.WARN -> ZkIcons.Warning to ZkWarn
+        FpsAnalysis.Severity.BAD -> ZkIcons.Warning to ZkBad
     }
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))

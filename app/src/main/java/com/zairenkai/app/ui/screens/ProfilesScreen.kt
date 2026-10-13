@@ -11,11 +11,10 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import com.zairenkai.app.ui.icons.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -101,7 +100,7 @@ fun ProfilesScreen(factory: VmFactory) {
 
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.AutoMode, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(ZkIcons.AutoMode, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(Profiles.AUTO.nameRes), style = MaterialTheme.typography.titleMedium,
@@ -236,11 +235,11 @@ private fun ProfileCard(
 }
 
 private fun iconFor(key: String): ImageVector = when (key) {
-    "sports_esports" -> Icons.Rounded.SportsEsports
-    "speed" -> Icons.Rounded.Speed
-    "battery_saver" -> Icons.Rounded.BatterySaver
-    "balance" -> Icons.Rounded.Balance
-    else -> Icons.Rounded.AutoMode
+    "sports_esports" -> ZkIcons.Gamepad
+    "speed" -> ZkIcons.Speed
+    "battery_saver" -> ZkIcons.BatterySaver
+    "balance" -> ZkIcons.Balance
+    else -> ZkIcons.AutoMode
 }
 
 @Composable
@@ -324,7 +323,7 @@ private fun CustomProfileCard(
     ) {
         Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Tune, null, Modifier.size(26.dp), tint = MaterialTheme.colorScheme.primary)
+                Icon(ZkIcons.Tune, null, Modifier.size(26.dp), tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

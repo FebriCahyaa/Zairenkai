@@ -12,7 +12,6 @@
     <string name="action_save">保存</string>
     <string name="action_back">返回</string>
     <string name="action_next">下一步</string>
-    <string name="action_skip">跳过</string>
     <string name="state_active">已启用</string>
     <string name="a11y_suffix_active">，已启用</string>
     <string name="a11y_suffix_unsupported">，此设备不支持</string>

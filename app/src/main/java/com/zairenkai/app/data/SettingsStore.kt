@@ -9,6 +9,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -37,6 +39,10 @@ data class AppSettings(
     val glassTint: Float = 0.12f,       // 0 .. 0.4 accent tint
     // FPS monitor
     val fpsWatch: Set<String> = emptySet(),   // packages recorded while in the foreground
+    /** Version of the legal terms the user accepted in setup (0: none). */
+    val legalAccepted: Int = 0,
+    /** When they were accepted (epoch ms); 0 when not. */
+    val legalAcceptedAt: Long = 0L,
 )
 
 class SettingsStore(private val context: Context) {
@@ -55,6 +61,8 @@ class SettingsStore(private val context: Context) {
         val GLASS_BLUR = floatPreferencesKey("glass_blur")
         val GLASS_TINT = floatPreferencesKey("glass_tint")
         val FPS_WATCH = stringSetPreferencesKey("fps_watch")
+        val LEGAL = intPreferencesKey("legal_accepted")
+        val LEGAL_AT = longPreferencesKey("legal_accepted_at")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -73,6 +81,8 @@ class SettingsStore(private val context: Context) {
             glassBlur = p[Keys.GLASS_BLUR] ?: 18f,
             glassTint = p[Keys.GLASS_TINT] ?: 0.12f,
             fpsWatch = p[Keys.FPS_WATCH] ?: emptySet(),
+            legalAccepted = p[Keys.LEGAL] ?: 0,
+            legalAcceptedAt = p[Keys.LEGAL_AT] ?: 0L,
         )
     }
 
@@ -92,4 +102,8 @@ class SettingsStore(private val context: Context) {
     suspend fun setGlassBlur(v: Float) = context.dataStore.edit { it[Keys.GLASS_BLUR] = v }
     suspend fun setGlassTint(v: Float) = context.dataStore.edit { it[Keys.GLASS_TINT] = v }
     suspend fun setFpsWatch(v: Set<String>) = context.dataStore.edit { it[Keys.FPS_WATCH] = v }
+    suspend fun acceptLegal(version: Int, atMs: Long) = context.dataStore.edit {
+        it[Keys.LEGAL] = version
+        it[Keys.LEGAL_AT] = atMs
+    }
 }

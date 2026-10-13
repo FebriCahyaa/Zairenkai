@@ -1,0 +1,2328 @@
+{
+ "libraries": {
+  "androidx.activity:activity": {
+   "name": "Activity",
+   "description": "Provides the base Activity subclass and the relevant hooks to build a composable structure on top.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/activity#1.13.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.activity:activity-compose": {
+   "name": "Activity Compose",
+   "description": "Compose integration with Activity",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/activity#1.13.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.activity:activity-ktx": {
+   "name": "Activity Kotlin Extensions",
+   "description": "Kotlin extensions for 'activity' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/activity#1.13.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.annotation:annotation": {
+   "name": "Annotation",
+   "description": "Provides source annotations for tooling and readability.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/annotation#1.10.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.annotation:annotation-experimental": {
+   "name": "Experimental annotation",
+   "description": "Java annotation for use on unstable Android API surfaces. When used in conjunction with the Experimental annotation lint checks, this annotation provides functional parity with Kotlin's Experimental annotation.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/annotation#1.4.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.annotation:annotation-jvm": {
+   "name": "Annotation",
+   "description": "Provides source annotations for tooling and readability.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/annotation#1.10.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.appcompat:appcompat": {
+   "name": "AppCompat",
+   "description": "Provides backwards-compatible implementations of UI-related Android SDK functionality, including dark mode and Material theming.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/appcompat#1.7.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.appcompat:appcompat-resources": {
+   "name": "AppCompat Resources",
+   "description": "Provides backward-compatible implementations of resource-related Android SDKfunctionality, including color state list theming.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/appcompat#1.7.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.arch.core:core-common": {
+   "name": "Android Arch-Common",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/arch-core#2.2.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.arch.core:core-runtime": {
+   "name": "Android Arch-Runtime",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/arch-core#2.2.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.autofill:autofill": {
+   "name": "AndroidX Autofill",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.collection:collection": {
+   "name": "collections",
+   "description": "Standalone efficient collections.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/collection#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.collection:collection-jvm": {
+   "name": "collections",
+   "description": "Standalone efficient collections.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/collection#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.collection:collection-ktx": {
+   "name": "Collections Kotlin Extensions",
+   "description": "Kotlin extensions for 'collection' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/collection#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.animation:animation": {
+   "name": "Compose Animation",
+   "description": "Compose animation library",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.animation:animation-android": {
+   "name": "Compose Animation",
+   "description": "Compose animation library",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.animation:animation-core": {
+   "name": "Compose Animation Core",
+   "description": "Animation engine and animation primitives that are the building blocks of the Compose animation library",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.animation:animation-core-android": {
+   "name": "Compose Animation Core",
+   "description": "Animation engine and animation primitives that are the building blocks of the Compose animation library",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.foundation:foundation": {
+   "name": "Compose Foundation",
+   "description": "Higher level abstractions of the Compose UI primitives. This library is design system agnostic, providing the high-level building blocks for both application and design-system developers",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.foundation:foundation-android": {
+   "name": "Compose Foundation",
+   "description": "Higher level abstractions of the Compose UI primitives. This library is design system agnostic, providing the high-level building blocks for both application and design-system developers",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.foundation:foundation-layout": {
+   "name": "Compose Layouts",
+   "description": "Compose layout implementations",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.foundation:foundation-layout-android": {
+   "name": "Compose Layouts",
+   "description": "Compose layout implementations",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.material3:material3": {
+   "name": "Compose Material3 Components",
+   "description": "Compose Material You Design Components library",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.4.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.material3:material3-android": {
+   "name": "Compose Material3 Components",
+   "description": "Compose Material You Design Components library",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.4.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.material:material-icons-core": {
+   "name": "Compose Material Icons Core",
+   "description": "Compose Material Design core icons. This module contains the most commonly used set of Material icons.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.7.8",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.material:material-icons-core-android": {
+   "name": "Compose Material Icons Core",
+   "description": "Compose Material Design core icons. This module contains the most commonly used set of Material icons.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.7.8",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.material:material-ripple": {
+   "name": "Compose Material Ripple",
+   "description": "Material ripple used to build interactive components",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.material:material-ripple-android": {
+   "name": "Compose Material Ripple",
+   "description": "Material ripple used to build interactive components",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime": {
+   "name": "Compose Runtime",
+   "description": "Tree composition support for code generated by the Compose compiler plugin and corresponding public API",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime-android": {
+   "name": "Compose Runtime",
+   "description": "Tree composition support for code generated by the Compose compiler plugin and corresponding public API",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime-annotation": {
+   "name": "Compose Runtime Annotation",
+   "description": "Provides Compose-specific annotations used by the compiler and tooling",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime-annotation-android": {
+   "name": "Compose Runtime Annotation",
+   "description": "Provides Compose-specific annotations used by the compiler and tooling",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime-retain": {
+   "name": "Compose Runtime Retain",
+   "description": "Preserve state in composable methods across configuration changes and other transient content destruction scenarios",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime-retain-android": {
+   "name": "Compose Runtime Retain",
+   "description": "Preserve state in composable methods across configuration changes and other transient content destruction scenarios",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime-saveable": {
+   "name": "Compose Saveable",
+   "description": "Compose components that allow saving and restoring the local ui state",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.runtime:runtime-saveable-android": {
+   "name": "Compose Saveable",
+   "description": "Compose components that allow saving and restoring the local ui state",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui": {
+   "name": "Compose UI",
+   "description": "Compose UI primitives. This library contains the primitives that form the Compose UI Toolkit, such as drawing, measurement and layout.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-android": {
+   "name": "Compose UI",
+   "description": "Compose UI primitives. This library contains the primitives that form the Compose UI Toolkit, such as drawing, measurement and layout.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-geometry": {
+   "name": "Compose Geometry",
+   "description": "Compose classes related to dimensions without units",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-geometry-android": {
+   "name": "Compose Geometry",
+   "description": "Compose classes related to dimensions without units",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-graphics": {
+   "name": "Compose Graphics",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-graphics-android": {
+   "name": "Compose Graphics",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-test-manifest": {
+   "name": "Compose Testing manifest dependency",
+   "description": "Compose testing library that should be added as a debugImplementation dependency to add properties to the debug manifest necessary for testing an application",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-text": {
+   "name": "Compose UI Text",
+   "description": "Compose Text primitives and utilities",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-text-android": {
+   "name": "Compose UI Text",
+   "description": "Compose Text primitives and utilities",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-tooling": {
+   "name": "Compose Tooling",
+   "description": "Compose tooling library. This library exposes information to our tools for better IDE support.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-tooling-android": {
+   "name": "Compose Tooling",
+   "description": "Compose tooling library. This library exposes information to our tools for better IDE support.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-tooling-data": {
+   "name": "Compose Tooling Data",
+   "description": "Compose tooling library data. This library provides data about compose for different tooling purposes.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-tooling-data-android": {
+   "name": "Compose Tooling Data",
+   "description": "Compose tooling library data. This library provides data about compose for different tooling purposes.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-tooling-preview": {
+   "name": "Compose UI Preview Tooling",
+   "description": "Compose tooling library API. This library provides the API required to declare @Preview composables in user apps.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-tooling-preview-android": {
+   "name": "Compose UI Preview Tooling",
+   "description": "Compose tooling library API. This library provides the API required to declare @Preview composables in user apps.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-unit": {
+   "name": "Compose Unit",
+   "description": "Compose classes for simple units",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-unit-android": {
+   "name": "Compose Unit",
+   "description": "Compose classes for simple units",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-util": {
+   "name": "Compose Util",
+   "description": "Internal Compose utilities used by other modules",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.compose.ui:ui-util-android": {
+   "name": "Compose Util",
+   "description": "Internal Compose utilities used by other modules",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.concurrent:concurrent-futures": {
+   "name": "AndroidX Futures",
+   "description": "Androidx implementation of Guava's ListenableFuture",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/topic/libraries/architecture/index.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.core:core": {
+   "name": "Core",
+   "description": "Provides backward-compatible implementations of Android platform APIs and features.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/core#1.19.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.core:core-ktx": {
+   "name": "Core Kotlin Extensions",
+   "description": "Kotlin extensions for 'core' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/core#1.19.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.core:core-splashscreen": {
+   "name": "SplashScreen",
+   "description": "This library provides the compatibility APIs for SplashScreen and helper method to enable a splashscreen on devices prior Android 12",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/core#1.2.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.core:core-viewtree": {
+   "name": "androidx.core:core-viewtree",
+   "description": "Provides ViewTree extensions packaged for use by other core androidx libraries",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/core#1.0.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.cursoradapter:cursoradapter": {
+   "name": "Android Support Library Cursor Adapter",
+   "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "http://developer.android.com/tools/extras/support-library.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.customview:customview": {
+   "name": "Android Support Library Custom View",
+   "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "http://developer.android.com/tools/extras/support-library.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.customview:customview-poolingcontainer": {
+   "name": "androidx.customview:poolingcontainer",
+   "description": "Utilities for listening to the lifecycle of containers that manage their child Views' lifecycle, such as RecyclerView",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/customview#1.0.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore": {
+   "name": "DataStore",
+   "description": "Android DataStore - contains the underlying store used by each serialization method along with components that require an Android dependency",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-android": {
+   "name": "DataStore",
+   "description": "Android DataStore - contains the underlying store used by each serialization method along with components that require an Android dependency",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-core": {
+   "name": "DataStore Core",
+   "description": "Android DataStore Core - contains the underlying store used by each serialization method",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-core-android": {
+   "name": "DataStore Core",
+   "description": "Android DataStore Core - contains the underlying store used by each serialization method",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-core-okio": {
+   "name": "DataStore Core Okio",
+   "description": "Android DataStore Core Okio- contains APIs to use datastore-core in multiplatform via okio",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-core-okio-jvm": {
+   "name": "DataStore Core Okio",
+   "description": "Android DataStore Core Okio- contains APIs to use datastore-core in multiplatform via okio",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-preferences": {
+   "name": "Preferences DataStore",
+   "description": "Android Preferences DataStore",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-preferences-android": {
+   "name": "Preferences DataStore",
+   "description": "Android Preferences DataStore",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-preferences-core": {
+   "name": "Preferences DataStore Core",
+   "description": "Android Preferences DataStore without the Android Dependencies",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-preferences-core-android": {
+   "name": "Preferences DataStore Core",
+   "description": "Android Preferences DataStore without the Android Dependencies",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-preferences-external-protobuf": {
+   "name": "Preferences External Protobuf",
+   "description": "Repackaged proto-lite dependency for use by datastore preferences",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "BSD-3-Clause",
+     "name": "BSD-3-Clause",
+     "url": "https://opensource.org/licenses/BSD-3-Clause"
+    }
+   ]
+  },
+  "androidx.datastore:datastore-preferences-proto": {
+   "name": "Preferences DataStore Proto",
+   "description": "Jarjar the generated proto for use by datastore-preferences.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/datastore#1.2.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.drawerlayout:drawerlayout": {
+   "name": "Android Support Library Drawer Layout",
+   "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "http://developer.android.com/tools/extras/support-library.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.emoji2:emoji2": {
+   "name": "Emoji2",
+   "description": "Core library to enable emoji compatibility in Kitkat and newer devices to avoid the empty emoji characters.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/emoji2#1.4.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.emoji2:emoji2-views-helper": {
+   "name": "Emoji2 Views Helper",
+   "description": "Provide helper classes for Emoji2 views.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/emoji2#1.4.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.fragment:fragment": {
+   "name": "Android Support Library fragment",
+   "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/fragment#1.5.4",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.graphics:graphics-path": {
+   "name": "Android Graphics Path",
+   "description": "Query segment data for android.graphics.Path objects",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/graphics#1.0.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.interpolator:interpolator": {
+   "name": "Android Support Library Interpolators",
+   "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "http://developer.android.com/tools/extras/support-library.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-common": {
+   "name": "Lifecycle-Common",
+   "description": "Android Lifecycle-Common",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-common-java8": {
+   "name": "Lifecycle-Common for Java 8",
+   "description": "Android Lifecycle-Common for Java 8 Language",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-common-jvm": {
+   "name": "Lifecycle-Common",
+   "description": "Android Lifecycle-Common",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-livedata": {
+   "name": "Lifecycle LiveData",
+   "description": "Android Lifecycle LiveData",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-livedata-core": {
+   "name": "Lifecycle LiveData Core",
+   "description": "Android Lifecycle LiveData Core",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-livedata-core-ktx": {
+   "name": "LiveData Core Kotlin Extensions",
+   "description": "Kotlin extensions for 'livedata-core' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-process": {
+   "name": "Lifecycle Process",
+   "description": "Android Lifecycle Process",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-runtime": {
+   "name": "Lifecycle Runtime",
+   "description": "Android Lifecycle Runtime",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-runtime-android": {
+   "name": "Lifecycle Runtime",
+   "description": "Android Lifecycle Runtime",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-runtime-compose": {
+   "name": "Lifecycle Runtime Compose",
+   "description": "Compose integration with Lifecycle",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-runtime-compose-android": {
+   "name": "Lifecycle Runtime Compose",
+   "description": "Compose integration with Lifecycle",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-runtime-ktx": {
+   "name": "Lifecycle Kotlin Extensions",
+   "description": "Kotlin extensions for 'lifecycle' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-runtime-ktx-android": {
+   "name": "Lifecycle Kotlin Extensions",
+   "description": "Kotlin extensions for 'lifecycle' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-viewmodel": {
+   "name": "Lifecycle ViewModel",
+   "description": "Android Lifecycle ViewModel",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-viewmodel-android": {
+   "name": "Lifecycle ViewModel",
+   "description": "Android Lifecycle ViewModel",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-viewmodel-compose": {
+   "name": "Lifecycle ViewModel Compose",
+   "description": "Compose integration with Lifecycle ViewModel",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-viewmodel-compose-android": {
+   "name": "Lifecycle ViewModel Compose",
+   "description": "Compose integration with Lifecycle ViewModel",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-viewmodel-ktx": {
+   "name": "Lifecycle ViewModel Kotlin Extensions",
+   "description": "Kotlin extensions for 'viewmodel' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-viewmodel-savedstate": {
+   "name": "Lifecycle ViewModel with SavedState",
+   "description": "Android Lifecycle ViewModel",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.lifecycle:lifecycle-viewmodel-savedstate-android": {
+   "name": "Lifecycle ViewModel with SavedState",
+   "description": "Android Lifecycle ViewModel",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.loader:loader": {
+   "name": "Android Support Library loader",
+   "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "http://developer.android.com/tools/extras/support-library.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigation:navigation-common": {
+   "name": "Navigation Common",
+   "description": "Android Navigation-Common",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigation#2.10.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigation:navigation-common-android": {
+   "name": "Navigation Common",
+   "description": "Android Navigation-Common",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigation#2.10.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigation:navigation-compose": {
+   "name": "Compose Navigation",
+   "description": "Compose integration with Navigation",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigation#2.10.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigation:navigation-compose-android": {
+   "name": "Compose Navigation",
+   "description": "Compose integration with Navigation",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigation#2.10.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigation:navigation-runtime": {
+   "name": "Navigation Runtime",
+   "description": "Android Navigation-Runtime",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigation#2.10.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigation:navigation-runtime-android": {
+   "name": "Navigation Runtime",
+   "description": "Android Navigation-Runtime",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigation#2.10.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigationevent:navigationevent": {
+   "name": "Navigation Event",
+   "description": "Provides APIs to easily intercept platform navigation events, including swipes and clicks, to provide a consistent API surface for handling these events.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.1.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigationevent:navigationevent-android": {
+   "name": "Navigation Event",
+   "description": "Provides APIs to easily intercept platform navigation events, including swipes and clicks, to provide a consistent API surface for handling these events.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.1.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigationevent:navigationevent-compose": {
+   "name": "NavigationEvent Compose",
+   "description": "Compose integration with NavigationEvent",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.1.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.navigationevent:navigationevent-compose-android": {
+   "name": "NavigationEvent Compose",
+   "description": "Compose integration with NavigationEvent",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.1.2",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.profileinstaller:profileinstaller": {
+   "name": "Profile Installer",
+   "description": "Allows libraries to prepopulate ahead of time compilation traces to be read by ART",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/profileinstaller#1.4.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.resourceinspection:resourceinspection-annotation": {
+   "name": "Android Resource Inspection - Annotations",
+   "description": "Annotation processors for Android resource and layout inspection",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/resourceinspection#1.0.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.savedstate:savedstate": {
+   "name": "Saved State",
+   "description": "Android Lifecycle Saved State",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.savedstate:savedstate-android": {
+   "name": "Saved State",
+   "description": "Android Lifecycle Saved State",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.savedstate:savedstate-compose": {
+   "name": "Saved State Compose",
+   "description": "Compose integration with Saved State",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.savedstate:savedstate-compose-android": {
+   "name": "Saved State Compose",
+   "description": "Compose integration with Saved State",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.savedstate:savedstate-ktx": {
+   "name": "SavedState Kotlin Extensions",
+   "description": "Kotlin extensions for 'savedstate' artifact",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.startup:startup-runtime": {
+   "name": "Android App Startup Runtime",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/startup#1.1.1",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.tracing:tracing": {
+   "name": "Android Tracing",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/tracing#1.2.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.vectordrawable:vectordrawable": {
+   "name": "Android Support VectorDrawable",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.vectordrawable:vectordrawable-animated": {
+   "name": "Android Support AnimatedVectorDrawable",
+   "description": null,
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.versionedparcelable:versionedparcelable": {
+   "name": "VersionedParcelable",
+   "description": "Provides a stable but relatively compact binary serialization format that can be passed across processes or persisted safely.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "http://developer.android.com/tools/extras/support-library.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.viewpager:viewpager": {
+   "name": "Android Support Library View Pager",
+   "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "http://developer.android.com/tools/extras/support-library.html",
+   "source": "http://source.android.com",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.window:window": {
+   "name": "WindowManager",
+   "description": "WindowManager Jetpack library. Currently only provides additional functionality on foldable devices.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/window#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.window:window-core": {
+   "name": "WindowManager Core",
+   "description": "WindowManager Core Library.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/window#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "androidx.window:window-core-android": {
+   "name": "WindowManager Core",
+   "description": "WindowManager Core Library.",
+   "developers": [
+    "The Android Open Source Project"
+   ],
+   "website": "https://developer.android.com/jetpack/androidx/releases/window#1.5.0",
+   "source": "https://cs.android.com/androidx/platform/frameworks/support",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "com.airbnb.android:lottie": {
+   "name": "Lottie",
+   "description": "Lottie is an animation library that renders Adobe After Effects animations natively in realtime.",
+   "developers": [
+    "Airbnb"
+   ],
+   "website": "https://github.com/airbnb/lottie-android",
+   "source": "https://github.com/airbnb/lottie-android",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
+   ]
+  },
+  "com.airbnb.android:lottie-compose": {
+   "name": "Lottie Compose",
+   "description": "Lottie for Jetpack Compose.",
+   "developers": [
+    "Airbnb"
+   ],
+   "website": "https://github.com/airbnb/lottie-android",
+   "source": "https://github.com/airbnb/lottie-android",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
+   ]
+  },
+  "com.google.guava:listenablefuture": {
+   "name": "Guava ListenableFuture only",
+   "description": "Contains Guava's com.google.common.util.concurrent.ListenableFuture class, without any of its other classes -- but is also available in a second \"version\" that omits the class to avoid conflicts with the copy in Guava itself. The idea is: - If users want only ListenableFuture, they depend on listenablefuture-1.0. - If users want all of Guava, they depend on guava, which, as of Guava 27.0, depends on listenablefuture-9999.0-empty-to-avoid-conflict-with-guava. The 9999.0-... version number is enough for some build systems (notably, Gradle) to select that empty artifact over the \"real\" listenablefuture-1.0 -- avoiding a conflict with the copy of ListenableFuture in guava itself. If users are using an older version of Guava or a build system other than Gradle, they may see class conflicts. If so, they can solve them by manually excluding the listenablefuture artifact or manually forcing their build systems to use 9999.0-....",
+   "developers": [
+    "Kevin Bourrillion"
+   ],
+   "website": "https://github.com/google/guava",
+   "source": "https://github.com/google/guava",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "com.squareup.okio:okio": {
+   "name": "okio",
+   "description": "A modern I/O library for Android, Java, and Kotlin Multiplatform.",
+   "developers": [
+    "Square, Inc."
+   ],
+   "website": "https://github.com/square/okio/",
+   "source": "https://github.com/square/okio/",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "com.squareup.okio:okio-jvm": {
+   "name": "okio",
+   "description": "A modern I/O library for Android, Java, and Kotlin Multiplatform.",
+   "developers": [
+    "Square, Inc."
+   ],
+   "website": "https://github.com/square/okio/",
+   "source": "https://github.com/square/okio/",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlin:kotlin-stdlib": {
+   "name": "Kotlin Stdlib",
+   "description": "Kotlin Standard Library",
+   "developers": [
+    "Kotlin Team"
+   ],
+   "website": "https://kotlinlang.org/",
+   "source": "https://github.com/JetBrains/kotlin",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlin:kotlin-stdlib-common": {
+   "name": "Kotlin Stdlib Common",
+   "description": "Kotlin Common Standard Library (legacy, use kotlin-stdlib instead)",
+   "developers": [
+    "Kotlin Team"
+   ],
+   "website": "https://kotlinlang.org/",
+   "source": "https://github.com/JetBrains/kotlin",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlinx:kotlinx-coroutines-android": {
+   "name": "kotlinx-coroutines-android",
+   "description": "Coroutines support libraries for Kotlin",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/Kotlin/kotlinx.coroutines",
+   "source": "https://github.com/Kotlin/kotlinx.coroutines",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlinx:kotlinx-coroutines-core": {
+   "name": "kotlinx-coroutines-core",
+   "description": "Coroutines support libraries for Kotlin",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/Kotlin/kotlinx.coroutines",
+   "source": "https://github.com/Kotlin/kotlinx.coroutines",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm": {
+   "name": "kotlinx-coroutines-core",
+   "description": "Coroutines support libraries for Kotlin",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/Kotlin/kotlinx.coroutines",
+   "source": "https://github.com/Kotlin/kotlinx.coroutines",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlinx:kotlinx-serialization-core": {
+   "name": "kotlinx-serialization-core",
+   "description": "Kotlin multiplatform serialization runtime library",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/Kotlin/kotlinx.serialization",
+   "source": "https://github.com/Kotlin/kotlinx.serialization",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm": {
+   "name": "kotlinx-serialization-core",
+   "description": "Kotlin multiplatform serialization runtime library",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/Kotlin/kotlinx.serialization",
+   "source": "https://github.com/Kotlin/kotlinx.serialization",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlinx:kotlinx-serialization-json": {
+   "name": "kotlinx-serialization-json",
+   "description": "Kotlin multiplatform serialization runtime library",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/Kotlin/kotlinx.serialization",
+   "source": "https://github.com/Kotlin/kotlinx.serialization",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm": {
+   "name": "kotlinx-serialization-json",
+   "description": "Kotlin multiplatform serialization runtime library",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/Kotlin/kotlinx.serialization",
+   "source": "https://github.com/Kotlin/kotlinx.serialization",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "Apache-2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jetbrains:annotations": {
+   "name": "JetBrains Java Annotations",
+   "description": "A set of annotations used for code inspection support and code documentation.",
+   "developers": [
+    "JetBrains Team"
+   ],
+   "website": "https://github.com/JetBrains/java-annotations",
+   "source": "https://github.com/JetBrains/java-annotations",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache Software License, Version 2.0",
+     "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  },
+  "org.jspecify:jspecify": {
+   "name": "JSpecify annotations",
+   "description": "An artifact of well-named and well-specified annotations to power static analysis checks",
+   "developers": [
+    "Kevin Bourrillion"
+   ],
+   "website": "http://jspecify.org/",
+   "source": "https://github.com/jspecify/jspecify/",
+   "licenses": [
+    {
+     "spdx": "Apache-2.0",
+     "name": "The Apache License, Version 2.0",
+     "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+   ]
+  }
+ },
+ "extra": [
+  {
+   "id": "fonts:google-sans-flex",
+   "version": "variable",
+   "name": "Google Sans Flex",
+   "description": "The variable typeface of Material 3 Expressive, bundled as a Latin, Greek and Cyrillic subset.",
+   "developers": [
+    "Google LLC"
+   ],
+   "website": "https://fonts.google.com/specimen/Google+Sans+Flex",
+   "source": null,
+   "licenses": [
+    {
+     "spdx": "OFL-1.1",
+     "name": "SIL Open Font License 1.1",
+     "url": "https://openfontlicense.org"
+    }
+   ]
+  }
+ ]
+}

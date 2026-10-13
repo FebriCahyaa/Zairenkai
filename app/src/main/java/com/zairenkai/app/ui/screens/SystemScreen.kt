@@ -40,7 +40,7 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
+fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAboutPhone: () -> Unit = {}) {
     val vm: SystemViewModel = viewModel(factory = factory)
     val ui by vm.ui.collectAsState()
     val ctx = LocalContext.current
@@ -72,6 +72,7 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}) {
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            com.zairenkai.app.ui.device.DeviceEntryCard(onOpenAboutPhone)
             val sig = remember { SignatureGuard.check(ctx) }
             SectionCard(stringResource(R.string.system_integrity_title)) {
                 val (txt, col) = when (sig) {

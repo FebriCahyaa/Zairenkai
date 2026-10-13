@@ -5,14 +5,13 @@
  */
 package com.zairenkai.app.ui.screens.monitor
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,8 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zairenkai.app.R
 import com.zairenkai.app.ui.components.CollapsingScaffold
-import com.zairenkai.app.ui.icons.ChevronLeft
-import com.zairenkai.app.ui.icons.SensorsOff
 import com.zairenkai.app.ui.theme.LocalGlass
 import com.zairenkai.app.ui.theme.ZkBad
 import com.zairenkai.app.ui.theme.ZkGood
@@ -262,7 +259,7 @@ internal fun ModuleNeeded(modifier: Modifier = Modifier, detail: String? = null)
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(
-            Icons.Rounded.SensorsOff,
+            ZkIcons.SensorsOff,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -290,7 +287,7 @@ internal fun ModuleBanner(onDismiss: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
-                Icons.Rounded.SensorsOff,
+                ZkIcons.SensorsOff,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -303,7 +300,7 @@ internal fun ModuleBanner(onDismiss: () -> Unit) {
             )
             IconButton(onClick = onDismiss) {
                 Icon(
-                    Icons.Rounded.Close,
+                    ZkIcons.Close,
                     contentDescription = stringResource(R.string.mon_banner_dismiss),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 )

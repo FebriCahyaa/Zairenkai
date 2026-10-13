@@ -6,7 +6,6 @@
     <string name="settings_section_appearance">Tampilan</string>
     <string name="settings_theme_sub">Mode, aksen, warna dinamis &amp; Glass UI</string>
     <string name="settings_about_sub">Versi, lisensi &amp; kredit</string>
-    <string name="settings_section_general">Umum</string>
     <string name="settings_lite_title">Mode Lite</string>
     <string name="settings_lite_sub">Sembunyikan tweak berat, kurangi overhead.</string>
     <string name="settings_mitigation_title">Mitigasi perangkat</string>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="setup_step_legal">法的情報</string>
+    <string name="setup_step_theme">表示</string>
+    <string name="setup_step_permissions">アプリの権限</string>
+    <string name="setup_alert_notes_title">使用できます（注意あり）</string>
+    <string name="setup_alert_missing_title">準備ができていないコンポーネントがあります</string>
+    <string name="setup_start_app">はじめる</string>
+    <string name="setup_agree_continue">同意して続ける</string>
+    <string name="setup_theme_title">表示を選ぶ</string>
+    <string name="setup_theme_body">モードと色を選ぶと、プレビューにすぐ反映されます。あとから設定でいつでも変更できます。</string>
+    <string name="setup_theme_mode">表示モード</string>
+    <string name="setup_theme_dynamic">ダイナミックカラー</string>
+    <string name="setup_theme_dynamic_sub">壁紙の色に合わせる（Material You）</string>
+    <string name="setup_theme_accent">アクセントカラー</string>
+    <string name="setup_theme_accent_off">アクセントカラー（選ぶにはダイナミックカラーをオフに）</string>
+    <string name="setup_theme_preview">Zairenkai のプレビュー</string>
+    <string name="setup_features_title">できること</string>
+    <string name="setup_feature_fps_title">FPS レコーダー</string>
+    <string name="setup_feature_fps_body">選んだゲームの FPS をバックグラウンドで記録し、グラフや安定性、ゲームごとのセッションを確認できます。</string>
+    <string name="setup_feature_device_title">端末を知る</string>
+    <string name="setup_feature_device_body">ブランド、チップセット、ディスプレイ、メモリ、ストレージがわかるデバイス情報。</string>
+    <string name="setup_perm_title">アプリの権限</string>
+    <string name="setup_perm_body">Zairenkai の機能で実際に使う権限だけです。Android の設定でいつでも変更できます。</string>
+    <string name="setup_perm_note">どの権限も任意です。許可しなかった場合は、必要な機能を開いたときに改めて確認します。root は root マネージャーで許可するもので、ここでは扱いません。</string>
+    <string name="perm_notifications_title">通知</string>
+    <string name="perm_notifications_body">FPS レコーダーと履歴レコーダーはバックグラウンドサービスとして動作し、動作中は Android により通知が必要です。</string>
+    <string name="perm_usage_title">使用状況へのアクセス</string>
+    <string name="perm_usage_body">どのアプリを開いているかを知るため。アプリ別プロファイル、自動モード、使用履歴で使います。</string>
+    <string name="perm_battery_title">電池の最適化</string>
+    <string name="perm_battery_body">Android がバックグラウンドのレコーダーを停止しないよう、Zairenkai を除外します。Zairenkai を選び「最適化しない」を選択してください。</string>
+    <string name="perm_granted">許可済み</string>
+    <string name="perm_not_granted">未許可</string>
+    <string name="perm_needed">機能に必要</string>
+    <string name="perm_recommended">推奨</string>
+    <string name="perm_allow">許可</string>
+    <string name="perm_open_settings">設定を開く</string>
+    <plurals name="setup_done_permissions">
+        <item quantity="other">アプリの権限：%2$d 件中 %1$d 件を許可</item>
+    </plurals>
+</resources>

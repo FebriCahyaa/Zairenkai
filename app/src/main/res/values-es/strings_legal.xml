@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="legal_title">Información legal</string>
+    <string name="legal_intro">Lee estos términos antes de usar Zairenkai. Toca cualquier sección para leerla completa.</string>
+    <string name="legal_consent">He leído y acepto los Términos de uso, la exención de responsabilidad y la Política de privacidad de Zairenkai.</string>
+    <string name="legal_expanded">desplegado</string>
+    <string name="legal_collapsed">plegado</string>
+    <string name="legal_terms_title">Términos de uso</string>
+    <string name="legal_terms_summary">Cómo usar Zairenkai correctamente</string>
+    <string name="legal_terms_body">Zairenkai es un gestor de rendimiento para dispositivos Android con root. Lee el estado del sistema y, solo cuando tú lo pides, aplica perfiles y ajustes mediante el motor zperfd sobre el framework de kernel ZKFC.\n\nAl usar Zairenkai aceptas: usarlo solo en dispositivos de tu propiedad o que estés autorizado a modificar; no usarlo para infringir la ley ni los derechos de otros; y no descompilar, modificar ni redistribuir la app salvo lo que permita su licencia.\n\nEstos términos pueden actualizarse. Si cambian, se mostrará la nueva versión y se te pedirá de nuevo tu consentimiento.</string>
+    <string name="legal_risk_title">Riesgos y exención de responsabilidad</string>
+    <string name="legal_risk_summary">El root y el ajuste del kernel conllevan riesgos</string>
+    <string name="legal_risk_body">El acceso root y los cambios en parámetros del kernel (frecuencias de CPU y GPU, planificador, memoria) pueden afectar a la estabilidad, la temperatura, la autonomía y la garantía del dispositivo.\n\nZairenkai mantiene las protecciones existentes: cada cambio se aplica mediante zperfd, se verifica leyéndolo del kernel y se revierte si falla; sus límites siguen la protección térmica del kernel y el SAFE MODE tras un arranque fallido. La app no desactiva el servicio térmico del fabricante.\n\nAun así, este software se ofrece \"tal cual\", sin garantía de ningún tipo. En la medida en que lo permita la ley, el desarrollador no es responsable de daños, pérdida de datos u otros perjuicios derivados de su uso.</string>
+    <string name="legal_privacy_title">Privacidad y datos</string>
+    <string name="legal_privacy_summary">Sin internet, sin rastreo</string>
+    <string name="legal_privacy_body">Zairenkai no solicita acceso a internet y no envía ningún dato fuera de tu dispositivo. No hay cuentas, anuncios, analíticas ni rastreo.\n\nLos datos que crea la app (ajustes, historial de uso y energía, sesiones de FPS) se guardan localmente en el almacenamiento privado de la app, no se copian a la nube y se eliminan al desinstalarla.\n\nEl acceso de uso y las notificaciones solo se usan para las funciones descritas en el paso de permisos. El informe de diagnóstico solo se copia al portapapeles cuando pulsas Copiar y nunca contiene el token ni claves.</string>
+    <string name="legal_license_title">Licencia de Zairenkai</string>
+    <string name="legal_license_summary">Software propietario y token de API</string>
+    <string name="legal_license_body">Zairenkai es software propietario, © 2026 FebriCahyaa (LicenseRef-Zairenkai-Proprietary). Esta licencia te da derecho a usar la app, no la propiedad de su código, su diseño ni las ilustraciones de la mascota.\n\nLas funciones de rendimiento se desbloquean con un token de API vinculado a tu dispositivo y verificado por el kernel. No compartas tu token; los tokens compartidos pueden revocarse.</string>
+    <string name="legal_third_party_title">Componentes de terceros</string>
+    <string name="legal_third_party_summary">Bibliotecas de código abierto y sus licencias</string>
+    <string name="legal_third_party_body">Zairenkai está hecho con componentes de código abierto, entre ellos AndroidX y Jetpack Compose, Kotlin y kotlinx, y Lottie, la mayoría bajo la Apache License 2.0, y la fuente Google Sans Flex bajo la SIL Open Font License 1.1.\n\nLa lista completa (nombre, versión, desarrolladores, sitio web y el texto completo de la licencia de cada componente) está en Licencias de código abierto.</string>
+    <string name="legal_trademarks_title">Marcas comerciales</string>
+    <string name="legal_trademarks_summary">Las marcas solo identifican tu dispositivo</string>
+    <string name="legal_trademarks_body">Android es una marca comercial de Google LLC. Google, Pixel, Samsung, Xiaomi, Redmi, POCO, OnePlus, realme, Nothing, Motorola y otros nombres que se muestran para identificar tu dispositivo son marcas de sus respectivos propietarios.\n\nZairenkai no está afiliado, patrocinado ni respaldado por dichos propietarios. Los distintivos de marca en Información del teléfono son diseños de Zairenkai, no logotipos oficiales.</string>
+    <string name="oss_title">Licencias de código abierto</string>
+    <string name="oss_search">Buscar bibliotecas, desarrolladores o licencias</string>
+    <string name="oss_empty">No hay coincidencias.</string>
+    <string name="oss_source">Código</string>
+    <string name="oss_website">Sitio web</string>
+    <string name="oss_view_license">Ver licencia</string>
+    <string name="oss_hide_license">Ocultar</string>
+    <string name="oss_text_missing">El texto completo de esta licencia no está incluido; abre el enlace de arriba.</string>
+    <plurals name="oss_summary">
+        <item quantity="one">%1$d componente de código abierto en esta compilación, ordenado por nombre.</item>
+        <item quantity="many">%1$d componentes de código abierto en esta compilación, ordenados por nombre.</item>
+        <item quantity="other">%1$d componentes de código abierto en esta compilación, ordenados por nombre.</item>
+    </plurals>
+</resources>

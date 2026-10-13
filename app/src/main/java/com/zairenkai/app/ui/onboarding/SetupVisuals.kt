@@ -54,6 +54,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.zairenkai.app.ui.theme.ZkSetup
 import kotlinx.coroutines.delay
 import kotlin.math.max
 
@@ -91,7 +92,9 @@ fun SetupBackdrop(step: SetupStep, modifier: Modifier = Modifier, content: @Comp
         if (step == SetupStep.WELCOME || step == SetupStep.DONE) -0.36f else -0.44f,
         spring(stiffness = Spring.StiffnessVeryLow), label = "arcY",
     )
-    BrandBackdrop(arcY = { arcY }, modifier = modifier, content = content)
+    // Setup's own surfaces (ZkSetup tokens): a cool near-white or deep blue-black.
+    val base = if (isDarkSurface()) ZkSetup.BackgroundDark else ZkSetup.BackgroundLight
+    BrandBackdrop(arcY = { arcY }, modifier = modifier, base = base, content = content)
 }
 
 /**
@@ -100,7 +103,13 @@ fun SetupBackdrop(step: SetupStep, modifier: Modifier = Modifier, content: @Comp
  * read in the draw phase, so moving it does not recompose.
  */
 @Composable
-fun BrandBackdrop(arcY: () -> Float, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+fun BrandBackdrop(
+    arcY: () -> Float,
+    modifier: Modifier = Modifier,
+    /** The background under the arc; the scheme surface when null. */
+    base: Color? = null,
+    content: @Composable BoxScope.() -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
     val dark = isDarkSurface()
     val still = reducedMotion()
@@ -125,7 +134,7 @@ fun BrandBackdrop(arcY: () -> Float, modifier: Modifier = Modifier, content: @Co
     val low = lerp(cs.primaryContainer, Color(0xFFE5DBFF), 0.4f).copy(alpha = if (dark) 0.22f else 0.8f)
     Box(
         modifier.drawBehind {
-            drawRect(cs.surface)
+            drawRect(base ?: cs.surface)
             val b = breathe?.value ?: 0.5f
             val r = max(size.width, size.height) * (0.62f + 0.02f * b)
             // The arc: a ring band of a huge circle whose centre sits above the screen.

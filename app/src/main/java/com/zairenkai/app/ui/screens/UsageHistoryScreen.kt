@@ -8,6 +8,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
@@ -16,11 +17,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import com.zairenkai.app.ui.icons.ChevronLeft
-import com.zairenkai.app.ui.icons.DeleteSweep
-import com.zairenkai.app.ui.icons.FiberManualRecord
-import com.zairenkai.app.ui.icons.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -59,7 +55,7 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
         actions = {
             if (ui.sessions.isNotEmpty()) {
                 IconButton(onClick = { vm.clearAll() }) {
-                    Icon(Icons.Rounded.DeleteSweep, stringResource(R.string.usage_clear_all))
+                    Icon(ZkIcons.DeleteSweep, stringResource(R.string.usage_clear_all))
                 }
             }
         },
@@ -86,7 +82,7 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
                             onClick = { ZkMonitorService.stop(context) },
                             colors = ButtonDefaults.buttonColors(containerColor = ZkBad),
                         ) {
-                            Icon(Icons.Rounded.Stop, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.usage_stop_save))
+                            Icon(ZkIcons.Stop, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.usage_stop_save))
                         }
                     } else {
                         Button(onClick = {
@@ -96,7 +92,7 @@ fun UsageHistoryScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (S
                                 ZkMonitorService.start(context)
                             }
                         }) {
-                            Icon(Icons.Rounded.FiberManualRecord, null, tint = ZkBad)
+                            Icon(ZkIcons.Dot, null, tint = ZkBad)
                             Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.usage_start))
                         }
                     }

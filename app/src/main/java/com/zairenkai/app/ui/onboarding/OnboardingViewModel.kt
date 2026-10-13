@@ -1,30 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * State for the first-run wizard: the system check (root -> ZKFC -> zperfd ->
- * token, probed read-only) and an optional first profile, applied through
- * zperfd exactly like the Profiles screen. Nothing here writes a tunable
- * itself.
+ * State for the first-run setup: welcome, legal information and consent,
+ * appearance (theme mode, accent, dynamic colour), the system check (root ->
+ * ZKFC -> zperfd -> token, probed read-only), app permissions, and done.
+ * Nothing here writes a tunable; the theme is saved to the settings store
+ * as it is chosen, so the whole app (and the preview) follows it live.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.onboarding
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.annotation.StringRes
 import com.zairenkai.app.AppContainer
 import com.zairenkai.app.R
-import com.zairenkai.app.core.text.UiText
-import com.zairenkai.app.core.text.uiText
-import com.zairenkai.app.data.ModeApplyResult
-import com.zairenkai.app.domain.Profile
-import com.zairenkai.app.domain.ProfileId
-import com.zairenkai.app.ui.profileFailureMessage
-import com.zairenkai.app.ui.profileSuccessMessage
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Minimum time between step changes; shorter than the page transition so normal use never notices. */
@@ -32,24 +26,36 @@ internal const val STEP_DEBOUNCE_MS = 280L
 
 internal fun stepChangeAllowed(lastMs: Long, nowMs: Long): Boolean = lastMs == 0L || nowMs - lastMs >= STEP_DEBOUNCE_MS
 
+/** The version of the legal terms shown in setup; raise it when they change materially. */
+const val LEGAL_VERSION = 1
+
 enum class SetupStep(@StringRes val title: Int) {
     WELCOME(R.string.setup_step_welcome),
+    LEGAL(R.string.setup_step_legal),
+    THEME(R.string.setup_step_theme),
     CHECK(R.string.setup_step_check),
-    PROFILE(R.string.setup_step_profile),
+    PERMISSIONS(R.string.setup_step_permissions),
     DONE(R.string.setup_step_done),
 }
 
 data class OnboardingUi(
     val step: SetupStep = SetupStep.WELCOME,
     val probe: SetupProbe = SetupProbe(),
-    val choice: ProfileId? = null,
-    val applying: Boolean = false,
-    /** Name of the profile zperfd committed during setup. */
-    val applied: UiText? = null,
-    val applyMessage: UiText? = null,
-    val applyFailed: Boolean = false,
+    /** The consent box on the legal step; required to continue. */
+    val legalChecked: Boolean = false,
+    val themeMode: String = "system",
+    val accent: String = "indigo",
+    val dynamicColor: Boolean = true,
 ) {
     val checks: List<SetupCheck> get() = setupChecks(probe)
+
+    /** Next is allowed from this step (legal needs consent; the check needs every probe answered). */
+    val canContinue: Boolean
+        get() = when (step) {
+            SetupStep.LEGAL -> legalChecked
+            SetupStep.CHECK -> checks.settled()
+            else -> true
+        }
 }
 
 class OnboardingViewModel(private val c: AppContainer) : ViewModel() {
@@ -57,15 +63,29 @@ class OnboardingViewModel(private val c: AppContainer) : ViewModel() {
     val ui: StateFlow<OnboardingUi> = _ui.asStateFlow()
     private var checking: Job? = null
 
+    init {
+        viewModelScope.launch {
+            c.settings.settings.collect { s ->
+                _ui.update {
+                    it.copy(
+                        themeMode = s.themeMode, accent = s.accent, dynamicColor = s.dynamicColor,
+                        // A returning user who accepted these terms keeps the box ticked.
+                        legalChecked = it.legalChecked || s.legalAccepted >= LEGAL_VERSION,
+                    )
+                }
+            }
+        }
+    }
+
     /** (Re)run every probe. Root is asked first; the rest run in parallel. */
     fun runChecks() {
         checking?.cancel()
-        _ui.value = _ui.value.copy(probe = SetupProbe())
+        _ui.update { it.copy(probe = SetupProbe()) }
         checking = viewModelScope.launch { SetupProber(c).run(::update) }
     }
 
     private fun update(f: (SetupProbe) -> SetupProbe) {
-        _ui.value = _ui.value.copy(probe = f(_ui.value.probe))
+        _ui.update { it.copy(probe = f(it.probe)) }
     }
 
     private var lastStepChangeMs = 0L
@@ -73,38 +93,26 @@ class OnboardingViewModel(private val c: AppContainer) : ViewModel() {
     fun goTo(step: SetupStep) {
         // A second tap during the page transition must not skip a step.
         val now = android.os.SystemClock.uptimeMillis()
-        if (step != _ui.value.step && !stepChangeAllowed(lastStepChangeMs, now)) return
-        if (_ui.value.applying) return
+        val cur = _ui.value
+        if (step == cur.step || !stepChangeAllowed(lastStepChangeMs, now)) return
+        // Forward needs this step done; back is always allowed.
+        if (step.ordinal > cur.step.ordinal && !cur.canContinue) return
+        if (cur.step == SetupStep.LEGAL && step.ordinal > cur.step.ordinal) {
+            viewModelScope.launch { c.settings.acceptLegal(LEGAL_VERSION, System.currentTimeMillis()) }
+        }
         lastStepChangeMs = now
-        _ui.value = _ui.value.copy(step = step)
+        _ui.update { it.copy(step = step) }
         if (step == SetupStep.CHECK && _ui.value.probe == SetupProbe()) runChecks()
     }
 
     fun next() = SetupStep.entries.getOrNull(_ui.value.step.ordinal + 1)?.let(::goTo)
     fun back() = SetupStep.entries.getOrNull(_ui.value.step.ordinal - 1)?.let(::goTo)
 
-    fun choose(id: ProfileId?) {
-        if (!_ui.value.applying) _ui.value = _ui.value.copy(choice = id, applyMessage = null, applyFailed = false)
-    }
+    fun setLegalChecked(v: Boolean) = _ui.update { it.copy(legalChecked = v) }
 
-    /** Apply the chosen profile through zperfd, then move on only if it was committed. */
-    fun applyChoice(profile: Profile) = viewModelScope.launch {
-        if (_ui.value.applying) return@launch
-        _ui.value = _ui.value.copy(applying = true, applyMessage = null, applyFailed = false)
-        val result = runCatching { c.zperf.apply(profile.mode) }.getOrElse {
-            ModeApplyResult(ok = false, kind = "protocol", error = it.message)
-        }
-        if (result.ok) {
-            if (profile.id != ProfileId.AUTO) c.settings.setActiveProfile(profile.id)
-            c.settings.setAutoProfile(profile.id == ProfileId.AUTO)
-            _ui.value = _ui.value.copy(
-                applying = false, applied = uiText(profile.nameRes),
-                applyMessage = profileSuccessMessage(uiText(profile.nameRes), result), step = SetupStep.DONE,
-            )
-        } else {
-            _ui.value = _ui.value.copy(applying = false, applyFailed = true, applyMessage = profileFailureMessage(result))
-        }
-    }
+    fun setThemeMode(v: String) = viewModelScope.launch { c.settings.setThemeMode(v) }
+    fun setAccent(v: String) = viewModelScope.launch { c.settings.setAccent(v) }
+    fun setDynamicColor(v: Boolean) = viewModelScope.launch { c.settings.setDynamicColor(v) }
 
     fun finish(onDone: () -> Unit) = viewModelScope.launch {
         c.settings.setOnboarded(true)

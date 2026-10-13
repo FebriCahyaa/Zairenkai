@@ -7,14 +7,13 @@
  */
 package com.zairenkai.app.ui.components
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import android.graphics.Canvas
 import androidx.core.graphics.createBitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import com.zairenkai.app.ui.icons.Android
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -60,7 +59,7 @@ fun AppIcon(pkg: String, modifier: Modifier = Modifier, size: Dp = 36.dp) {
         Image(bitmap = b, contentDescription = pkg, modifier = modifier.size(size))
     } else {
         Icon(
-            Icons.Rounded.Android, contentDescription = pkg,
+            ZkIcons.Android, contentDescription = pkg,
             modifier = modifier.size(size),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )

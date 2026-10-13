@@ -4,23 +4,18 @@
     <!-- Wizard frame -->
     <string name="setup_step_welcome">Bienvenida</string>
     <string name="setup_step_check">Comprobación del sistema</string>
-    <string name="setup_step_profile">Perfil inicial</string>
     <string name="setup_step_done">Listo</string>
     <string name="setup_step_label">Paso %1$d de %2$d · %3$s</string>
     <string name="setup_language">Idioma</string>
     <string name="setup_info">Información de la app y el dispositivo</string>
     <string name="setup_start">Iniciar configuración</string>
     <string name="setup_checking">Comprobando…</string>
-    <string name="setup_apply_profile">Aplicar %1$s</string>
-    <!-- %1$s: profile name -->
-    <string name="setup_applying">Aplicando %1$s…</string>
-    <string name="setup_skip_for_now">Omitir por ahora</string>
-    <string name="setup_enter_app">Entrar en Zairenkai</string>
 
     <!-- 1. Welcome -->
     <string name="setup_greeting_hello">Hola</string>
     <string name="setup_greeting_tagline">Rendimiento, a tu manera.</string>
-    <string name="setup_welcome_body">Control de rendimiento para dispositivos con root, gestionado por el motor zperfd sobre el framework de kernel ZKFC.</string>
+    <string name="setup_welcome_title">Conoce Zairenkai</string>
+    <string name="setup_welcome_body">El control del sistema Android, en una experiencia más intuitiva.</string>
     <string name="setup_feature_monitor_title">Monitor en vivo</string>
     <string name="setup_feature_monitor_body">FPS del juego que elijas, carga de CPU por núcleo, GPU, batería y temperatura.</string>
     <string name="setup_feature_verified_title">Perfiles y ajustes verificados</string>
@@ -96,7 +91,6 @@
     <string name="setup_state_warn">requiere atención</string>
     <string name="setup_state_missing">no listo</string>
     <string name="setup_check_a11y">%1$s: %2$s. %3$s</string>
-    <string name="setup_check_summary_row">%1$s: %2$s</string>
 
     <!-- License states, as "Token <state>." -->
     <string name="license_state_valid">válido</string>
@@ -110,15 +104,10 @@
     <string name="license_state_no_owner_key">sin clave de propietario aprovisionada en el kernel</string>
     <string name="license_state_revoked">revocado</string>
 
-    <!-- 3. First profile -->
-    <string name="setup_profile_title">Elige un perfil inicial</string>
-    <string name="setup_profile_body">Opcional. Los perfiles son modos de zperfd; sus valores se ajustan a la tabla de frecuencias del dispositivo y siguen limitados por la envolvente térmica.</string>
-    <string name="setup_profile_blocked">Podrás aplicar perfiles cuando %1$s esté listo. Puedes elegirlo más tarde en la pestaña Perfiles.</string>
 
     <!-- 4. Done -->
     <string name="setup_done_ready_title">Listo para usar</string>
     <string name="setup_done_partial_title">Configuración completada</string>
-    <string name="setup_done_applied">Perfil %1$s aplicado.</string>
     <string name="setup_done_ready_body">Elige un perfil cuando quieras en la pestaña Perfiles o crea un perfil personalizado a partir de un modo integrado.</string>
     <string name="setup_done_partial_body">Ya puedes abrir Zairenkai. Las funciones que necesitan componentes que aún no están listos seguirán bloqueadas.</string>
     <string name="setup_next_steps">Próximos pasos</string>

@@ -15,11 +15,11 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,7 +44,9 @@ fun currentLanguageLabel(): String {
 fun LanguageSheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val current = remember { AppLocale.current(context) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -71,8 +73,13 @@ fun LanguageSheet(onDismiss: () -> Unit) {
                         stringResource(R.string.language_system_current, system.getDisplayName(system))
                     } else null
                     LanguageOption(title, subtitle, selected = lang == current) {
-                        onDismiss()
-                        if (lang != current) context.findActivity()?.let { AppLocale.apply(it, lang) }
+                        // Slide the sheet away first, then switch: the new language
+                        // fades in on a calm screen instead of under a moving sheet.
+                        scope.launch {
+                            sheet.hide()
+                            onDismiss()
+                            if (lang != current) context.findActivity()?.let { AppLocale.apply(it, lang) }
+                        }
                     }
                 }
             }
@@ -94,7 +101,7 @@ private fun LanguageOption(title: String, subtitle: String?, selected: Boolean, 
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = LocalContentColor.current.copy(alpha = 0.75f)) }
             }
-            if (selected) Icon(Icons.Rounded.Check, null)
+            if (selected) Icon(ZkIcons.Check, null)
         }
     }
 }

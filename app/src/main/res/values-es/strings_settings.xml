@@ -6,7 +6,6 @@
     <string name="settings_section_appearance">Apariencia</string>
     <string name="settings_theme_sub">Modo, acento, color dinámico y Glass UI</string>
     <string name="settings_about_sub">Versión, licencias y créditos</string>
-    <string name="settings_section_general">General</string>
     <string name="settings_lite_title">Modo Lite</string>
     <string name="settings_lite_sub">Oculta los ajustes pesados y reduce la sobrecarga.</string>
     <string name="settings_mitigation_title">Mitigación del dispositivo</string>

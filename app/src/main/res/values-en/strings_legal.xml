@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="legal_title">Legal information</string>
+    <string name="legal_intro">Read these terms before using Zairenkai. Tap any section to read it in full.</string>
+    <string name="legal_consent">I have read and agree to the Zairenkai Terms of Use, risk disclaimer and Privacy Policy.</string>
+    <string name="legal_expanded">expanded</string>
+    <string name="legal_collapsed">collapsed</string>
+    <string name="legal_terms_title">Terms of use</string>
+    <string name="legal_terms_summary">How to use Zairenkai properly</string>
+    <string name="legal_terms_body">Zairenkai is a performance manager for rooted Android devices. It reads the state of the system and, only when you ask it to, applies profiles and tweaks through the zperfd engine on top of the ZKFC kernel framework.\n\nBy using Zairenkai you agree to: use it only on devices you own or are authorised to modify; not use it to break the law or the rights of others; and not reverse engineer, modify or redistribute the app except as its licence allows.\n\nThese terms may be updated. When they change, the new version is shown and asks for your consent again.</string>
+    <string name="legal_risk_title">Risks and disclaimer</string>
+    <string name="legal_risk_summary">Root and kernel tuning carry risk</string>
+    <string name="legal_risk_body">Root access and changes to kernel parameters (CPU and GPU frequencies, the scheduler, memory) can affect your device\'s stability, temperature, battery life and warranty.\n\nZairenkai keeps the existing safeguards: every change is applied through zperfd, read back from the kernel and rolled back if it fails; its limits follow the kernel thermal guard and SAFE MODE after a failed boot. The app does not disable the manufacturer\'s thermal daemon.\n\nEven so, this software is provided \"as is\", without warranty of any kind. To the extent permitted by law, the developer is not liable for damage, data loss or other harm resulting from its use.</string>
+    <string name="legal_privacy_title">Privacy and data</string>
+    <string name="legal_privacy_summary">No internet, no tracking</string>
+    <string name="legal_privacy_body">Zairenkai does not request internet access and sends no data off your device. There are no accounts, ads, analytics or tracking.\n\nData the app creates (settings, usage and power history, FPS sessions) is stored locally in the app\'s private storage, is not backed up to the cloud, and is deleted when the app is uninstalled.\n\nUsage access and notifications are used only for the features described in the permissions step. A diagnostics report is copied to the clipboard only when you tap Copy, and never contains token contents or keys.</string>
+    <string name="legal_license_title">Zairenkai licence</string>
+    <string name="legal_license_summary">Proprietary software and the API token</string>
+    <string name="legal_license_body">Zairenkai is proprietary software, © 2026 FebriCahyaa (LicenseRef-Zairenkai-Proprietary). This licence gives you the right to use the app, not ownership of its code, design or mascot artwork.\n\nPerformance features are unlocked with an API token bound to your device and verified by the kernel. Do not share your token; shared tokens can be revoked.</string>
+    <string name="legal_third_party_title">Third-party components</string>
+    <string name="legal_third_party_summary">Open-source libraries and their licences</string>
+    <string name="legal_third_party_body">Zairenkai is built with open-source components, including AndroidX and Jetpack Compose, Kotlin and kotlinx, and Lottie, mostly under the Apache License 2.0, and the Google Sans Flex font under the SIL Open Font License 1.1.\n\nThe full list (name, version, developers, website and the complete licence text of every component) is in Open-source licences.</string>
+    <string name="legal_trademarks_title">Trademarks</string>
+    <string name="legal_trademarks_summary">Brand names only identify your device</string>
+    <string name="legal_trademarks_body">Android is a trademark of Google LLC. Google, Pixel, Samsung, Xiaomi, Redmi, POCO, OnePlus, realme, Nothing, Motorola and other names shown to identify your device are trademarks of their respective owners.\n\nZairenkai is not affiliated with, sponsored or endorsed by those owners. The brand marks in About phone are Zairenkai designs, not official logos.</string>
+    <string name="oss_title">Open-source licences</string>
+    <string name="oss_search">Search libraries, developers or licences</string>
+    <string name="oss_empty">Nothing matches.</string>
+    <string name="oss_source">Source</string>
+    <string name="oss_website">Website</string>
+    <string name="oss_view_license">View licence</string>
+    <string name="oss_hide_license">Hide</string>
+    <string name="oss_text_missing">The full text of this licence is not bundled; open the link above.</string>
+    <plurals name="oss_summary">
+        <item quantity="one">%1$d open-source component in this build, sorted by name.</item>
+        <item quantity="other">%1$d open-source components in this build, sorted by name.</item>
+    </plurals>
+</resources>

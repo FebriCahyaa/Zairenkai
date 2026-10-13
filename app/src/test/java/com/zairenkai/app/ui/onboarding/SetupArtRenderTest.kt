@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -54,10 +55,8 @@ import org.robolectric.annotation.GraphicsMode
 class SetupArtRenderTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private val anims = listOf(
-        "welcome" to R.raw.setup_welcome, "scan" to R.raw.setup_scan, "tune" to R.raw.setup_tune,
-        "attention" to R.raw.setup_attention, "success" to R.raw.setup_success,
-    )
+    // The check states are the mascot's (MascotRenderTest); these remain line art.
+    private val anims = listOf("welcome" to R.raw.setup_welcome, "tune" to R.raw.setup_tune, "success" to R.raw.setup_success)
     private val stops = listOf(0.05f, 0.2f, 0.35f, 0.5f, 0.65f, 0.8f, 1f)
 
     private fun strip(dark: Boolean) {
@@ -81,15 +80,33 @@ class SetupArtRenderTest {
                             stops.forEach { p -> LottieAnimation(c, progress = { p }, dynamicProperties = dyn, modifier = Modifier.size(108.dp)) }
                         }
                     }
-                    Row {
-                        listOf(ZkIcons.Globe, ZkIcons.Info, ZkIcons.Mark).forEach {
-                            Icon(it, null, Modifier.padding(8.dp).size(48.dp), tint = MaterialTheme.colorScheme.onSurface)
+
+                }
+            }
+        }
+        rule.onRoot().captureRoboImage(shotPath("art_${if (dark) "dark" else "light"}.png"))
+    }
+
+    /** Every icon of the app's own set, labelled. */
+    @Test
+    fun icons() {
+        rule.setContent {
+            ZairenkaiTheme(themeMode = "light", dynamicColor = false) {
+                Column(Modifier.background(MaterialTheme.colorScheme.surface).padding(12.dp)) {
+                    ZkIcons.all.chunked(10).forEach { row ->
+                        Row {
+                            row.forEach { (name, icon) ->
+                                Column(Modifier.size(78.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(icon, null, Modifier.padding(8.dp).size(32.dp), tint = MaterialTheme.colorScheme.onSurface)
+                                    Text(name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        rule.onRoot().captureRoboImage(shotPath("art_${if (dark) "dark" else "light"}.png"))
+        rule.onRoot().captureRoboImage(shotPath("icons.png"))
     }
 
     @Test fun light() = strip(false)

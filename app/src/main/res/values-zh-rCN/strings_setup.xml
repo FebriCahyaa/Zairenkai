@@ -4,23 +4,18 @@
     <!-- Wizard frame -->
     <string name="setup_step_welcome">欢迎</string>
     <string name="setup_step_check">系统检查</string>
-    <string name="setup_step_profile">初始配置</string>
     <string name="setup_step_done">完成</string>
     <string name="setup_step_label">第 %1$d 步，共 %2$d 步 · %3$s</string>
     <string name="setup_language">语言</string>
     <string name="setup_info">应用与设备信息</string>
     <string name="setup_start">开始设置</string>
     <string name="setup_checking">正在检查…</string>
-    <string name="setup_apply_profile">应用%1$s</string>
-    <!-- %1$s: profile name -->
-    <string name="setup_applying">正在应用%1$s…</string>
-    <string name="setup_skip_for_now">暂时跳过</string>
-    <string name="setup_enter_app">进入 Zairenkai</string>
 
     <!-- 1. Welcome -->
     <string name="setup_greeting_hello">你好</string>
     <string name="setup_greeting_tagline">性能，随你所想。</string>
-    <string name="setup_welcome_body">面向 root 设备的性能控制，由运行在 ZKFC 内核框架之上的 zperfd 引擎驱动。</string>
+    <string name="setup_welcome_title">认识 Zairenkai</string>
+    <string name="setup_welcome_body">Android 系统控制，尽在更直观的体验中。</string>
     <string name="setup_feature_monitor_title">实时监控</string>
     <string name="setup_feature_monitor_body">所选游戏的 FPS、每核心 CPU 负载、GPU、电池以及温度。</string>
     <string name="setup_feature_verified_title">经验证的配置与调校</string>
@@ -96,7 +91,6 @@
     <string name="setup_state_warn">需要注意</string>
     <string name="setup_state_missing">未就绪</string>
     <string name="setup_check_a11y">%1$s：%2$s。%3$s</string>
-    <string name="setup_check_summary_row">%1$s：%2$s</string>
 
     <!-- License states, as "Token <state>." -->
     <string name="license_state_valid">有效</string>
@@ -110,15 +104,10 @@
     <string name="license_state_no_owner_key">缺少所有者密钥（内核尚未配置）</string>
     <string name="license_state_revoked">已吊销</string>
 
-    <!-- 3. First profile -->
-    <string name="setup_profile_title">选择初始配置</string>
-    <string name="setup_profile_body">可选。配置即 zperfd 模式；其数值会对齐到设备频率表，并始终受温控包络限制。</string>
-    <string name="setup_profile_blocked">%1$s 就绪后才能应用配置。你也可以稍后在“配置”标签页中选择。</string>
 
     <!-- 4. Done -->
     <string name="setup_done_ready_title">准备就绪</string>
     <string name="setup_done_partial_title">设置完成</string>
-    <string name="setup_done_applied">已应用配置“%1$s”。</string>
     <string name="setup_done_ready_body">随时可在“配置”标签页中选择配置，或基于内置模式创建自定义配置。</string>
     <string name="setup_done_partial_body">现在即可打开 Zairenkai。依赖未就绪组件的功能将保持锁定。</string>
     <string name="setup_next_steps">后续步骤</string>

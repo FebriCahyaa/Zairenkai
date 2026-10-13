@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * The setup flow as a user meets it (Robolectric + Compose UI test): each
- * step renders from real state, every action reaches the right callback,
- * the on-screen and system Back agree, an apply cannot be started twice, and
- * a missing module is explained without raw shell output. Screenshots of
- * every step (light and dark) are written to build/outputs/roborazzi.
+ * The setup flow as a user meets it (Robolectric + Compose UI test): welcome,
+ * legal consent, appearance, system check, permissions and done each render
+ * from real state; every action reaches the right callback; Next is held
+ * until consent is given and every probe has answered; the on-screen and
+ * system Back agree; a missing module is explained without raw shell
+ * output. Screenshots of every step (light and dark) are written to
+ * build/outputs/roborazzi.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.onboarding
@@ -31,7 +33,6 @@ import com.zairenkai.app.data.InfoResult
 import com.zairenkai.app.data.ZperfStatus
 import com.zairenkai.app.data.diag.InstallFacts
 import com.zairenkai.app.data.diag.RootState
-import com.zairenkai.app.domain.ProfileId
 import com.zairenkai.app.ui.theme.ZairenkaiTheme
 import org.junit.Assert.assertEquals
 import com.zairenkai.app.shotPath
@@ -64,20 +65,27 @@ class SetupFlowUiTest {
 
     private val calls = mutableListOf<String>()
 
-    private fun show(initial: OnboardingUi, dark: Boolean = false): (OnboardingUi) -> Unit {
+    private val noPermissions = AppPermission.entries.associateWith { false }
+    private val allPermissions = AppPermission.entries.associateWith { true }
+
+    private fun show(initial: OnboardingUi, dark: Boolean = false, permissions: Map<AppPermission, Boolean> = noPermissions): (OnboardingUi) -> Unit {
         var state by mutableStateOf(initial)
         rule.setContent {
             ZairenkaiTheme(themeMode = if (dark) "dark" else "light", dynamicColor = false) {
                 SetupFlow(
                     ui = state,
+                    permissions = permissions,
                     onLanguage = { calls += "language" },
                     onInfo = { calls += "info" },
-                    onSkip = { calls += "skip" },
                     onBack = { calls += "back" },
                     onNext = { calls += "next" },
+                    onLegalChecked = { calls += "legal:$it" },
+                    onOpenLicenses = { calls += "licenses" },
+                    onThemeMode = { calls += "mode:$it" },
+                    onAccent = { calls += "accent:$it" },
+                    onDynamic = { calls += "dynamic:$it" },
                     onRecheck = { calls += "recheck" },
-                    onChoose = { calls += "choose:$it" },
-                    onApply = { calls += "apply" },
+                    onPermission = { calls += "perm:${it.name}" },
                     onFinish = { calls += "finish" },
                 )
             }
@@ -91,7 +99,7 @@ class SetupFlowUiTest {
     fun welcomeShowsTheBrandAndStartsTheFlow() {
         show(OnboardingUi())
         // The typed greeting exposes its final text to accessibility at once.
-        rule.onNodeWithContentDescription("${str(R.string.app_name)}. ${str(R.string.setup_greeting_tagline)}").assertExists()
+        rule.onNodeWithContentDescription("${str(R.string.setup_welcome_title)}. ${str(R.string.setup_greeting_tagline)}").assertExists()
         // Language and device info live at the bottom of the welcome page.
         rule.onNodeWithContentDescription(str(R.string.setup_language)).assertIsDisplayed()
         rule.onNodeWithContentDescription(str(R.string.setup_info)).assertIsDisplayed().performClick()
@@ -111,14 +119,63 @@ class SetupFlowUiTest {
     }
 
     @Test
+    fun legalNeedsConsentBeforeNext() {
+        val set = show(OnboardingUi(step = SetupStep.LEGAL))
+        rule.onNodeWithText(str(R.string.setup_agree_continue)).assertIsNotEnabled()
+        // A section opens in place.
+        rule.onNodeWithText(str(R.string.legal_privacy_title)).performScrollTo().performClick()
+        rule.mainClock.advanceTimeBy(600)
+        rule.onNodeWithText(str(R.string.legal_privacy_body)).assertExists()
+        shot("2_legal_light")
+        rule.onNodeWithText(str(R.string.legal_consent)).performScrollTo().performClick()
+        assertEquals("legal:true", calls.last())
+        set(OnboardingUi(step = SetupStep.LEGAL, legalChecked = true))
+        rule.onNodeWithText(str(R.string.setup_agree_continue)).assertIsEnabled().performClick()
+        assertEquals("next", calls.last())
+        // The open-source list is one tap away from the third-party section.
+        rule.onNodeWithText(str(R.string.legal_third_party_title)).performScrollTo().performClick()
+        rule.mainClock.advanceTimeBy(600)
+        rule.onNodeWithText(str(R.string.oss_title)).performScrollTo().performClick()
+        assertEquals("licenses", calls.last())
+    }
+
+    @Test
+    fun legalDark() {
+        show(OnboardingUi(step = SetupStep.LEGAL, legalChecked = true), dark = true)
+        rule.mainClock.advanceTimeBy(1_000)
+        shot("2_legal_dark")
+    }
+
+    @Test
+    fun appearanceChoicesReachTheSettings() {
+        show(OnboardingUi(step = SetupStep.THEME, dynamicColor = false))
+        rule.mainClock.advanceTimeBy(1_000)
+        shot("3_theme_light")
+        rule.onNodeWithText(str(R.string.theme_mode_dark)).performScrollTo().performClick()
+        rule.onNodeWithText(str(R.string.setup_theme_dynamic)).performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Rose").performScrollTo().performClick()
+        assertEquals(listOf("mode:dark", "dynamic:true", "accent:rose"), calls)
+    }
+
+    @Config(qualifiers = "w411dp-h1600dp-xxhdpi")
+    @Test
+    fun appearanceDarkFull() {
+        show(OnboardingUi(step = SetupStep.THEME, themeMode = "dark", dynamicColor = false, accent = "aqua"), dark = true)
+        rule.mainClock.advanceTimeBy(2_500)
+        shot("3_theme_full_dark")
+    }
+
+    @Test
     fun missingModuleIsExplainedAndRecheckRerunsTheProbe() {
         show(OnboardingUi(step = SetupStep.CHECK, probe = missingModule))
         rule.onNodeWithText(str(R.string.setup_zkfc_module_missing)).assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.setup_alert_missing_title)).performScrollTo().assertIsDisplayed()
         // Language and info buttons are only on the welcome page.
         assertEquals(0, rule.onAllNodesWithContentDescription(str(R.string.setup_language)).fetchSemanticsNodes().size)
         // Raw shell output never reaches the screen.
         assertEquals(0, rule.onAllNodesWithText("inaccessible", substring = true).fetchSemanticsNodes().size)
-        shot("2_check_missing_module_light")
+        rule.mainClock.advanceTimeBy(1_500)
+        shot("4_check_missing_module_light")
         rule.onNodeWithText(str(R.string.setup_recheck)).performScrollTo().performClick()
         rule.onNodeWithText(str(R.string.action_back)).performClick()
         rule.onNodeWithText(str(R.string.action_next)).assertIsEnabled().performClick()
@@ -129,62 +186,69 @@ class SetupFlowUiTest {
     fun checkingBlocksNextUntilEveryProbeAnswers() {
         show(OnboardingUi(step = SetupStep.CHECK, probe = SetupProbe(root = true, rootState = RootState.GRANTED)), dark = true)
         rule.onNodeWithText(str(R.string.setup_checking)).assertIsNotEnabled()
-        shot("2_check_running_dark")
+        rule.mainClock.advanceTimeBy(1_200)
+        shot("4_check_running_dark")
+    }
+
+    @Test
+    fun healthyCheckIsReady() {
+        show(OnboardingUi(step = SetupStep.CHECK, probe = healthy))
+        rule.onNodeWithText(str(R.string.setup_check_all_ok)).performScrollTo().assertIsDisplayed()
+        rule.mainClock.advanceTimeBy(1_500)
+        shot("4_check_ready_light")
     }
 
     @Test
     fun systemBackMatchesTheBackButtonOnMiddleSteps() {
-        val set = show(OnboardingUi(step = SetupStep.PROFILE, probe = healthy))
-        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
-        rule.waitForIdle()
-        assertEquals(listOf("back"), calls)
-        // While a profile is being applied, Back is ignored.
-        set(OnboardingUi(step = SetupStep.PROFILE, probe = healthy, choice = ProfileId.GAME, applying = true))
-        rule.waitForIdle()
+        show(OnboardingUi(step = SetupStep.PERMISSIONS, probe = healthy))
         rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
         rule.waitForIdle()
         assertEquals(listOf("back"), calls)
     }
 
     @Test
-    fun profileChoiceThenApplyAndNoSecondApplyWhileBusy() {
-        val set = show(OnboardingUi(step = SetupStep.PROFILE, probe = healthy))
-        // Nothing chosen: the action is "skip", and choosing calls back without applying.
-        rule.onNodeWithText(str(R.string.setup_skip_for_now)).assertIsDisplayed()
-        val game = str(R.string.profile_game_name)
-        rule.onNodeWithText(game).performScrollTo().performClick()
-        assertEquals(listOf("choose:GAME"), calls)
-
-        set(OnboardingUi(step = SetupStep.PROFILE, probe = healthy, choice = ProfileId.GAME))
-        rule.onNodeWithText(str(R.string.setup_apply_profile, game)).performClick()
-        assertEquals("apply", calls.last())
-        shot("3_profile_selected_light")
-
-        set(OnboardingUi(step = SetupStep.PROFILE, probe = healthy, choice = ProfileId.GAME, applying = true))
-        rule.onNodeWithText(str(R.string.setup_applying, game)).assertIsNotEnabled()
-        shot("3_profile_applying_light")
+    fun permissionsShowRealStatusAndAskOnTap() {
+        show(OnboardingUi(step = SetupStep.PERMISSIONS, probe = healthy), permissions = mapOf(
+            AppPermission.NOTIFICATIONS to false, AppPermission.USAGE_ACCESS to true, AppPermission.BATTERY to false,
+        ))
+        rule.onNodeWithText(str(R.string.perm_allow)).performScrollTo().performClick()
+        assertEquals(listOf("perm:NOTIFICATIONS"), calls)
+        rule.onNodeWithContentDescription("${str(R.string.perm_usage_title)}: ${str(R.string.perm_granted)}").assertExists()
+        rule.mainClock.advanceTimeBy(1_000)
+        shot("5_permissions_light")
+        // Every permission is optional: Next stays enabled.
+        rule.onNodeWithText(str(R.string.action_next)).assertIsEnabled()
     }
 
     @Test
-    fun profilesAreBlockedWithoutTheStackAndSkipRemains() {
-        show(OnboardingUi(step = SetupStep.PROFILE, probe = missingModule), dark = true)
-        rule.onNodeWithText(str(R.string.setup_skip_for_now)).assertIsEnabled()
-        shot("3_profile_blocked_dark")
+    fun permissionsDarkAllGranted() {
+        show(OnboardingUi(step = SetupStep.PERMISSIONS, probe = healthy), dark = true, permissions = allPermissions)
+        rule.mainClock.advanceTimeBy(1_000)
+        shot("5_permissions_dark")
     }
 
     @Test
-    fun doneSummarisesHonestlyAndEntersTheApp() {
+    fun doneSummarisesHonestlyAndStarts() {
         show(OnboardingUi(step = SetupStep.DONE, probe = missingModule))
-        rule.onNodeWithText(str(R.string.setup_done_partial_title)).assertIsDisplayed()
-        shot("4_done_partial_light")
-        rule.onNodeWithText(str(R.string.setup_enter_app)).performClick()
+        rule.onNodeWithContentDescription(str(R.string.setup_done_partial_title)).assertExists()
+        rule.mainClock.advanceTimeBy(2_000)
+        shot("6_done_partial_light")
+        rule.onNodeWithText(str(R.string.setup_start_app)).performClick()
         assertEquals(listOf("finish"), calls)
     }
 
     @Test
+    fun doneReadyCelebrates() {
+        show(OnboardingUi(step = SetupStep.DONE, probe = healthy), permissions = allPermissions)
+        rule.onNodeWithContentDescription(str(R.string.setup_done_ready_title)).assertExists()
+        rule.mainClock.advanceTimeBy(1_800)
+        shot("6_done_ready_light")
+    }
+
+    @Test
     fun doneReadyDark() {
-        show(OnboardingUi(step = SetupStep.DONE, probe = healthy), dark = true)
-        rule.onNodeWithText(str(R.string.setup_done_ready_title)).assertIsDisplayed()
-        shot("4_done_ready_dark")
+        show(OnboardingUi(step = SetupStep.DONE, probe = healthy), dark = true, permissions = allPermissions)
+        rule.mainClock.advanceTimeBy(3_800)
+        shot("6_done_ready_dark")
     }
 }

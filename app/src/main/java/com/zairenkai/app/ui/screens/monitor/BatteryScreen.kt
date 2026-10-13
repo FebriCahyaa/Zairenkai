@@ -8,9 +8,9 @@
  */
 package com.zairenkai.app.ui.screens.monitor
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -35,7 +35,6 @@ import com.zairenkai.app.ui.components.ChartSeries
 import com.zairenkai.app.ui.components.MeterBar
 import com.zairenkai.app.ui.components.RingGauge
 import com.zairenkai.app.ui.components.TimeSeriesChart
-import com.zairenkai.app.ui.icons.*
 import com.zairenkai.app.ui.screens.batteryStatusText
 import com.zairenkai.app.ui.theme.*
 import kotlin.math.abs
@@ -75,7 +74,7 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
                     RingGauge(b?.levelPct?.div(100f), accent, Modifier.size(140.dp), stroke = 14.dp) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                if (charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryStd,
+                                if (charging) ZkIcons.BatteryCharging else ZkIcons.Battery,
                                 contentDescription = null,
                                 tint = accent,
                                 modifier = Modifier.size(22.dp),
@@ -115,7 +114,7 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.Timeline, metric.color, stringResource(R.string.mon_battery_chart_title), chartSpan(s.batteryHistory))
+                CardHeader(ZkIcons.Pulse, metric.color, stringResource(R.string.mon_battery_chart_title), chartSpan(s.batteryHistory))
                 Spacer(Modifier.height(12.dp))
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     BatteryMetric.entries.forEachIndexed { i, m ->
@@ -173,7 +172,7 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
         if (b != null && (b.plug != PlugType.NONE || b.chargerType != null)) {
             item {
                 MonitorCard {
-                    CardHeader(Icons.Rounded.ElectricalServices, ZkGood, stringResource(R.string.mon_charger_title), b.chargerType ?: plugLabel(b.plug))
+                    CardHeader(ZkIcons.Plug, ZkGood, stringResource(R.string.mon_charger_title), b.chargerType ?: plugLabel(b.plug))
                     Spacer(Modifier.height(12.dp))
                     StatGrid(
                         listOf(
@@ -201,7 +200,7 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.HealthAndSafety, healthColor(b?.healthPct), stringResource(R.string.mon_health_title), stringResource(R.string.mon_health_sub))
+                CardHeader(ZkIcons.Health, healthColor(b?.healthPct), stringResource(R.string.mon_health_title), stringResource(R.string.mon_health_sub))
                 Spacer(Modifier.height(14.dp))
                 val hp = b?.healthPct
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -258,7 +257,7 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
 
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.Bolt, ZkAqua, stringResource(R.string.mon_electrical_title))
+                CardHeader(ZkIcons.Bolt, ZkAqua, stringResource(R.string.mon_electrical_title))
                 Spacer(Modifier.height(12.dp))
                 StatGrid(
                     listOf(

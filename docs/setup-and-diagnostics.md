@@ -5,7 +5,7 @@ This page covers how the app finds out what is installed, how it explains a
 missing piece, and the first-run setup flow. It also covers the edge-to-edge
 system-bar policy and the collapsing page titles.
 
-## System check (setup step 2 and the Dashboard)
+## System check (setup step 4 and the Dashboard)
 
 `SetupProber` (`ui/onboarding/SetupProber.kt`) runs the same read-only check
 for the setup wizard and the Dashboard. **Retry** re-runs every step. It first
@@ -126,43 +126,163 @@ screen and in its notification.
 
 ## Setup flow
 
-Four steps: welcome, system check, an optional first profile (applied only
-through zperfd and reported as applied only when zperfd commits it), and done.
-The screen is the stateless `SetupFlow(ui, callbacks)`. The ViewModel drives
-it in the app; the tests drive it directly.
+Six steps, in order. The screen is the stateless `SetupFlow(ui, permissions,
+callbacks)`; the ViewModel drives it in the app and the tests drive it
+directly. Setup only checks and asks; it applies no profile or tweak (that is
+the Profiles tab, through zperfd).
 
-Design (the setup's character):
+| Step | What happens | Next allowed when |
+|---|---|---|
+| 1. Welcome | The mascot pops in; "Halo" types itself into "Kenali Zairenkai" and the gradient tagline. Language and device info at the bottom. | always |
+| 2. Legal information | Terms of use, risks and disclaimer, privacy, the Zairenkai licence, third-party components (opens Open-source licences), trademarks; each opens in place. The user ticks the consent box. | consent ticked; accepting stores `LEGAL_VERSION` and the time |
+| 3. Appearance | Theme mode, dynamic colour and accent, saved as chosen, so the setup and the live preview follow at once. A miniature of the app plays in a phone frame (content scrolls, the gauge fills, bars move, the tab glides). The features as swipeable cards. | always |
+| 4. System check | Root, ZKFC, zperfd and the token, probed read-only (see above), with animated badges and a plain alert when something is missing. | every probe answered |
+| 5. Permissions | Notifications, usage access, battery optimisation (see below). | always (all optional) |
+| 6. Done | The celebrating mascot inside the signature line sequence, a summary of checks and permissions, next steps when something is missing, and Start. | Start finishes setup |
 
-- **Backdrop**: the surface colour with a luminous pastel arc across the
-  top (scheme containers blended with peach, pink and lavender) that breathes
-  slowly and moves per step, plus a soft glow at the bottom.
-- **Greeting**: the welcome page types "Halo", erases it, types the app
-  name, then types the tagline in the brand gradient (blue → violet → pink →
-  amber, tuned separately for light and dark), followed by a blinking caret.
-  Space for the final text is reserved, so nothing jumps while it types.
-  Screen readers get the final text at once. The script is a pure function
-  (`greetingFrames`, tested). The completion title types itself the same way.
-- **Line art** (Lottie, `tools/lottie/gen_setup_animations.py`): gradient
-  strokes named `brandGradient`, recoloured at runtime.
-  - welcome: the Zairenkai mark, a four-petal pinwheel that turns slowly
-  - check: orbit rings while checking; success or a pulse line when settled
-  - profile: a bundle of waves
-  - done: the signature sequence (particles gather, burst into rays, a line
-    bundle opens, orbit rings turn in, a coil draws through, and the mark
-    resolves; the last frame is the still)
-- **Reveal**: content rises in, in reading order (70 ms apart, emphasized
-  decelerate). On the welcome page it starts once the greeting has typed.
-- **Language and device info**: our own icons (`ZkIcons.Globe`,
-  `ZkIcons.Info`), shown only at the bottom of the welcome page, next to a
-  compact start pill. After setup, the language is changed in
-  **Settings → App language** (`LanguageSheet`, shared).
-- **Actions**: a pill-shaped inverse primary action and a quiet Back. A
-  spinner shows while busy, without the label jumping. Step changes within
-  280 ms are ignored, an apply cannot start twice, and Back is disabled
-  while applying.
-- **System Back** follows the on-screen Back (check and profile steps only).
-- **Reduced motion** (animator scale 0): the final text and still frames
-  show at once.
+Back (on screen and system) works on steps 2 to 5. Step changes within 280 ms
+are ignored, so a double tap never skips a step.
+
+### Permissions
+
+Only what the app uses. Status is read from the system and refreshed when the
+app returns to the foreground; nothing is requested silently.
+
+| Permission | Why | How |
+|---|---|---|
+| Notifications (`POST_NOTIFICATIONS`) | The FPS recorder and the history recorder are foreground services and must show a notification | runtime request; after a denial, the app's notification settings |
+| Usage access (`PACKAGE_USAGE_STATS`) | Per-app profiles, Auto mode and usage history need the foreground app | the system's usage-access settings |
+| Battery optimisation (recommended) | So Android does not stop the background recorders | the system's battery-optimisation list (no extra permission is declared) |
+
+Root is granted by the root manager and checked in step 4. The same list is in
+**Settings → App permissions**.
+
+### Mascot
+
+The mascot is the owner's artwork: one pose per state (`art/mascot/*.png`),
+each animated as a Lottie by `tools/lottie/gen_mascot.py`
+(`res/raw/mascot_<state>.json`). The generator cuts each pose into layers so
+parts move on their own (stars, confetti, hearts, the "!" marks, sparkles, the
+warning sign) and embeds them as WebP, so every animation is one offline file.
+Loops are seamless. State comes from the real setup state, never a timer:
+
+| State | When | Motion |
+|---|---|---|
+| WELCOME | welcome page | sways with open arms; the "!" calls out; hearts bob |
+| INSPECTING | a probe is still running | leans side to side with the magnifier; a glint crosses the lens; crystals sparkle |
+| READY | every check passed; usable with notes at the end | thumbs up with a hop; sparkles pulse |
+| WARNING | something is missing | a shake; the warning sign flashes and wiggles |
+| CELEBRATING | done, and every check is OK | two jumps per loop; stars spin; confetti falls |
+| IDLE | calm places (permissions, Settings) | breathes; faint sparkles |
+
+States cross-fade (320 ms); the first appearance pops in with a spring. With
+reduced motion the pose is shown still. While a composition loads (or if it
+fails), `mascot_fallback.webp` holds the space. The mascot is decorative for
+screen readers; the step text says the same thing.
+
+### Character and motion
+
+- **Backdrop**: setup's own surface (`ZkSetup`: `#F7F9FC` light, `#0B1018`
+  dark) with a luminous pastel arc that breathes and moves per step.
+- **Greeting**: types "Halo", erases it, types "Kenali Zairenkai", then the
+  tagline in the brand gradient, with a blinking caret. Space is reserved, so
+  nothing jumps. Screen readers get the final text at once (`greetingFrames`,
+  tested).
+- **Line art** (Lottie, `tools/lottie/gen_setup_animations.py`): the mark
+  turning (home), tuning waves (home profile card) and the signature success
+  sequence (done step).
+- **Steps** slide and fade (360 ms, emphasized decelerate); content rises in,
+  in reading order (70 ms apart).
+- **Check badges** turn while checking; when the probe answers the ring
+  closes and a check, cross or "!" is drawn in (420 ms). Shape and colour both
+  carry the state.
+- **Actions**: a pill-shaped primary action that squeezes slightly while
+  pressed, with a spinner slot so the label never jumps.
+- **Reduced motion** (animator scale 0): final text and still frames at once.
+
+## Legal information and open-source licences
+
+**Legal information** (setup step 2, and Settings → Legal information) has six
+sections: terms of use, risks and disclaimer, privacy and data, the Zairenkai
+licence, third-party components and trademarks. The privacy text reflects the
+app as built: it declares no internet permission, stores its data in private
+storage only and is excluded from backups (`allowBackup="false"`).
+
+**Open-source licences** lists every library packaged in the build, sorted by
+name, with its version, developers and licence chips, a search box, and a
+summary of licences by count. A library opens a sheet with its description,
+Maven id, Source and Website links, and the full licence text (paragraphs
+re-flowed for the screen).
+
+How the list stays complete:
+
+1. `OssLicensesTask` (in `app/build.gradle.kts`) runs for every variant. It
+   takes the variant's runtime classpath (BOMs excluded), matches each library
+   against `tools/licenses/libraries.json`, adds the full text of each licence
+   used from `tools/licenses/texts`, and writes `assets/oss_licenses.json`.
+2. The build **fails** if a packaged library has no metadata, naming it.
+3. To update the metadata after a dependency change:
+   `./gradlew :app:writeOssModules && python3 tools/licenses/update_libraries.py`.
+   The tool reads each library's POM (Gradle cache, Google Maven or Maven
+   Central, with back-off) and its parents.
+
+The typeface (Google Sans Flex, OFL-1.1) is listed from the `extra` entries.
+
+## Icons
+
+Every icon in the app is Zairenkai's own (`ui/icons/ZkIcons.kt`): rounded
+2 dp strokes on a 24 dp grid, the same line language as the setup art. There
+is no icon library; the foundation check fails if a Material icon import or
+the `material-icons` dependency comes back. `SetupArtRenderTest.icons` renders
+the whole set.
+
+## Settings
+
+Grouped like a system settings page: a hero (mascot, version; opens About),
+then **Device** (About phone), **Appearance** (theme, app language, dynamic
+colour), **Performance** (lite mode, device mitigation), **Permissions &
+privacy** (app permissions sheet, privacy), **Diagnostics** (ZKFC log: level
+and live log on its own page) and **About** (about the app, legal
+information, open-source licences).
+
+## Language switching
+
+On Android 13+ the per-app language is applied in place: `MainActivity`
+declares `configChanges="locale|layoutDirection"`, so the activity is not
+recreated and Compose recomposes with the new strings. The language sheet
+slides away first, then the language changes and the content fades in
+(420 ms), so there is no flash. On Android 12 the activity is recreated, as
+before.
+
+## About phone and brand-aware identity
+
+**About phone** (Settings → About phone, or the device card at the top of
+the System tab) shows the device from public Android APIs and `getprop`,
+without root: a brand-aware hero, storage use, then software (Android and
+API level, security patch, build number, kernel, baseband, bootloader),
+hardware (SoC, CPU cores and ABI, RAM, display resolution, refresh rate and
+density) and identity (brand, manufacturer, model, codename, the user's
+device name). A field Android does not report is left out. The copy button
+copies every row.
+
+The brand (`resolveBrand`) is the first of these that names a known brand:
+the `debug.zairenkai.brand` property (to preview another brand), then
+`ro.product.brand`, `Build.BRAND` and `Build.MANUFACTURER`. A POCO (brand
+POCO, maker Xiaomi) is therefore POCO, and a ROM with an odd brand falls back
+to the maker. Known brands: Google Pixel, Samsung, Xiaomi, Redmi, POCO,
+OnePlus, realme, Nothing and Motorola; any other maker gets the Android mark
+and its own name. The product name comes from the maker's marketing-name
+property when there is one (`ro.product.marketname` and others), else from
+the model.
+
+The marks are Zairenkai's own: a squircle in colours associated with the
+brand, a monogram in the app's typeface, and the brand name as text. The
+makers' logos are trademarks and are not bundled. A brand can be given an
+official logo drawable (`BrandStyle.officialLogo`) where its use is
+permitted; the mark then draws it instead.
+
+`getprop` runs once, off the main thread (`rememberDeviceInfo`); the hero
+shows a spinner until then.
 
 ## Typography and colour
 
@@ -232,14 +352,16 @@ screens (CPU & GPU, Battery, FPS, FPS session).
 ```
 
 - **Home:** `HomeUiTest` (ready, missing module, no root, checking, safe mode; light and dark, viewport and full page) and `HomeModelTest` (greeting, summary, thermal bands).
-- **Visual review:** `SetupArtRenderTest` renders every animation as a filmstrip (light and dark), the custom icons, and the app icon in several masks.
+- **Visual review:** `SetupArtRenderTest` renders the line animations as filmstrips (light and dark), every icon, and the app icon in several masks. `MascotRenderTest` renders every mascot pose as a filmstrip (light and dark); `DeviceRenderTest` renders every brand mark, device heroes and About phone; `SettingsRenderTest` renders Settings.
+- **Licences:** `OssLicensesTest` (the generated catalogue is complete, sorted and has every licence text; search; list and detail sheet).
+- **Device and mascot logic:** `DeviceBrandTest` (brand order, product names, getprop parsing) and `MascotStateTest` (the mascot never celebrates or reports ready while a probe runs or something is missing).
 - **Logic:**
   - `InstallFactsTest`: probe parsing, root/zkfctl classification, read-only script.
   - `SetupChecksTest`: every install state's reason, no raw output, report contents.
   - `MonitorStateTest`: missing-dependency backoff.
   - `BatteryMathTest`: cycle-count provenance.
 - **UI (Robolectric):**
-  - `SetupFlowUiTest`: every step, actions, Back/system Back, no double apply, honest done screen.
+  - `SetupFlowUiTest`: every step (welcome, legal consent, appearance, check, permissions, done), actions, Back/system Back, honest done screen.
   - `CollapsingTitleUiTest`: collapse while dragging, settle, stay collapsed, expand at the top; system-bar icons follow the app theme.
 - **Screenshots** (light and dark) are written to `app/build/outputs/roborazzi/`.
 - Robolectric's Android jar is resolved by Gradle (`robolectricRuntime`), and Robolectric runs offline.

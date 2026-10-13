@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="settings_section_device">设备</string>
+    <string name="settings_section_performance">性能</string>
+    <string name="settings_section_privacy">权限与隐私</string>
+    <string name="settings_section_diagnostics">诊断</string>
+    <string name="settings_section_about">关于</string>
+    <string name="settings_permissions_title">应用权限</string>
+    <string name="settings_legal_sub">条款、风险、隐私与商标</string>
+    <string name="settings_logs_title">ZKFC 日志</string>
+    <string name="settings_logs_sub">级别 %1$s · 内核实时日志</string>
+    <string name="settings_hero_sub">版本 %1$s · 点按查看应用信息</string>
+    <plurals name="settings_permissions_sub">
+        <item quantity="other">已允许 %1$d/%2$d 项</item>
+    </plurals>
+</resources>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="legal_title">法律信息</string>
+    <string name="legal_intro">使用 Zairenkai 前请阅读以下条款。点按任一部分可查看全文。</string>
+    <string name="legal_consent">我已阅读并同意 Zairenkai 的使用条款、风险免责声明和隐私政策。</string>
+    <string name="legal_expanded">已展开</string>
+    <string name="legal_collapsed">已收起</string>
+    <string name="legal_terms_title">使用条款</string>
+    <string name="legal_terms_summary">正确使用 Zairenkai 的方式</string>
+    <string name="legal_terms_body">Zairenkai 是面向已 root 的 Android 设备的性能管理应用。它读取系统状态，并且仅在你要求时，通过运行在 ZKFC 内核框架之上的 zperfd 引擎应用配置和调整。\n\n使用 Zairenkai 即表示你同意：仅在你拥有或有权修改的设备上使用；不将其用于违反法律或侵犯他人权利；除许可证允许外，不对应用进行逆向工程、修改或再分发。\n\n本条款可能会更新。条款变更时将显示新版本并再次征求你的同意。</string>
+    <string name="legal_risk_title">风险与免责声明</string>
+    <string name="legal_risk_summary">root 与内核调校存在风险</string>
+    <string name="legal_risk_body">root 权限以及对内核参数（CPU 与 GPU 频率、调度器、内存）的更改，可能影响设备的稳定性、温度、续航和保修。\n\nZairenkai 保留现有的保护机制：每项更改都通过 zperfd 应用，从内核回读确认，失败时自动回滚；其上限遵循内核温控保护以及启动失败后的 SAFE MODE。应用不会关闭厂商自带的温控守护进程。\n\n尽管如此，本软件按“原样”提供，不附带任何形式的保证。在法律允许的范围内，开发者不对因使用本软件造成的损坏、数据丢失或其他损失承担责任。</string>
+    <string name="legal_privacy_title">隐私与数据</string>
+    <string name="legal_privacy_summary">不联网，不追踪</string>
+    <string name="legal_privacy_body">Zairenkai 不申请网络访问权限，也不会将任何数据发送到设备之外。没有账号、广告、分析或追踪。\n\n应用产生的数据（设置、使用与耗电记录、FPS 会话）保存在应用的私有存储中，不会备份到云端，并会在卸载应用时删除。\n\n使用情况访问权限和通知仅用于权限步骤中所述的功能。诊断报告仅在你点按“复制”时复制到剪贴板，且不包含令牌内容或密钥。</string>
+    <string name="legal_license_title">Zairenkai 许可</string>
+    <string name="legal_license_summary">专有软件与 API 令牌</string>
+    <string name="legal_license_body">Zairenkai 是专有软件，© 2026 FebriCahyaa（LicenseRef-Zairenkai-Proprietary）。本许可授予你使用应用的权利，而非其代码、设计或吉祥物插画的所有权。\n\n性能功能通过与设备绑定并由内核验证的 API 令牌解锁。请勿分享你的令牌；被分享的令牌可能会被吊销。</string>
+    <string name="legal_third_party_title">第三方组件</string>
+    <string name="legal_third_party_summary">开源库及其许可证</string>
+    <string name="legal_third_party_body">Zairenkai 使用了开源组件构建，包括 AndroidX 与 Jetpack Compose、Kotlin 与 kotlinx 以及 Lottie，其中大多数采用 Apache License 2.0，字体 Google Sans Flex 采用 SIL Open Font License 1.1。\n\n完整列表（每个组件的名称、版本、开发者、网站和许可证全文）请见“开源许可”。</string>
+    <string name="legal_trademarks_title">商标</string>
+    <string name="legal_trademarks_summary">品牌名称仅用于识别你的设备</string>
+    <string name="legal_trademarks_body">Android 是 Google LLC 的商标。Google、Pixel、Samsung、Xiaomi、Redmi、POCO、OnePlus、realme、Nothing、Motorola 以及为识别你的设备而显示的其他名称，均为其各自所有者的商标。\n\nZairenkai 与这些所有者无关联，也未获得其赞助或认可。“关于手机”中的品牌标识是 Zairenkai 的设计，并非官方标志。</string>
+    <string name="oss_title">开源许可</string>
+    <string name="oss_search">搜索库、开发者或许可证</string>
+    <string name="oss_empty">没有匹配项。</string>
+    <string name="oss_source">源代码</string>
+    <string name="oss_website">网站</string>
+    <string name="oss_view_license">查看许可证</string>
+    <string name="oss_hide_license">收起</string>
+    <string name="oss_text_missing">未附带此许可证的全文，请打开上方链接。</string>
+    <plurals name="oss_summary">
+        <item quantity="other">此版本包含 %1$d 个开源组件，按名称排序。</item>
+    </plurals>
+</resources>

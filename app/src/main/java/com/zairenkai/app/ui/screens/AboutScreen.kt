@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -19,9 +20,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import com.zairenkai.app.ui.icons.Bolt
-import com.zairenkai.app.ui.icons.ChevronLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -161,7 +159,7 @@ private fun LiquidBanner() {
                 shadowElevation = 6.dp,
             ) {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Bolt, null, tint = Color.White)
+                    Icon(ZkIcons.Bolt, null, tint = Color.White)
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Text("Zairenkai", color = Color.White, fontWeight = FontWeight.Bold,

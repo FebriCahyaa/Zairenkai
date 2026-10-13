@@ -6,7 +6,6 @@
     <string name="settings_section_appearance">外观</string>
     <string name="settings_theme_sub">模式、强调色、动态取色与 Glass UI</string>
     <string name="settings_about_sub">版本、许可与致谢</string>
-    <string name="settings_section_general">常规</string>
     <string name="settings_lite_title">精简模式</string>
     <string name="settings_lite_sub">隐藏重度调校项，降低开销。</string>
     <string name="settings_mitigation_title">设备缓解</string>

@@ -2,10 +2,9 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 """Generate the setup-wizard Lottie animations (app/src/main/res/raw/setup_*.json).
 
-The animations use the setup's line language: thin gradient strokes that
-burst, bundle, orbit and coil and resolve into the Zairenkai mark (a
-four-petal pinwheel), with emphasized and overshooting easing and colour roles
-instead of fixed colours. Every fill or
+The animations use the setup's line language: thin gradient strokes (the
+Zairenkai mark, a four-petal pinwheel, turning; a bundle of tuning waves),
+with emphasized easing and colour roles instead of fixed colours. Every fill or
 stroke is named after the Material colour role it stands for (primary,
 primaryContainer, secondary, tertiary, onPrimary, ...); the app replaces those
 colours at runtime with the active colour scheme, so dynamic colour and dark
@@ -287,23 +286,6 @@ def welcome() -> dict:
     return comp.json()
 
 
-def scan() -> dict:
-    """Orbit rings: tilted ellipses breathing in sequence while the set turns."""
-    n = 3 * FPS
-    comp = Comp("setup_scan", n)
-    for i in range(6):
-        w = 176 - i * 6
-        hs = [36 + 18 * math.sin(2 * math.pi * (j / 4) + i * 0.7) + 40 for j in range(4)]
-        comp.layer(f"ring{i}", [group("ring", [ellipse(animated(loop_keys(n, [[w, h] for h in hs]), SINE), (C, C - 30 + i * 12)),
-                                               gstroke(2.4, 90 - i * 8)])])
-    comp.layers[-1]["ks"] = transform()
-    root = {"r": animated([(0, -8), (n // 2, 8), (n, -8)], SINE)}
-    for layer in comp.layers:
-        layer["ks"] = transform(p=(C, C), a=(C, C), r=root["r"])
-    comp.layer("core", [group("core", [ellipse(animated(loop_keys(n, [[12, 12], [18, 18]]), SINE), (C, C)), fill("primary")])])
-    return comp.json()
-
-
 def tune() -> dict:
     """A bundle of waves, each a little behind the next, like strings being tuned."""
     n = 3 * FPS
@@ -312,21 +294,6 @@ def tune() -> dict:
         y = 80 + i * 16
         shapes = [wave(y, 14 - i * 1.2, i * 0.6 + j * math.pi / 2) for j in range(4)]
         comp.layer(f"wave{i}", [group("wave", [path_item(animated(loop_keys(n, shapes), SINE)), gstroke(2.6, 95 - i * 9)])])
-    return comp.json()
-
-
-def attention() -> dict:
-    """A pulse line draws across (something needs a look), then a dot settles on it."""
-    n = int(1.8 * FPS)
-    comp = Comp("setup_attention", n)
-    pulse = open_path([(24, 128), (84, 128), (100, 92), (120, 158), (136, 108), (148, 128), (216, 128)])
-    comp.layer("pulse", [group("pulse", [path_item(pulse), gstroke(6, start=(24, 128), end=(216, 128)),
-                                         trim(0, animated([(0, 0), (40, 100)], EMPHASIZED))])])
-    comp.layer("echo", [group("echo", [path_item(pulse), gstroke(2, 35, start=(24, 128), end=(216, 128)),
-                                       trim(0, animated([(6, 0), (50, 100)], EMPHASIZED))])],
-               transform(p=(0, 14)))
-    comp.layer("dot", [group("dot", [ellipse(18, (C, 72)), fill("tertiary")])],
-               transform(p=(C, 72), a=(C, 72), s=animated([(38, [0, 0, 100]), (52, [130, 130, 100]), (64, [100, 100, 100])], STANDARD)))
     return comp.json()
 
 
@@ -382,12 +349,12 @@ def success() -> dict:
     return comp.json()
 
 
+# The check states are the mascot's (ui/mascot, tools/lottie/gen_mascot.py);
+# the completion keeps the signature line sequence around the celebrating mascot.
 ANIMATIONS = {
     "setup_welcome": welcome,
-    "setup_scan": scan,
     "setup_tune": tune,
     "setup_success": success,
-    "setup_attention": attention,
 }
 
 # Colour roles the app must map (MaterialTheme.colorScheme). Kept in sync by a check below.

@@ -45,6 +45,11 @@ class ContrastTest {
             check("$tag inverse pill", cs.inverseOnSurface, cs.inverseSurface, 4.5f)
             check("$tag onPrimary", cs.onPrimary, cs.primary, 4.5f)
             brandGradient(dark).forEachIndexed { i, stop -> check("$tag greeting stop $i", stop, cs.surface, 3f) }
+            // Setup draws on its own surfaces (ZkSetup).
+            val setupBg = if (dark) ZkSetup.BackgroundDark else ZkSetup.BackgroundLight
+            check("$tag onSurface on setup", cs.onSurface, setupBg, 4.5f)
+            check("$tag onSurfaceVariant on setup", cs.onSurfaceVariant, setupBg, 4.5f)
+            brandGradient(dark).forEachIndexed { i, stop -> check("$tag greeting stop $i on setup", stop, setupBg, 3f) }
         }
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }

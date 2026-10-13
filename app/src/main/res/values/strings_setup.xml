@@ -4,24 +4,19 @@
     <!-- Wizard frame -->
     <string name="setup_step_welcome">Selamat datang</string>
     <string name="setup_step_check">Pemeriksaan sistem</string>
-    <string name="setup_step_profile">Profil awal</string>
     <string name="setup_step_done">Selesai</string>
     <string name="setup_step_label" tools:ignore="PluralsCandidate">Langkah %1$d dari %2$d · %3$s</string>
     <string name="setup_language">Bahasa</string>
     <string name="setup_info">Info aplikasi &amp; perangkat</string>
     <string name="setup_start">Mulai penyiapan</string>
     <string name="setup_checking">Memeriksa…</string>
-    <string name="setup_apply_profile">Terapkan %1$s</string>
-    <!-- %1$s: profile name -->
-    <string name="setup_applying">Menerapkan %1$s…</string>
-    <string name="setup_skip_for_now">Lewati untuk sekarang</string>
-    <string name="setup_enter_app">Masuk ke Zairenkai</string>
 
     <!-- 1. Welcome -->
     <!-- Typed greeting on the first page: "Halo" is typed and erased, then the app name, then this tagline in the brand gradient. -->
     <string name="setup_greeting_hello">Halo</string>
     <string name="setup_greeting_tagline">Performa, dengan caramu.</string>
-    <string name="setup_welcome_body">Kendali performa untuk perangkat root, dijalankan oleh engine zperfd di atas framework kernel ZKFC.</string>
+    <string name="setup_welcome_title">Kenali Zairenkai</string>
+    <string name="setup_welcome_body">Kendali sistem Android, dalam satu pengalaman yang lebih intuitif.</string>
     <string name="setup_feature_monitor_title">Monitor langsung</string>
     <string name="setup_feature_monitor_body">FPS game yang kamu pilih, beban CPU per core, GPU, baterai, dan suhu.</string>
     <string name="setup_feature_verified_title">Profil &amp; tweak terverifikasi</string>
@@ -97,7 +92,6 @@
     <string name="setup_state_warn">perlu perhatian</string>
     <string name="setup_state_missing">belum siap</string>
     <string name="setup_check_a11y">%1$s: %2$s. %3$s</string>
-    <string name="setup_check_summary_row">%1$s: %2$s</string>
 
     <!-- License states, as "Token <state>." -->
     <string name="license_state_valid">valid</string>
@@ -111,15 +105,10 @@
     <string name="license_state_no_owner_key">kunci pemilik belum diprovisikan di kernel</string>
     <string name="license_state_revoked">dicabut</string>
 
-    <!-- 3. First profile -->
-    <string name="setup_profile_title">Pilih profil awal</string>
-    <string name="setup_profile_body">Opsional. Profil adalah mode zperfd; nilainya diselaraskan ke tabel frekuensi perangkat dan tetap dibatasi envelope termal.</string>
-    <string name="setup_profile_blocked">Profil bisa diterapkan setelah %1$s siap. Kamu bisa memilihnya nanti di tab Profil.</string>
 
     <!-- 4. Done -->
     <string name="setup_done_ready_title">Siap digunakan</string>
     <string name="setup_done_partial_title">Penyiapan selesai</string>
-    <string name="setup_done_applied">Profil %1$s diterapkan.</string>
     <string name="setup_done_ready_body">Pilih profil kapan saja di tab Profil, atau buat profil kustom dari mode bawaan.</string>
     <string name="setup_done_partial_body">Zairenkai bisa dibuka sekarang. Fitur yang membutuhkan komponen yang belum siap tetap terkunci.</string>
     <string name="setup_next_steps">Langkah berikutnya</string>

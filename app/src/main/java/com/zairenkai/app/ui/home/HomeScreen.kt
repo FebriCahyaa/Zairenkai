@@ -13,6 +13,7 @@
  */
 package com.zairenkai.app.ui.home
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.compose.animation.animateContentSize
@@ -42,11 +43,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
@@ -91,7 +87,8 @@ import com.zairenkai.app.data.ZperfStatus
 import com.zairenkai.app.domain.Profiles
 import com.zairenkai.app.ui.OverviewState
 import com.zairenkai.app.ui.holdMessage
-import com.zairenkai.app.ui.icons.ContentCopy
+import com.zairenkai.app.ui.components.SpecTile
+import com.zairenkai.app.ui.components.ZkCard
 import com.zairenkai.app.ui.onboarding.BrandBackdrop
 import com.zairenkai.app.ui.onboarding.CheckId
 import com.zairenkai.app.ui.onboarding.CheckRow
@@ -180,7 +177,7 @@ private fun TopRow(onOpenSettings: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onOpenSettings) {
-            Icon(Icons.Rounded.Settings, stringResource(R.string.dashboard_settings), tint = MaterialTheme.colorScheme.onSurface)
+            Icon(ZkIcons.Settings, stringResource(R.string.dashboard_settings), tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -253,31 +250,6 @@ private fun ComponentStrip(checks: List<SetupCheck>, modifier: Modifier = Modifi
 /* ---------------- cards ---------------- */
 
 @Composable
-private fun HomeCard(
-    modifier: Modifier = Modifier,
-    title: String? = null,
-    tint: Brush? = null,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Column(
-            (if (tint != null) Modifier.background(tint) else Modifier).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (title != null) {
-                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-            }
-            content()
-        }
-    }
-}
-
-@Composable
 private fun Banner(title: String, body: String, modifier: Modifier = Modifier, action: Pair<String, () -> Unit>? = null) {
     val cs = MaterialTheme.colorScheme
     Surface(
@@ -287,7 +259,7 @@ private fun Banner(title: String, body: String, modifier: Modifier = Modifier, a
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = if (action == null) 16.dp else 6.dp)) {
-            Icon(Icons.Rounded.Warning, null, Modifier.size(22.dp))
+            Icon(ZkIcons.Warning, null, Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall)
@@ -312,7 +284,7 @@ private fun ModeCard(status: ZperfStatus, onOpenProfiles: () -> Unit, modifier: 
     val tint = Brush.linearGradient(brandGradient(isDarkSurface()).map { it.copy(alpha = 0.12f) })
     val desired = Profiles.byMode(status.desired)?.let { stringResource(it.nameRes) } ?: status.desired
     val effective = Profiles.byMode(status.effective)?.let { stringResource(it.nameRes) } ?: status.effective
-    HomeCard(modifier, tint = tint) {
+    ZkCard(modifier, tint = tint) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(R.string.home_mode_label), style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
@@ -336,7 +308,7 @@ private fun ModeCard(status: ZperfStatus, onOpenProfiles: () -> Unit, modifier: 
         }
         holdMessage(status.hold, null)?.let { hold ->
             Row(verticalAlignment = Alignment.Top) {
-                Icon(Icons.Rounded.Warning, null, Modifier.size(18.dp), tint = statusInk(ZkWarn))
+                Icon(ZkIcons.Warning, null, Modifier.size(18.dp), tint = statusInk(ZkWarn))
                 Spacer(Modifier.width(8.dp))
                 Text(hold.asString(), style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
             }
@@ -348,10 +320,10 @@ private fun ModeCard(status: ZperfStatus, onOpenProfiles: () -> Unit, modifier: 
 @Composable
 private fun ThermalCard(t: ThermalStatus?, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
-    HomeCard(modifier, title = stringResource(R.string.home_thermal_title)) {
+    ZkCard(modifier, title = stringResource(R.string.home_thermal_title)) {
         if (t == null) {
             Text(stringResource(R.string.dashboard_thermal_no_evidence), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-            return@HomeCard
+            return@ZkCard
         }
         val tone = bandTone(t.band)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -397,10 +369,10 @@ private fun HeadroomGauge(fraction: Float?, color: Color, modifier: Modifier = M
 @Composable
 private fun BoostCard(b: BoostStatus?, onReset: () -> Unit, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
-    HomeCard(modifier, title = stringResource(R.string.dashboard_active_performance)) {
+    ZkCard(modifier, title = stringResource(R.string.dashboard_active_performance)) {
         if (b == null) {
             Text(stringResource(R.string.dashboard_boost_unavailable), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-            return@HomeCard
+            return@ZkCard
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MiniStat(
@@ -431,7 +403,7 @@ private fun DeviceCard(s: OverviewState, modifier: Modifier = Modifier) {
     val info = s.info
     val lic = s.license
     val facts = s.probe.facts
-    HomeCard(modifier, title = stringResource(R.string.dashboard_device)) {
+    ZkCard(modifier, title = stringResource(R.string.dashboard_device)) {
         val cells = buildList {
             add(Triple(stringResource(R.string.dashboard_zkfc_status),
                 stringResource(if (info != null) R.string.state_active else R.string.dashboard_not_available),
@@ -449,15 +421,15 @@ private fun DeviceCard(s: OverviewState, modifier: Modifier = Modifier) {
         }
         cells.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { (label, value, color) -> Spec(label, value, color, Modifier.weight(1f)) }
+                row.forEach { (label, value, color) -> SpecTile(label, value, Modifier.weight(1f), valueColor = color) }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
         lic?.token?.licensee?.takeIf { it.isNotBlank() }
-            ?.let { Spec(stringResource(R.string.home_licensee), it, cs.onSurface, Modifier.fillMaxWidth()) }
+            ?.let { SpecTile(stringResource(R.string.home_licensee), it, Modifier.fillMaxWidth()) }
         (info?.kernelRelease?.takeIf { it.isNotBlank() } ?: facts?.kernel?.takeIf { it.isNotBlank() })
-            ?.let { Spec(stringResource(R.string.dashboard_kernel), it, cs.onSurface, Modifier.fillMaxWidth(), maxLines = 2) }
-        info?.buildId?.takeIf { it.isNotBlank() }?.let { Spec(stringResource(R.string.dashboard_build), it, cs.onSurface, Modifier.fillMaxWidth(), maxLines = 2) }
+            ?.let { SpecTile(stringResource(R.string.dashboard_kernel), it, Modifier.fillMaxWidth()) }
+        info?.buildId?.takeIf { it.isNotBlank() }?.let { SpecTile(stringResource(R.string.dashboard_build), it, Modifier.fillMaxWidth()) }
         if (info == null) {
             Text(stringResource(R.string.dashboard_zkfc_fields_unavailable), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
@@ -478,14 +450,14 @@ private fun StatusCard(s: OverviewState, compact: Boolean, onRetry: () -> Unit, 
     var copied by remember { mutableStateOf(false) }
     val retryEnabled = checks.settled() || !s.loading
     val retry = { copied = false; onRetry() }
-    HomeCard(modifier.animateContentSize(), title = if (compact) null else stringResource(R.string.dashboard_system_status)) {
+    ZkCard(modifier.animateContentSize(), title = if (compact) null else stringResource(R.string.dashboard_system_status)) {
         if (compact) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.CheckCircle, null, Modifier.size(22.dp), tint = statusInk(ZkGood))
+                Icon(ZkIcons.CheckCircle, null, Modifier.size(22.dp), tint = statusInk(ZkGood))
                 Spacer(Modifier.width(12.dp))
                 Text(stringResource(R.string.setup_check_all_ok), style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, modifier = Modifier.weight(1f))
                 IconButton(onClick = retry, enabled = retryEnabled) {
-                    Icon(Icons.Rounded.Refresh, stringResource(R.string.setup_recheck), tint = cs.onSurfaceVariant)
+                    Icon(ZkIcons.Refresh, stringResource(R.string.setup_recheck), tint = cs.onSurfaceVariant)
                 }
             }
         } else {
@@ -498,7 +470,7 @@ private fun StatusCard(s: OverviewState, compact: Boolean, onRetry: () -> Unit, 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (!compact) {
                 FilledTonalButton(onClick = retry, enabled = retryEnabled) {
-                    Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
+                    Icon(ZkIcons.Refresh, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.setup_recheck))
                 }
@@ -522,7 +494,7 @@ private fun StatusCard(s: OverviewState, compact: Boolean, onRetry: () -> Unit, 
                         ?.setPrimaryClip(ClipData.newPlainText("Zairenkai diagnostics", report))
                     copied = true
                 }) {
-                    Icon(Icons.Rounded.ContentCopy, null, Modifier.size(18.dp))
+                    Icon(ZkIcons.Copy, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.dashboard_copy_diagnostics))
                 }
@@ -581,17 +553,6 @@ private fun MiniStat(label: String, value: String, valueColor: Color, modifier: 
             Text(value, style = MaterialTheme.typography.titleLarge, color = valueColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(2.dp))
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, minLines = 2, maxLines = 2)
-        }
-    }
-}
-
-@Composable
-private fun Spec(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier, maxLines: Int = 2) {
-    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = valueColor,
-                maxLines = maxLines, overflow = TextOverflow.Ellipsis)
         }
     }
 }

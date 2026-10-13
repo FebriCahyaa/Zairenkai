@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="setup_step_legal">Información legal</string>
+    <string name="setup_step_theme">Apariencia</string>
+    <string name="setup_step_permissions">Permisos</string>
+    <string name="setup_alert_notes_title">Se puede usar, con observaciones</string>
+    <string name="setup_alert_missing_title">Algunos componentes no están listos</string>
+    <string name="setup_start_app">Empezar</string>
+    <string name="setup_agree_continue">Aceptar y continuar</string>
+    <string name="setup_theme_title">Elige tu estilo</string>
+    <string name="setup_theme_body">Ajusta el modo y los colores y míralos al instante en la vista previa. Puedes cambiarlo todo después en Ajustes.</string>
+    <string name="setup_theme_mode">Modo de pantalla</string>
+    <string name="setup_theme_dynamic">Color dinámico</string>
+    <string name="setup_theme_dynamic_sub">Seguir los colores del fondo de pantalla (Material You)</string>
+    <string name="setup_theme_accent">Color de acento</string>
+    <string name="setup_theme_accent_off">Color de acento (desactiva el color dinámico para elegir)</string>
+    <string name="setup_theme_preview">Vista previa de Zairenkai</string>
+    <string name="setup_features_title">Lo que puedes hacer</string>
+    <string name="setup_feature_fps_title">Grabador de FPS</string>
+    <string name="setup_feature_fps_body">Graba en segundo plano los FPS de los juegos que elijas y consulta gráficos, estabilidad y sesiones por juego.</string>
+    <string name="setup_feature_device_title">Conoce tu dispositivo</string>
+    <string name="setup_feature_device_body">Información del teléfono con identidad de marca, chipset, pantalla, memoria y almacenamiento.</string>
+    <string name="setup_perm_title">Permisos de la app</string>
+    <string name="setup_perm_body">Solo los permisos que usan de verdad las funciones de Zairenkai. Puedes cambiarlos cuando quieras en los ajustes de Android.</string>
+    <string name="setup_perm_note">Todos los permisos son opcionales. Sin uno, la función que lo necesita lo pedirá de nuevo al abrirla. El root lo concede tu gestor de root, no esta pantalla.</string>
+    <string name="perm_notifications_title">Notificaciones</string>
+    <string name="perm_notifications_body">El grabador de FPS y el de historial funcionan como servicios en segundo plano, y Android exige una notificación mientras están activos.</string>
+    <string name="perm_usage_title">Acceso de uso</string>
+    <string name="perm_usage_body">Para saber qué app está abierta: lo usan los perfiles por app, el modo Automático y el historial de uso.</string>
+    <string name="perm_battery_title">Optimización de batería</string>
+    <string name="perm_battery_body">Excluye a Zairenkai para que Android no detenga los grabadores en segundo plano. Elige Zairenkai y luego No optimizar.</string>
+    <string name="perm_granted">Permitido</string>
+    <string name="perm_not_granted">Aún no permitido</string>
+    <string name="perm_needed">Lo necesitan funciones</string>
+    <string name="perm_recommended">Recomendado</string>
+    <string name="perm_allow">Permitir</string>
+    <string name="perm_open_settings">Abrir ajustes</string>
+    <plurals name="setup_done_permissions">
+        <item quantity="one">Permisos: %1$d de %2$d permitido</item>
+        <item quantity="many">Permisos: %1$d de %2$d permitidos</item>
+        <item quantity="other">Permisos: %1$d de %2$d permitidos</item>
+    </plurals>
+</resources>

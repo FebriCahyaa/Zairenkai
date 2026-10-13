@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="settings_section_device">Dispositivo</string>
+    <string name="settings_section_performance">Rendimiento</string>
+    <string name="settings_section_privacy">Permisos y privacidad</string>
+    <string name="settings_section_diagnostics">Diagnóstico</string>
+    <string name="settings_section_about">Información</string>
+    <string name="settings_permissions_title">Permisos de la app</string>
+    <string name="settings_legal_sub">Términos, riesgos, privacidad y marcas</string>
+    <string name="settings_logs_title">Registro de ZKFC</string>
+    <string name="settings_logs_sub">Nivel %1$s · registro en vivo del kernel</string>
+    <string name="settings_hero_sub">Versión %1$s · Toca para ver la información</string>
+    <plurals name="settings_permissions_sub">
+        <item quantity="one">%1$d de %2$d permitido</item>
+        <item quantity="many">%1$d de %2$d permitidos</item>
+        <item quantity="other">%1$d de %2$d permitidos</item>
+    </plurals>
+</resources>

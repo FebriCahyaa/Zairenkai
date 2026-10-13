@@ -7,10 +7,10 @@
  */
 package com.zairenkai.app.ui.screens.monitor
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -38,7 +38,6 @@ import com.zairenkai.app.ui.components.MeterBar
 import com.zairenkai.app.ui.components.RingGauge
 import com.zairenkai.app.ui.components.Sparkline
 import com.zairenkai.app.ui.components.TimeSeriesChart
-import com.zairenkai.app.ui.icons.*
 import com.zairenkai.app.ui.theme.*
 
 private val ClusterColors = listOf(ZkAqua, ZkCpu, ZkGpu, ZkAmber, ZkTemp)
@@ -112,7 +111,7 @@ private fun LazyListScope.cpuTab(s: LiveState) {
     if (clusters.isNotEmpty()) {
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.Speed, ZkCpu, stringResource(R.string.mon_cpu_clusters_title), stringResource(R.string.mon_cpu_clusters_sub))
+                CardHeader(ZkIcons.Speed, ZkCpu, stringResource(R.string.mon_cpu_clusters_title), stringResource(R.string.mon_cpu_clusters_sub))
                 Spacer(Modifier.height(14.dp))
                 clusters.forEachIndexed { i, c ->
                     ClusterBlock(c, ClusterColors[i % ClusterColors.size])
@@ -146,7 +145,7 @@ private fun LazyListScope.cpuTab(s: LiveState) {
     if (cores.isNotEmpty()) {
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.Memory, ZkCpu, stringResource(R.string.monitor_cores_title), stringResource(R.string.mon_cpu_cores_sub))
+                CardHeader(ZkIcons.Memory, ZkCpu, stringResource(R.string.monitor_cores_title), stringResource(R.string.mon_cpu_cores_sub))
                 Spacer(Modifier.height(14.dp))
                 val colorOf = clusters.flatMapIndexed { i, c -> c.cores.map { it.cpu to ClusterColors[i % ClusterColors.size] } }.toMap()
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -197,7 +196,7 @@ private fun LazyListScope.cpuTab(s: LiveState) {
     s.probe?.let { p ->
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.DeveloperBoard, ZkIndigo, stringResource(R.string.mon_cpu_platform))
+                CardHeader(ZkIcons.Chip, ZkIndigo, stringResource(R.string.mon_cpu_platform))
                 Spacer(Modifier.height(8.dp))
                 if (p.release.isNotBlank()) InfoLine(stringResource(R.string.mon_cpu_kernel), p.release)
                 InfoLine(stringResource(R.string.mon_cpu_policies), p.policies.size.toString())
@@ -299,7 +298,7 @@ private fun LazyListScope.gpuTab(s: LiveState) {
     }
     item {
         MonitorCard {
-            CardHeader(Icons.Rounded.Timeline, ZkGpu, stringResource(R.string.mon_gpu_busy_history))
+            CardHeader(ZkIcons.Pulse, ZkGpu, stringResource(R.string.mon_gpu_busy_history))
             Spacer(Modifier.height(12.dp))
             if (s.monitor.gpuHistory.size >= 2) {
                 TimeSeriesChart(
@@ -315,7 +314,7 @@ private fun LazyListScope.gpuTab(s: LiveState) {
     }
     item {
         MonitorCard {
-            CardHeader(Icons.Rounded.Speed, ZkGpu, stringResource(R.string.mon_gpu_freq_history))
+            CardHeader(ZkIcons.Speed, ZkGpu, stringResource(R.string.mon_gpu_freq_history))
             Spacer(Modifier.height(12.dp))
             if (s.gpuFreqHistory.size >= 2) {
                 val top = maxMhz ?: ((s.gpuFreqHistory.maxOrNull() ?: 100f) * 1.1f)
@@ -335,7 +334,7 @@ private fun LazyListScope.gpuTab(s: LiveState) {
     if (pg != null) {
         item {
             MonitorCard {
-                CardHeader(Icons.Rounded.DeveloperBoard, ZkGpu, stringResource(R.string.mon_gpu_info))
+                CardHeader(ZkIcons.Chip, ZkGpu, stringResource(R.string.mon_gpu_info))
                 Spacer(Modifier.height(8.dp))
                 pg.provider.ifBlank { pg.kind }.takeIf { it.isNotBlank() }?.let { InfoLine(stringResource(R.string.mon_gpu_driver), it) }
                 InfoLine(stringResource(R.string.mon_gpu_opps), pg.opps.toString())

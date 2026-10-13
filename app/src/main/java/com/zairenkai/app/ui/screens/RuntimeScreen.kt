@@ -6,6 +6,7 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,15 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
-import com.zairenkai.app.ui.icons.Shield
-import com.zairenkai.app.ui.icons.Thermostat
-import com.zairenkai.app.ui.icons.Memory
-import com.zairenkai.app.ui.icons.Storage
-import com.zairenkai.app.ui.icons.Public
-import com.zairenkai.app.ui.icons.DeveloperBoard
-import com.zairenkai.app.ui.icons.ChevronLeft
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,7 +58,7 @@ fun RuntimeScreen(factory: VmFactory, onBack: () -> Unit = {}) {
     CollapsingScaffold(
         stringResource(R.string.runtime_title),
         onBack = onBack,
-        actions = { IconButton(onClick = vm::refresh) { Icon(Icons.Rounded.Refresh, stringResource(R.string.action_reload)) } },
+        actions = { IconButton(onClick = vm::refresh) { Icon(ZkIcons.Refresh, stringResource(R.string.action_reload)) } },
     ) { inner ->
         when {
             ui.loading && snap == null -> Column(Modifier.fillMaxSize().padding(inner), verticalArrangement = Arrangement.Center) {
@@ -106,21 +98,21 @@ fun RuntimeScreen(factory: VmFactory, onBack: () -> Unit = {}) {
                     }
 
                     val categoryIcons = mapOf(
-                        "Runtime" to Icons.Rounded.DeveloperBoard,
-                        "Thermal" to Icons.Rounded.Thermostat,
-                        "CPU" to Icons.Rounded.Memory,
-                        "GPU" to Icons.Rounded.DeveloperBoard,
-                        "Memory" to Icons.Rounded.Memory,
-                        "Storage" to Icons.Rounded.Storage,
-                        "Network" to Icons.Rounded.Public,
-                        "System" to Icons.Rounded.Shield,
+                        "Runtime" to ZkIcons.Chip,
+                        "Thermal" to ZkIcons.Thermometer,
+                        "CPU" to ZkIcons.Memory,
+                        "GPU" to ZkIcons.Chip,
+                        "Memory" to ZkIcons.Memory,
+                        "Storage" to ZkIcons.Storage,
+                        "Network" to ZkIcons.Globe,
+                        "System" to ZkIcons.Shield,
                     )
                     s.capabilities.byCategory().forEach { (category, caps) ->
                         SectionCard(stringResource(R.string.runtime_capability_section, stringResource(caps.first().id.categoryRes))) {
                             caps.forEach { cap ->
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Row(Modifier.weight(1f)) {
-                                        Icon(categoryIcons[category] ?: Icons.Rounded.Shield, null, tint = MaterialTheme.colorScheme.primary)
+                                        Icon(categoryIcons[category] ?: ZkIcons.Shield, null, tint = MaterialTheme.colorScheme.primary)
                                         Spacer(Modifier.width(8.dp))
                                         Column {
                                             Text(stringResource(cap.id.titleRes), style = MaterialTheme.typography.bodyMedium)

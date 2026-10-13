@@ -19,6 +19,16 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.zairenkai.app.ui.ZairenkaiRoot
 import com.zairenkai.app.ui.onboarding.Onboarding
@@ -69,7 +79,20 @@ class MainActivity : ComponentActivity() {
                     tertiary = cs.tertiary,
                     glass = GlassConfig(enabled = s?.glass ?: false),
                 ) {
-                    if (s != null) {
+                    // A language change (handled in place on Android 13+, see the
+                    // manifest) swaps every string at once; a short fade turns that
+                    // into a soft transition instead of a flicker.
+                    val locales = LocalConfiguration.current.locales
+                    val fade = remember { Animatable(1f) }
+                    var seen by remember { mutableStateOf(locales) }
+                    LaunchedEffect(locales) {
+                        if (locales != seen) {
+                            seen = locales
+                            fade.snapTo(0.3f)
+                            fade.animateTo(1f, tween(420))
+                        }
+                    }
+                    if (s != null) Box(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }) {
                         AnimatedContent(
                             targetState = s.onboarded,
                             transitionSpec = { fadeIn(tween(350)).togetherWith(fadeOut(tween(200))) },

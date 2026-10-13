@@ -38,3 +38,15 @@ val ZkAccents = listOf(
 )
 
 fun accentById(id: String): Accent = ZkAccents.firstOrNull { it.id == id } ?: ZkAccents[0]
+
+/**
+ * Setup and mascot tokens. The backgrounds are the setup surfaces; the
+ * accents are for illustration (Zai, rings), not for text: on the light
+ * background they are below 4.5:1.
+ */
+object ZkSetup {
+    val BackgroundLight = Color(0xFFF7F9FC)
+    val BackgroundDark = Color(0xFF0B1018)
+    val Accent = Color(0xFF64B5FF)
+    val AccentAlt = Color(0xFF8B9CFF)
+}

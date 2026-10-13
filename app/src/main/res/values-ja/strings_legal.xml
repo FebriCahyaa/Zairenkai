@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="legal_title">法的情報</string>
+    <string name="legal_intro">Zairenkai を使う前にお読みください。各項目をタップすると全文を表示します。</string>
+    <string name="legal_consent">Zairenkai の利用規約、リスクに関する免責事項、プライバシーポリシーを読み、同意します。</string>
+    <string name="legal_expanded">展開</string>
+    <string name="legal_collapsed">折りたたみ</string>
+    <string name="legal_terms_title">利用規約</string>
+    <string name="legal_terms_summary">Zairenkai の正しい使い方</string>
+    <string name="legal_terms_body">Zairenkai は root 化した Android 端末向けのパフォーマンス管理アプリです。システムの状態を読み取り、あなたが指示したときだけ、ZKFC カーネルフレームワーク上の zperfd エンジンを通じてプロファイルや調整を適用します。\n\nZairenkai を使用することで、次のことに同意したものとみなされます：自分が所有する、または変更する権限のある端末でのみ使用すること、法律や他者の権利を侵害する目的で使用しないこと、ライセンスで許可された範囲を超えてアプリを解析・改変・再配布しないこと。\n\n本規約は更新されることがあります。変更時には新しい版を表示し、改めて同意をお願いします。</string>
+    <string name="legal_risk_title">リスクと免責事項</string>
+    <string name="legal_risk_summary">root とカーネル調整にはリスクがあります</string>
+    <string name="legal_risk_body">root アクセスやカーネルパラメータ（CPU・GPU の周波数、スケジューラ、メモリ）の変更は、端末の安定性、温度、電池持ち、保証に影響することがあります。\n\nZairenkai は既存の保護機能を維持します。変更はすべて zperfd を通じて適用され、カーネルから読み戻して確認し、失敗した場合は元に戻します。上限はカーネルの温度保護と、起動失敗後の SAFE MODE に従います。メーカーの温度管理デーモンを無効にすることはありません。\n\nそれでも、本ソフトウェアは「現状のまま」提供され、いかなる保証もありません。法律で認められる範囲で、開発者は使用によって生じた損害、データの損失、その他の不利益について責任を負いません。</string>
+    <string name="legal_privacy_title">プライバシーとデータ</string>
+    <string name="legal_privacy_summary">インターネット不要、追跡なし</string>
+    <string name="legal_privacy_body">Zairenkai はインターネットへのアクセス権を要求せず、端末の外へデータを送信しません。アカウント、広告、分析、追跡はありません。\n\nアプリが作成するデータ（設定、使用状況と電力の履歴、FPS セッション）はアプリ専用の領域にローカル保存され、クラウドにはバックアップされず、アンインストール時に削除されます。\n\n使用状況へのアクセスと通知は、権限の手順で説明する機能にのみ使用します。診断レポートは「コピー」を押したときだけクリップボードにコピーされ、トークンの内容や鍵は含まれません。</string>
+    <string name="legal_license_title">Zairenkai のライセンス</string>
+    <string name="legal_license_summary">プロプライエタリソフトウェアと API トークン</string>
+    <string name="legal_license_body">Zairenkai はプロプライエタリソフトウェアです。© 2026 FebriCahyaa (LicenseRef-Zairenkai-Proprietary)。本ライセンスはアプリを使用する権利を与えるもので、コード、デザイン、マスコットのイラストの所有権を与えるものではありません。\n\nパフォーマンス機能は、端末に紐づきカーネルで検証される API トークンで有効になります。トークンを共有しないでください。共有されたトークンは失効させることがあります。</string>
+    <string name="legal_third_party_title">サードパーティのコンポーネント</string>
+    <string name="legal_third_party_summary">オープンソースライブラリとそのライセンス</string>
+    <string name="legal_third_party_body">Zairenkai は AndroidX と Jetpack Compose、Kotlin と kotlinx、Lottie などのオープンソースコンポーネントで作られており、その多くは Apache License 2.0、フォントの Google Sans Flex は SIL Open Font License 1.1 で提供されています。\n\n全一覧（各コンポーネントの名前、バージョン、開発者、ウェブサイト、ライセンス全文）は「オープンソースライセンス」にあります。</string>
+    <string name="legal_trademarks_title">商標</string>
+    <string name="legal_trademarks_summary">ブランド名は端末の識別のためだけに使用</string>
+    <string name="legal_trademarks_body">Android は Google LLC の商標です。Google、Pixel、Samsung、Xiaomi、Redmi、POCO、OnePlus、realme、Nothing、Motorola、および端末を識別するために表示されるその他の名称は、それぞれの所有者の商標です。\n\nZairenkai はこれらの所有者と提携しておらず、後援・承認を受けていません。「デバイス情報」のブランドマークは Zairenkai のデザインであり、公式ロゴではありません。</string>
+    <string name="oss_title">オープンソースライセンス</string>
+    <string name="oss_search">ライブラリ、開発者、ライセンスを検索</string>
+    <string name="oss_empty">一致するものはありません。</string>
+    <string name="oss_source">ソース</string>
+    <string name="oss_website">ウェブサイト</string>
+    <string name="oss_view_license">ライセンスを表示</string>
+    <string name="oss_hide_license">閉じる</string>
+    <string name="oss_text_missing">このライセンスの全文は同梱されていません。上のリンクを開いてください。</string>
+    <plurals name="oss_summary">
+        <item quantity="other">このビルドに含まれるオープンソースコンポーネント %1$d 件（名前順）。</item>
+    </plurals>
+</resources>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="about_phone_title">关于手机</string>
+    <string name="about_phone_entry_sub">Android %1$s · %2$s</string>
+    <string name="about_phone_software">软件</string>
+    <string name="about_phone_hardware">硬件</string>
+    <string name="about_phone_identity">标识</string>
+    <string name="about_phone_android_value">%1$s（API %2$d）</string>
+    <string name="about_phone_patch">安全补丁</string>
+    <string name="about_phone_build">版本号</string>
+    <string name="about_phone_baseband">基带</string>
+    <string name="about_phone_bootloader">引导程序</string>
+    <string name="about_phone_cpu">CPU</string>
+    <string name="about_phone_display">显示屏</string>
+    <string name="about_phone_brand">品牌</string>
+    <string name="about_phone_manufacturer">制造商</string>
+    <string name="about_phone_model">型号</string>
+    <string name="about_phone_codename">代号</string>
+    <string name="about_phone_device_name">设备名称</string>
+    <string name="about_phone_storage_value">已用 %1$s，共 %2$s</string>
+    <string name="about_phone_storage_free">可用 %1$s</string>
+    <string name="device_user_name">“%1$s”</string>
+    <string name="device_chip_android">Android %1$s</string>
+    <string name="device_chip_ram">内存 %1$s</string>
+    <string name="device_hz">%1$d Hz</string>
+    <plurals name="about_phone_cpu_value">
+        <item quantity="other">%1$d 核 · %2$s</item>
+    </plurals>
+</resources>

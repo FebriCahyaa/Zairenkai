@@ -4,23 +4,18 @@
     <!-- Wizard frame -->
     <string name="setup_step_welcome">ようこそ</string>
     <string name="setup_step_check">システムチェック</string>
-    <string name="setup_step_profile">最初のプロファイル</string>
     <string name="setup_step_done">完了</string>
     <string name="setup_step_label">ステップ %1$d/%2$d · %3$s</string>
     <string name="setup_language">言語</string>
     <string name="setup_info">アプリ &amp; デバイス情報</string>
     <string name="setup_start">セットアップを開始</string>
     <string name="setup_checking">確認中…</string>
-    <string name="setup_apply_profile">%1$s を適用</string>
-    <!-- %1$s: profile name -->
-    <string name="setup_applying">%1$s を適用中…</string>
-    <string name="setup_skip_for_now">今はスキップ</string>
-    <string name="setup_enter_app">Zairenkai を開く</string>
 
     <!-- 1. Welcome -->
     <string name="setup_greeting_hello">こんにちは</string>
     <string name="setup_greeting_tagline">あなたらしいパフォーマンスを。</string>
-    <string name="setup_welcome_body">root 化デバイス向けのパフォーマンス制御です。ZKFC カーネルフレームワーク上で動作する zperfd エンジンによって実行されます。</string>
+    <string name="setup_welcome_title">Zairenkai をはじめよう</string>
+    <string name="setup_welcome_body">Android のシステム管理を、もっと直感的に。</string>
     <string name="setup_feature_monitor_title">ライブモニター</string>
     <string name="setup_feature_monitor_body">選択したゲームの FPS、コアごとの CPU 負荷、GPU、バッテリー、温度。</string>
     <string name="setup_feature_verified_title">検証済みのプロファイル &amp; チューニング</string>
@@ -96,7 +91,6 @@
     <string name="setup_state_warn">要確認</string>
     <string name="setup_state_missing">未準備</string>
     <string name="setup_check_a11y">%1$s: %2$s。%3$s</string>
-    <string name="setup_check_summary_row">%1$s: %2$s</string>
 
     <!-- License states, as "Token <state>." -->
     <string name="license_state_valid">有効</string>
@@ -110,15 +104,10 @@
     <string name="license_state_no_owner_key">オーナーキーがカーネルにプロビジョニングされていません</string>
     <string name="license_state_revoked">失効</string>
 
-    <!-- 3. First profile -->
-    <string name="setup_profile_title">最初のプロファイルを選択</string>
-    <string name="setup_profile_body">任意です。プロファイルは zperfd のモードです。値はデバイスの周波数テーブルに合わせて調整され、引き続き熱エンベロープによって制限されます。</string>
-    <string name="setup_profile_blocked">%1$s の準備ができるとプロファイルを適用できます。後からプロファイルタブで選択することもできます。</string>
 
     <!-- 4. Done -->
     <string name="setup_done_ready_title">準備完了</string>
     <string name="setup_done_partial_title">セットアップ完了</string>
-    <string name="setup_done_applied">プロファイル %1$s を適用しました。</string>
     <string name="setup_done_ready_body">プロファイルタブでいつでもプロファイルを選択したり、組み込みモードからカスタムプロファイルを作成したりできます。</string>
     <string name="setup_done_partial_body">Zairenkai を開けるようになりました。準備ができていないコンポーネントを必要とする機能はロックされたままです。</string>
     <string name="setup_next_steps">次のステップ</string>

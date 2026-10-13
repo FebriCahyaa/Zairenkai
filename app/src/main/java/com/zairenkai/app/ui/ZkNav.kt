@@ -5,6 +5,7 @@
  */
 package com.zairenkai.app.ui
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,8 +15,6 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import com.zairenkai.app.ui.icons.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,11 +38,11 @@ import com.zairenkai.app.ui.screens.monitor.FpsScreen
 import com.zairenkai.app.ui.screens.monitor.FpsSessionScreen
 
 enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVector) {
-    DASHBOARD("dashboard", R.string.nav_dashboard, Icons.Rounded.Dashboard),
-    MONITOR("monitor", R.string.nav_monitor, Icons.Rounded.Timeline),
-    TWEAKS("tweaks", R.string.nav_tweaks, Icons.Rounded.Tune),
-    PROFILES("profiles", R.string.nav_profiles, Icons.Rounded.ViewCarousel),
-    SYSTEM("system", R.string.nav_system, Icons.Rounded.Security),
+    DASHBOARD("dashboard", R.string.nav_dashboard, ZkIcons.Home),
+    MONITOR("monitor", R.string.nav_monitor, ZkIcons.Pulse),
+    TWEAKS("tweaks", R.string.nav_tweaks, ZkIcons.Tune),
+    PROFILES("profiles", R.string.nav_profiles, ZkIcons.Profiles),
+    SYSTEM("system", R.string.nav_system, ZkIcons.Security),
 }
 
 private val bottomDests = listOf(Dest.DASHBOARD, Dest.MONITOR, Dest.TWEAKS, Dest.PROFILES, Dest.SYSTEM)
@@ -173,17 +172,29 @@ fun ZairenkaiRoot(container: AppContainer) {
             }
             composable(Dest.TWEAKS.route) { TweaksScreen(factory) }
             composable(Dest.PROFILES.route) { ProfilesScreen(factory) }
-            composable(Dest.SYSTEM.route) { SystemScreen(factory, onOpenRuntime = { nav.navigate("runtime") }) }
+            composable(Dest.SYSTEM.route) {
+                SystemScreen(factory, onOpenRuntime = { nav.navigate("runtime") }, onOpenAboutPhone = { nav.navigate("about_phone") })
+            }
+            composable("about_phone") { com.zairenkai.app.ui.device.AboutPhoneScreen(onBack = { nav.popBackStack() }) }
             composable("runtime") { RuntimeScreen(factory, onBack = { nav.popBackStack() }) }
             composable("settings") {
                 SettingsScreen(
                     factory,
                     onOpenTheme = { nav.navigate("theme") },
                     onOpenAbout = { nav.navigate("about") },
+                    onOpenAboutPhone = { nav.navigate("about_phone") },
+                    onOpenLegal = { nav.navigate("legal") },
+                    onOpenLicenses = { nav.navigate("licenses") },
+                    onOpenLogs = { nav.navigate("logs") },
                 )
             }
             composable("theme") { ThemeScreen(factory, onBack = { nav.popBackStack() }) }
             composable("about") { AboutScreen(onBack = { nav.popBackStack() }) }
+            composable("legal") {
+                com.zairenkai.app.ui.legal.LegalInfoScreen(onBack = { nav.popBackStack() }, onOpenLicenses = { nav.navigate("licenses") })
+            }
+            composable("licenses") { com.zairenkai.app.ui.legal.OssLicensesScreen(onBack = { nav.popBackStack() }) }
+            composable("logs") { LogsScreen(factory, onBack = { nav.popBackStack() }) }
         }
     }
 }

@@ -10,9 +10,9 @@
  */
 package com.zairenkai.app.ui.components
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.zairenkai.app.R
-import com.zairenkai.app.ui.icons.ChevronLeft
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +48,7 @@ fun CollapsingScaffold(
                 title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("pageTitle")) },
                 navigationIcon = {
                     if (onBack != null) {
-                        IconButton(onClick = onBack) { Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.action_back)) }
+                        IconButton(onClick = onBack) { Icon(ZkIcons.ChevronLeft, stringResource(R.string.action_back)) }
                     }
                 },
                 actions = actions,

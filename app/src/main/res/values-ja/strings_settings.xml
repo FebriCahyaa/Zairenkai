@@ -6,7 +6,6 @@
     <string name="settings_section_appearance">外観</string>
     <string name="settings_theme_sub">モード、アクセント、ダイナミックカラー &amp; Glass UI</string>
     <string name="settings_about_sub">バージョン、ライセンス &amp; クレジット</string>
-    <string name="settings_section_general">一般</string>
     <string name="settings_lite_title">ライトモード</string>
     <string name="settings_lite_sub">負荷の大きいチューニングを非表示にし、オーバーヘッドを減らします。</string>
     <string name="settings_mitigation_title">デバイスの緩和策</string>

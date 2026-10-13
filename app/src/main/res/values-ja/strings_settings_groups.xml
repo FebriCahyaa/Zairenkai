@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="settings_section_device">デバイス</string>
+    <string name="settings_section_performance">パフォーマンス</string>
+    <string name="settings_section_privacy">権限とプライバシー</string>
+    <string name="settings_section_diagnostics">診断</string>
+    <string name="settings_section_about">情報</string>
+    <string name="settings_permissions_title">アプリの権限</string>
+    <string name="settings_legal_sub">規約、リスク、プライバシー、商標</string>
+    <string name="settings_logs_title">ZKFC ログ</string>
+    <string name="settings_logs_sub">レベル %1$s · カーネルのライブログ</string>
+    <string name="settings_hero_sub">バージョン %1$s · タップしてアプリ情報</string>
+    <plurals name="settings_permissions_sub">
+        <item quantity="other">%2$d 件中 %1$d 件を許可</item>
+    </plurals>
+</resources>

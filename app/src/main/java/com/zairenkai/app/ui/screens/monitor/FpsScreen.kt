@@ -7,6 +7,7 @@
  */
 package com.zairenkai.app.ui.screens.monitor
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -14,10 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,7 +38,6 @@ import com.zairenkai.app.ui.components.AppIcon
 import com.zairenkai.app.ui.components.Sparkline
 import com.zairenkai.app.ui.components.formatClock
 import com.zairenkai.app.ui.components.formatDuration
-import com.zairenkai.app.ui.icons.*
 import com.zairenkai.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +64,7 @@ fun FpsScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (String) ->
         actions = {
             if (!sessions.isNullOrEmpty()) {
                 IconButton(onClick = { confirmClear = true }) {
-                    Icon(Icons.Rounded.DeleteSweep, stringResource(R.string.fps_clear_all))
+                    Icon(ZkIcons.DeleteSweep, stringResource(R.string.fps_clear_all))
                 }
             }
         },
@@ -136,13 +132,13 @@ fun FpsScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (String) ->
         item {
             MonitorCard {
                 CardHeader(
-                    Icons.Rounded.SportsEsports,
+                    ZkIcons.Gamepad,
                     ZkFps,
                     stringResource(R.string.fps_watch_title),
                     stringResource(R.string.fps_watch_sub),
                 ) {
                     FilledTonalButton(onClick = { picker = true }, contentPadding = PaddingValues(horizontal = 14.dp)) {
-                        Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
+                        Icon(ZkIcons.Add, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.fps_watch_add))
                     }
@@ -172,7 +168,7 @@ fun FpsScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (String) ->
                                 )
                             }
                             IconButton(onClick = { vm.setWatched(pkg, false) }) {
-                                Icon(Icons.Rounded.Close, stringResource(R.string.fps_watch_remove))
+                                Icon(ZkIcons.Close, stringResource(R.string.fps_watch_remove))
                             }
                         }
                     }
@@ -195,7 +191,7 @@ fun FpsScreen(factory: VmFactory, onBack: () -> Unit, onOpenSession: (String) ->
         } else if (sessions != null) {
             item {
                 MonitorCard(color = MaterialTheme.colorScheme.surfaceContainerLow) {
-                    CardHeader(Icons.Rounded.Insights, ZkFps, stringResource(R.string.fps_sessions_empty_title))
+                    CardHeader(ZkIcons.Insights, ZkFps, stringResource(R.string.fps_sessions_empty_title))
                     Spacer(Modifier.height(8.dp))
                     Text(
                         stringResource(R.string.fps_sessions_empty_body),
@@ -234,7 +230,7 @@ private fun Overview(list: List<FpsRecording>) {
     val avg = if (active > 0) list.sumOf { it.stats.avgFps.toDouble() * it.stats.activeMs } / active else null
     val stab = list.map { it.stats.stabilityPct }.average()
     MonitorCard {
-        CardHeader(Icons.Rounded.BarChart, ZkFps, stringResource(R.string.fps_overview_title))
+        CardHeader(ZkIcons.Chart, ZkFps, stringResource(R.string.fps_overview_title))
         Spacer(Modifier.height(12.dp))
         StatGrid(
             listOf(
@@ -305,7 +301,7 @@ private fun AppPicker(
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                leadingIcon = { Icon(Icons.Rounded.Search, null) },
+                leadingIcon = { Icon(ZkIcons.Search, null) },
                 placeholder = { Text(stringResource(R.string.fps_picker_search)) },
                 shape = MaterialTheme.shapes.extraLarge,
             )

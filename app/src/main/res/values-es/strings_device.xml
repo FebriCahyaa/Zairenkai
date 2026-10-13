@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="about_phone_title">Información del teléfono</string>
+    <string name="about_phone_entry_sub">Android %1$s · %2$s</string>
+    <string name="about_phone_software">Software</string>
+    <string name="about_phone_hardware">Hardware</string>
+    <string name="about_phone_identity">Identidad</string>
+    <string name="about_phone_android_value">%1$s (API %2$d)</string>
+    <string name="about_phone_patch">Parche de seguridad</string>
+    <string name="about_phone_build">Número de compilación</string>
+    <string name="about_phone_baseband">Banda base</string>
+    <string name="about_phone_bootloader">Bootloader</string>
+    <string name="about_phone_cpu">CPU</string>
+    <string name="about_phone_display">Pantalla</string>
+    <string name="about_phone_brand">Marca</string>
+    <string name="about_phone_manufacturer">Fabricante</string>
+    <string name="about_phone_model">Modelo</string>
+    <string name="about_phone_codename">Nombre en clave</string>
+    <string name="about_phone_device_name">Nombre del dispositivo</string>
+    <string name="about_phone_storage_value">%1$s de %2$s en uso</string>
+    <string name="about_phone_storage_free">%1$s disponibles</string>
+    <string name="device_user_name">«%1$s»</string>
+    <string name="device_chip_android">Android %1$s</string>
+    <string name="device_chip_ram">RAM %1$s</string>
+    <string name="device_hz">%1$d Hz</string>
+    <plurals name="about_phone_cpu_value">
+        <item quantity="one">%1$d núcleo · %2$s</item>
+        <item quantity="many">%1$d núcleos · %2$s</item>
+        <item quantity="other">%1$d núcleos · %2$s</item>
+    </plurals>
+</resources>

@@ -8,12 +8,12 @@
  */
 package com.zairenkai.app.ui.screens
 
+import com.zairenkai.app.ui.icons.ZkIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +36,6 @@ import com.zairenkai.app.ui.PLAUSIBLE_CELSIUS
 import com.zairenkai.app.ui.VmFactory
 import com.zairenkai.app.ui.components.RingGauge
 import com.zairenkai.app.ui.components.Sparkline
-import com.zairenkai.app.ui.icons.*
 import com.zairenkai.app.ui.screens.monitor.*
 import com.zairenkai.app.ui.theme.*
 
@@ -104,7 +103,7 @@ fun MonitorScreen(
                         )
                     }
                 }
-                IconBadge(Icons.Rounded.SportsEsports, on, size = 26.dp)
+                IconBadge(ZkIcons.Gamepad, on, size = 26.dp)
             }
             Spacer(Modifier.height(6.dp))
             Text(
@@ -149,7 +148,7 @@ fun MonitorScreen(
             MonitorCard(shape = TileShape, color = MaterialTheme.colorScheme.surfaceContainerLow, padding = 14.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(
-                        if (zkfc.thermalTripped) Icons.Rounded.Shield else Icons.Rounded.VerifiedUser,
+                        if (zkfc.thermalTripped) ZkIcons.Shield else ZkIcons.Verified,
                         contentDescription = null,
                         tint = if (zkfc.thermalTripped) ZkWarn else ZkGood,
                     )
@@ -216,7 +215,7 @@ private fun HubHeader(s: LiveState, onOpenHistory: () -> Unit) {
             )
         }
         FilledTonalIconButton(onClick = onOpenHistory, modifier = Modifier.size(52.dp)) {
-            Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.monitor_open_history))
+            Icon(ZkIcons.History, contentDescription = stringResource(R.string.monitor_open_history))
         }
     }
 }
@@ -227,7 +226,7 @@ private fun CpuCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
     val online = m?.cpu.orEmpty().filter { it.online && it.loadPct in 0..100 }
     val load = online.takeIf { it.isNotEmpty() }?.let { c -> c.sumOf { it.loadPct } / c.size }
     MonitorCard(modifier, onClick = onClick, padding = 16.dp) {
-        CardHeaderSmall(Icons.Rounded.Memory, ZkCpu, "CPU")
+        CardHeaderSmall(ZkIcons.Memory, ZkCpu, "CPU")
         Spacer(Modifier.height(10.dp))
         if (load == null) {
             if (s.rootTelemetryMissing) ModuleNeeded() else WaitingText()
@@ -254,7 +253,7 @@ private fun GpuCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
     val busy = g?.busyPct?.takeIf { it in 0..100 }
     val mhz = g?.curFreq?.takeIf { it > 0 }?.let { it / 1_000_000f }
     MonitorCard(modifier, onClick = onClick, padding = 16.dp) {
-        CardHeaderSmall(Icons.Rounded.DeveloperBoard, ZkGpu, "GPU")
+        CardHeaderSmall(ZkIcons.Chip, ZkGpu, "GPU")
         Spacer(Modifier.height(10.dp))
         if (busy == null && mhz == null) {
             if (s.rootTelemetryMissing) ModuleNeeded() else WaitingText(R.string.monitor_sensor_unavailable.takeIf { s.monitor.latest != null })
@@ -290,7 +289,7 @@ private fun BatteryCard(s: LiveState, onClick: () -> Unit) {
                         fontWeight = FontWeight.Bold,
                     )
                     Icon(
-                        if (charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryStd,
+                        if (charging) ZkIcons.BatteryCharging else ZkIcons.Battery,
                         contentDescription = null,
                         tint = accent,
                         modifier = Modifier.size(16.dp),
@@ -332,7 +331,7 @@ private fun ThermalCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
     val zones = s.monitor.latest?.thermal.orEmpty().filter { it.celsius in PLAUSIBLE_CELSIUS }
     val hottest = zones.maxOfOrNull { it.celsius }
     MonitorCard(modifier, onClick = onClick, padding = 16.dp) {
-        CardHeaderSmall(Icons.Rounded.DeviceThermostat, ZkTemp, stringResource(R.string.monitor_thermal_title))
+        CardHeaderSmall(ZkIcons.Thermometer, ZkTemp, stringResource(R.string.monitor_thermal_title))
         Spacer(Modifier.height(10.dp))
         if (hottest == null) {
             if (s.rootTelemetryMissing) ModuleNeeded() else WaitingText()
@@ -353,7 +352,7 @@ private fun ThermalCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
 private fun MemoryCard(s: LiveState, modifier: Modifier) {
     val mem = s.memory
     MonitorCard(modifier, padding = 16.dp) {
-        CardHeaderSmall(Icons.Rounded.Storage, ZkIndigo, stringResource(R.string.mon_memory_title))
+        CardHeaderSmall(ZkIcons.Storage, ZkIndigo, stringResource(R.string.mon_memory_title))
         Spacer(Modifier.height(10.dp))
         if (mem == null) {
             WaitingText()
@@ -375,7 +374,7 @@ private fun CardHeaderSmall(icon: androidx.compose.ui.graphics.vector.ImageVecto
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         IconBadge(icon, accent, size = 18.dp)
         Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        Icon(ZkIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
     }
 }
 
