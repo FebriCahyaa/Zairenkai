@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="setup_step_legal">Informasi hukum</string>
+    <string name="setup_step_theme">Tampilan</string>
+    <string name="setup_step_permissions">Izin aplikasi</string>
+    <string name="setup_alert_notes_title">Bisa dipakai, dengan catatan</string>
+    <string name="setup_alert_missing_title">Beberapa komponen belum siap</string>
+    <string name="setup_start_app">Mulai</string>
+    <string name="setup_agree_continue">Setuju dan lanjut</string>
+    <string name="setup_theme_title">Pilih tampilanmu</string>
+    <string name="setup_theme_body">Atur mode, warna, dan lihat langsung hasilnya di pratinjau. Semua bisa diubah lagi di Pengaturan.</string>
+    <string name="setup_theme_mode">Mode tampilan</string>
+    <string name="setup_theme_dynamic">Warna dinamis</string>
+    <string name="setup_theme_dynamic_sub">Ikuti warna wallpaper (Material You)</string>
+    <string name="setup_theme_accent">Warna aksen</string>
+    <string name="setup_theme_accent_off">Warna aksen (matikan warna dinamis untuk memilih)</string>
+    <string name="setup_theme_preview">Pratinjau Zairenkai</string>
+    <string name="setup_features_title">Yang bisa kamu lakukan</string>
+    <string name="setup_feature_fps_title">Perekam FPS</string>
+    <string name="setup_feature_fps_body">Rekam FPS game pilihanmu di latar, lalu lihat grafik, stabilitas, dan sesi per game.</string>
+    <string name="setup_feature_device_title">Kenali perangkatmu</string>
+    <string name="setup_feature_device_body">Tentang ponsel lengkap dengan identitas merek, chipset, layar, memori, dan penyimpanan.</string>
+    <string name="setup_perm_title">Izin aplikasi</string>
+    <string name="setup_perm_body">Hanya izin yang benar-benar dipakai fitur Zairenkai. Kamu bisa mengubahnya kapan saja di pengaturan Android.</string>
+    <string name="setup_perm_note">Semua izin opsional. Tanpa izin, fitur yang membutuhkannya akan meminta lagi saat dibuka. Akses root diberikan lewat manajer root, bukan di sini.</string>
+    <string name="perm_notifications_title">Notifikasi</string>
+    <string name="perm_notifications_body">Perekam FPS dan perekam riwayat berjalan sebagai layanan latar, dan Android mewajibkan notifikasi saat keduanya aktif.</string>
+    <string name="perm_usage_title">Akses penggunaan</string>
+    <string name="perm_usage_body">Untuk mengetahui aplikasi yang sedang dibuka: dipakai profil per-aplikasi, mode Otomatis, dan riwayat penggunaan.</string>
+    <string name="perm_battery_title">Optimasi baterai</string>
+    <string name="perm_battery_body">Kecualikan Zairenkai agar Android tidak menghentikan perekam di latar. Pilih Zairenkai, lalu Jangan optimalkan.</string>
+    <string name="perm_granted">Diizinkan</string>
+    <string name="perm_not_granted">Belum diizinkan</string>
+    <string name="perm_needed">Dibutuhkan fitur</string>
+    <string name="perm_recommended">Disarankan</string>
+    <string name="perm_allow">Izinkan</string>
+    <string name="perm_open_settings">Buka pengaturan</string>
+    <plurals name="setup_done_permissions">
+        <item quantity="other">Izin aplikasi: %1$d dari %2$d diizinkan</item>
+    </plurals>
+</resources>

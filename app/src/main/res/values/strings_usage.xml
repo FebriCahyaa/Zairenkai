@@ -2,31 +2,31 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources>
     <!-- Usage history list -->
-    <string name="usage_title">Riwayat Penggunaan</string>
-    <string name="usage_clear_all">Hapus semua</string>
-    <string name="usage_recording_title">Merekam…</string>
-    <string name="usage_background_title">Perekaman latar belakang</string>
-    <string name="usage_recording_body">Zairenkai sedang merekam daya &amp; aplikasi yang aktif. Hentikan untuk menyimpan sesi.</string>
-    <string name="usage_idle_body">Rekam riwayat daya dan penggunaan aplikasi di latar belakang, lalu tinjau per sesi.</string>
-    <string name="usage_stop_save">Hentikan &amp; simpan</string>
-    <string name="usage_start">Mulai merekam</string>
-    <string name="usage_access_hint">Beri izin \"Akses penggunaan\" agar aplikasi aktif terdeteksi akurat (tanpa itu, deteksi memakai root bila tersedia).</string>
-    <string name="usage_open_access_settings">Buka pengaturan akses</string>
-    <string name="usage_empty">Belum ada sesi. Mulai merekam untuk melihat riwayat di sini.</string>
+    <string name="usage_title">Usage history</string>
+    <string name="usage_clear_all">Clear all</string>
+    <string name="usage_recording_title">Recording…</string>
+    <string name="usage_background_title">Background recording</string>
+    <string name="usage_recording_body">Zairenkai is recording power &amp; active apps. Stop to save the session.</string>
+    <string name="usage_idle_body">Record power and app usage history in the background, then review it per session.</string>
+    <string name="usage_stop_save">Stop &amp; save</string>
+    <string name="usage_start">Start recording</string>
+    <string name="usage_access_hint">Grant \"Usage access\" so the active app is detected accurately (without it, detection uses root when available).</string>
+    <string name="usage_open_access_settings">Open access settings</string>
+    <string name="usage_empty">No sessions yet. Start recording to see your history here.</string>
     <!-- %1$d: start level %, %2$d: end level %, %3$d: level drop %. Quoted to keep the double spaces. -->
-    <string name="usage_session_levels">"%1$d%% → %2$d%%  •  turun %3$d%%"</string>
+    <string name="usage_session_levels">"%1$d%% → %2$d%%  •  down %3$d%%"</string>
 
     <!-- Session detail (power statistics) -->
-    <string name="usage_detail_title">Statistik Daya</string>
-    <string name="usage_session_not_found">Sesi tidak ditemukan.</string>
+    <string name="usage_detail_title">Power statistics</string>
+    <string name="usage_session_not_found">Session not found.</string>
     <!-- %1$d: level drop %. Quoted to keep the double spaces. -->
-    <string name="usage_detail_process">"Proses penggunaan  •  %1$d%%"</string>
+    <string name="usage_detail_process">"Usage process  •  %1$d%%"</string>
     <string name="usage_detail_discharge">Discharge</string>
-    <string name="usage_detail_avg_power">Rata-rata daya</string>
-    <string name="usage_detail_used">Dipakai</string>
-    <string name="usage_detail_estimate">Estimasi</string>
-    <string name="usage_detail_scenarios">Skenario penggunaan</string>
-    <string name="usage_detail_no_scenarios">Tidak ada data skenario.</string>
+    <string name="usage_detail_avg_power">Average power</string>
+    <string name="usage_detail_used">Used</string>
+    <string name="usage_detail_estimate">Estimate</string>
+    <string name="usage_detail_scenarios">Usage scenarios</string>
+    <string name="usage_detail_no_scenarios">No scenario data.</string>
     <!-- %1$s: average power (W, 2 decimals), %2$s: max temperature (°C, no decimals). Quoted to keep the spacing. -->
     <string name="usage_detail_scenario_stats">"AVG %1$sW   MAX %2$s°C"</string>
     <!-- %1$s: game / app label. Quoted to keep the double spaces. -->
@@ -39,10 +39,10 @@
     <string name="usage_stat_low5" formatted="false">5% Low</string>
     <string name="usage_stat_max_temp">MAX °C</string>
     <string name="usage_stat_avg_power">AVG W</string>
-    <string name="usage_detail_frame_time">Frame Time (ms)</string>
+    <string name="usage_detail_frame_time">Frame time (ms)</string>
 
     <!-- Background recording service notification -->
-    <string name="usage_notif_channel_name">Monitor penggunaan</string>
-    <string name="usage_notif_channel_desc">Merekam riwayat daya &amp; penggunaan aplikasi</string>
-    <string name="usage_notif_recording">Merekam riwayat penggunaan…</string>
+    <string name="usage_notif_channel_name">Usage monitor</string>
+    <string name="usage_notif_channel_desc">Records power &amp; app usage history</string>
+    <string name="usage_notif_recording">Recording usage history…</string>
 </resources>

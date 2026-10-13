@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources>
     <!-- Bottom navigation -->
-    <string name="nav_dashboard">Home</string>
+    <string name="nav_dashboard">Beranda</string>
     <string name="nav_monitor">Monitor</string>
     <string name="nav_tweaks">Tweaks</string>
-    <string name="nav_profiles">Profiles</string>
-    <string name="nav_system">System</string>
+    <string name="nav_profiles">Profil</string>
+    <string name="nav_system">Sistem</string>
 </resources>

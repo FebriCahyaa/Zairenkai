@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- System & security screen -->
+    <string name="system_title">Sistem &amp; Keamanan</string>
+    <string name="system_yes">Ya</string>
+    <string name="system_no">Tidak</string>
+    <string name="system_label_status">Status</string>
+
+    <!-- App integrity (SignatureGuard) -->
+    <string name="system_integrity_title">Integritas aplikasi</string>
+    <string name="system_sig_official">Resmi (tanda tangan cocok)</string>
+    <string name="system_sig_modified">Termodifikasi / dikemas ulang</string>
+    <string name="system_sig_unknown">Tidak diverifikasi (debug/spoofed)</string>
+    <string name="system_label_signature_fingerprint">Sidik tanda tangan</string>
+
+    <!-- Runtime architecture entry -->
+    <string name="system_runtime_title">Arsitektur runtime</string>
+    <string name="system_runtime_desc">Identitas, capability runtime, thermal authority, dan subsystem registry diproyeksikan dari observation boundary Zairenkai.</string>
+    <string name="system_runtime_open">Buka Zairenkai Runtime</string>
+
+    <!-- ZKFC API license -->
+    <string name="system_license_title">Lisensi API (ZKFC)</string>
+    <string name="system_label_token_installed">Token terpasang</string>
+    <string name="system_label_owner_key">Kunci owner</string>
+    <string name="system_owner_key_installed">Terpasang</string>
+    <string name="system_owner_key_missing">Belum</string>
+    <string name="system_label_key_fingerprint">Sidik kunci</string>
+    <string name="system_label_kernel_binding">Binding kernel</string>
+    <string name="system_label_licensee">Pemegang lisensi</string>
+    <string name="system_license_note">Token API ditanam di kernel saat build dan diverifikasi di sana (tanda tangan Ed25519 pemilik). Aplikasi hanya membaca statusnya — kamu tidak perlu memasukkan token apa pun.</string>
+
+    <!-- Caller identity -->
+    <string name="system_caller_title">Identitas pemanggil</string>
+    <string name="system_label_zkfc_caps">Kapabilitas ZKFC</string>
+
+    <!-- System security -->
+    <string name="system_security_title">Keamanan sistem</string>
+    <string name="system_present">Ada</string>
+    <string name="system_label_module_signing">Penandatanganan modul</string>
+    <string name="system_enforced">Dipaksa</string>
+    <string name="system_label_lockdown">Lockdown kernel</string>
+    <string name="system_label_taint">Taint</string>
+    <string name="system_taint_clean">Bersih</string>
+    <string name="system_label_config_digest">Digest konfigurasi</string>
+
+    <!-- Device -->
+    <string name="system_device_title">Perangkat</string>
+    <string name="system_label_model">Model</string>
+    <string name="system_label_compatible">Kompatibel</string>
+    <string name="system_label_kernel_tag">Tag kernel</string>
+    <string name="system_empty">(kosong)</string>
+    <string name="system_label_cpu_count">Jumlah CPU</string>
+
+    <!-- Performance engine (zperfd) -->
+    <string name="system_zperf_title">Mesin performa (zperfd)</string>
+    <string name="system_label_kernel">Kernel</string>
+    <string name="system_label_release">Rilis</string>
+    <string name="system_label_boost">Boost</string>
+
+    <!-- Access policy -->
+    <string name="system_policy_title">Policy akses (UID/GID/Grup)</string>
+    <!-- %1$s: entry type (uid/gid/group), %2$d: numeric id -->
+    <string name="system_policy_entry_builtin">%1$s:%2$d (builtin)</string>
+
+    <!-- Root required (shared screen piece) -->
+    <string name="system_root_required_title">Akses root diperlukan</string>
+    <string name="system_root_required_body">Zairenkai memerlukan root (Magisk / KernelSU / APatch) dan modul ZKFC terpasang. Pasang modul lalu coba lagi.</string>
+    <string name="system_action_retry">Coba lagi</string>
+
+    <!-- Zairenkai Runtime screen -->
+    <string name="runtime_identity_title">Identitas Zairenkai</string>
+    <string name="runtime_label_product">Produk</string>
+    <string name="runtime_label_app_id">ID aplikasi</string>
+    <string name="runtime_label_core_id">ID Core</string>
+    <string name="runtime_label_core_api">API Core</string>
+    <string name="runtime_label_platform">Platform</string>
+    <string name="runtime_kernel_unidentified">Kernel tidak teridentifikasi</string>
+    <string name="runtime_platform_unidentified">Perangkat tidak teridentifikasi</string>
+    <string name="runtime_thermal_title">Otoritas termal</string>
+    <string name="runtime_label_envelope">Envelope</string>
+    <string name="runtime_label_headroom">Headroom</string>
+    <string name="runtime_label_control_zone">Zona kontrol</string>
+    <string name="runtime_label_critical_trip">Trip kritis</string>
+    <string name="runtime_label_telemetry">Telemetri</string>
+    <string name="runtime_telemetry_complete">Lengkap</string>
+    <string name="runtime_telemetry_incomplete">Tidak lengkap</string>
+    <string name="runtime_unknown">Tidak diketahui</string>
+    <!-- %1$s: capability category name -->
+    <string name="runtime_capability_section">Kapabilitas · %1$s</string>
+    <string name="runtime_cap_ready">SIAP</string>
+    <string name="runtime_cap_unavailable">TIDAK TERSEDIA</string>
+    <string name="runtime_cap_unobserved">BELUM TERAMATI</string>
+    <string name="runtime_subsystem_title">Registri subsistem</string>
+    <string name="runtime_observe_failed">Observasi runtime gagal.</string>
+
+    <!-- Capability categories -->
+    <string name="capability_category_runtime">Runtime</string>
+    <string name="capability_category_thermal">Termal</string>
+    <string name="capability_category_memory">Memori</string>
+    <string name="capability_category_storage">Penyimpanan</string>
+    <string name="capability_category_network">Jaringan</string>
+    <string name="capability_category_system">Sistem</string>
+
+    <!-- Capability titles -->
+    <string name="capability_root">Otoritas root</string>
+    <string name="capability_zkfc">Otoritas kernel ZKFC</string>
+    <string name="capability_zperfd">Engine runtime zperfd</string>
+    <string name="capability_thermal_telemetry">Telemetri termal</string>
+    <string name="capability_thermal_trips">Topologi trip runtime</string>
+    <string name="capability_thermal_headroom">Headroom termal</string>
+    <string name="capability_cpu_cpufreq">Kebijakan frekuensi CPU</string>
+    <string name="capability_cpu_uclamp">uclamp CPU</string>
+    <string name="capability_cpu_schedtune">schedtune CPU</string>
+    <string name="capability_input_boost">Boost input</string>
+    <string name="capability_gpu_devfreq">devfreq GPU</string>
+    <string name="capability_memory">Telemetri memori</string>
+    <string name="capability_storage">Topologi penyimpanan</string>
+    <string name="capability_network">Kontrol jaringan</string>
+    <string name="capability_properties">Broker properti Zairenkai</string>
+
+    <!-- Subsystem roles (display names are product names and stay in code) -->
+    <string name="subsystem_role_atlas">kecerdasan perangkat</string>
+    <string name="subsystem_role_sentinel">keselamatan dan keamanan</string>
+    <string name="subsystem_role_thermoguard">keselamatan termal</string>
+    <string name="subsystem_role_zperfd">orkestrasi runtime</string>
+    <string name="subsystem_role_zkfc">otoritas kernel</string>
+</resources>

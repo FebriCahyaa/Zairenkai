@@ -2,17 +2,18 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources>
     <!-- Greeting by time of day (pagi 04-10, siang 11-14, sore 15-17, malam 18-03) -->
-    <string name="home_greeting_morning">Selamat pagi</string>
-    <string name="home_greeting_midday">Selamat siang</string>
-    <string name="home_greeting_afternoon">Selamat sore</string>
-    <string name="home_greeting_night">Selamat malam</string>
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_midday">Good afternoon</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_night">Good evening</string>
 
     <!-- One-line summary under the greeting -->
-    <string name="home_summary_checking">Memeriksa sistem…</string>
-    <string name="home_summary_no_root">Akses root dibutuhkan</string>
-    <string name="home_summary_ready">Semua sistem siap</string>
+    <string name="home_summary_checking">Checking your system…</string>
+    <string name="home_summary_no_root">Root access is needed</string>
+    <string name="home_summary_ready">All systems ready</string>
     <plurals name="home_summary_attention">
-        <item quantity="other">%d komponen perlu perhatian</item>
+        <item quantity="one">%d component needs attention</item>
+        <item quantity="other">%d components need attention</item>
     </plurals>
 
     <!-- Component strip -->
@@ -24,39 +25,39 @@
     <string name="home_chip_a11y">%1$s: %2$s</string>
 
     <!-- Active profile -->
-    <string name="home_mode_label">Profil aktif</string>
-    <string name="home_mode_default">Bawaan engine, belum dipilih</string>
-    <string name="home_mode_change">Ganti profil</string>
+    <string name="home_mode_label">Active profile</string>
+    <string name="home_mode_default">Engine default, not chosen yet</string>
+    <string name="home_mode_change">Change profile</string>
 
     <!-- Thermal (bands come from zperfd) -->
-    <string name="home_thermal_title">Termal</string>
-    <string name="home_thermal_hottest">Suhu tertinggi</string>
-    <string name="home_thermal_headroom">ruang</string>
+    <string name="home_thermal_title">Thermal</string>
+    <string name="home_thermal_hottest">Hottest</string>
+    <string name="home_thermal_headroom">headroom</string>
     <!-- %1$s: headroom, e.g. 72% -->
-    <string name="home_thermal_headroom_a11y">Ruang termal %1$s</string>
+    <string name="home_thermal_headroom_a11y">Thermal headroom %1$s</string>
     <string name="home_band_nominal">Normal</string>
-    <string name="home_band_warm">Hangat</string>
-    <string name="home_band_hot">Panas</string>
-    <string name="home_band_critical">Kritis</string>
-    <string name="home_band_unknown">Belum diketahui</string>
+    <string name="home_band_warm">Warm</string>
+    <string name="home_band_hot">Hot</string>
+    <string name="home_band_critical">Critical</string>
+    <string name="home_band_unknown">Not known yet</string>
 
-    <string name="home_licensee">Pemegang lisensi</string>
-    <string name="home_install_title">Zairenkai belum terpasang</string>
-    <string name="home_install_body">Pasang modul kernel Zairenkai untuk mengaktifkan framework ZKFC dan engine. Berlaku untuk kernel GKI.</string>
-    <string name="home_install_action">Cara pasang</string>
-    <string name="install_sheet_title">Pasang Zairenkai</string>
-    <string name="install_sheet_sub">Zairenkai berjalan sebagai modul kernel. Pemasangan ini untuk kernel GKI.</string>
-    <string name="install_method_file">Pilih berkas modul (.zip)</string>
-    <string name="install_method_file_sub">Paket modul Zairenkai atau AnyKernel.</string>
-    <string name="install_method_direct">Pasang langsung (disarankan)</string>
-    <string name="install_method_direct_sub">Pasang ke slot aktif pada kernel GKI.</string>
-    <string name="install_method_inactive">Pasang ke slot nonaktif (setelah OTA)</string>
-    <string name="install_method_inactive_sub">Setelah pembaruan sistem, pasang ke slot berikutnya.</string>
-    <string name="install_method_anykernel">Pasang AnyKernel (.zip)</string>
-    <string name="install_method_anykernel_sub">Flash paket AnyKernel berisi Zairenkai.</string>
-    <string name="install_pick">Pilih berkas .zip</string>
-    <string name="install_picked">Terpilih: %1$s</string>
-    <string name="install_continue">Lanjutkan</string>
-    <string name="install_steps">Demi keamanan, Zairenkai tidak mem-flash kernel langsung dari aplikasi. Setelah memilih berkas, lanjutkan di pengelola root/modul kamu untuk mem-flash, lalu reboot.</string>
-    <string name="install_no_handler">Tidak ada aplikasi yang bisa membuka berkas ini. Flash manual lewat pengelola modul, lalu reboot.</string>
+    <string name="home_licensee">Licensee</string>
+    <string name="home_install_title">Zairenkai is not installed</string>
+    <string name="home_install_body">Install the Zairenkai kernel module to enable the ZKFC framework and engine. For GKI kernels.</string>
+    <string name="home_install_action">How to install</string>
+    <string name="install_sheet_title">Install Zairenkai</string>
+    <string name="install_sheet_sub">Zairenkai runs as a kernel module. This install is for GKI kernels.</string>
+    <string name="install_method_file">Select module file (.zip)</string>
+    <string name="install_method_file_sub">A Zairenkai module or AnyKernel package.</string>
+    <string name="install_method_direct">Direct install (recommended)</string>
+    <string name="install_method_direct_sub">Install to the active slot on a GKI kernel.</string>
+    <string name="install_method_inactive">Install to inactive slot (after OTA)</string>
+    <string name="install_method_inactive_sub">After a system update, install to the next slot.</string>
+    <string name="install_method_anykernel">Install AnyKernel (.zip)</string>
+    <string name="install_method_anykernel_sub">Flash an AnyKernel package that bundles Zairenkai.</string>
+    <string name="install_pick">Select a .zip file</string>
+    <string name="install_picked">Selected: %1$s</string>
+    <string name="install_continue">Continue</string>
+    <string name="install_steps">For safety, Zairenkai does not flash the kernel from the app. After picking a file, continue in your root/module manager to flash it, then reboot.</string>
+    <string name="install_no_handler">No app can open this file. Flash it manually through your module manager, then reboot.</string>
 </resources>

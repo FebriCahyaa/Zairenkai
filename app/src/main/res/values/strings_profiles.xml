@@ -2,140 +2,141 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Built-in profiles (one per zperfd mode) -->
-    <string name="profile_battery_name">Hemat Baterai</string>
-    <string name="profile_battery_tagline">Batas performa rendah, dingin &amp; irit daya</string>
-    <string name="profile_balanced_name">Seimbang</string>
-    <string name="profile_balanced_tagline">Rentang frekuensi penuh dengan boost input sedang</string>
-    <string name="profile_performance_name">Performa</string>
-    <string name="profile_performance_tagline">Lantai frekuensi dan uclamp lebih tinggi untuk beban berat</string>
+    <string name="profile_battery_name">Battery saver</string>
+    <string name="profile_battery_tagline">Low performance cap, cool &amp; power efficient</string>
+    <string name="profile_balanced_name">Balanced</string>
+    <string name="profile_balanced_tagline">Full frequency range with moderate input boost</string>
+    <string name="profile_performance_name">Performance</string>
+    <string name="profile_performance_tagline">Higher frequency floor and uclamp for heavy workloads</string>
     <string name="profile_game_name">Game</string>
-    <string name="profile_game_tagline">Lantai frekuensi tertinggi dan boost input terkuat</string>
-    <string name="profile_auto_name">Otomatis</string>
-    <string name="profile_auto_tagline">Engine memilih mode dari baterai, daya &amp; headroom termal</string>
+    <string name="profile_game_tagline">Highest frequency floor and strongest input boost</string>
+    <string name="profile_auto_name">Auto</string>
+    <string name="profile_auto_tagline">The engine picks a mode from battery, power &amp; thermal headroom</string>
 
     <!-- Mode summary line parts, joined with " · " -->
     <string name="mode_cpu_min">CPU min %1$s</string>
-    <string name="mode_cpu_max_pct">CPU maks %1$d%%</string>
-    <string name="mode_cpu_max">CPU maks %1$s</string>
+    <string name="mode_cpu_max_pct">CPU max %1$d%%</string>
+    <string name="mode_cpu_max">CPU max %1$s</string>
     <string name="mode_uclamp">uclamp %1$d%%</string>
-    <string name="mode_input_boost">boost input %1$d%% %2$d ms</string>
-    <string name="mode_no_input_boost">tanpa boost input</string>
+    <string name="mode_input_boost">input boost %1$d%% %2$d ms</string>
+    <string name="mode_no_input_boost">no input boost</string>
     <string name="mode_gpu_min">GPU min %1$s</string>
-    <string name="mode_gpu_max_pct">GPU maks %1$d%%</string>
-    <string name="mode_gpu_max">GPU maks %1$s</string>
+    <string name="mode_gpu_max_pct">GPU max %1$d%%</string>
+    <string name="mode_gpu_max">GPU max %1$s</string>
     <string name="mode_swappiness">swappiness %1$d</string>
-    <string name="mode_kernel_defaults">Nilai default kernel</string>
+    <string name="mode_kernel_defaults">Kernel defaults</string>
 
     <!-- Baseline hold reasons -->
-    <string name="hold_revalidation">Kernel atau perangkat berubah sejak profil %1$s dipilih. Engine menahan baseline stok sampai Anda mengonfirmasi ulang.</string>
-    <string name="hold_revalidation_saved_fallback">tersimpan</string>
-    <string name="hold_safe_mode">SAFE MODE aktif: baseline stok ditahan dan profil tidak diterapkan.</string>
-    <string name="hold_stock">Direset ke stok: engine tidak menerapkan profil apa pun.</string>
-    <string name="hold_other">Engine menahan baseline stok (%1$s).</string>
+    <string name="hold_revalidation">The kernel or device changed since the %1$s profile was selected. The engine is holding the stock baseline until you confirm again.</string>
+    <string name="hold_revalidation_saved_fallback">saved</string>
+    <string name="hold_safe_mode">SAFE MODE is on: the stock baseline is held and profiles are not applied.</string>
+    <string name="hold_stock">Reset to stock: the engine is not applying any profile.</string>
+    <string name="hold_other">The engine is holding the stock baseline (%1$s).</string>
 
     <!-- Apply outcome -->
-    <string name="apply_success">Profil %1$s diterapkan: %2$s.</string>
+    <string name="apply_success">Profile %1$s applied: %2$s.</string>
     <!-- Counts precede adjectives/"of", which read correctly for any number: no plural forms needed. -->
-    <string name="apply_outcome_verified" tools:ignore="PluralsCandidate">%1$d terverifikasi</string>
-    <string name="apply_outcome_constrained" tools:ignore="PluralsCandidate">%1$d dibatasi kernel</string>
-    <string name="apply_outcome_unverified" tools:ignore="PluralsCandidate">%1$d tidak dapat diverifikasi</string>
-    <string name="apply_outcome_skipped" tools:ignore="PluralsCandidate">%1$d tidak tersedia di perangkat</string>
-    <string name="apply_fail_engine_unavailable">zperfd tidak tersedia; profil tidak diterapkan.</string>
-    <string name="apply_fail_framework_unavailable">ZKFC tidak termuat di kernel; profil dikunci.</string>
-    <string name="apply_fail_framework_incompatible">Versi API ZKFC tidak kompatibel dengan engine; profil dikunci.</string>
-    <string name="apply_fail_license">Token API ZKFC belum valid; profil performa dikunci.</string>
-    <string name="apply_fail_unauthorized">Operasi ditolak oleh Core Authority.</string>
-    <string name="apply_fail_sentinel">Diblokir Sentinel (keamanan termal/daya/penyimpanan); tidak ada perubahan.</string>
-    <string name="apply_fail_thermal_guard">Guard termal kernel tidak dapat dikonfigurasi; profil tidak diterapkan.</string>
-    <string name="apply_fail_blocked">Diblokir oleh kernel (ZKFC/token), Sentinel, atau guard termal; tidak ada perubahan.</string>
-    <string name="apply_fail_rejected">Mode tidak tersedia di profil perangkat ini.</string>
-    <string name="apply_fail_not_observed">Kernel tidak mempertahankan nilai yang ditulis; engine melakukan rollback.</string>
-    <string name="apply_fail_failed">Penerapan gagal; engine melakukan rollback dan status aktif tidak berubah.</string>
-    <string name="apply_fail_rollback_failed">Penerapan gagal dan rollback tidak tuntas; pemulihan akan dijalankan.</string>
-    <string name="apply_fail_state">State engine tidak dapat dipulihkan; tidak ada perubahan.</string>
-    <string name="apply_fail_timeout">Engine tidak merespons tepat waktu; status tidak pasti, muat ulang.</string>
-    <string name="apply_fail_unknown">Respons engine tidak dikenali; anggap tidak diterapkan.</string>
-    <string name="apply_engine_not_running">zperfd belum aktif. Profil tidak diterapkan agar tidak melewati transaction engine.</string>
+    <string name="apply_outcome_verified" tools:ignore="PluralsCandidate">%1$d verified</string>
+    <string name="apply_outcome_constrained" tools:ignore="PluralsCandidate">%1$d limited by the kernel</string>
+    <string name="apply_outcome_unverified" tools:ignore="PluralsCandidate">%1$d could not be verified</string>
+    <string name="apply_outcome_skipped" tools:ignore="PluralsCandidate">%1$d not available on the device</string>
+    <string name="apply_fail_engine_unavailable">zperfd is not available; the profile was not applied.</string>
+    <string name="apply_fail_framework_unavailable">ZKFC is not loaded in the kernel; profiles are locked.</string>
+    <string name="apply_fail_framework_incompatible">The ZKFC API version is not compatible with the engine; profiles are locked.</string>
+    <string name="apply_fail_license">The ZKFC API token is not valid yet; performance profiles are locked.</string>
+    <string name="apply_fail_unauthorized">Operation denied by Core Authority.</string>
+    <string name="apply_fail_sentinel">Blocked by Sentinel (thermal/power/storage safety); nothing was changed.</string>
+    <string name="apply_fail_thermal_guard">The kernel thermal guard couldn\'t be configured; the profile was not applied.</string>
+    <string name="apply_fail_blocked">Blocked by the kernel (ZKFC/token), Sentinel or the thermal guard; nothing was changed.</string>
+    <string name="apply_fail_rejected">This mode is not available in this device\'s profile.</string>
+    <string name="apply_fail_not_observed">The kernel didn\'t keep the written values; the engine rolled back.</string>
+    <string name="apply_fail_failed">Apply failed; the engine rolled back and the active state is unchanged.</string>
+    <string name="apply_fail_rollback_failed">Apply failed and the rollback was incomplete; recovery will run.</string>
+    <string name="apply_fail_state">The engine state couldn\'t be restored; nothing was changed.</string>
+    <string name="apply_fail_timeout">The engine didn\'t respond in time; the status is uncertain, reload.</string>
+    <string name="apply_fail_unknown">Unrecognized engine response; assume it was not applied.</string>
+    <string name="apply_engine_not_running">zperfd is not running yet. The profile was not applied so it doesn\'t bypass the transaction engine.</string>
 
     <!-- Custom profile store/remove refusals -->
-    <string name="custom_fail_rejected">Profil kustom ditolak engine.</string>
-    <string name="custom_fail_limit">Batas jumlah profil kustom tercapai; hapus salah satu dulu.</string>
-    <string name="custom_fail_in_use">Profil ini sedang dipilih. Pilih profil lain sebelum menghapusnya.</string>
-    <string name="custom_fail_not_found">Profil kustom sudah tidak ada.</string>
-    <string name="custom_fail_state">Engine gagal menyimpan profil kustom; tidak ada perubahan.</string>
-    <string name="custom_fail_unauthorized">Operasi ditolak oleh Core Authority.</string>
-    <string name="custom_fail_profile">Profil perangkat engine tidak dapat dimuat.</string>
-    <string name="custom_fail_engine_unavailable">zperfd tidak tersedia; profil kustom tidak disimpan.</string>
-    <string name="custom_fail_timeout">Engine tidak merespons tepat waktu; muat ulang untuk melihat status.</string>
-    <string name="custom_fail_unknown">Respons engine tidak dikenali; anggap tidak disimpan.</string>
-    <string name="custom_saved">Profil kustom %1$s disimpan.</string>
-    <string name="custom_deleted">Profil kustom %1$s dihapus.</string>
+    <string name="custom_fail_rejected">The engine rejected the custom profile.</string>
+    <string name="custom_fail_limit">Custom profile limit reached; delete one first.</string>
+    <string name="custom_fail_in_use">This profile is currently selected. Select another profile before deleting it.</string>
+    <string name="custom_fail_not_found">The custom profile no longer exists.</string>
+    <string name="custom_fail_state">The engine failed to save the custom profile; nothing was changed.</string>
+    <string name="custom_fail_unauthorized">Operation denied by Core Authority.</string>
+    <string name="custom_fail_profile">The engine\'s device profile couldn\'t be loaded.</string>
+    <string name="custom_fail_engine_unavailable">zperfd is not available; the custom profile was not saved.</string>
+    <string name="custom_fail_timeout">The engine didn\'t respond in time; reload to see the status.</string>
+    <string name="custom_fail_unknown">Unrecognized engine response; assume it was not saved.</string>
+    <string name="custom_saved">Custom profile %1$s saved.</string>
+    <string name="custom_deleted">Custom profile %1$s deleted.</string>
     <!-- Custom profile editor fields -->
     <string name="custom_section_cpu">CPU</string>
     <string name="custom_section_gpu">GPU</string>
-    <string name="custom_section_mem">Memori</string>
+    <string name="custom_section_mem">Memory</string>
     <string name="custom_section_io">I/O</string>
-    <string name="custom_hint_freq" formatted="false">min, max, 80%, 1.8GHz, 1800MHz, -300MHz atau kHz</string>
-    <string name="custom_hint_list">urut prioritas, pisahkan dengan koma</string>
-    <string name="custom_field_cpu_min_freq">Frekuensi minimum CPU</string>
-    <string name="custom_field_cpu_max_freq">Frekuensi maksimum CPU</string>
-    <string name="custom_field_cpu_min_perf_pct">Lantai performa CPU (%)</string>
-    <string name="custom_field_cpu_max_perf_pct">Batas performa CPU (%)</string>
-    <string name="custom_field_cpu_governor">Governor CPU</string>
+    <string name="custom_hint_freq" formatted="false">min, max, 80%, 1.8GHz, 1800MHz, -300MHz or kHz</string>
+    <string name="custom_hint_list">in priority order, separated by commas</string>
+    <string name="custom_field_cpu_min_freq">CPU minimum frequency</string>
+    <string name="custom_field_cpu_max_freq">CPU maximum frequency</string>
+    <string name="custom_field_cpu_min_perf_pct">CPU performance floor (%)</string>
+    <string name="custom_field_cpu_max_perf_pct">CPU performance cap (%)</string>
+    <string name="custom_field_cpu_governor">CPU governor</string>
     <string name="custom_field_cpu_uclamp_min">uclamp minimum (%)</string>
-    <string name="custom_field_cpu_uclamp_max">uclamp maksimum (%)</string>
-    <string name="custom_field_cpu_input_boost_pct" formatted="false">Boost input (% frekuensi maks)</string>
-    <string name="custom_field_cpu_input_boost_ms">Durasi boost input (ms)</string>
+    <string name="custom_field_cpu_uclamp_max">uclamp maximum (%)</string>
+    <string name="custom_field_cpu_input_boost_pct" formatted="false">Input boost (% of max frequency)</string>
+    <string name="custom_field_cpu_input_boost_ms">Input boost duration (ms)</string>
     <string name="custom_field_cpu_sched_boost" translatable="false">sched_boost</string>
-    <string name="custom_field_gpu_min_freq">Frekuensi minimum GPU</string>
-    <string name="custom_field_gpu_max_freq">Frekuensi maksimum GPU</string>
-    <string name="custom_field_gpu_min_perf_pct">Lantai performa GPU (%)</string>
-    <string name="custom_field_gpu_max_perf_pct">Batas performa GPU (%)</string>
-    <string name="custom_field_gpu_governor">Governor GPU</string>
+    <string name="custom_field_gpu_min_freq">GPU minimum frequency</string>
+    <string name="custom_field_gpu_max_freq">GPU maximum frequency</string>
+    <string name="custom_field_gpu_min_perf_pct">GPU performance floor (%)</string>
+    <string name="custom_field_gpu_max_perf_pct">GPU performance cap (%)</string>
+    <string name="custom_field_gpu_governor">GPU governor</string>
     <string name="custom_field_mem_swappiness">Swappiness</string>
     <string name="custom_field_mem_vfs_cache_pressure" translatable="false">vfs_cache_pressure</string>
     <string name="custom_field_mem_watermark_scale_factor" translatable="false">watermark_scale_factor</string>
     <string name="custom_field_mem_page_cluster" translatable="false">page-cluster</string>
     <string name="custom_field_mem_extra_free_kbytes" translatable="false">extra_free_kbytes</string>
-    <string name="custom_field_io_scheduler">Scheduler I/O</string>
+    <string name="custom_field_io_scheduler">I/O scheduler</string>
     <string name="custom_field_io_read_ahead_kb" translatable="false">read_ahead_kb</string>
     <string name="custom_field_io_nr_requests" translatable="false">nr_requests</string>
-    <string name="custom_err_id">ID profil tidak valid.</string>
-    <string name="custom_err_label">Nama profil harus 1–32 karakter.</string>
-    <string name="custom_err_base">Pilih mode dasar.</string>
-    <string name="custom_err_integer">%1$s: harus angka bulat.</string>
-    <string name="custom_err_range">%1$s: harus %2$d–%3$d.</string>
-    <string name="custom_err_freq">%1$s: format frekuensi tidak dikenali.</string>
-    <string name="custom_err_list">%1$s: daftar tidak valid.</string>
-    <string name="custom_err_uclamp">uclamp minimum tidak boleh melebihi maksimum.</string>
+    <string name="custom_err_id">Invalid profile ID.</string>
+    <string name="custom_err_label">Profile name must be 1–32 characters.</string>
+    <string name="custom_err_base">Choose a base mode.</string>
+    <string name="custom_err_integer">%1$s: must be a whole number.</string>
+    <string name="custom_err_range">%1$s: must be %2$d–%3$d.</string>
+    <string name="custom_err_freq">%1$s: unrecognized frequency format.</string>
+    <string name="custom_err_list">%1$s: invalid list.</string>
+    <string name="custom_err_uclamp">uclamp minimum can\'t exceed the maximum.</string>
 
     <!-- Profiles screen -->
-    <string name="profiles_title">Profil</string>
-    <string name="profiles_engine_down">zperfd tidak aktif — status profil tidak dapat diverifikasi.</string>
-    <string name="profiles_engine_down_cached">Terakhir dipilih di aplikasi: %1$s (tidak terverifikasi).</string>
-    <string name="profiles_confirm_apply">Konfirmasi &amp; terapkan %1$s</string>
-    <string name="profiles_values_note">Nilai di atas adalah permintaan profil perangkat; frekuensi diselaraskan ke tabel OPP dan dapat dikurangi oleh envelope termal saat diterapkan.</string>
-    <string name="profiles_none_selected">Belum dipilih (default engine: %1$s)</string>
-    <string name="profiles_selected">Dipilih: %1$s</string>
-    <string name="profiles_running_as">Berjalan sebagai: %1$s (dipilih oleh Otomatis/aturan per-aplikasi)</string>
-    <string name="profiles_unsupported">Tidak tersedia di profil perangkat ini (mode %1$s).</string>
-    <string name="custom_section_title">Profil kustom</string>
-    <string name="custom_list_unavailable">Daftar profil kustom tidak dapat dibaca dari zperfd.</string>
-    <string name="custom_section_subtitle">Turunan mode bawaan dengan nilai Anda sendiri (%1$d/%2$d).</string>
-    <string name="custom_empty">Belum ada profil kustom. Pilih mode dasar, lalu ubah hanya nilai yang perlu; sisanya mengikuti mode dasar.</string>
-    <string name="custom_manual_only">Profil kustom hanya diterapkan manual; Otomatis dan aturan per-aplikasi tetap memakai mode bawaan.</string>
-    <string name="custom_delete_title">Hapus %1$s?</string>
-    <string name="custom_delete_body">Profil kustom ini dihapus dari engine. Profil yang sedang dipilih tidak bisa dihapus.</string>
+    <string name="profiles_title">Profiles</string>
+    <string name="profiles_engine_down">zperfd is not running — the profile status can\'t be verified.</string>
+    <string name="profiles_engine_down_cached">Last selected in the app: %1$s (not verified).</string>
+    <string name="profiles_confirm_apply">Confirm &amp; apply %1$s</string>
+    <string name="profiles_values_note">The values above are device profile requests; frequencies are aligned to the OPP table and may be reduced by the thermal envelope when applied.</string>
+    <string name="profiles_none_selected">Not selected (engine default: %1$s)</string>
+    <string name="profiles_selected">Selected: %1$s</string>
+    <string name="profiles_running_as">Running as: %1$s (selected by Auto/per-app rules)</string>
+    <string name="profiles_unsupported">Not available in this device\'s profile (mode %1$s).</string>
+    <string name="custom_section_title">Custom profiles</string>
+    <string name="custom_list_unavailable">Couldn\'t read the custom profile list from zperfd.</string>
+    <string name="custom_section_subtitle">Built-in modes derived with your own values (%1$d/%2$d).</string>
+    <string name="custom_empty">No custom profiles yet. Choose a base mode, then change only the values you need; the rest follow the base mode.</string>
+    <string name="custom_manual_only">Custom profiles are only applied manually; Auto and per-app rules keep using the built-in modes.</string>
+    <string name="custom_delete_title">Delete %1$s?</string>
+    <string name="custom_delete_body">This custom profile will be deleted from the engine. The currently selected profile can\'t be deleted.</string>
     <plurals name="custom_card_subtitle">
-        <item quantity="other">Turunan %1$s · %2$d perubahan</item>
+        <item quantity="one">Derived from %1$s · %2$d change</item>
+        <item quantity="other">Derived from %1$s · %2$d changes</item>
     </plurals>
-    <string name="custom_card_invalid">Tidak dapat diterapkan: %1$s</string>
-    <string name="custom_invalid">tidak valid</string>
-    <string name="custom_editor_new">Profil kustom baru</string>
-    <string name="custom_editor_edit">Ubah %1$s</string>
-    <string name="custom_editor_name">Nama</string>
-    <string name="custom_editor_base">Mode dasar</string>
-    <string name="custom_editor_note">Kosongkan kolom untuk mengikuti mode dasar. Nilai diselaraskan ke tabel OPP, divalidasi zperfd, dan tetap dibatasi Sentinel serta envelope termal saat diterapkan.</string>
-    <string name="custom_editor_kernel_default">default kernel</string>
-    <string name="custom_editor_base_value">Dasar: %1$s</string>
+    <string name="custom_card_invalid">Can\'t be applied: %1$s</string>
+    <string name="custom_invalid">invalid</string>
+    <string name="custom_editor_new">New custom profile</string>
+    <string name="custom_editor_edit">Edit %1$s</string>
+    <string name="custom_editor_name">Name</string>
+    <string name="custom_editor_base">Base mode</string>
+    <string name="custom_editor_note">Leave a field empty to follow the base mode. Values are aligned to the OPP table, validated by zperfd, and still limited by Sentinel and the thermal envelope when applied.</string>
+    <string name="custom_editor_kernel_default">kernel default</string>
+    <string name="custom_editor_base_value">Base: %1$s</string>
 </resources>

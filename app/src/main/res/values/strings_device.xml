@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 <resources>
-    <string name="about_phone_title">Tentang ponsel</string>
+    <string name="about_phone_title">About phone</string>
     <!-- %1$s: Android version, %2$s: model -->
     <string name="about_phone_entry_sub">Android %1$s · %2$s</string>
-    <string name="about_phone_software">Perangkat lunak</string>
-    <string name="about_phone_hardware">Perangkat keras</string>
-    <string name="about_phone_identity">Identitas</string>
+    <string name="about_phone_software">Software</string>
+    <string name="about_phone_hardware">Hardware</string>
+    <string name="about_phone_identity">Identity</string>
     <!-- %1$s: Android version, %2$d: API level -->
     <string name="about_phone_android_value">%1$s (API %2$d)</string>
-    <string name="about_phone_patch">Patch keamanan</string>
-    <string name="about_phone_build">Nomor build</string>
+    <string name="about_phone_patch">Security patch</string>
+    <string name="about_phone_build">Build number</string>
     <string name="about_phone_baseband">Baseband</string>
     <string name="about_phone_bootloader">Bootloader</string>
     <string name="about_phone_cpu">CPU</string>
-    <string name="about_phone_display">Layar</string>
-    <string name="about_phone_brand">Merek</string>
-    <string name="about_phone_manufacturer">Produsen</string>
+    <string name="about_phone_display">Display</string>
+    <string name="about_phone_brand">Brand</string>
+    <string name="about_phone_manufacturer">Manufacturer</string>
     <string name="about_phone_model">Model</string>
-    <string name="about_phone_codename">Nama kode</string>
-    <string name="about_phone_device_name">Nama perangkat</string>
+    <string name="about_phone_codename">Codename</string>
+    <string name="about_phone_device_name">Device name</string>
     <!-- %1$s: used, %2$s: total -->
-    <string name="about_phone_storage_value">%1$s dari %2$s terpakai</string>
+    <string name="about_phone_storage_value">%1$s of %2$s used</string>
     <!-- %1$s: free space -->
-    <string name="about_phone_storage_free">%1$s tersedia</string>
+    <string name="about_phone_storage_free">%1$s available</string>
     <!-- %1$s: the name the user gave the phone -->
     <string name="device_user_name">“%1$s”</string>
     <!-- %1$s: Android version -->
@@ -34,6 +34,7 @@
     <string name="device_hz">%1$d Hz</string>
     <!-- %1$d: cores, %2$s: primary ABI -->
     <plurals name="about_phone_cpu_value">
-        <item quantity="other">%1$d inti · %2$s</item>
+        <item quantity="one">%1$d core · %2$s</item>
+        <item quantity="other">%1$d cores · %2$s</item>
     </plurals>
 </resources>

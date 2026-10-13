@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
-<resources>
-    <!-- Stat tiles -->
-    <string name="dashboard_license">API licence</string>
-</resources>
