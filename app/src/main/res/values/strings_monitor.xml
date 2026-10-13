@@ -177,6 +177,47 @@
     <string name="mon_electrical_title">Kelistrikan</string>
     <string name="mon_battery_note">Arus dan daya dibaca dari kernel setiap detik. Sebagian perangkat melaporkan rata-rata atau memperbaruinya tiap beberapa detik.</string>
 
+    <!-- Memory detail -->
+    <string name="mon_memory_open">Buka detail memori</string>
+    <string name="mon_mem_title">Memori &amp; ZRAM</string>
+    <string name="mon_mem_ram_title">RAM</string>
+    <!-- %1$s used, %2$s total, e.g. "5,1 / 7,7 GB" -->
+    <string name="mon_mem_ram_used">%1$s / %2$s terpakai</string>
+    <string name="mon_mem_breakdown">Rincian</string>
+    <string name="mon_mem_used">Terpakai</string>
+    <string name="mon_mem_cached">Cache</string>
+    <string name="mon_mem_buffers">Buffer</string>
+    <string name="mon_mem_free">Bebas</string>
+    <string name="mon_mem_available">Tersedia</string>
+    <string name="mon_mem_total">Total</string>
+    <string name="mon_mem_slab">Slab (reclaimable)</string>
+    <string name="mon_zram_title">ZRAM</string>
+    <string name="mon_zram_sub">Swap terkompresi di RAM</string>
+    <string name="mon_zram_none">Tidak ada perangkat ZRAM aktif</string>
+    <string name="mon_zram_stored">Data tersimpan</string>
+    <string name="mon_zram_compressed">Setelah dikompres</string>
+    <string name="mon_zram_ratio">Rasio kompresi</string>
+    <string name="mon_zram_total">Memori ZRAM dipakai</string>
+    <string name="mon_zram_saved">RAM dihemat</string>
+    <string name="mon_zram_disksize">Kapasitas</string>
+    <!-- %1$.1f: compression ratio, e.g. 2.8x -->
+    <string name="mon_zram_ratio_value">%1$.1f×</string>
+    <string name="mon_swap_title">Area swap</string>
+    <!-- %1$s used, %2$s size -->
+    <string name="mon_swap_row">%1$s / %2$s</string>
+    <string name="mon_mem_note">Angka dibaca langsung dari /proc/meminfo, /proc/swaps, dan sysfs ZRAM kernel. RAM tidak butuh root; sebagian node ZRAM dibaca lewat root bila tersedia.</string>
+
+    <!-- Per-app battery -->
+    <string name="mon_apps_title">Aplikasi boros baterai</string>
+    <string name="mon_apps_sub">Estimasi Android sejak pengisian penuh terakhir</string>
+    <string name="mon_apps_needs_root">Butuh akses root untuk membaca estimasi batterystats Android.</string>
+    <string name="mon_apps_empty">Belum ada estimasi pemakaian per aplikasi.</string>
+    <string name="mon_apps_system">Sistem</string>
+    <!-- %1$.0f: milliamp-hours, e.g. 45 mAh -->
+    <string name="mon_apps_mah">%1$.0f mAh</string>
+    <string name="mon_apps_show_system">Tampilkan proses sistem</string>
+    <string name="mon_apps_note">Estimasi ini milik Android (dumpsys batterystats), bukan pengukuran Zairenkai. Nilainya perkiraan dan dapat berbeda dari pemakaian nyata.</string>
+
     <!-- ZKFC runtime -->
     <string name="monitor_zkfc_title">ZKFC runtime</string>
     <string name="monitor_zkfc_thermal_tripped">Thermal guard sedang membatasi performa</string>

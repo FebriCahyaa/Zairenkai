@@ -45,6 +45,7 @@ fun MonitorScreen(
     onOpenHistory: () -> Unit,
     onOpenCpu: (tab: Int) -> Unit,
     onOpenBattery: () -> Unit,
+    onOpenMemory: () -> Unit,
     onOpenFps: () -> Unit,
 ) {
     val vm: MonitorViewModel = viewModel(factory = factory)
@@ -141,7 +142,7 @@ fun MonitorScreen(
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ThermalCard(s, Modifier.weight(1f)) { onOpenCpu(2) }
-            MemoryCard(s, Modifier.weight(1f))
+            MemoryCard(s, Modifier.weight(1f), onOpenMemory)
         }
 
         s.monitor.latest?.zkfc?.let { zkfc ->
@@ -349,9 +350,9 @@ private fun ThermalCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MemoryCard(s: LiveState, modifier: Modifier) {
+private fun MemoryCard(s: LiveState, modifier: Modifier, onClick: () -> Unit) {
     val mem = s.memory
-    MonitorCard(modifier, padding = 16.dp) {
+    MonitorCard(modifier, onClick = onClick, padding = 16.dp) {
         CardHeaderSmall(ZkIcons.Storage, ZkIndigo, stringResource(R.string.mon_memory_title))
         Spacer(Modifier.height(10.dp))
         if (mem == null) {

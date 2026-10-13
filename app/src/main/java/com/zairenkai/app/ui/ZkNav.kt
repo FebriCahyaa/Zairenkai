@@ -131,6 +131,7 @@ fun ZairenkaiRoot(container: AppContainer) {
                     onOpenHistory = { nav.navigate("usage") },
                     onOpenCpu = { tab -> nav.navigate("monitor/cpu/$tab") },
                     onOpenBattery = { nav.navigate("monitor/battery") },
+                    onOpenMemory = { nav.navigate("monitor/memory") },
                     onOpenFps = { nav.navigate("monitor/fps") },
                 )
             }
@@ -142,6 +143,7 @@ fun ZairenkaiRoot(container: AppContainer) {
                 )
             }
             composable("monitor/battery") { BatteryScreen(factory, onBack = { nav.popBackStack() }) }
+            composable("monitor/memory") { com.zairenkai.app.ui.screens.monitor.MemoryScreen(onBack = { nav.popBackStack() }) }
             composable("monitor/fps") {
                 FpsScreen(
                     factory,

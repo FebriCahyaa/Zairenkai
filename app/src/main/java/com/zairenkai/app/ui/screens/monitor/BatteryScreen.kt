@@ -18,12 +18,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zairenkai.app.R
+import com.zairenkai.app.data.power.AppPowerReader
+import com.zairenkai.app.data.power.AppPowerReport
 import com.zairenkai.app.data.power.BatteryHealth
 import com.zairenkai.app.data.power.BatteryReading
 import com.zairenkai.app.data.power.ChargeStatus
@@ -111,6 +114,8 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
                 }
             }
         }
+
+        item { AppPowerSection() }
 
         item {
             MonitorCard {
@@ -275,6 +280,79 @@ fun BatteryScreen(factory: VmFactory, onBack: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+/** Top battery-draining apps, from Android's own batterystats estimate (needs root). */
+@Composable
+private fun AppPowerSection() {
+    val context = LocalContext.current
+    var showSystem by rememberSaveable { mutableStateOf(false) }
+    val report by produceState<AppPowerReport?>(initialValue = null) {
+        value = AppPowerReader.read(context)
+    }
+    MonitorCard {
+        CardHeader(ZkIcons.BatterySaver, ZkAqua, stringResource(R.string.mon_apps_title), stringResource(R.string.mon_apps_sub))
+        Spacer(Modifier.height(12.dp))
+        val r = report
+        when {
+            r == null -> Text(
+                stringResource(R.string.mon_apps_needs_root),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            r.apps.none { showSystem || !it.isSystem } -> Text(
+                stringResource(R.string.mon_apps_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            else -> {
+                val top = r.apps.filter { showSystem || !it.isSystem }.take(8)
+                val max = top.maxOfOrNull { it.mah } ?: 1.0
+                top.forEach { app ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    app.label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                                if (app.isSystem) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        stringResource(R.string.mon_apps_system),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            MeterBar((app.mah / max).toFloat().coerceIn(0f, 1f), ZkAqua, Modifier.fillMaxWidth())
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            stringResource(R.string.mon_apps_mah, app.mah),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.mon_apps_show_system), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Switch(checked = showSystem, onCheckedChange = { showSystem = it })
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.mon_apps_note),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
