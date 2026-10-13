@@ -41,6 +41,9 @@ class ZairenkaiApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // First launch opens in Indonesian (setup included); runs once, then the
+        // user's own language choice is respected.
+        com.zairenkai.app.ui.locale.AppLocale.ensureDefaultLocale(this)
         container = AppContainer(this)
     }
 }

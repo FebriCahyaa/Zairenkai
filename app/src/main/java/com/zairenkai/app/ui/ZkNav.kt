@@ -11,9 +11,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +104,15 @@ fun ZairenkaiRoot(container: AppContainer) {
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             val current = currentDest
+            // The bottom navigation belongs to the five top-level screens only.
+            // Pushed detail screens (monitor/battery, settings, about, …) have
+            // their own back button, so the bar would just get in the way there.
+            val onTopLevel = bottomDests.any { it.route == current?.route }
+            if (!onTopLevel) {
+                // Keep the bottom system-bar inset so detail content is never
+                // drawn under the gesture bar now that the nav bar is gone.
+                Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars))
+            } else
             NavigationBar(
                 containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
                     MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass,

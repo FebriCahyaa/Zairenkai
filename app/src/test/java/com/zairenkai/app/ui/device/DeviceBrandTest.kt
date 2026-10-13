@@ -16,6 +16,7 @@ class DeviceBrandTest {
             "samsung" to DeviceBrand.SAMSUNG, "Xiaomi" to DeviceBrand.XIAOMI, "Redmi" to DeviceBrand.REDMI,
             "POCO" to DeviceBrand.POCO, "OnePlus" to DeviceBrand.ONEPLUS, "realme" to DeviceBrand.REALME,
             "Nothing" to DeviceBrand.NOTHING, "motorola" to DeviceBrand.MOTOROLA, "moto" to DeviceBrand.MOTOROLA,
+            "HUAWEI" to DeviceBrand.HUAWEI, "Infinix" to DeviceBrand.INFINIX, "iQOO" to DeviceBrand.IQOO, "TECNO" to DeviceBrand.TECNO,
         )
         cases.forEach { (brand, expected) -> assertEquals(brand, expected, resolveBrand(null, brand, "", "")) }
     }

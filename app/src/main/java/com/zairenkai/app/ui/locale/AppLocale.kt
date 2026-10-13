@@ -50,6 +50,28 @@ enum class AppLanguage(val tag: String?, val endonym: String?) {
 object AppLocale {
     private const val PREFS = "zk_locale"
     private const val KEY = "tag"
+    private const val KEY_INIT = "initialized"
+    /** Zairenkai is an Indonesian-first app, so the very first launch opens in
+     *  Indonesian (setup included) rather than following an English device. */
+    private const val DEFAULT_TAG = "id"
+
+    /**
+     * On the first ever launch, default the app language to Indonesian so the
+     * setup flow is in Indonesian. Runs once; afterwards the user's own choice
+     * (including "follow system") is kept untouched. Call before the first
+     * Activity is created (Application.onCreate).
+     */
+    fun ensureDefaultLocale(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_INIT, false)) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val lm = context.getSystemService(LocaleManager::class.java)
+            if (lm.applicationLocales.isEmpty) lm.applicationLocales = LocaleList.forLanguageTags(DEFAULT_TAG)
+        } else if (prefs.getString(KEY, null) == null) {
+            prefs.edit(commit = true) { putString(KEY, DEFAULT_TAG) }
+        }
+        prefs.edit(commit = true) { putBoolean(KEY_INIT, true) }
+    }
 
     fun current(context: Context): AppLanguage =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

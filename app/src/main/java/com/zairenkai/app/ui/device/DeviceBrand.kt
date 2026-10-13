@@ -21,6 +21,10 @@ enum class DeviceBrand(val label: String, private val keys: Set<String>) {
     REALME("realme", setOf("realme")),
     NOTHING("Nothing", setOf("nothing")),
     MOTOROLA("motorola", setOf("motorola", "moto")),
+    HUAWEI("HUAWEI", setOf("huawei")),
+    INFINIX("Infinix", setOf("infinix")),
+    IQOO("iQOO", setOf("iqoo")),
+    TECNO("TECNO", setOf("tecno")),
 
     /** Any other maker: shown with the Android mark and the maker's own name. */
     OTHER("Android", emptySet());

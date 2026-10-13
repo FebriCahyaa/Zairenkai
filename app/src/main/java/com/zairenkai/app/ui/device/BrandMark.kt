@@ -51,6 +51,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -107,6 +108,10 @@ fun brandStyle(brand: DeviceBrand): BrandStyle = when (brand) {
     DeviceBrand.REALME -> BrandStyle(listOf(Color(0xFFFFC915), Color(0xFFFFA200)), BrandEmblem.RISE, "r", weight = FontWeight.Bold)
     DeviceBrand.NOTHING -> BrandStyle(listOf(Color(0xFF2A2A2A), Color(0xFF060606)), BrandEmblem.DOT_MATRIX, "N", tracking = 0.08.em)
     DeviceBrand.MOTOROLA -> BrandStyle(listOf(Color(0xFF0050B4), Color(0xFF3B7BE8)), BrandEmblem.ARCS, "M")
+    DeviceBrand.HUAWEI -> BrandStyle(listOf(Color(0xFFC7000B), Color(0xFFEB2A33)), BrandEmblem.PETAL, "H", uppercase = true, tracking = 0.1.em, weight = FontWeight.Bold)
+    DeviceBrand.INFINIX -> BrandStyle(listOf(Color(0xFF00A86B), Color(0xFF14C98A)), BrandEmblem.RISE, "I", weight = FontWeight.Bold)
+    DeviceBrand.IQOO -> BrandStyle(listOf(Color(0xFF0A5BFF), Color(0xFF2E79FF)), BrandEmblem.SPARK, "iQ", weight = FontWeight.Bold)
+    DeviceBrand.TECNO -> BrandStyle(listOf(Color(0xFF003D7A), Color(0xFF1667C2)), BrandEmblem.CHEVRON, "T", uppercase = true, tracking = 0.1.em, weight = FontWeight.Bold)
     DeviceBrand.OTHER -> BrandStyle(listOf(Color(0xFF3DDC84), Color(0xFF0E9F6E)), BrandEmblem.ANDROID, null)
 }
 
@@ -139,17 +144,30 @@ private fun officialLogoRes(brand: DeviceBrand): Int {
 fun BrandMark(brand: DeviceBrand, modifier: Modifier = Modifier, size: Dp = 52.dp) {
     val style = brandStyle(brand)
     val logo = officialLogoRes(brand)
+    // A real wordmark logo (tinted with the theme's primary) reads best on a
+    // neutral tile, not on the brand gradient; the original emblems keep the
+    // gradient squircle.
+    val surface = MaterialTheme.colorScheme.surfaceContainerHighest
     Box(
         modifier
             .size(size)
             .clip(RoundedCornerShape(size * 0.32f))
-            .background(Brush.linearGradient(style.colors))
+            .background(if (logo != 0) androidx.compose.ui.graphics.SolidColor(surface) else Brush.linearGradient(style.colors))
             .clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
         val ink = glyphOn(style.colors.first())
         when {
-            logo != 0 -> Image(painterResource(logo), null, Modifier.size(size * 0.62f))
+            logo != 0 -> Image(
+                painterResource(logo), null,
+                Modifier.fillMaxWidth().padding(horizontal = size * 0.12f),
+                // Monochrome wordmarks are tinted to read on the neutral tile in
+                // both themes (this also overrides their theme-attr fill, which
+                // is not defined under this app's base theme). The two-tone
+                // Xiaomi mark keeps its own brand colours.
+                colorFilter = if (brand == DeviceBrand.XIAOMI) null
+                else ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+            )
             style.emblem == BrandEmblem.ANDROID -> Icon(ZkIcons.Android, null, Modifier.size(size * 0.56f), tint = ink)
             else -> Canvas(Modifier.size(size * 0.56f)) { drawBrandEmblem(style.emblem, ink) }
         }
