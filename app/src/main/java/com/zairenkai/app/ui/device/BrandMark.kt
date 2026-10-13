@@ -15,6 +15,7 @@ package com.zairenkai.app.ui.device
 import com.zairenkai.app.ui.icons.ZkIcons
 import android.text.format.Formatter
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,15 +41,24 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -68,36 +78,67 @@ import com.zairenkai.app.ui.theme.readableInk
 data class BrandStyle(
     /** Two gradient stops for the squircle (associated colours, not logo artwork). */
     val colors: List<Color>,
-    /** The monogram; null draws the Android mark (other makers). */
+    /** The original emblem drawn inside the squircle. */
+    val emblem: BrandEmblem,
+    /** A faint watermark letter for the device hero; null uses the emblem's initial. */
     val monogram: String?,
     val uppercase: Boolean = false,
     val tracking: TextUnit = 0.sp,
     val weight: FontWeight = FontWeight.SemiBold,
-    /** A small accent dot on the squircle. */
-    val dot: Color? = null,
     @DrawableRes val officialLogo: Int? = null,
 )
 
+/**
+ * An original, brand-evocative emblem. These are Zairenkai's own geometric
+ * marks — a motif and palette that read as "this is a Xiaomi / a Pixel / a
+ * Nothing phone" at a glance — not reproductions of the makers' trademarked
+ * logos, which are never bundled. A maker you are entitled to represent with
+ * its official artwork can still be given a drawable through [BrandStyle.officialLogo].
+ */
+enum class BrandEmblem { SPARK, OVAL, SQUARE_DOT, PETAL, CHEVRON, UNIT_DOT, RISE, DOT_MATRIX, ARCS, ANDROID }
+
 fun brandStyle(brand: DeviceBrand): BrandStyle = when (brand) {
-    DeviceBrand.GOOGLE -> BrandStyle(listOf(Color(0xFF4285F4), Color(0xFF34A853)), "G", weight = FontWeight.Medium)
-    DeviceBrand.SAMSUNG -> BrandStyle(listOf(Color(0xFF1428A0), Color(0xFF3D5AFE)), "S", uppercase = true, tracking = 0.18.em, weight = FontWeight.Bold)
-    DeviceBrand.XIAOMI -> BrandStyle(listOf(Color(0xFFFF6900), Color(0xFFFF9248)), "X")
-    DeviceBrand.REDMI -> BrandStyle(listOf(Color(0xFFE3262C), Color(0xFFFF6A52)), "R")
-    DeviceBrand.POCO -> BrandStyle(listOf(Color(0xFFFFD400), Color(0xFFFFB000)), "P", uppercase = true, tracking = 0.06.em, weight = FontWeight.Bold)
-    DeviceBrand.ONEPLUS -> BrandStyle(listOf(Color(0xFFEB0028), Color(0xFFFF4D5E)), "O")
-    DeviceBrand.REALME -> BrandStyle(listOf(Color(0xFFFFC915), Color(0xFFFFA200)), "r", weight = FontWeight.Bold)
-    DeviceBrand.NOTHING -> BrandStyle(listOf(Color(0xFF2A2A2A), Color(0xFF050505)), "N", tracking = 0.08.em, dot = Color(0xFFD71921))
-    DeviceBrand.MOTOROLA -> BrandStyle(listOf(Color(0xFF0050B4), Color(0xFF5C92FA)), "M")
-    DeviceBrand.OTHER -> BrandStyle(listOf(Color(0xFF3DDC84), Color(0xFF0E9F6E)), null)
+    DeviceBrand.GOOGLE -> BrandStyle(listOf(Color(0xFF4285F4), Color(0xFF1A73E8)), BrandEmblem.SQUARE_DOT, "G", weight = FontWeight.Medium)
+    DeviceBrand.SAMSUNG -> BrandStyle(listOf(Color(0xFF1428A0), Color(0xFF2743D6)), BrandEmblem.OVAL, "S", uppercase = true, tracking = 0.18.em, weight = FontWeight.Bold)
+    DeviceBrand.XIAOMI -> BrandStyle(listOf(Color(0xFFFF6900), Color(0xFFFF8A3D)), BrandEmblem.SPARK, "X")
+    DeviceBrand.REDMI -> BrandStyle(listOf(Color(0xFFE3262C), Color(0xFFFF5A47)), BrandEmblem.PETAL, "R")
+    DeviceBrand.POCO -> BrandStyle(listOf(Color(0xFFFFD400), Color(0xFFFFAE00)), BrandEmblem.CHEVRON, "P", uppercase = true, tracking = 0.06.em, weight = FontWeight.Bold)
+    DeviceBrand.ONEPLUS -> BrandStyle(listOf(Color(0xFFEB0028), Color(0xFFFF3B49)), BrandEmblem.UNIT_DOT, "1")
+    DeviceBrand.REALME -> BrandStyle(listOf(Color(0xFFFFC915), Color(0xFFFFA200)), BrandEmblem.RISE, "r", weight = FontWeight.Bold)
+    DeviceBrand.NOTHING -> BrandStyle(listOf(Color(0xFF2A2A2A), Color(0xFF060606)), BrandEmblem.DOT_MATRIX, "N", tracking = 0.08.em)
+    DeviceBrand.MOTOROLA -> BrandStyle(listOf(Color(0xFF0050B4), Color(0xFF3B7BE8)), BrandEmblem.ARCS, "M")
+    DeviceBrand.OTHER -> BrandStyle(listOf(Color(0xFF3DDC84), Color(0xFF0E9F6E)), BrandEmblem.ANDROID, null)
 }
 
 /** Dark or light glyph, whichever reads on the squircle's first colour. */
 private fun glyphOn(c: Color) = if (c.luminance() > 0.45f) Color(0xFF1B1B1F) else Color.White
 
+/**
+ * An official brand logo the owner is entitled to use, if present.
+ *
+ * Zairenkai bundles no maker logos (they are trademarks). To show a real logo,
+ * drop a drawable you have the right to use at `res/drawable/brand_<key>.<ext>`
+ * — the key is the lower-cased brand name, e.g. `brand_xiaomi.xml`,
+ * `brand_samsung.webp`. It is then resolved by name at runtime and drawn in
+ * place of the original emblem; if the file is absent, the emblem is used.
+ * Nothing is referenced at build time, so the project compiles with no logos.
+ */
+@Composable
+private fun officialLogoRes(brand: DeviceBrand): Int {
+    val style = brandStyle(brand)
+    if (style.officialLogo != null) return style.officialLogo
+    val context = LocalContext.current
+    return remember(brand) {
+        @Suppress("DiscouragedApi")
+        context.resources.getIdentifier("brand_${brand.name.lowercase()}", "drawable", context.packageName)
+    }
+}
+
 /** The brand's squircle mark. Decorative: the brand name is always shown next to it as text. */
 @Composable
 fun BrandMark(brand: DeviceBrand, modifier: Modifier = Modifier, size: Dp = 52.dp) {
     val style = brandStyle(brand)
+    val logo = officialLogoRes(brand)
     Box(
         modifier
             .size(size)
@@ -108,23 +149,87 @@ fun BrandMark(brand: DeviceBrand, modifier: Modifier = Modifier, size: Dp = 52.d
     ) {
         val ink = glyphOn(style.colors.first())
         when {
-            style.officialLogo != null -> Image(painterResource(style.officialLogo), null, Modifier.size(size * 0.6f))
-            style.monogram == null -> Icon(ZkIcons.Android, null, Modifier.size(size * 0.56f), tint = ink)
-            else -> {
-                val fontSize = with(LocalDensity.current) { (size * 0.5f).toSp() }
-                Text(
-                    style.monogram,
-                    color = ink,
-                    fontSize = fontSize,
-                    fontWeight = style.weight,
-                    style = MaterialTheme.typography.displaySmall,
-                    modifier = Modifier.offset(y = -(size * 0.02f)),
-                )
+            logo != 0 -> Image(painterResource(logo), null, Modifier.size(size * 0.62f))
+            style.emblem == BrandEmblem.ANDROID -> Icon(ZkIcons.Android, null, Modifier.size(size * 0.56f), tint = ink)
+            else -> Canvas(Modifier.size(size * 0.56f)) { drawBrandEmblem(style.emblem, ink) }
+        }
+    }
+}
+
+/** Draws an original brand emblem to fill the canvas; [ink] is the on-colour glyph tint. */
+private fun DrawScope.drawBrandEmblem(emblem: BrandEmblem, ink: Color) {
+    val w = size.width
+    val h = size.height
+    val stroke = w * 0.14f
+    when (emblem) {
+        // Four rounded blades around a gap — an abstract nod to a multi-colour identity.
+        BrandEmblem.SQUARE_DOT -> {
+            val r = w * 0.30f
+            val g = w * 0.14f
+            listOf(Offset(w / 2 - r / 2 - g / 2, h / 2 - r / 2 - g / 2), Offset(w / 2 + r / 2 + g / 2, h / 2 - r / 2 - g / 2),
+                Offset(w / 2 - r / 2 - g / 2, h / 2 + r / 2 + g / 2), Offset(w / 2 + r / 2 + g / 2, h / 2 + r / 2 + g / 2)).forEach {
+                drawRoundRect(ink, topLeft = Offset(it.x - r / 2, it.y - r / 2), size = Size(r, r), cornerRadius = CornerRadius(r * 0.32f))
             }
         }
-        style.dot?.let {
-            Box(Modifier.align(Alignment.TopEnd).padding(size * 0.16f).size(size * 0.12f).clip(CircleShape).background(it))
+        // A tilted oval ring.
+        BrandEmblem.OVAL -> rotate(-20f) {
+            drawOval(ink, topLeft = Offset(w * 0.1f, h * 0.28f), size = Size(w * 0.8f, h * 0.44f), style = Stroke(stroke))
         }
+        // A four-point spark.
+        BrandEmblem.SPARK -> {
+            val p = Path().apply {
+                moveTo(w / 2, h * 0.08f)
+                cubicTo(w * 0.56f, h * 0.44f, w * 0.56f, h * 0.44f, w * 0.92f, h / 2)
+                cubicTo(w * 0.56f, h * 0.56f, w * 0.56f, h * 0.56f, w / 2, h * 0.92f)
+                cubicTo(w * 0.44f, h * 0.56f, w * 0.44f, h * 0.56f, w * 0.08f, h / 2)
+                cubicTo(w * 0.44f, h * 0.44f, w * 0.44f, h * 0.44f, w / 2, h * 0.08f)
+                close()
+            }
+            drawPath(p, ink)
+        }
+        // A leaf / petal.
+        BrandEmblem.PETAL -> {
+            val p = Path().apply {
+                moveTo(w * 0.2f, h * 0.8f)
+                cubicTo(w * 0.2f, h * 0.3f, w * 0.5f, h * 0.15f, w * 0.85f, h * 0.2f)
+                cubicTo(w * 0.85f, h * 0.7f, w * 0.6f, h * 0.85f, w * 0.2f, h * 0.8f)
+                close()
+            }
+            drawPath(p, ink)
+        }
+        // A bold chevron.
+        BrandEmblem.CHEVRON -> {
+            val p = Path().apply {
+                moveTo(w * 0.12f, h * 0.24f); lineTo(w / 2, h * 0.72f); lineTo(w * 0.88f, h * 0.24f)
+            }
+            drawPath(p, ink, style = Stroke(stroke * 1.4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        // A rounded square outline with a centred dot — an original "unit" mark.
+        BrandEmblem.UNIT_DOT -> {
+            drawRoundRect(ink, topLeft = Offset(w * 0.16f, h * 0.16f), size = Size(w * 0.68f, h * 0.68f),
+                cornerRadius = CornerRadius(w * 0.2f), style = Stroke(stroke))
+            drawCircle(ink, radius = w * 0.1f, center = Offset(w / 2, h / 2))
+        }
+        // A rising line with a dot — momentum.
+        BrandEmblem.RISE -> {
+            drawLine(ink, Offset(w * 0.16f, h * 0.78f), Offset(w * 0.74f, h * 0.24f), strokeWidth = stroke * 1.3f, cap = StrokeCap.Round)
+            drawCircle(ink, radius = w * 0.12f, center = Offset(w * 0.82f, h * 0.18f))
+        }
+        // A 3x3 dot matrix — the pared-back, dotted aesthetic.
+        BrandEmblem.DOT_MATRIX -> {
+            val r = w * 0.07f
+            for (col in 0..2) for (row in 0..2) {
+                drawCircle(ink, radius = r, center = Offset(w * (0.24f + col * 0.26f), h * (0.24f + row * 0.26f)))
+            }
+        }
+        // Two concentric arcs.
+        BrandEmblem.ARCS -> {
+            drawArc(ink, startAngle = 150f, sweepAngle = 240f, useCenter = false,
+                topLeft = Offset(w * 0.1f, h * 0.1f), size = Size(w * 0.8f, h * 0.8f), style = Stroke(stroke, cap = StrokeCap.Round))
+            drawArc(ink, startAngle = 150f, sweepAngle = 240f, useCenter = false,
+                topLeft = Offset(w * 0.28f, h * 0.28f), size = Size(w * 0.44f, h * 0.44f), style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+        BrandEmblem.ANDROID -> {}
     }
 }
 

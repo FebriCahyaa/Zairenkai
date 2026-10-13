@@ -175,11 +175,12 @@ internal fun SettingsContent(
                 }
             }
 
+            // The About entry is the Hero card at the top of this screen, so the
+            // section here carries only the legal and licence pages — no second
+            // "About" row that would just repeat the card's destination.
             item { Header(R.string.settings_section_about) }
             item {
                 Group {
-                    NavRow(ZkIcons.Info, stringResource(R.string.about_title), stringResource(R.string.settings_about_sub), onOpenAbout)
-                    Divider()
                     NavRow(ZkIcons.Document, stringResource(R.string.legal_title), stringResource(R.string.settings_legal_sub), onOpenLegal)
                     Divider()
                     NavRow(ZkIcons.Package, stringResource(R.string.oss_title), stringResource(R.string.legal_third_party_summary), onOpenLicenses)

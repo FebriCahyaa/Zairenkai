@@ -204,7 +204,11 @@ fun TypewriterGreeting(
 ) {
     val still = reducedMotion()
     val frames = remember(hello, brand, tagline) { greetingFrames(hello, brand, tagline) }
-    var index by rememberSaveable { mutableIntStateOf(if (still) frames.lastIndex else 0) }
+    // Keyed on the text: a language change rebuilds the script with a different
+    // length, so the saved position must be dropped, not restored into the new
+    // (possibly shorter) list. Also clamped, so a restored index can never read
+    // out of bounds while the new frames are being prepared.
+    var index by rememberSaveable(hello, brand, tagline) { mutableIntStateOf(if (still) frames.lastIndex else 0) }
     LaunchedEffect(frames) {
         while (index < frames.lastIndex) {
             delay(if (frames[index].second.isEmpty()) 85L else 45L)
@@ -212,10 +216,11 @@ fun TypewriterGreeting(
         }
         onFinished()
     }
+    val safeIndex = index.coerceIn(0, frames.lastIndex)
     val caret = if (still) null else rememberInfiniteTransition(label = "caret").animateFloat(
         1f, 0f, infiniteRepeatable(tween(530, easing = LinearEasing), RepeatMode.Reverse), label = "blink",
     )
-    val (line1, line2) = frames[index]
+    val (line1, line2) = frames[safeIndex]
     val gradient = Brush.linearGradient(brandGradient(isDarkSurface()))
     val ink = MaterialTheme.colorScheme.onSurface
     val caretColor = MaterialTheme.colorScheme.primary
