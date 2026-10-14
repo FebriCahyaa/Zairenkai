@@ -3,6 +3,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.Base64
 import java.util.Properties
+import java.security.KeyStore
+import java.security.MessageDigest
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -28,6 +30,31 @@ val keystoreProps = Properties().apply {
 fun secret(env: String, prop: String): String? =
     (System.getenv(env) ?: keystoreProps.getProperty(prop))?.trim()?.takeIf { it.isNotEmpty() }
 
+/** Return the SHA-256 fingerprint of the X.509 certificate used by this keystore alias. */
+fun certificateSha256(file: File, storePassword: String, alias: String): String {
+    var loaded: KeyStore? = null
+    var lastError: Exception? = null
+    for (type in listOf("PKCS12", "JKS")) {
+        try {
+            val candidate = KeyStore.getInstance(type)
+            file.inputStream().use { candidate.load(it, storePassword.toCharArray()) }
+            loaded = candidate
+            break
+        } catch (e: Exception) {
+            lastError = e
+        }
+    }
+    val keystore = loaded ?: throw GradleException(
+        "Unable to open release keystore '$file' as PKCS12 or JKS. " +
+            "Check ZK_KEYSTORE_BASE64/ZK_KEYSTORE_FILE and ZK_KEYSTORE_PASSWORD.",
+        lastError,
+    )
+    val certificate = keystore.getCertificate(alias)
+        ?: throw GradleException("Alias '$alias' was not found in release keystore '$file'.")
+    return MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
+        .joinToString("") { "%02X".format(it) }
+}
+
 // The spoofed variant only changes the package name; override with
 // -PspoofedAppId=<id>. Default stays within our own namespace.
 val spoofedAppId = (project.findProperty("spoofedAppId") as String?) ?: "com.zairenkai.app.spoofed"
@@ -50,7 +77,7 @@ android {
 
     signingConfigs {
         create("release") {
-            val b64 = System.getenv("ZK_KEYSTORE_BASE64")?.takeIf { it.isNotBlank() }
+            val b64 = System.getenv("ZK_KEYSTORE_BASE64")?.trim()?.takeIf { it.isNotEmpty() }
             val ksPath = secret("ZK_KEYSTORE_FILE", "storeFile")
             when {
                 b64 != null -> {
@@ -78,6 +105,21 @@ android {
         }
     }
 
+    // Pin the in-app signature guard to the certificate actually loaded for release
+    // signing. This avoids a stale hard-coded fingerprint when the owner's keystore
+    // is provisioned through GitHub Actions secrets.
+    val releaseSigningConfig = signingConfigs.getByName("release")
+    val releaseCertificateSha256 = run {
+        val file = releaseSigningConfig.storeFile
+        val password = releaseSigningConfig.storePassword
+        val alias = releaseSigningConfig.keyAlias
+        if (file != null && file.isFile && !password.isNullOrBlank() && !alias.isNullOrBlank()) {
+            certificateSha256(file, password, alias)
+        } else {
+            ""
+        }
+    }
+
     flavorDimensions += "distribution"
     productFlavors {
         create("standard") {
@@ -101,12 +143,14 @@ android {
             )
             // Sign only when signing material was actually supplied.
             val cfg = signingConfigs.getByName("release")
-            signingConfig = if (cfg.storeFile != null && cfg.storePassword != null) cfg else null
-            // SHA-256 of the official Zairenkai release certificate.
-            buildConfigField(
-                "String", "EXPECTED_CERT_SHA256",
-                "\"DE78314BD8E048B859085DAFE98BBBAC1D5EEBD2F4903E0FA81DD95741178FEC\"",
-            )
+            signingConfig = if (
+                cfg.storeFile?.isFile == true &&
+                !cfg.storePassword.isNullOrBlank() &&
+                !cfg.keyAlias.isNullOrBlank() &&
+                !cfg.keyPassword.isNullOrBlank()
+            ) cfg else null
+            // Keep runtime certificate verification aligned with the actual release key.
+            buildConfigField("String", "EXPECTED_CERT_SHA256", "\"$releaseCertificateSha256\"")
         }
         debug {
             applicationIdSuffix = ".debug"

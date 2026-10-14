@@ -50,11 +50,17 @@ jobs:
       - id: c
         env:
           KS: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
         run: |
-          if [ -n "$KS" ]; then
+          set -euo pipefail
+          if [[ -n "$KS" && -n "$STORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
             echo "has_signing=true" >> "$GITHUB_OUTPUT"
+            echo "Release signing secrets are configured."
           else
             echo "has_signing=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Release job will be skipped: one or more ZK signing secrets are missing."
           fi
 
   # The .ko half: build the flashable module once; both channels bundle it.
@@ -81,7 +87,7 @@ jobs:
       - name: Install SDK platform 37
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          sdkmanager "platforms;android-37" "build-tools;37.0.0"
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
@@ -164,12 +170,36 @@ jobs:
       - name: Install SDK platform 37
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          sdkmanager "platforms;android-37" "build-tools;37.0.0"
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Unit tests
         run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
+
+      - name: Validate release signing secrets
+        env:
+          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ZK_KEYSTORE_BASE64 ZK_KEYSTORE_PASSWORD ZK_KEY_ALIAS ZK_KEY_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Actions secret: $name"
+              exit 1
+            fi
+          done
+          mkdir -p "$RUNNER_TEMP/zairenkai-signing"
+          KEYSTORE="$RUNNER_TEMP/zairenkai-signing/release.p12"
+          printf '%s' "$ZK_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          keytool -list -keystore "$KEYSTORE" \
+            -storepass:env ZK_KEYSTORE_PASSWORD -alias "$ZK_KEY_ALIAS" >/dev/null
+          keytool -certreq -alias "$ZK_KEY_ALIAS" -keystore "$KEYSTORE" \
+            -storepass:env ZK_KEYSTORE_PASSWORD -keypass:env ZK_KEY_PASSWORD \
+            -file "$RUNNER_TEMP/zairenkai-signing/release-check.csr" >/dev/null
+          echo "Release keystore, alias, and key credentials are valid."
 
       - name: Build and sign release APK
         env:
@@ -179,62 +209,50 @@ jobs:
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
         run: ./gradlew :app:assembleStandardRelease --stacktrace
 
-      - name: Verify release certificate
+      - name: Verify release certificate and v1/v2/v3 signatures
+        env:
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          
-          APK="$(find app/build/outputs/apk/standard/release \
-            -type f -name '*.apk' -print -quit)"
-          
-          if [[ -z "$APK" || ! -f "$APK" ]]; then
-            echo "::error::Release APK not found"
-            exit 1
-          fi
-          
+          APK="$(find app/build/outputs/apk/standard/release -type f -name '*.apk' -print -quit)"
+          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Release APK not found"; exit 1; }
           BT="$ANDROID_HOME/build-tools/37.0.0"
           APKSIGNER="$BT/apksigner"
-          
-          if [[ ! -x "$APKSIGNER" ]]; then
-            echo "::error::apksigner not found: $APKSIGNER"
+          KEYSTORE="app/build/zk-release.jks"
+          [[ -x "$APKSIGNER" ]] || { echo "::error::apksigner not found: $APKSIGNER"; exit 1; }
+          [[ -f "$KEYSTORE" ]] || { echo "::error::Gradle did not materialize the release keystore"; exit 1; }
+
+          VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose "$APK" 2>&1)" || {
+            printf '%s\n' "$VERIFY_OUTPUT"
+            echo "::error::apksigner could not verify the APK"
             exit 1
-          fi
-          
-          echo "Verifying APK signature: $APK"
-          "$APKSIGNER" verify --verbose "$APK"
-          
-          EXPECTED='DE78314BD8E048B859085DAFE98BBBAC1D5EEBD2F4903E0FA81DD95741178FEC'
-          
-          ACTUAL="$(
-            "$APKSIGNER" verify --print-certs "$APK" |
-              sed -n '/Signer #1 certificate SHA-256 digest:/{
-                s/.*Signer #1 certificate SHA-256 digest:[[:space:]]*//
-                p
-                q
-              }' |
-              tr -d '[:space:]:' |
-              tr '[:lower:]' '[:upper:]'
-          )"
-          
-          if [[ ! "$EXPECTED" =~ ^[A-F0-9]{64}$ ]]; then
-            echo "::error::EXPECTED is not a valid SHA-256 fingerprint"
+          }
+          printf '%s\n' "$VERIFY_OUTPUT"
+          for scheme in \
+            'Verified using v1 scheme (JAR signing): true' \
+            'Verified using v2 scheme (APK Signature Scheme v2): true' \
+            'Verified using v3 scheme (APK Signature Scheme v3): true'; do
+            if ! grep -Fq "$scheme" <<< "$VERIFY_OUTPUT"; then
+              echo "::error::Required APK signature scheme is missing: $scheme"
+              exit 1
+            fi
+          done
+
+          EXPECTED="$(keytool -exportcert -alias "$ZK_KEY_ALIAS" -keystore "$KEYSTORE" \
+            -storepass:env ZK_KEYSTORE_PASSWORD | sha256sum | awk '{print toupper($1)}')"
+          ACTUAL="$("$APKSIGNER" verify --print-certs "$APK" 2>&1 | \
+            sed -n 's/.*Signer #1 certificate SHA-256 digest:[[:space:]]*//p' | \
+            head -1 | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
+          [[ "$EXPECTED" =~ ^[A-F0-9]{64}$ ]] || { echo "::error::Could not calculate keystore certificate SHA-256"; exit 1; }
+          [[ "$ACTUAL" =~ ^[A-F0-9]{64}$ ]] || { echo "::error::Could not read APK certificate SHA-256"; exit 1; }
+          [[ "$ACTUAL" == "$EXPECTED" ]] || {
+            echo "::error::APK signer does not match the configured release keystore certificate"
+            echo "Keystore SHA-256: $EXPECTED"
+            echo "APK SHA-256:      $ACTUAL"
             exit 1
-          fi
-          
-          if [[ ! "$ACTUAL" =~ ^[A-F0-9]{64}$ ]]; then
-            echo "::error::Could not extract the APK signer SHA-256 fingerprint"
-            echo "Extracted value: '$ACTUAL'"
-            exit 1
-          fi
-          
-          echo "Expected SHA-256: $EXPECTED"
-          echo "Actual SHA-256:   $ACTUAL"
-          
-          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
-            echo "::error::APK signing certificate fingerprint mismatch"
-            exit 1
-          fi
-          
-          echo "APK signature and release certificate verified successfully."
+          }
+          echo "Verified: APK signature schemes v1, v2 and v3 are present; signer matches the configured keystore."
 
       - name: Download module artifact
         uses: actions/download-artifact@v8.0.0

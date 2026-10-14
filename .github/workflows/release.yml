@@ -33,8 +33,32 @@ jobs:
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+          sdkmanager "platforms;android-37" "build-tools;37.0.0" "ndk;30.0.16248370"
       - uses: gradle/actions/setup-gradle@v6.4.0
+
+      - name: Validate release signing secrets
+        env:
+          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ZK_KEYSTORE_BASE64 ZK_KEYSTORE_PASSWORD ZK_KEY_ALIAS ZK_KEY_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Actions secret: $name"
+              exit 1
+            fi
+          done
+          mkdir -p "$RUNNER_TEMP/zairenkai-signing"
+          printf '%s' "$ZK_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/zairenkai-signing/release.p12"
+          keytool -list -keystore "$RUNNER_TEMP/zairenkai-signing/release.p12" \
+            -storepass:env ZK_KEYSTORE_PASSWORD -alias "$ZK_KEY_ALIAS" >/dev/null
+          keytool -certreq -alias "$ZK_KEY_ALIAS" \
+            -keystore "$RUNNER_TEMP/zairenkai-signing/release.p12" \
+            -storepass:env ZK_KEYSTORE_PASSWORD -keypass:env ZK_KEY_PASSWORD \
+            -file "$RUNNER_TEMP/zairenkai-signing/release-check.csr" >/dev/null
+          echo "Release keystore, alias, and key credentials are valid."
 
       - name: Build and verify signed APK
         env:
@@ -44,19 +68,44 @@ jobs:
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
         run: ./gradlew :app:assembleStandardRelease :app:testStandardDebugUnitTest --stacktrace
 
-      - name: Verify APK certificate
+      - name: Verify APK certificate and v1/v2/v3 signatures
+        env:
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          APK=$(find app/build/outputs/apk/standard/release -name '*.apk' | head -1)
+          APK="$(find app/build/outputs/apk/standard/release -name '*.apk' -type f -print -quit)"
+          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Release APK not found"; exit 1; }
           BT="$ANDROID_HOME/build-tools/37.0.0"
-          "$BT/apksigner" verify --verbose "$APK"
-          EXPECTED='DE78314BD8E048B859085DAFE98BBBAC1D5EEBD2F4903E0FA81DD95741178FEC'
-          ACTUAL=$(
-            "$BT/apksigner" verify --print-certs "$APK" |
-              sed -n 's/Signer #1 certificate SHA-256 digest: //p' |
-              head -1 | tr -d '[:space:]' | tr 'a-f' 'A-F'
-          )
-          test "$ACTUAL" = "$EXPECTED"
+          KEYSTORE="app/build/zk-release.jks"
+          [[ -x "$BT/apksigner" ]] || { echo "::error::apksigner not found"; exit 1; }
+          [[ -f "$KEYSTORE" ]] || { echo "::error::Release keystore was not materialized"; exit 1; }
+          VERIFY_OUTPUT="$("$BT/apksigner" verify --verbose "$APK" 2>&1)" || {
+            printf '%s\n' "$VERIFY_OUTPUT"
+            exit 1
+          }
+          printf '%s\n' "$VERIFY_OUTPUT"
+          for scheme in \
+            'Verified using v1 scheme (JAR signing): true' \
+            'Verified using v2 scheme (APK Signature Scheme v2): true' \
+            'Verified using v3 scheme (APK Signature Scheme v3): true'; do
+            grep -Fq "$scheme" <<< "$VERIFY_OUTPUT" || {
+              echo "::error::Required APK signature scheme is missing: $scheme"
+              exit 1
+            }
+          done
+          EXPECTED="$(keytool -exportcert -alias "$ZK_KEY_ALIAS" -keystore "$KEYSTORE" \
+            -storepass:env ZK_KEYSTORE_PASSWORD | sha256sum | awk '{print toupper($1)}')"
+          ACTUAL="$("$BT/apksigner" verify --print-certs "$APK" | \
+            sed -n 's/.*Signer #1 certificate SHA-256 digest:[[:space:]]*//p' | \
+            head -1 | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
+          [[ "$ACTUAL" == "$EXPECTED" ]] || {
+            echo "::error::APK signer does not match release keystore"
+            echo "Keystore SHA-256: $EXPECTED"
+            echo "APK SHA-256:      $ACTUAL"
+            exit 1
+          }
+          echo "APK signature schemes v1/v2/v3 and keystore fingerprint verified."
 
       - name: Set up Rust
         run: |
