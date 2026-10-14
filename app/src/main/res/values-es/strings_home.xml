@@ -58,11 +58,24 @@
     <string name="install_continue">Continuar</string>
     <string name="install_steps">Por seguridad, Zairenkai no flashea el kernel desde la app. Tras elegir un archivo, continúa en tu gestor de root/módulos para flashearlo y reinicia.</string>
     <string name="install_no_handler">Ninguna app puede abrir este archivo. Fláshealo manualmente con tu gestor de módulos y reinicia.</string>
-    <string name="boot_patch_title">Parchear boot.img (experimental)</string>
-    <string name="boot_patch_body">Elige tu boot.img de fábrica. Zairenkai comprueba que puede reconstruir la imagen byte a byte antes de parchear; si no puede, se niega. Tú flasheas el resultado por recovery — la app nunca flashea el kernel.</string>
-    <string name="boot_patch_pick">Seleccionar boot.img</string>
-    <string name="boot_patch_ok">Legible — cabecera v%1$d, página de %2$d bytes. Verificación de reconstrucción superada.</string>
+    <string name="boot_patch_title">Reemplazar kernel en boot.img</string>
+    <string name="boot_patch_body">Selecciona un boot.img de fábrica o de la ROM y un kernel compatible (por ejemplo, Image o Image.gz). Zairenkai solo reemplaza la sección del kernel, actualiza el ID antiguo cuando corresponde, verifica el resultado y guarda un archivo nuevo. No modifica ramdisk/CPIO, no flashea particiones ni vuelve a firmar AVB. Comprueba la compatibilidad del kernel y que el bootloader permita imágenes modificadas.</string>
+    <string name="boot_patch_pick">Elegir boot.img de origen</string>
+    <string name="boot_patch_pick_kernel">Elegir kernel</string>
+    <string name="boot_patch_save">Parchear y guardar imagen</string>
+    <string name="boot_patch_selected_boot">Imagen de arranque: %1$s</string>
+    <string name="boot_patch_selected_kernel">Kernel: %1$s</string>
+    <string name="boot_patch_need_both">Selecciona una imagen de arranque y un kernel antes de continuar.</string>
+    <string name="boot_patch_working">Aplicando el parche y verificando…</string>
+    <string name="boot_patch_success_prefix">Parche verificado correctamente.</string>
+    <string name="boot_patch_success">Parche verificado correctamente.
+Cabecera v%1$d, página de %2$d bytes.
+Tamaño del kernel: %3$s → %4$s.
+SHA-256: %5$s
+Salida: %6$s</string>
+    <string name="boot_patch_failed">El proceso de parcheo no terminó. El archivo de salida puede estar vacío o incompleto; elimínalo antes de volver a intentarlo. Consulta los detalles.</string>
+    <string name="boot_patch_ok">Readable — header v%1$d, %2$d-byte page. Round-trip check passed.</string>
     <string name="boot_patch_sizes">kernel %1$s · ramdisk %2$s</string>
-    <string name="boot_patch_unsupported">Zairenkai no puede reconstruir esta imagen con exactitud, así que no se parcheará (rechazo seguro).</string>
-    <string name="boot_patch_notboot">Ese archivo no es una imagen boot de Android.</string>
+    <string name="boot_patch_unsupported">Zairenkai cannot rebuild this image exactly, so patching is refused.</string>
+    <string name="boot_patch_notboot">That file is not a supported Android boot image.</string>
 </resources>

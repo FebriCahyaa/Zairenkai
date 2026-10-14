@@ -69,6 +69,21 @@ Unix domain socket for structured introspection. API v1 is observation-only; fut
 mutation endpoints must reuse Core Authority, Sentinel, ZKFC validation and the
 durable transaction engine rather than introducing a second mutation path.
 
+## Boot image patching
+
+The install screen includes a guarded **kernel-payload replacement** workflow for
+compatible `ANDROID!` boot images (header versions 0–4). It selects the source
+`boot.img` and a prebuilt kernel payload, updates the legacy image ID when
+applicable, validates the rebuilt container, and writes a new file through the
+Android document picker. It never writes to a boot partition.
+
+This is intentionally **not a full MagiskBoot implementation**: it does not
+unpack/recompress ramdisk CPIO, patch `vendor_boot`, inject `zkfc.ko`, or sign AVB
+metadata. Images carrying an unregenerable trailer or a v4 boot signature are
+refused. See [`docs/boot-image-patching.md`](docs/boot-image-patching.md) for the
+compatibility rules and safe workflow. The existing `module/` installer remains
+the supported way to install Zairenkai's LKM through a compatible root manager.
+
 ## Features
 
 - **Dashboard** — device identity, ZKFC/API state, live performance status.

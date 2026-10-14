@@ -56,11 +56,24 @@
     <string name="install_continue">続行</string>
     <string name="install_steps">安全のため、Zairenkai はアプリからカーネルをフラッシュしません。ファイルを選択後、root/モジュールマネージャーでフラッシュして再起動してください。</string>
     <string name="install_no_handler">このファイルを開けるアプリがありません。モジュールマネージャーで手動フラッシュして再起動してください。</string>
-    <string name="boot_patch_title">boot.img をパッチ（実験的）</string>
-    <string name="boot_patch_body">純正の boot.img を選んでください。Zairenkai はパッチ前にイメージをバイト単位で再構築できるか確認し、できなければ拒否します。結果のフラッシュは recovery であなたが行います—アプリがカーネルをフラッシュすることはありません。</string>
-    <string name="boot_patch_pick">boot.img を選択</string>
-    <string name="boot_patch_ok">読み取り可—ヘッダ v%1$d、ページ %2$d バイト。再構築チェック合格。</string>
-    <string name="boot_patch_sizes">カーネル %1$s · ramdisk %2$s</string>
-    <string name="boot_patch_unsupported">Zairenkai はこのイメージを正確に再構築できないため、パッチしません（安全な拒否）。</string>
-    <string name="boot_patch_notboot">そのファイルは Android boot image ではありません。</string>
+    <string name="boot_patch_title">boot.img のカーネルを置換</string>
+    <string name="boot_patch_body">純正または ROM の boot.img と互換性のあるカーネル（Image / Image.gz など）を選択します。Zairenkai はカーネル領域のみを置換し、該当する旧形式 boot ID を更新して結果を検証し、新しいファイルとして保存します。ramdisk/CPIO の編集、パーティションへの書き込み、AVB の再署名は行いません。カーネルの互換性とブートローダーの制限を確認してください。</string>
+    <string name="boot_patch_pick">元の boot.img を選択</string>
+    <string name="boot_patch_pick_kernel">カーネルを選択</string>
+    <string name="boot_patch_save">パッチして新しいイメージを保存</string>
+    <string name="boot_patch_selected_boot">Boot image: %1$s</string>
+    <string name="boot_patch_selected_kernel">Kernel: %1$s</string>
+    <string name="boot_patch_need_both">続行する前に boot.img とカーネルを選択してください。</string>
+    <string name="boot_patch_working">パッチと検証を実行中…</string>
+    <string name="boot_patch_success_prefix">パッチの検証に成功しました。</string>
+    <string name="boot_patch_success">パッチの検証に成功しました。
+ヘッダー v%1$d、ページ %2$d バイト。
+カーネルサイズ: %3$s → %4$s。
+SHA-256: %5$s
+出力: %6$s</string>
+    <string name="boot_patch_failed">パッチ処理が完了しませんでした。出力ファイルが空または不完全な可能性があるため、再試行する前に削除してください。詳細を確認してください。</string>
+    <string name="boot_patch_ok">Readable — header v%1$d, %2$d-byte page. Round-trip check passed.</string>
+    <string name="boot_patch_sizes">kernel %1$s · ramdisk %2$s</string>
+    <string name="boot_patch_unsupported">Zairenkai cannot rebuild this image exactly, so patching is refused.</string>
+    <string name="boot_patch_notboot">That file is not a supported Android boot image.</string>
 </resources>

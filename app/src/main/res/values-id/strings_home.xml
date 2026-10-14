@@ -56,11 +56,24 @@
     <string name="install_continue">Lanjutkan</string>
     <string name="install_steps">Demi keamanan, Zairenkai tidak mem-flash kernel langsung dari aplikasi. Setelah memilih berkas, lanjutkan di pengelola root/modul kamu untuk mem-flash, lalu reboot.</string>
     <string name="install_no_handler">Tidak ada aplikasi yang bisa membuka berkas ini. Flash manual lewat pengelola modul, lalu reboot.</string>
-    <string name="boot_patch_title">Patch boot.img (eksperimental)</string>
-    <string name="boot_patch_body">Pilih boot.img bawaanmu. Zairenkai memastikan bisa membangun ulang image byte-per-byte sebelum mem-patch; kalau tidak bisa, ia menolak. Kamu yang mem-flash hasilnya via recovery — aplikasi tidak pernah mem-flash kernel.</string>
-    <string name="boot_patch_pick">Pilih boot.img</string>
-    <string name="boot_patch_ok">Terbaca — header v%1$d, page %2$d byte. Cek bangun-ulang lolos.</string>
+    <string name="boot_patch_title">Ganti kernel di boot.img</string>
+    <string name="boot_patch_body">Pilih boot.img bawaan ROM/pabrik dan payload kernel yang kompatibel (misalnya Image atau Image.gz). Zairenkai hanya mengganti bagian kernel, memperbarui boot ID legacy jika berlaku, memverifikasi hasil, lalu menyimpan berkas baru. Ramdisk/CPIO tidak diubah, partisi tidak di-flash, dan AVB tidak ditandatangani ulang. Pastikan kernel cocok dan bootloader mengizinkan image modifikasi.</string>
+    <string name="boot_patch_pick">Pilih boot.img sumber</string>
+    <string name="boot_patch_pick_kernel">Pilih payload kernel</string>
+    <string name="boot_patch_save">Patch dan simpan image baru</string>
+    <string name="boot_patch_selected_boot">Boot image: %1$s</string>
+    <string name="boot_patch_selected_kernel">Kernel: %1$s</string>
+    <string name="boot_patch_need_both">Pilih boot image dan payload kernel sebelum melanjutkan.</string>
+    <string name="boot_patch_working">Mem-patch dan memverifikasi…</string>
+    <string name="boot_patch_success_prefix">Patch berhasil diverifikasi.</string>
+    <string name="boot_patch_success">Patch berhasil diverifikasi.
+Header v%1$d, page %2$d byte.
+Ukuran kernel: %3$s → %4$s.
+SHA-256: %5$s
+Output: %6$s</string>
+    <string name="boot_patch_failed">Proses patch gagal. Berkas output mungkin kosong atau tidak lengkap; hapus sebelum mencoba lagi. Detail ada di bawah.</string>
+    <string name="boot_patch_ok">Readable — header v%1$d, %2$d-byte page. Round-trip check passed.</string>
     <string name="boot_patch_sizes">kernel %1$s · ramdisk %2$s</string>
-    <string name="boot_patch_unsupported">Zairenkai tidak bisa membangun ulang image ini persis, jadi tidak akan dipatch (penolakan aman).</string>
-    <string name="boot_patch_notboot">Berkas itu bukan boot image Android.</string>
+    <string name="boot_patch_unsupported">Zairenkai cannot rebuild this image exactly, so patching is refused.</string>
+    <string name="boot_patch_notboot">That file is not a supported Android boot image.</string>
 </resources>

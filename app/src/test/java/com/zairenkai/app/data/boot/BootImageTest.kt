@@ -98,6 +98,96 @@ class BootImageTest {
         assertTrue(b4.roundTrips(v4))
     }
 
+
+    @Test fun replaceKernelV2PreservesRamdiskAndRecomputesLegacyId() {
+        val ramdisk = ByteArray(5000) { (it * 3).toByte() }
+        val original = legacyImage(2, 2048, "OLD-KERNEL".toByteArray(), ramdisk)
+        val originalBoot = BootImage.parse(original)!!
+        val originalId = original.copyOfRange(576, 608)
+        val newKernel = ByteArray(8193) { (it xor 0x5a).toByte() }
+
+        val result = BootImagePatcher.replaceKernel(original, newKernel)
+        val patched = BootImage.parse(result.image)!!
+
+        assertEquals(2, result.headerVersion)
+        assertEquals(2048, result.pageSize)
+        assertEquals(newKernel.size, result.patchedKernelSize)
+        assertTrue(patched.kernel!!.contentEquals(newKernel))
+        assertTrue(patched.ramdisk!!.contentEquals(ramdisk))
+        assertTrue(patched.roundTrips(result.image))
+        assertFalse("legacy boot image ID must be recomputed", originalId.contentEquals(result.image.copyOfRange(576, 608)))
+        assertTrue("the original image must remain unchanged", originalBoot.kernel!!.contentEquals("OLD-KERNEL".toByteArray()))
+        assertEquals(64, result.sha256.length)
+    }
+
+
+    @Test fun replaceKernelV2UpdatesRecoveryDtboOffset() {
+        val page = 2048
+        val version = 2
+        val headerSize = 1660
+        val kernel = "OLD".toByteArray()
+        val ramdisk = ByteArray(33) { it.toByte() }
+        val second = ByteArray(11) { (it + 1).toByte() }
+        val recovery = ByteArray(17) { (it + 2).toByte() }
+        val dtb = ByteArray(29) { (it + 3).toByte() }
+        val header = le(headerSize) { b ->
+            System.arraycopy("ANDROID!".toByteArray(), 0, b.array(), 0, 8)
+            b.putInt(8, kernel.size); b.putInt(16, ramdisk.size); b.putInt(24, second.size)
+            b.putInt(36, page); b.putInt(40, version); b.putInt(44, 0x10000)
+            b.putInt(1632, recovery.size)
+            b.putLong(1636, (page + padTo(kernel, page).size + padTo(ramdisk, page).size + padTo(second, page).size).toLong())
+            b.putInt(1644, headerSize); b.putInt(1648, dtb.size)
+        }
+        val image = ByteArrayOutputStream().apply {
+            write(padTo(header, page)); write(padTo(kernel, page)); write(padTo(ramdisk, page))
+            write(padTo(second, page)); write(padTo(recovery, page)); write(padTo(dtb, page))
+        }.toByteArray()
+        val newKernel = ByteArray(4001) { (it * 9).toByte() }
+        val patched = BootImagePatcher.replaceKernel(image, newKernel).image
+        val b = ByteBuffer.wrap(patched).order(ByteOrder.LITTLE_ENDIAN)
+        val expectedOffset = page + padTo(newKernel, page).size + padTo(ramdisk, page).size + padTo(second, page).size
+        assertEquals(expectedOffset.toLong(), b.getLong(1636))
+        assertTrue(BootImage.parse(patched)!!.roundTrips(patched))
+    }
+
+    @Test fun replaceKernelV3RebuildsAndVerifiesOutput() {
+        val original = modernImage(3, ByteArray(9000) { 1 }, ByteArray(3000) { 2 })
+        val newKernel = ByteArray(12001) { (it * 7).toByte() }
+        val result = BootImagePatcher.replaceKernel(original, newKernel)
+        val patched = BootImage.parse(result.image)!!
+
+        assertEquals(3, patched.headerVersion)
+        assertTrue(patched.kernel!!.contentEquals(newKernel))
+        assertTrue(patched.ramdisk!!.contentEquals(ByteArray(3000) { 2 }))
+        assertTrue(patched.roundTrips(result.image))
+    }
+
+    @Test fun replaceKernelRefusesUnknownTailMetadata() {
+        val original = modernImage(3, ByteArray(100) { 1 }, ByteArray(200) { 2 }, tail = "AVBf".toByteArray())
+        try {
+            BootImagePatcher.replaceKernel(original, ByteArray(128) { 3 })
+            throw AssertionError("Expected tail metadata to be refused")
+        } catch (error: IllegalArgumentException) {
+            assertTrue(error.message.orEmpty().contains("trailing footer/metadata"))
+        }
+    }
+
+    @Test fun replaceKernelRefusesNonEmptyV4BootSignature() {
+        val original = modernImage(4, ByteArray(100) { 1 }, ByteArray(200) { 2 })
+        // v4 signature_size field; include a real aligned signature section.
+        ByteBuffer.wrap(original).order(ByteOrder.LITTLE_ENDIAN).putInt(1580, 16)
+        val signature = ByteArray(16) { 9 }
+        val withSignature = original + padTo(signature, 4096)
+        val parsed = BootImage.parse(withSignature)!!
+        assertTrue(parsed.hasBootSignature)
+        try {
+            BootImagePatcher.replaceKernel(withSignature, ByteArray(128) { 3 })
+            throw AssertionError("Expected signed v4 image to be refused")
+        } catch (error: IllegalArgumentException) {
+            assertTrue(error.message.orEmpty().contains("boot signature"))
+        }
+    }
+
     @Test fun refusesNonBoot() {
         assertNull(BootImage.parse(ByteArray(4096)))
         assertNull(BootImage.parse("not a boot image".toByteArray()))

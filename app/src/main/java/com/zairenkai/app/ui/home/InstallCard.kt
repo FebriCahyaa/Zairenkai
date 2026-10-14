@@ -174,34 +174,72 @@ private fun InstallSheet(onDismiss: () -> Unit) {
 }
 
 /**
- * Experimental GKI boot.img inspection. Reads the chosen boot image with the
- * original codec and reports whether Zairenkai can rebuild it byte-for-byte —
- * the gate the patch flow would use. Flashing is the user's own step; the app
- * never flashes the kernel.
+ * Conservative boot-image kernel replacement. The output is a new file; the
+ * app never flashes partitions, edits the ramdisk, or claims to re-sign AVB.
  */
 @Composable
 private fun BootPatchSection() {
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var bootUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var kernelUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var bootName by remember { mutableStateOf<String?>(null) }
+    var kernelName by remember { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf<String?>(null) }
-    val notBoot = stringResource(R.string.boot_patch_notboot)
-    val unsupported = stringResource(R.string.boot_patch_unsupported)
-    val okFmt = stringResource(R.string.boot_patch_ok)
-    val sizeFmt = stringResource(R.string.boot_patch_sizes)
+    var working by remember { mutableStateOf(false) }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
+    val chooseBoot = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            bootUri = uri
+            bootName = documentDisplayName(context, uri)
+            result = null
+        }
+    }
+    val chooseKernel = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            kernelUri = uri
+            kernelName = documentDisplayName(context, uri)
+            result = null
+        }
+    }
+    val saveOutput = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { outputUri ->
+        val inputBoot = bootUri
+        val inputKernel = kernelUri
+        if (outputUri == null) return@rememberLauncherForActivityResult
+        if (inputBoot == null || inputKernel == null) {
+            result = context.getString(R.string.boot_patch_need_both)
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch {
+            working = true
+            result = context.getString(R.string.boot_patch_working)
             result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val bytes = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
-                    ?: return@withContext notBoot
-                val boot = com.zairenkai.app.data.boot.BootImage.parse(bytes) ?: return@withContext notBoot
-                if (!boot.roundTrips(bytes)) return@withContext unsupported
-                val sizes = sizeFmt.format(
-                    android.text.format.Formatter.formatShortFileSize(context, (boot.kernel?.size ?: 0).toLong()),
-                    android.text.format.Formatter.formatShortFileSize(context, (boot.ramdisk?.size ?: 0).toLong()),
-                )
-                okFmt.format(boot.headerVersion, boot.pageSize) + "\n" + sizes
+                try {
+                    // Bound reads before allocating the complete image in memory.
+                    val sourceBytes = readDocumentBounded(context, inputBoot, MAX_BOOT_INPUT_BYTES)
+                    val kernelBytes = readDocumentBounded(context, inputKernel, MAX_KERNEL_INPUT_BYTES)
+                    val patched = com.zairenkai.app.data.boot.BootImagePatcher.replaceKernel(sourceBytes, kernelBytes)
+                    val output = context.contentResolver.openOutputStream(outputUri, "wt")
+                        ?: throw java.io.IOException("Android document provider did not open the output file")
+                    output.use { stream ->
+                        stream.write(patched.image)
+                        stream.flush()
+                    }
+                    context.getString(
+                        R.string.boot_patch_success,
+                        patched.headerVersion,
+                        patched.pageSize,
+                        android.text.format.Formatter.formatShortFileSize(context, patched.originalKernelSize.toLong()),
+                        android.text.format.Formatter.formatShortFileSize(context, patched.patchedKernelSize.toLong()),
+                        patched.sha256,
+                        documentDisplayName(context, outputUri),
+                    )
+                } catch (error: Exception) {
+                    context.getString(R.string.boot_patch_failed) + "\n" +
+                        (error.message ?: error.javaClass.simpleName)
+                }
             }
+            working = false
         }
     }
 
@@ -211,15 +249,76 @@ private fun BootPatchSection() {
             Spacer(Modifier.height(6.dp))
             Text(stringResource(R.string.boot_patch_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(12.dp))
-            FilledTonalButton(onClick = { picker.launch(arrayOf("application/octet-stream", "*/*")) }) {
+            FilledTonalButton(
+                onClick = { chooseBoot.launch(arrayOf("application/octet-stream", "application/x-android-boot-image", "*/*")) },
+                enabled = !working,
+            ) {
                 Icon(ZkIcons.Memory, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.boot_patch_pick))
             }
+            bootName?.let {
+                Text(stringResource(R.string.boot_patch_selected_boot, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            FilledTonalButton(
+                onClick = { chooseKernel.launch(arrayOf("application/octet-stream", "application/x-executable", "*/*")) },
+                enabled = !working,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(ZkIcons.Package, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.boot_patch_pick_kernel))
+            }
+            kernelName?.let {
+                Text(stringResource(R.string.boot_patch_selected_kernel, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.height(6.dp))
+            Button(
+                onClick = { saveOutput.launch("zairenkai-patched-boot.img") },
+                enabled = bootUri != null && kernelUri != null && !working,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (working) stringResource(R.string.boot_patch_working) else stringResource(R.string.boot_patch_save))
+            }
             result?.let {
                 Spacer(Modifier.height(10.dp))
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (it.startsWith(context.getString(R.string.boot_patch_success_prefix))) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
+}
+
+private const val MAX_BOOT_INPUT_BYTES = 192 * 1024 * 1024
+private const val MAX_KERNEL_INPUT_BYTES = 128 * 1024 * 1024
+
+private fun readDocumentBounded(context: android.content.Context, uri: android.net.Uri, limit: Int): ByteArray {
+    val input = context.contentResolver.openInputStream(uri)
+        ?: throw java.io.IOException("Cannot open the selected document")
+    input.use { stream ->
+        val output = java.io.ByteArrayOutputStream(minOf(limit, 1024 * 1024))
+        val buffer = ByteArray(64 * 1024)
+        var total = 0
+        while (true) {
+            val count = stream.read(buffer)
+            if (count < 0) break
+            if (count == 0) continue
+            if (total > limit - count) throw java.io.IOException("File exceeds the safe input limit (${limit / (1024 * 1024)} MiB)")
+            output.write(buffer, 0, count)
+            total += count
+        }
+        if (total == 0) throw java.io.IOException("Selected file is empty")
+        return output.toByteArray()
+    }
+}
+
+private fun documentDisplayName(context: android.content.Context, uri: android.net.Uri): String {
+    return runCatching {
+        context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+    }.getOrNull()?.takeIf { it.isNotBlank() } ?: (uri.lastPathSegment?.substringAfterLast('/') ?: uri.toString())
 }
