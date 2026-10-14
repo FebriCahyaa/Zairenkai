@@ -122,9 +122,17 @@ jobs:
           done
           EXPECTED="$(keytool -exportcert -alias "$ZK_KEY_ALIAS" -keystore "$KEYSTORE" \
             -storepass:env ZK_KEYSTORE_PASSWORD | sha256sum | awk '{print toupper($1)}')"
-          ACTUAL="$("$BT/apksigner" verify --print-certs "$APK" | \
-            sed -n 's/.*Signer #1 certificate SHA-256 digest:[[:space:]]*//p' | \
-            head -1 | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
+          CERT_OUTPUT="$("$APKSIGNER" verify --print-certs "$APK" 2>&1)" || {
+            printf '%s\n' "$CERT_OUTPUT"
+            echo "::error::Could not inspect APK signing certificate"
+            exit 1
+          }
+          ACTUAL="$(printf '%s\n' "$CERT_OUTPUT" |
+            awk '/certificate SHA-256 digest:/ {
+              sub(/^.*certificate SHA-256 digest:[[:space:]]*/, "")
+              gsub(/[^[:xdigit:]]/, "")
+              if (length($0) == 64) { print toupper($0); exit }
+            }')"
           [[ "$ACTUAL" == "$EXPECTED" ]] || {
             echo "::error::APK signer does not match release keystore"
             echo "Keystore SHA-256: $EXPECTED"
