@@ -100,12 +100,13 @@ jobs:
             --ks-key-alias "$ZK_KEY_ALIAS" \
             --ks-pass env:ZK_KEYSTORE_PASSWORD \
             --key-pass env:ZK_KEY_PASSWORD \
+            --min-sdk-version 23 \
             --v1-signing-enabled true \
             --v2-signing-enabled true \
             --v3-signing-enabled true \
             "$APK"
 
-          VERIFY_OUTPUT="$("$BT/apksigner" verify --verbose "$APK" 2>&1)" || {
+          VERIFY_OUTPUT="$("$BT/apksigner" verify --verbose --min-sdk-version 23 "$APK" 2>&1)" || {
             printf '%s\n' "$VERIFY_OUTPUT"
             exit 1
           }
