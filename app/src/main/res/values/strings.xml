@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
-<!-- Default language: Indonesian. Translations live in values-en (US), values-en-rGB, values-ja, values-es, values-zh-rCN. -->
-<resources>
+<!-- Fallback strings are English; AppLocale selects Indonesian on first launch. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
     <string name="app_name" translatable="false">Zairenkai</string>
 </resources>
