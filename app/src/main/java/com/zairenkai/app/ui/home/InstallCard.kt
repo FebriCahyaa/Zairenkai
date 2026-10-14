@@ -173,6 +173,21 @@ private fun InstallSheet(onDismiss: () -> Unit) {
     }
 }
 
+/** UI states for the boot-image patch flow; strings are resolved by Compose. */
+private sealed interface BootPatchUiResult {
+    data object NeedBoth : BootPatchUiResult
+    data object Working : BootPatchUiResult
+    data class Success(
+        val headerVersion: Int,
+        val pageSize: Int,
+        val originalKernelSize: Int,
+        val patchedKernelSize: Int,
+        val sha256: String,
+        val outputName: String,
+    ) : BootPatchUiResult
+    data class Failure(val detail: String) : BootPatchUiResult
+}
+
 /**
  * Conservative boot-image kernel replacement. The output is a new file; the
  * app never flashes partitions, edits the ramdisk, or claims to re-sign AVB.
@@ -185,7 +200,7 @@ private fun BootPatchSection() {
     var kernelUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var bootName by remember { mutableStateOf<String?>(null) }
     var kernelName by remember { mutableStateOf<String?>(null) }
-    var result by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<BootPatchUiResult?>(null) }
     var working by remember { mutableStateOf(false) }
 
     val chooseBoot = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -207,39 +222,42 @@ private fun BootPatchSection() {
         val inputKernel = kernelUri
         if (outputUri == null) return@rememberLauncherForActivityResult
         if (inputBoot == null || inputKernel == null) {
-            result = context.getString(R.string.boot_patch_need_both)
+            result = BootPatchUiResult.NeedBoth
             return@rememberLauncherForActivityResult
         }
         scope.launch {
             working = true
-            result = context.getString(R.string.boot_patch_working)
-            result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                    // Bound reads before allocating the complete image in memory.
-                    val sourceBytes = readDocumentBounded(context, inputBoot, MAX_BOOT_INPUT_BYTES)
-                    val kernelBytes = readDocumentBounded(context, inputKernel, MAX_KERNEL_INPUT_BYTES)
-                    val patched = com.zairenkai.app.data.boot.BootImagePatcher.replaceKernel(sourceBytes, kernelBytes)
-                    val output = context.contentResolver.openOutputStream(outputUri, "wt")
-                        ?: throw java.io.IOException("Android document provider did not open the output file")
-                    output.use { stream ->
-                        stream.write(patched.image)
-                        stream.flush()
+            result = BootPatchUiResult.Working
+            try {
+                result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        // Bound reads before allocating the complete image in memory.
+                        val sourceBytes = readDocumentBounded(context, inputBoot, MAX_BOOT_INPUT_BYTES)
+                        val kernelBytes = readDocumentBounded(context, inputKernel, MAX_KERNEL_INPUT_BYTES)
+                        val patched = com.zairenkai.app.data.boot.BootImagePatcher.replaceKernel(sourceBytes, kernelBytes)
+                        val output = context.contentResolver.openOutputStream(outputUri, "wt")
+                            ?: throw java.io.IOException("Android document provider did not open the output file")
+                        output.use { stream ->
+                            stream.write(patched.image)
+                            stream.flush()
+                        }
+                        BootPatchUiResult.Success(
+                            headerVersion = patched.headerVersion,
+                            pageSize = patched.pageSize,
+                            originalKernelSize = patched.originalKernelSize,
+                            patchedKernelSize = patched.patchedKernelSize,
+                            sha256 = patched.sha256,
+                            outputName = documentDisplayName(context, outputUri),
+                        )
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        BootPatchUiResult.Failure(error.message ?: error.javaClass.simpleName)
                     }
-                    context.getString(
-                        R.string.boot_patch_success,
-                        patched.headerVersion,
-                        patched.pageSize,
-                        android.text.format.Formatter.formatShortFileSize(context, patched.originalKernelSize.toLong()),
-                        android.text.format.Formatter.formatShortFileSize(context, patched.patchedKernelSize.toLong()),
-                        patched.sha256,
-                        documentDisplayName(context, outputUri),
-                    )
-                } catch (error: Exception) {
-                    context.getString(R.string.boot_patch_failed) + "\n" +
-                        (error.message ?: error.javaClass.simpleName)
                 }
+            } finally {
+                working = false
             }
-            working = false
         }
     }
 
@@ -280,12 +298,26 @@ private fun BootPatchSection() {
             ) {
                 Text(if (working) stringResource(R.string.boot_patch_working) else stringResource(R.string.boot_patch_save))
             }
-            result?.let {
+            result?.let { patchResult ->
+                val resultText = when (patchResult) {
+                    BootPatchUiResult.NeedBoth -> stringResource(R.string.boot_patch_need_both)
+                    BootPatchUiResult.Working -> stringResource(R.string.boot_patch_working)
+                    is BootPatchUiResult.Success -> stringResource(
+                        R.string.boot_patch_success,
+                        patchResult.headerVersion,
+                        patchResult.pageSize,
+                        android.text.format.Formatter.formatShortFileSize(context, patchResult.originalKernelSize.toLong()),
+                        android.text.format.Formatter.formatShortFileSize(context, patchResult.patchedKernelSize.toLong()),
+                        patchResult.sha256,
+                        patchResult.outputName,
+                    )
+                    is BootPatchUiResult.Failure -> stringResource(R.string.boot_patch_failed) + "\n" + patchResult.detail
+                }
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    it,
+                    resultText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (it.startsWith(context.getString(R.string.boot_patch_success_prefix))) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (patchResult is BootPatchUiResult.Success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
