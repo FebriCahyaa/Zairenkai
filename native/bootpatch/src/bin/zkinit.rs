@@ -64,7 +64,6 @@ pub unsafe extern "C" fn main(_argc: i32, argv: *const *const u8, envp: *const *
         let error = unsafe { execve(direct_path, argv, envp) };
         kmsg(&format!("fatal: execve of original init failed: {error}"));
         return 127;
-        return 127;
     }
 
     // SAFETY: argv/envp came from the kernel's process entry point and are
@@ -79,6 +78,5 @@ pub unsafe extern "C" fn main(_argc: i32, argv: *const *const u8, envp: *const *
     // SAFETY: same argv/envp process-entry pointers as above.
     let fallback_error = unsafe { execve(direct_path, argv, envp) };
     kmsg(&format!("fatal: original init exec failed: {fallback_error}"));
-    127
     127
 }
