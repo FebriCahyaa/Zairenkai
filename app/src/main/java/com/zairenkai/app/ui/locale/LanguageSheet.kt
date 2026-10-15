@@ -8,6 +8,7 @@
 package com.zairenkai.app.ui.locale
 
 import android.content.res.Resources
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -44,7 +45,7 @@ fun currentLanguageLabel(): String {
 @Composable
 fun LanguageSheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val activity = remember(context) { context.findActivity() }
+    val activity = remember(context) { context.findActivity() as? ComponentActivity }
     val current = remember { AppLocale.current(context) }
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()

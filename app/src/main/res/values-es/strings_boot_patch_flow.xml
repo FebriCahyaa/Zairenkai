@@ -13,6 +13,10 @@
     <string name="patch_flow_title">Integrar Zairenkai en la imagen de arranque</string>
     <string name="patch_flow_pick_image">Seleccionar boot.img o init_boot.img</string>
     <string name="patch_flow_selected_image">Imagen: %1$s</string>
+    <string name="patch_flow_pick_kernel_reference">Seleccionar el boot.img correspondiente (referencia del kernel, si es necesario)</string>
+    <string name="patch_flow_selected_kernel_reference">Referencia del kernel: %1$s</string>
+    <string name="patch_flow_kernel_release_detected">Versión del kernel: %1$s</string>
+    <string name="patch_flow_kernel_reference_help">En Android 13 y versiones posteriores, el ramdisk genérico suele estar en init_boot.img. Selecciona init_boot.img arriba como objetivo del parche y el boot.img de la misma ROM/compilación aquí. Para imágenes que ya incluyen un kernel, este campo es opcional.</string>
     <string name="patch_flow_pick_module">Selecciona un zkfc.ko compatible (opcional si el APK incluye el KMI elegido)</string>
     <string name="patch_flow_selected_module">Módulo: %1$s</string>
     <string name="patch_flow_kmi_title">KMI del kernel objetivo</string>

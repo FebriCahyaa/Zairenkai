@@ -13,6 +13,10 @@
     <string name="patch_flow_title">将 Zairenkai 注入启动镜像</string>
     <string name="patch_flow_pick_image">选择 boot.img 或 init_boot.img</string>
     <string name="patch_flow_selected_image">镜像：%1$s</string>
+    <string name="patch_flow_pick_kernel_reference">选择配套的 boot.img（如需要，用作内核参考）</string>
+    <string name="patch_flow_selected_kernel_reference">内核参考：%1$s</string>
+    <string name="patch_flow_kernel_release_detected">内核版本：%1$s</string>
+    <string name="patch_flow_kernel_reference_help">在 Android 13 及更高版本中，通用 ramdisk 通常位于 init_boot.img。请在上方选择 init_boot.img 作为修补目标，并在此选择同一 ROM/构建的 boot.img。对于已包含内核的镜像，此项可选。</string>
     <string name="patch_flow_pick_module">选择匹配的 zkfc.ko（此 APK 已包含所选 KMI 时可选）</string>
     <string name="patch_flow_selected_module">模块：%1$s</string>
     <string name="patch_flow_kmi_title">目标内核 KMI</string>

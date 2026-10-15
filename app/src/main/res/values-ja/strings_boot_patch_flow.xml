@@ -13,6 +13,10 @@
     <string name="patch_flow_title">ブートイメージにZairenkaiをパッチ</string>
     <string name="patch_flow_pick_image">boot.imgまたはinit_boot.imgを選択</string>
     <string name="patch_flow_selected_image">イメージ: %1$s</string>
+    <string name="patch_flow_pick_kernel_reference">対応する boot.img を選択（必要な場合のカーネル参照）</string>
+    <string name="patch_flow_selected_kernel_reference">カーネル参照: %1$s</string>
+    <string name="patch_flow_kernel_release_detected">カーネルリリース: %1$s</string>
+    <string name="patch_flow_kernel_reference_help">Android 13 以降では、汎用 ramdisk は通常 init_boot.img にあります。上で init_boot.img をパッチ対象として選び、ここでは同じ ROM/ビルドの boot.img を選択してください。カーネルをすでに含むイメージでは、この項目は省略できます。</string>
     <string name="patch_flow_pick_module">対応する zkfc.ko を選択（この APK に対象 KMI が含まれる場合は任意）</string>
     <string name="patch_flow_selected_module">モジュール: %1$s</string>
     <string name="patch_flow_kmi_title">対象カーネルKMI</string>
