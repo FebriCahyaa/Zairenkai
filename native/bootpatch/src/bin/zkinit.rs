@@ -12,7 +12,6 @@
 use rustix::{cstr, runtime::execve, system::init_module};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::os::unix::fs::symlink;
 use std::path::Path;
 
 fn kmsg(message: &str) {
@@ -39,44 +38,17 @@ fn load_zkfc() {
 pub unsafe extern "C" fn main(_argc: i32, argv: *const *const u8, envp: *const *const u8) -> i32 {
     load_zkfc();
 
-    // The original /init was moved to /init.real by the boot-image patcher.
-    // If the source image did not contain an init entry, use Android's normal
-    // init path instead. Never write to a boot partition from this program.
-    let original_init = if Path::new("/init.real").exists() {
-        "/init.real"
-    } else if Path::new("/system/bin/init").exists() {
-        "/system/bin/init"
-    } else {
-        kmsg("fatal: neither /init.real nor /system/bin/init exists");
-        return 127;
-    };
-
-    let _ = fs::remove_file("/init");
-    if let Err(error) = symlink(original_init, "/init") {
-        kmsg(&format!("could not restore /init symlink: {error}"));
-        // Try the original path directly if the symlink cannot be created.
-        let direct_path = if original_init == "/init.real" {
-            cstr!("/init.real")
-        } else {
-            cstr!("/system/bin/init")
-        };
-        // SAFETY: argv/envp came from the kernel's process entry point.
-        let error = unsafe { execve(direct_path, argv, envp) };
-        kmsg(&format!("fatal: execve of original init failed: {error}"));
+    // The patcher only creates this wrapper after verifying the source generic
+    // ramdisk has /init and moving it to /init.real. Never fall back to
+    // /system/bin/init here: /system is commonly not mounted at PID 1 startup.
+    if !Path::new("/init.real").is_file() {
+        kmsg("fatal: preserved /init.real is missing; refusing an unsafe fallback");
         return 127;
     }
 
-    // SAFETY: argv/envp came from the kernel's process entry point and are
-    // passed directly to execve without changing their lifetime.
-    let error = unsafe { execve(cstr!("/init"), argv, envp) };
-    kmsg(&format!("execve(/init) failed: {error}; trying original init directly"));
-    let direct_path = if original_init == "/init.real" {
-        cstr!("/init.real")
-    } else {
-        cstr!("/system/bin/init")
-    };
-    // SAFETY: same argv/envp process-entry pointers as above.
-    let fallback_error = unsafe { execve(direct_path, argv, envp) };
-    kmsg(&format!("fatal: original init exec failed: {fallback_error}"));
+    // SAFETY: argv/envp are the original process-entry pointers. Execute the
+    // preserved init directly; no unlink/symlink operation is needed.
+    let error = unsafe { execve(cstr!("/init.real"), argv, envp) };
+    kmsg(&format!("fatal: execve(/init.real) failed: {error}"));
     127
 }

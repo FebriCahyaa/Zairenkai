@@ -24,20 +24,30 @@ object BootPatchRepository {
         val log: String,
     )
 
+    data class KernelDetection(
+        val kmi: String?,
+        val kernelRelease: String?,
+    )
+
     suspend fun patch(
         context: Context,
         bootUri: Uri,
+        kernelReferenceUri: Uri?,
         moduleUri: Uri?,
         kmi: String,
     ): Result = withContext(Dispatchers.IO) {
         val workspace = File(context.cacheDir, "zk-bootpatch-${UUID.randomUUID()}")
         if (!workspace.mkdirs()) throw IOException("Cannot create a private boot-patch workspace")
-        val bootFile = File(workspace, "input-boot.img")
+        val bootFile = File(workspace, "input-ramdisk.img")
+        val kernelReferenceFile = File(workspace, "kernel-reference-boot.img")
         val moduleFile = File(workspace, "zkfc.ko")
         val outputFile = File(workspace, "boot_zairenkai_patched.img")
 
         try {
             copyUri(context, bootUri, bootFile, MAX_BOOT_BYTES)
+            if (kernelReferenceUri != null) {
+                copyUri(context, kernelReferenceUri, kernelReferenceFile, MAX_BOOT_BYTES)
+            }
             val selectedModuleAsset = if (moduleUri == null) bundledModuleAsset(context, kmi) else null
             if (moduleUri != null) {
                 copyUri(context, moduleUri, moduleFile, MAX_MODULE_BYTES)
@@ -60,16 +70,19 @@ object BootPatchRepository {
             if (!initWrapper.isFile || !initWrapper.canRead()) {
                 throw IOException("Zairenkai init wrapper is missing. Rebuild the APK with tools/bootpatch/build-android.sh.")
             }
-            val log = runHelper(
-                helper,
-                listOf(
-                    "--boot", bootFile.absolutePath,
-                    "--module", moduleFile.absolutePath,
-                    "--init", initWrapper.absolutePath,
-                    "--kmi", kmi,
-                    "--out", outputFile.absolutePath,
-                ),
+            val arguments = mutableListOf(
+                "--boot", bootFile.absolutePath,
             )
+            if (kernelReferenceUri != null) {
+                arguments += listOf("--kernel-reference", kernelReferenceFile.absolutePath)
+            }
+            arguments += listOf(
+                "--module", moduleFile.absolutePath,
+                "--init", initWrapper.absolutePath,
+                "--kmi", kmi,
+                "--out", outputFile.absolutePath,
+            )
+            val log = runHelper(helper, arguments)
             if (!outputFile.isFile || outputFile.length() == 0L) {
                 throw IOException("The patch helper reported success but no output image was created.")
             }
@@ -80,27 +93,44 @@ object BootPatchRepository {
         }
     }
 
-    /** Mirrors KernelSU-Next by extracting KMI from a kernel payload when the selected image has one. */
-    suspend fun detectKmi(context: Context, bootUri: Uri): String? = withContext(Dispatchers.IO) {
+    /** Extracts the Android KMI hint and complete Linux release from the selected image pair. */
+    suspend fun detectKernel(
+        context: Context,
+        bootUri: Uri,
+        kernelReferenceUri: Uri? = null,
+    ): KernelDetection = withContext(Dispatchers.IO) {
         val workspace = File(context.cacheDir, "zk-kmi-detect-${UUID.randomUUID()}")
         if (!workspace.mkdirs()) throw IOException("Cannot create a private KMI-detection workspace")
         try {
-            val bootFile = File(workspace, "input-boot.img")
+            val bootFile = File(workspace, "input-ramdisk.img")
+            val kernelReferenceFile = File(workspace, "kernel-reference-boot.img")
             copyUri(context, bootUri, bootFile, MAX_BOOT_BYTES)
+            if (kernelReferenceUri != null) {
+                copyUri(context, kernelReferenceUri, kernelReferenceFile, MAX_BOOT_BYTES)
+            }
             val helper = File(context.applicationInfo.nativeLibraryDir, "libzkbootpatch.so")
             if (!helper.isFile || !helper.canRead()) {
                 throw IOException("Native boot-patch helper is missing from this APK")
             }
-            val log = runHelper(helper, listOf("--detect-kmi", "--boot", bootFile.absolutePath))
-            val detected = log.lineSequence()
-                .firstOrNull { it.startsWith("DETECTED_KMI=") }
-                ?.substringAfter('=')
-                ?: throw IOException("KMI detection returned no result")
-            detected.takeUnless { it == "NONE" }
+            val arguments = mutableListOf("--detect-kmi", "--boot", bootFile.absolutePath)
+            if (kernelReferenceUri != null) {
+                arguments += listOf("--kernel-reference", kernelReferenceFile.absolutePath)
+            }
+            val log = runHelper(helper, arguments)
+            val values = log.lineSequence()
+                .filter { it.startsWith("DETECTED_KMI=") || it.startsWith("DETECTED_KERNEL_RELEASE=") }
+                .associate { it.substringBefore('=') to it.substringAfter('=') }
+            val detectedKmi = values["DETECTED_KMI"]?.takeUnless { it == "NONE" }
+            val detectedRelease = values["DETECTED_KERNEL_RELEASE"]?.takeUnless { it == "NONE" }
+            if (values.isEmpty()) throw IOException("Kernel detection returned no result")
+            KernelDetection(detectedKmi, detectedRelease)
         } finally {
             workspace.deleteRecursively()
         }
     }
+
+    suspend fun detectKmi(context: Context, bootUri: Uri, kernelReferenceUri: Uri? = null): String? =
+        detectKernel(context, bootUri, kernelReferenceUri).kmi
 
     suspend fun deleteOutput(outputFile: File) = withContext(Dispatchers.IO) {
         val workspace = outputFile.parentFile ?: return@withContext

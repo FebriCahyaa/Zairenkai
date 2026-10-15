@@ -1,82 +1,80 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 # Boot-image patching: implementation and safety contract
 
-## Current capability
+## Supported native patch path
 
-Zairenkai can replace the **kernel payload** in a supported Android `boot.img`
-using its own Kotlin boot-image codec and save the result to a new user-selected
-file. The implementation models `ANDROID!` header versions 0–4. It does not
-modify the ramdisk, inspect/decompress kernel compression, install a kernel
-module, write a partition, or sign an image.
+The experimental Rust backend under `native/bootpatch` modifies a supported
+Android v3/v4 image that already contains a **generic init ramdisk**. It injects
+`zkinit`, `zkfc.ko`, and a diagnostic manifest, preserves the original `/init`
+as `/init.real`, repacks to a new file, then parses the output again. It never
+writes a partition or flashes an image.
 
-The flow is deliberately conservative:
+### Select the right image pair
 
-1. Read both inputs through Android's Storage Access Framework with input-size
-   limits.
-2. Parse the boot header and verify the original image can be reconstructed
-   byte-for-byte.
-3. Replace only the kernel section. Update the kernel size field and, for
-   header versions 0–2, regenerate the legacy SHA-1 image ID and recovery-DTBO
-   offset when applicable.
-4. Parse the generated output again and verify exact reconstruction and that
-   the embedded kernel bytes match the selected payload.
-5. Calculate and display SHA-256, then write the verified bytes to the selected
-   output document. No partition-flashing command exists in this path.
+- **Android 12 and older / a `boot.img` that includes the generic ramdisk:**
+  select that `boot.img` as the patch target. A kernel reference is optional.
+- **Android 13 and newer, where the generic ramdisk is normally in
+  `init_boot.img`:** select `init_boot.img` as the patch target and the matching
+  `boot.img` from the same device and ROM/build as the kernel reference. The
+  helper uses the reference only to identify the kernel release/KMI; output is
+  still an `init_boot`-format image.
+- `vendor_boot.img`, raw CPIO inputs, legacy boot headers v0-v2, and images
+  without a generic `/init` are refused. The helper will not fabricate an empty
+  ramdisk in a kernel-only `boot.img` because that can create a structurally
+  valid output that is not the ramdisk the device actually boots.
 
-## Explicit refusals
+### Module compatibility checks
 
-Patching is refused when the input layout does not round-trip exactly, the
-kernel payload is empty or too large, or the input has trailing bytes (which
-may be an AVB/footer structure) or a non-empty v4 boot signature. Zairenkai
-cannot recompute device-specific AVB/vbmeta signatures and must not imply that
-changing the kernel makes a verified-boot image bootable. If the output is used,
-the owner must understand the device's bootloader-lock and verified-boot
-requirements and keep a known-good stock image for recovery.
+The helper verifies the ELF architecture, selected Android KMI where the kernel
+banner exposes it, module vermagic, and Linux major/minor family. It also
+verifies that repacking did not change the kernel release embedded in a
+`boot.img` target. A vendor release without `androidNN-X.Y` can still be paired
+with a manually selected KMI, but the branch cannot be proved from that banner;
+the kernel module loader must validate module vermagic/symbol CRCs at runtime.
+Linux major/minor alone is not proof that two KMI branches are ABI-compatible.
 
-`vendor_boot` uses a different `VNDRBOOT` format and is not accepted by this
-workflow. An `init_boot` image without a kernel is not a valid target here.
+### Init chainload and runtime status
 
-## Relationship to KernelSU-Next / MagiskBoot
+The injected `zkinit` tries to load `/zkfc.ko` and then executes the preserved
+`/init.real` directly. The patcher refuses to run when `/init` is absent or when
+`init.real` is already present (likely already patched). It does not attempt to
+execute `/system/bin/init` during early boot because `/system` may not yet be
+mounted.
 
-KernelSU-Next's userspace boot-patch path uses a dedicated boot-image parser,
-CPIO manipulation and a repacker, with checks around the ramdisk and the target
-operation. MagiskBoot additionally understands more compression and Android
-boot formats. This implementation adopts the high-level safety ideas (explicit
-input, strict format checks, output verification and no silent partition flash)
-but is **not a port or replacement** for those tools. Their source is licensed
-under GPL terms while Zairenkai's Android app is proprietary; this code is an
-independent implementation against the public AOSP header layout instead of
-copying that code into the app. Reproducing KernelSU-Next's LKM/ramdisk injection
-would require a separately reviewed, license-compatible native backend and a
-Zairenkai-specific early-boot loader contract; merely adding `zkfc.ko` to CPIO
-would not make the module load reliably.
+The root-manager installer prefers a module from the detected KMI and retains
+same-family candidates when the kernel's KMI marker is absent. At boot, service
+tries candidates for the device ABI and Linux family, letting the kernel loader
+reject incompatible vermagic/symbol versions; it stops when `/dev/zkfc` appears
+or when a module inserted successfully but failed to publish the device. It
+logs failures, skips starting `zperfd` when the endpoint is absent, and persists
+daemon startup output to `/data/adb/zperf/zperfd.log`.
 
-## Manual verification
+## Explicit limitations and recovery
+
+This backend is not full MagiskBoot or KernelSU-Next parity. It does not perform
+KMI/`vermagic` rewriting, symbol relocation, module-signature bypass, direct
+partition flashing, or AVB signing. It cannot make a module ABI-compatible by
+renaming a file or changing a metadata string. A successful structural check
+is not proof that a device will boot or that the module will load.
+
+Changing boot images can make the device unbootable if the image pair, module,
+AVB state, or bootloader configuration is wrong. Keep a known-good stock
+`boot.img` and `init_boot.img`, and validate on a device with a recovery path
+before relying on the patched image. Do not flash the generated output until
+its kernel release and module provenance have been confirmed.
+
+## Verification
 
 Run from the repository root:
 
 ```sh
-bash ./gradlew :app:testDebugUnitTest
-bash ./gradlew :app:assembleDebug
+cargo test --manifest-path native/bootpatch/Cargo.toml
+cargo fmt --manifest-path native/bootpatch/Cargo.toml -- --check
+bash -n module/customize.sh module/service.sh
+./gradlew :app:assembleDebug
 ```
 
-The boot codec tests include round-trip checks for legacy and modern headers,
-replacement verification, legacy-ID regeneration, and refusal of unsupported
-trailer/signature cases. Device-specific booting still needs to be tested on an
-unlocked test device with a recoverable stock image; synthetic unit tests cannot
-prove a given kernel matches a given device.
-
-## Native KernelSU-style path (experimental)
-
-The native patch flow is implemented as a separate GPL-3.0-only Rust command
-under `native/bootpatch`, using the pinned `android-bootimg` parser, CPIO
-reader/writer and repacker. The Compose sheet selects a boot image, KMI and a
-matching `zkfc.ko` (or a KMI-specific bundled module), then invokes the helper
-to inject the module and the standalone `zkinit` adapter into the selected
-ramdisk and repack a new image.
-
-`zkinit` attempts to load `/zkfc.ko` and then chainloads `/init.real`, falling
-back to `/system/bin/init` when needed. This is an experimental early-boot
-adapter, not full KernelSU-Next parity: it does not implement kallsyms
-relocation, vermagic repair/retry, direct partition flashing, or AVB signing.
-A structurally validated image is not proof that the device will boot or that
+Native unit tests cover KMI extraction, kernel-family validation, CPIO init
+preservation, and rejection of a ramdisk without `/init`. Android build and
+real-device boot validation remain separate steps. Synthetic tests cannot prove
+that a module matches the kernel configuration or that AVB accepts an image.

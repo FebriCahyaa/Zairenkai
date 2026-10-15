@@ -86,13 +86,16 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var mode by rememberSaveable { mutableStateOf(ZairenkaiInstallMode.FILE) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var kernelReferenceUri by remember { mutableStateOf<Uri?>(null) }
     var moduleUri by remember { mutableStateOf<Uri?>(null) }
     var anyKernelUri by remember { mutableStateOf<Uri?>(null) }
     var imageName by rememberSaveable { mutableStateOf<String?>(null) }
+    var kernelReferenceName by rememberSaveable { mutableStateOf<String?>(null) }
     var moduleName by rememberSaveable { mutableStateOf<String?>(null) }
     var anyKernelName by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedKmi by rememberSaveable { mutableStateOf<String?>(null) }
     var detectedKmi by rememberSaveable { mutableStateOf<String?>(null) }
+    var detectedKernelRelease by rememberSaveable { mutableStateOf<String?>(null) }
     var detectingKmi by remember { mutableStateOf(false) }
     var showKmiPicker by remember { mutableStateOf(false) }
     var patching by remember { mutableStateOf(false) }
@@ -113,8 +116,11 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
             outputFile?.let { previous -> scope.launch { BootPatchRepository.deleteOutput(previous) } }
             imageUri = uri
             imageName = null
+            kernelReferenceUri = null
+            kernelReferenceName = null
             selectedKmi = null
             detectedKmi = null
+            detectedKernelRelease = null
             detectingKmi = true
             status = detectingKmiText
             log = null
@@ -122,8 +128,10 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
             scope.launch {
                 try {
                     imageName = BootPatchRepository.displayName(context, uri)
-                    val candidate = BootPatchRepository.detectKmi(context, uri)
+                    val detection = BootPatchRepository.detectKernel(context, uri, kernelReferenceUri)
+                    val candidate = detection.kmi
                     detectedKmi = candidate
+                    detectedKernelRelease = detection.kernelRelease
                     if (candidate != null && zairenkaiKmiOptions.any { it.id == candidate }) {
                         selectedKmi = candidate
                     }
@@ -135,6 +143,42 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                     status = null
                 } finally {
                     detectingKmi = false
+                }
+            }
+        }
+    }
+    val kernelReferencePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            outputFile?.let { previous -> scope.launch { BootPatchRepository.deleteOutput(previous) } }
+            kernelReferenceUri = uri
+            kernelReferenceName = null
+            selectedKmi = null
+            detectedKmi = null
+            detectedKernelRelease = null
+            outputFile = null
+            status = null
+            log = null
+            scope.launch {
+                kernelReferenceName = runCatching { BootPatchRepository.displayName(context, uri) }.getOrNull()
+                val target = imageUri
+                if (target != null) {
+                    detectingKmi = true
+                    status = detectingKmiText
+                    try {
+                        val detection = BootPatchRepository.detectKernel(context, target, uri)
+                        val candidate = detection.kmi
+                        detectedKmi = candidate
+                        detectedKernelRelease = detection.kernelRelease
+                        if (candidate != null && zairenkaiKmiOptions.any { it.id == candidate }) {
+                            selectedKmi = candidate
+                        }
+                        status = null
+                    } catch (error: Exception) {
+                        log = "KMI detection: ${error.message.orEmpty()}"
+                        status = null
+                    } finally {
+                        detectingKmi = false
+                    }
                 }
             }
         }
@@ -243,6 +287,24 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                     imageName?.let { Text(stringResource(R.string.patch_flow_selected_image, it), style = MaterialTheme.typography.bodySmall) }
 
                     FilledTonalButton(
+                        onClick = { kernelReferencePicker.launch(arrayOf("application/octet-stream", "application/x-android-boot-image", "*/*")) },
+                        enabled = !patching && !detectingKmi,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(ZkIcons.Memory, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.patch_flow_pick_kernel_reference))
+                    }
+                    kernelReferenceName?.let {
+                        Text(stringResource(R.string.patch_flow_selected_kernel_reference, it), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text(
+                        stringResource(R.string.patch_flow_kernel_reference_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    FilledTonalButton(
                         onClick = { modulePicker.launch(arrayOf("application/octet-stream", "*/*")) },
                         enabled = !patching && !detectingKmi,
                         modifier = Modifier.fillMaxWidth(),
@@ -284,6 +346,13 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
+                            detectedKernelRelease?.let { release ->
+                                Text(
+                                    stringResource(R.string.patch_flow_kernel_release_detected, release),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             Text(stringResource(R.string.patch_flow_kmi_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -306,7 +375,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                             log = null
                             scope.launch {
                                 try {
-                                    val result = BootPatchRepository.patch(context, boot, moduleUri, kmi)
+                                    val result = BootPatchRepository.patch(context, boot, kernelReferenceUri, moduleUri, kmi)
                                     outputFile = result.outputFile
                                     log = result.log
                                     status = successText
