@@ -11,6 +11,12 @@
     <string name="home_summary_checking">システムを確認しています…</string>
     <string name="home_summary_no_root">root アクセスが必要です</string>
     <string name="home_summary_ready">すべて準備完了</string>
+    <string name="home_summary_safe_mode">セーフモードで動作しています</string>
+    <string name="home_summary_api_outdated">ZKFC API の更新が必要です</string>
+    <string name="home_section_performance_title">パフォーマンス</string>
+    <string name="home_section_performance_subtitle">有効なプロファイル、熱余裕、ブーストの状態</string>
+    <string name="home_section_device_title">デバイスとフレームワーク</string>
+    <string name="home_section_device_subtitle">カーネル、アーキテクチャ、ZKFC の詳細</string>
     <plurals name="home_summary_attention">
         <item quantity="other">%d 件の項目に対応が必要です</item>
     </plurals>

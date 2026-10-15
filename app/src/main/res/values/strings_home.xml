@@ -11,6 +11,12 @@
     <string name="home_summary_checking">Checking your system…</string>
     <string name="home_summary_no_root">Root access is needed</string>
     <string name="home_summary_ready">All systems ready</string>
+    <string name="home_summary_safe_mode">Performance is running in safe mode</string>
+    <string name="home_summary_api_outdated">ZKFC API needs updating</string>
+    <string name="home_section_performance_title">Performance</string>
+    <string name="home_section_performance_subtitle">Active profile, thermal headroom and boost activity</string>
+    <string name="home_section_device_title">Device &amp; framework</string>
+    <string name="home_section_device_subtitle">Kernel, architecture and ZKFC details</string>
     <plurals name="home_summary_attention">
         <item quantity="one">%d component needs attention</item>
         <item quantity="other">%d components need attention</item>

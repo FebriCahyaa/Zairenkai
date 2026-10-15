@@ -11,6 +11,12 @@
     <string name="home_summary_checking">正在检查系统…</string>
     <string name="home_summary_no_root">需要 root 权限</string>
     <string name="home_summary_ready">系统一切就绪</string>
+    <string name="home_summary_safe_mode">性能当前运行在安全模式</string>
+    <string name="home_summary_api_outdated">需要更新 ZKFC API</string>
+    <string name="home_section_performance_title">性能</string>
+    <string name="home_section_performance_subtitle">当前配置、热余量和加速活动</string>
+    <string name="home_section_device_title">设备与框架</string>
+    <string name="home_section_device_subtitle">内核、架构和 ZKFC 详情</string>
     <plurals name="home_summary_attention">
         <item quantity="other">%d 个组件需要处理</item>
     </plurals>

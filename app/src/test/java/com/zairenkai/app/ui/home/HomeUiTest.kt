@@ -102,6 +102,9 @@ class HomeUiTest {
         show(ready)
         rule.onNodeWithContentDescription(str(R.string.home_greeting_morning)).assertIsDisplayed()
         rule.onNodeWithText(str(R.string.home_summary_ready)).assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.setup_check_all_ok)).assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.home_section_performance_title)).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.home_section_device_title)).performScrollTo().assertIsDisplayed()
         rule.onNodeWithText(str(R.string.profile_balanced_name)).assertIsDisplayed()
         shot("1_ready_light")
         rule.onNodeWithContentDescription(str(R.string.home_thermal_headroom_a11y, "72%")).performScrollTo().assertIsDisplayed()
@@ -174,6 +177,25 @@ class HomeUiTest {
         shot("7_checking_light")
     }
 
+    @Config(qualifiers = "w320dp-h800dp-xxhdpi")
+    @Test
+    fun narrowPhoneKeepsThermalAndBoostMetricsReachable() {
+        show(ready)
+        rule.onNodeWithText(str(R.string.home_thermal_title)).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.dashboard_cpufreq_requests)).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.dashboard_reset_boosts)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Config(qualifiers = "w820dp-h1180dp-xxhdpi")
+    @Test
+    fun wideWindowShowsPerformanceAndDeviceSections() {
+        show(ready)
+        rule.onNodeWithText(str(R.string.home_section_performance_title)).assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.home_mode_label)).assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.home_thermal_title)).assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.home_section_device_title)).performScrollTo().assertIsDisplayed()
+    }
+
     @Test
     fun safeModeAndHoldAreShownAndExitWorks() {
         show(
@@ -182,6 +204,7 @@ class HomeUiTest {
                 probe = ready.probe.copy(engineStatus = ZperfStatus(ok = true, desired = "balance", effective = "stock", hold = "safe_mode", safeMode = true)),
             ),
         )
+        rule.onNodeWithText(str(R.string.home_summary_safe_mode)).assertIsDisplayed()
         rule.onNodeWithText(str(R.string.dashboard_safe_mode_title)).performScrollTo().assertIsDisplayed()
         rule.onNodeWithText(str(R.string.hold_safe_mode)).performScrollTo().assertIsDisplayed()
         rule.onNodeWithText(str(R.string.dashboard_safe_mode_exit)).performScrollTo().performClick()

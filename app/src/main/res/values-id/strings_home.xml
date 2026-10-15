@@ -11,6 +11,12 @@
     <string name="home_summary_checking">Memeriksa sistem…</string>
     <string name="home_summary_no_root">Akses root dibutuhkan</string>
     <string name="home_summary_ready">Semua sistem siap</string>
+    <string name="home_summary_safe_mode">Performa berjalan dalam mode aman</string>
+    <string name="home_summary_api_outdated">API ZKFC perlu diperbarui</string>
+    <string name="home_section_performance_title">Performa</string>
+    <string name="home_section_performance_subtitle">Profil aktif, ruang termal, dan aktivitas boost</string>
+    <string name="home_section_device_title">Perangkat &amp; framework</string>
+    <string name="home_section_device_subtitle">Detail kernel, arsitektur, dan ZKFC</string>
     <plurals name="home_summary_attention">
         <item quantity="other">%d komponen perlu perhatian</item>
     </plurals>

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
  * Home (Beranda), with the same character as setup: the brand backdrop, a
- * greeting that types itself, a gradient one-line summary and the component
- * strip. Below it, in order: what needs attention, the active profile, the
- * thermal envelope as a gauge, the boost state and the device.
+ * greeting that types itself, a gradient one-line summary and explicit
+ * component states. System health stays near the top; performance controls
+ * are grouped together, followed by device/framework facts. Wide layouts use
+ * a balanced two-column performance row; narrow windows stay single-column.
  *
  * Stateless: [HomeScreen] renders an [OverviewState]; the ViewModel drives it
  * in the app and the tests drive it directly. Only fields that were reported
@@ -23,6 +24,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -38,6 +40,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -121,52 +124,128 @@ fun HomeScreen(
 ) {
     val checks = s.checks
     val summary = homeSummary(s.probe.root, checks)
+    val info = s.info
+    val systemSettled = s.rootAvailable && !s.loading
+    val safeModeActive = systemSettled && s.safeMode
+    val apiOutdated = systemSettled && (info?.api?.outdated == true || info?.licenseState == "api_outdated")
+    val ready = !s.loading && summary == HomeSummary.Ready && !safeModeActive && !apiOutdated
+    val notInstalled = checks.settled() && checks.firstOrNull { it.id == CheckId.ZKFC }?.state == CheckState.MISSING
+
     BrandBackdrop(arcY = { -0.34f }, modifier = Modifier.fillMaxSize()) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            TopRow(onOpenSettings)
-            Hero(hour, summary, checks)
-            Spacer(Modifier.height(4.dp))
-            val ready = summary == HomeSummary.Ready
-            if (!ready) StatusCard(s, compact = false, onRetry = onRetry, modifier = Modifier.reveal(1))
-            // Not installed: the ZKFC framework is absent once the checks settle.
-            val notInstalled = checks.settled() && checks.firstOrNull { it.id == CheckId.ZKFC }?.state == CheckState.MISSING
-            if (notInstalled) InstallCard(Modifier.reveal(2))
-            if (s.rootAvailable && !s.loading) {
-                var order = 3
-                if (s.safeMode) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            Column(
+                Modifier
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .align(Alignment.TopCenter)
+                    .verticalScroll(rememberScrollState())
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top + WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                        ),
+                    )
+                    .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                TopRow(onOpenSettings)
+                Hero(hour, summary, checks, safeMode = safeModeActive, apiOutdated = apiOutdated)
+
+                // Surface urgent states before the dashboard's normal status and metrics.
+                if (safeModeActive) {
                     Banner(
-                        stringResource(R.string.dashboard_safe_mode_title), stringResource(R.string.dashboard_safe_mode_body),
+                        stringResource(R.string.dashboard_safe_mode_title),
+                        stringResource(R.string.dashboard_safe_mode_body),
                         action = stringResource(R.string.dashboard_safe_mode_exit) to onExitSafeMode,
-                        modifier = Modifier.reveal(order++),
+                        modifier = Modifier.reveal(1),
                     )
                 }
-                val info = s.info
-                if (info?.api?.outdated == true || info?.licenseState == "api_outdated") {
+                if (apiOutdated) {
                     Banner(
-                        stringResource(R.string.dashboard_api_outdated_title), stringResource(R.string.dashboard_api_outdated_body),
-                        modifier = Modifier.reveal(order++),
+                        stringResource(R.string.dashboard_api_outdated_title),
+                        stringResource(R.string.dashboard_api_outdated_body),
+                        modifier = Modifier.reveal(2),
                     )
                 }
-                s.probe.engineStatus?.takeIf { it.ok }?.let { ModeCard(it, onOpenProfiles, Modifier.reveal(order++)) }
-                // Cards whose source is known to be missing are left out; the
-                // status card above already says what is missing and why.
-                if (s.probe.engineInstalled != false) ThermalCard(s.thermal, Modifier.reveal(order++))
-                if (s.probe.info?.ok == true) BoostCard(s.boost, onResetBoosts, Modifier.reveal(order++))
-                DeviceCard(s, Modifier.reveal(order++))
-                if (ready) StatusCard(s, compact = true, onRetry = onRetry, modifier = Modifier.reveal(order))
+
+                // Keep health at the top in both states. In the ready state it is compact;
+                // warning conditions expand it, so a green summary never hides safe mode/API issues.
+                StatusCard(
+                    s,
+                    compact = ready,
+                    onRetry = onRetry,
+                    modifier = Modifier.reveal(3),
+                )
+
+                // Not installed: the ZKFC framework is absent once the checks settle.
+                if (notInstalled) InstallCard(Modifier.reveal(4))
+
+                if (s.rootAvailable && !s.loading) {
+                    val engineStatus = s.probe.engineStatus?.takeIf { it.ok }
+                    val showThermal = s.probe.engineInstalled != false
+                    val showBoost = s.probe.info?.ok == true
+                    val showPerformance = engineStatus != null || showThermal || showBoost
+
+                    if (showPerformance) {
+                        SectionHeading(
+                            title = stringResource(R.string.home_section_performance_title),
+                            subtitle = stringResource(R.string.home_section_performance_subtitle),
+                            modifier = Modifier.reveal(5),
+                        )
+                    }
+
+                    // Use a balanced two-column layout on wide displays; preserve the single-column
+                    // reading order on phones and narrow split-screen windows.
+                    val orderStart = 6
+                    if (maxWidth >= 760.dp && engineStatus != null && showThermal) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            ModeCard(engineStatus, onOpenProfiles, Modifier.weight(1f).reveal(orderStart))
+                            ThermalCard(s.thermal, Modifier.weight(1f).reveal(orderStart + 1))
+                        }
+                    } else {
+                        engineStatus?.let { ModeCard(it, onOpenProfiles, Modifier.reveal(orderStart)) }
+                        if (showThermal) ThermalCard(s.thermal, Modifier.reveal(orderStart + 1))
+                    }
+                    if (showBoost) BoostCard(s.boost, onResetBoosts, Modifier.reveal(orderStart + 2))
+
+                    SectionHeading(
+                        title = stringResource(R.string.home_section_device_title),
+                        subtitle = stringResource(R.string.home_section_device_subtitle),
+                        modifier = Modifier.reveal(orderStart + 3),
+                    )
+                    DeviceCard(s, Modifier.reveal(orderStart + 4))
+                }
             }
         }
     }
 }
 
 /* ---------------- hero ---------------- */
+
+
+@Composable
+private fun SectionHeading(title: String, subtitle: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 private fun TopRow(onOpenSettings: () -> Unit) {
@@ -186,14 +265,24 @@ private fun TopRow(onOpenSettings: () -> Unit) {
 }
 
 @Composable
-private fun Hero(hour: Int, summary: HomeSummary, checks: List<SetupCheck>) {
-    Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun Hero(
+    hour: Int,
+    summary: HomeSummary,
+    checks: List<SetupCheck>,
+    safeMode: Boolean,
+    apiOutdated: Boolean,
+) {
+    Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TypewriterLine(stringResource(dayPart(hour).greeting), HomeGreetingStyle, caretWhenDone = false)
-        val text = when (summary) {
-            HomeSummary.Checking -> stringResource(R.string.home_summary_checking)
-            HomeSummary.NoRoot -> stringResource(R.string.home_summary_no_root)
-            HomeSummary.Ready -> stringResource(R.string.home_summary_ready)
-            is HomeSummary.Attention -> pluralStringResource(R.plurals.home_summary_attention, summary.count, summary.count)
+        val text = when {
+            safeMode -> stringResource(R.string.home_summary_safe_mode)
+            apiOutdated -> stringResource(R.string.home_summary_api_outdated)
+            else -> when (summary) {
+                HomeSummary.Checking -> stringResource(R.string.home_summary_checking)
+                HomeSummary.NoRoot -> stringResource(R.string.home_summary_no_root)
+                HomeSummary.Ready -> stringResource(R.string.home_summary_ready)
+                is HomeSummary.Attention -> pluralStringResource(R.plurals.home_summary_attention, summary.count, summary.count)
+            }
         }
         Text(
             text,
@@ -244,6 +333,12 @@ private fun ComponentStrip(checks: List<SetupCheck>, modifier: Modifier = Modifi
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(label, style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        state,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = toneInk(tone ?: Tone.NEUTRAL),
+                    )
                 }
             }
         }
@@ -329,14 +424,17 @@ private fun ThermalCard(t: ThermalStatus?, modifier: Modifier = Modifier) {
             return@ZkCard
         }
         val tone = bandTone(t.band)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            HeadroomGauge(t.headroomFraction, toneGraphic(tone), Modifier.size(128.dp))
-            Spacer(Modifier.width(18.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TonePill(bandLabel(t.band)?.let { stringResource(it) } ?: t.band, tone)
-                t.temperatureCelsius?.let { Fact(stringResource(R.string.home_thermal_hottest), "%.1f °C".format(it)) }
-                t.controlZone?.takeIf { it.isNotBlank() }?.let { Fact(stringResource(R.string.dashboard_control_zone), it) }
-                t.criticalTripMdeg?.let { Fact(stringResource(R.string.dashboard_critical_trip), "%.1f °C".format(it / 1000f)) }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val gaugeSize = if (maxWidth < 320.dp) 104.dp else 128.dp
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HeadroomGauge(t.headroomFraction, toneGraphic(tone), Modifier.size(gaugeSize))
+                Spacer(Modifier.width(if (maxWidth < 320.dp) 12.dp else 18.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TonePill(bandLabel(t.band)?.let { stringResource(it) } ?: t.band, tone)
+                    t.temperatureCelsius?.let { Fact(stringResource(R.string.home_thermal_hottest), "%.1f °C".format(it)) }
+                    t.controlZone?.takeIf { it.isNotBlank() }?.let { Fact(stringResource(R.string.dashboard_control_zone), it) }
+                    t.criticalTripMdeg?.let { Fact(stringResource(R.string.dashboard_critical_trip), "%.1f °C".format(it / 1000f)) }
+                }
             }
         }
         t.reason.takeIf { it.isNotBlank() }?.let {
@@ -377,16 +475,46 @@ private fun BoostCard(b: BoostStatus?, onReset: () -> Unit, modifier: Modifier =
             Text(stringResource(R.string.dashboard_boost_unavailable), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             return@ZkCard
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniStat(
-                stringResource(R.string.dashboard_input_boost),
-                stringResource(if (b.inputBoostActive) R.string.state_active else R.string.dashboard_idle),
-                if (b.inputBoostActive) statusInk(ZkGood) else cs.onSurface,
-                Modifier.weight(1f),
-            )
-            MiniStat(stringResource(R.string.dashboard_boosted_tasks), b.boostedTasks.toString(), cs.onSurface, Modifier.weight(1f))
-            MiniStat(stringResource(R.string.dashboard_cpufreq_requests), b.cpufreqRequests.toString(), cs.onSurface, Modifier.weight(1f))
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            if (maxWidth < 320.dp) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        MiniStat(
+                            stringResource(R.string.dashboard_input_boost),
+                            stringResource(if (b.inputBoostActive) R.string.state_active else R.string.dashboard_idle),
+                            if (b.inputBoostActive) statusInk(ZkGood) else cs.onSurface,
+                            Modifier.weight(1f),
+                        )
+                        MiniStat(
+                            stringResource(R.string.dashboard_boosted_tasks),
+                            b.boostedTasks.toString(), cs.onSurface, Modifier.weight(1f),
+                        )
+                    }
+                    MiniStat(
+                        stringResource(R.string.dashboard_cpufreq_requests),
+                        b.cpufreqRequests.toString(), cs.onSurface, Modifier.fillMaxWidth(),
+                    )
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MiniStat(
+                        stringResource(R.string.dashboard_input_boost),
+                        stringResource(if (b.inputBoostActive) R.string.state_active else R.string.dashboard_idle),
+                        if (b.inputBoostActive) statusInk(ZkGood) else cs.onSurface,
+                        Modifier.weight(1f),
+                    )
+                    MiniStat(
+                        stringResource(R.string.dashboard_boosted_tasks),
+                        b.boostedTasks.toString(), cs.onSurface, Modifier.weight(1f),
+                    )
+                    MiniStat(
+                        stringResource(R.string.dashboard_cpufreq_requests),
+                        b.cpufreqRequests.toString(), cs.onSurface, Modifier.weight(1f),
+                    )
+                }
+            }
         }
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.dashboard_thermal), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))

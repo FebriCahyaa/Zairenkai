@@ -11,6 +11,12 @@
     <string name="home_summary_checking">Revisando el sistema…</string>
     <string name="home_summary_no_root">Se necesita acceso root</string>
     <string name="home_summary_ready">Todo el sistema está listo</string>
+    <string name="home_summary_safe_mode">El rendimiento funciona en modo seguro</string>
+    <string name="home_summary_api_outdated">Es necesario actualizar la API de ZKFC</string>
+    <string name="home_section_performance_title">Rendimiento</string>
+    <string name="home_section_performance_subtitle">Perfil activo, margen térmico y actividad de impulso</string>
+    <string name="home_section_device_title">Dispositivo y framework</string>
+    <string name="home_section_device_subtitle">Detalles del kernel, la arquitectura y ZKFC</string>
     <plurals name="home_summary_attention">
         <item quantity="one">%d componente necesita atención</item>
         <item quantity="many">%d componentes necesitan atención</item>
