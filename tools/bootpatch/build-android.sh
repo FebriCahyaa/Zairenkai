@@ -19,7 +19,13 @@ test -d "$ANDROID_NDK_HOME/toolchains/llvm" || {
 }
 
 rustup target add aarch64-linux-android x86_64-linux-android
-cargo ndk -t arm64-v8a -t x86_64 --platform 31 build --manifest-path "$CRATE" --release
+test -f "$CRATE" || {
+    echo "Cargo manifest not found: $CRATE" >&2
+    exit 1
+}
+
+cd "$ROOT/native/bootpatch"
+cargo ndk -t arm64-v8a -t x86_64 --platform 31 build --release
 
 for pair in "aarch64-linux-android:arm64-v8a" "x86_64-linux-android:x86_64"; do
     triple="${pair%%:*}"
