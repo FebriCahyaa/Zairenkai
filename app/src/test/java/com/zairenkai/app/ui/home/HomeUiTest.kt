@@ -181,7 +181,7 @@ class HomeUiTest {
     @Test
     fun narrowPhoneKeepsThermalAndBoostMetricsReachable() {
         show(ready)
-        rule.onNodeWithText(str(R.string.home_thermal_title)).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithContentDescription(str(R.string.home_thermal_headroom_a11y, "72%")).performScrollTo().assertIsDisplayed()
         rule.onNodeWithText(str(R.string.dashboard_cpufreq_requests)).performScrollTo().assertIsDisplayed()
         rule.onNodeWithText(str(R.string.dashboard_reset_boosts)).performScrollTo().assertIsDisplayed()
     }
@@ -192,7 +192,7 @@ class HomeUiTest {
         show(ready)
         rule.onNodeWithText(str(R.string.home_section_performance_title)).assertIsDisplayed()
         rule.onNodeWithText(str(R.string.home_mode_label)).assertIsDisplayed()
-        rule.onNodeWithText(str(R.string.home_thermal_title)).assertIsDisplayed()
+        rule.onNodeWithContentDescription(str(R.string.home_thermal_headroom_a11y, "72%")).performScrollTo().assertIsDisplayed()
         rule.onNodeWithText(str(R.string.home_section_device_title)).performScrollTo().assertIsDisplayed()
     }
 

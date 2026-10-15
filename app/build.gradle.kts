@@ -337,7 +337,9 @@ dependencies {
 // run Robolectric offline against it, instead of letting it download on its own.
 val robolectricRuntime: Configuration by configurations.creating
 dependencies {
+    // Provide every SDK used by @Config tests; offline Robolectric resolves jars by exact filename.
     robolectricRuntime(libs.robolectric.android.all)
+    robolectricRuntime(libs.robolectric.android.api32)
 }
 val robolectricJars = layout.buildDirectory.dir("robolectric-jars")
 val copyRobolectricJars by tasks.registering(Copy::class) {
