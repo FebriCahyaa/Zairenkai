@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="patch_flow_method_file">选择文件（推荐）</string>
+    <string name="patch_flow_method_file_sub">使用匹配的 ZKFC LKM 修补兼容的 boot.img 或 init_boot.img。</string>
+    <string name="patch_flow_method_direct">直接安装</string>
+    <string name="patch_flow_method_direct_sub">直接安装到当前活动的启动槽位。</string>
+    <string name="patch_flow_method_inactive">安装到非活动槽位（OTA 后）</string>
+    <string name="patch_flow_method_inactive_sub">系统更新后准备下一个槽位。</string>
+    <string name="patch_flow_method_anykernel">安装 AnyKernel（.zip）</string>
+    <string name="patch_flow_method_anykernel_sub">在 root 管理器中打开兼容的 AnyKernel 包。</string>
+    <string name="patch_flow_mode_unavailable">此版本暂不可用</string>
+    <string name="patch_flow_summary">选择匹配的 boot/init_boot 镜像和针对目标 KMI 构建的 ZKFC 内核模块，然后生成修补后的镜像。Zairenkai 只保存文件，不会直接刷写分区。</string>
+    <string name="patch_flow_title">将 Zairenkai 注入启动镜像</string>
+    <string name="patch_flow_pick_image">选择 boot.img 或 init_boot.img</string>
+    <string name="patch_flow_selected_image">镜像：%1$s</string>
+    <string name="patch_flow_pick_module">选择匹配的 zkfc.ko（此 APK 已包含所选 KMI 时可选）</string>
+    <string name="patch_flow_selected_module">模块：%1$s</string>
+    <string name="patch_flow_kmi_title">目标内核 KMI</string>
+    <string name="patch_flow_kmi_not_selected">请选择此设备的 KMI</string>
+    <string name="patch_flow_kmi_choose">选择 KMI</string>
+    <string name="patch_flow_kmi_help">重新打包前会将所选 KMI 与模块 vermagic 进行校验。</string>
+    <string name="patch_flow_kmi_dialog_title">选择内核 KMI</string>
+    <string name="patch_flow_warning">请使用来自同一设备和 ROM 的镜像。不会重新签署 AVB，因此需要已解锁的引导加载程序或兼容的签名方案。模块签名强制策略或 KMI 不匹配可能导致模块无法加载。请保留可正常恢复的镜像。</string>
+    <string name="patch_flow_action">修补镜像</string>
+    <string name="patch_flow_running">正在解包、注入 ZKFC 并重新打包…</string>
+    <string name="patch_flow_success">修补完成且结构校验通过。请选择保存输出镜像的位置。</string>
+    <string name="patch_flow_save">保存修补后的镜像</string>
+    <string name="patch_flow_saving">正在保存修补后的镜像…</string>
+    <string name="patch_flow_saved">修补后的镜像已成功保存。</string>
+    <string name="patch_flow_error">修补失败</string>
+    <string name="patch_flow_direct_unavailable">直接刷写和安装到非活动槽位尚未实现。请使用文件修补或兼容的 AnyKernel 包。</string>
+    <string name="patch_flow_kmi_detecting">正在从所选镜像检测 KMI…</string>
+    <string name="patch_flow_kmi_detected">从镜像检测到的 KMI：%1$s</string>
+    <string name="patch_flow_kmi_manual">无法从此镜像检测内核 KMI。请手动选择目标 KMI。</string>
+<string name="patch_flow_module_bundled_hint">发布版 APK 可以使用与所选 KMI 匹配的内置模块。仅在需要覆盖内置模块或没有匹配模块时选择文件。</string></resources>

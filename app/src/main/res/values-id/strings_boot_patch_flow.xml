@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="patch_flow_method_file">Pilih berkas (disarankan)</string>
+    <string name="patch_flow_method_file_sub">Patch boot.img atau init_boot.img yang cocok dengan LKM ZKFC.</string>
+    <string name="patch_flow_method_direct">Pemasangan langsung</string>
+    <string name="patch_flow_method_direct_sub">Pasang langsung ke slot boot aktif.</string>
+    <string name="patch_flow_method_inactive">Pasang ke slot nonaktif (setelah OTA)</string>
+    <string name="patch_flow_method_inactive_sub">Siapkan slot berikutnya setelah pembaruan sistem.</string>
+    <string name="patch_flow_method_anykernel">Pasang AnyKernel (.zip)</string>
+    <string name="patch_flow_method_anykernel_sub">Buka paket AnyKernel yang kompatibel melalui root manager.</string>
+    <string name="patch_flow_mode_unavailable">Belum tersedia dalam versi ini</string>
+    <string name="patch_flow_summary">Pilih image boot/init_boot yang sesuai dan modul kernel ZKFC yang dibangun untuk KMI target, lalu buat image hasil patch. Zairenkai hanya menyimpan berkas dan tidak melakukan flashing partisi.</string>
+    <string name="patch_flow_title">Patch Zairenkai ke image boot</string>
+    <string name="patch_flow_pick_image">Pilih boot.img atau init_boot.img</string>
+    <string name="patch_flow_selected_image">Image: %1$s</string>
+    <string name="patch_flow_pick_module">Pilih zkfc.ko yang sesuai (opsional jika APK ini menyertakan KMI terpilih)</string>
+    <string name="patch_flow_selected_module">Modul: %1$s</string>
+    <string name="patch_flow_kmi_title">KMI kernel target</string>
+    <string name="patch_flow_kmi_not_selected">Pilih KMI perangkat ini</string>
+    <string name="patch_flow_kmi_choose">Pilih KMI</string>
+    <string name="patch_flow_kmi_help">KMI terpilih akan dicocokkan dengan vermagic modul sebelum repack.</string>
+    <string name="patch_flow_kmi_dialog_title">Pilih KMI kernel</string>
+    <string name="patch_flow_warning">Gunakan image dari perangkat dan ROM yang sama. AVB tidak ditandatangani ulang: diperlukan bootloader terbuka atau konfigurasi penandatanganan yang kompatibel. Kebijakan tanda tangan modul atau KMI yang tidak cocok dapat mencegah modul dimuat. Simpan image pemulihan yang diketahui berfungsi.</string>
+    <string name="patch_flow_action">Patch image</string>
+    <string name="patch_flow_running">Membongkar, menyisipkan ZKFC, dan repack…</string>
+    <string name="patch_flow_success">Patch selesai dan struktur output terverifikasi. Pilih lokasi untuk menyimpan image.</string>
+    <string name="patch_flow_save">Simpan image hasil patch</string>
+    <string name="patch_flow_saving">Menyimpan image hasil patch…</string>
+    <string name="patch_flow_saved">Image hasil patch berhasil disimpan.</string>
+    <string name="patch_flow_error">Patch gagal</string>
+    <string name="patch_flow_direct_unavailable">Flashing langsung dan pemasangan ke slot nonaktif belum diterapkan. Gunakan patch berkas atau paket AnyKernel yang kompatibel.</string>
+    <string name="patch_flow_kmi_detecting">Mendeteksi KMI dari image yang dipilih…</string>
+    <string name="patch_flow_kmi_detected">KMI terdeteksi dari image: %1$s</string>
+    <string name="patch_flow_kmi_manual">KMI kernel tidak dapat dideteksi dari image ini. Pilih KMI target secara manual.</string>
+<string name="patch_flow_module_bundled_hint">APK rilis dapat memakai modul bawaan yang cocok dengan KMI terpilih. Pilih berkas untuk menggantinya atau jika modul bawaan tidak tersedia.</string></resources>

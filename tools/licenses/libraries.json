@@ -2323,6 +2323,26 @@
      "url": "https://openfontlicense.org"
     }
    ]
+  },
+  {
+   "id": "native:zkbootpatch",
+   "version": "0.2.0",
+   "name": "Zairenkai boot-image patcher and init adapter",
+   "description": "Standalone GPL-3.0-only Android boot-image patcher using android-bootimg and a Zairenkai init-chainloading adapter derived in part from KernelSU-Next ksuinit.",
+   "developers": [
+    "FebriCahyaa",
+    "5ec1cff",
+    "KernelSU-Next contributors"
+   ],
+   "website": "https://github.com/FebriCahyaa/Zairenkai",
+   "source": "https://github.com/KernelSU-Next/KernelSU-Next",
+   "licenses": [
+    {
+     "spdx": "GPL-3.0-only",
+     "name": "GNU General Public License v3.0 only",
+     "url": "https://www.gnu.org/licenses/gpl-3.0.html"
+    }
+   ]
   }
  ]
 }

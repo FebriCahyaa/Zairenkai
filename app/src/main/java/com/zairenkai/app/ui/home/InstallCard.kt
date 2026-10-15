@@ -87,7 +87,7 @@ fun InstallCard(modifier: Modifier = Modifier) {
             }
         }
     }
-    if (open) InstallSheet(onDismiss = { open = false })
+    if (open) ZairenkaiBootPatchSheet(onDismiss = { open = false })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

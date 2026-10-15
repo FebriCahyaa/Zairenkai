@@ -29,3 +29,8 @@ secring.*
 
 /rust/target/
 __pycache__/
+
+# Generated Android boot-patch helper executables
+/app/src/main/jniLibs/
+/native/bootpatch/target/
+/app/src/main/assets/zkfc/

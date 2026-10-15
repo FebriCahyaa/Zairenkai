@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="patch_flow_method_file">ファイルを選択（推奨）</string>
+    <string name="patch_flow_method_file_sub">対応するZKFC LKMを使用してboot.imgまたはinit_boot.imgをパッチします。</string>
+    <string name="patch_flow_method_direct">直接インストール</string>
+    <string name="patch_flow_method_direct_sub">現在アクティブなブートスロットへ直接インストールします。</string>
+    <string name="patch_flow_method_inactive">非アクティブスロットへインストール（OTA後）</string>
+    <string name="patch_flow_method_inactive_sub">システム更新後に次のスロットを準備します。</string>
+    <string name="patch_flow_method_anykernel">AnyKernelをインストール（.zip）</string>
+    <string name="patch_flow_method_anykernel_sub">互換性のあるAnyKernelパッケージをrootマネージャーで開きます。</string>
+    <string name="patch_flow_mode_unavailable">このバージョンでは利用できません</string>
+    <string name="patch_flow_summary">対象KMI向けにビルドされたZKFCモジュールと対応するboot/init_bootイメージを選択し、パッチ済みイメージを作成します。Zairenkaiはファイルを保存するだけで、パーティションを書き換えません。</string>
+    <string name="patch_flow_title">ブートイメージにZairenkaiをパッチ</string>
+    <string name="patch_flow_pick_image">boot.imgまたはinit_boot.imgを選択</string>
+    <string name="patch_flow_selected_image">イメージ: %1$s</string>
+    <string name="patch_flow_pick_module">対応する zkfc.ko を選択（この APK に対象 KMI が含まれる場合は任意）</string>
+    <string name="patch_flow_selected_module">モジュール: %1$s</string>
+    <string name="patch_flow_kmi_title">対象カーネルKMI</string>
+    <string name="patch_flow_kmi_not_selected">このデバイスのKMIを選択してください</string>
+    <string name="patch_flow_kmi_choose">KMIを選択</string>
+    <string name="patch_flow_kmi_help">再パック前に選択したKMIとモジュールのvermagicを照合します。</string>
+    <string name="patch_flow_kmi_dialog_title">カーネルKMIを選択</string>
+    <string name="patch_flow_warning">同じデバイスとROMのイメージを使用してください。AVBの再署名は行いません。ブートローダーの解除または互換性のある署名設定が必要です。モジュール署名の強制やKMI不一致により読み込みに失敗する場合があります。正常起動できる復旧用イメージを保存してください。</string>
+    <string name="patch_flow_action">イメージをパッチ</string>
+    <string name="patch_flow_running">展開、ZKFC追加、再パック中…</string>
+    <string name="patch_flow_success">パッチが完了し、構造検証に成功しました。出力イメージの保存先を選択してください。</string>
+    <string name="patch_flow_save">パッチ済みイメージを保存</string>
+    <string name="patch_flow_saving">パッチ済みイメージを保存中…</string>
+    <string name="patch_flow_saved">パッチ済みイメージを保存しました。</string>
+    <string name="patch_flow_error">パッチに失敗しました</string>
+    <string name="patch_flow_direct_unavailable">直接書き込みと非アクティブスロットへのインストールはまだ実装されていません。ファイルパッチまたは互換性のあるAnyKernelパッケージを使用してください。</string>
+    <string name="patch_flow_kmi_detecting">選択したイメージから KMI を検出しています…</string>
+    <string name="patch_flow_kmi_detected">イメージから検出した KMI: %1$s</string>
+    <string name="patch_flow_kmi_manual">このイメージからカーネル KMI を検出できませんでした。対象の KMI を手動で選択してください。</string>
+<string name="patch_flow_module_bundled_hint">リリース APK は選択した KMI に対応する同梱モジュールを使用できます。上書きする場合、または同梱モジュールがない場合のみファイルを選択してください。</string></resources>

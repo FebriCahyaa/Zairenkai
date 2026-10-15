@@ -65,3 +65,18 @@ replacement verification, legacy-ID regeneration, and refusal of unsupported
 trailer/signature cases. Device-specific booting still needs to be tested on an
 unlocked test device with a recoverable stock image; synthetic unit tests cannot
 prove a given kernel matches a given device.
+
+## Native KernelSU-style path (experimental)
+
+The native patch flow is implemented as a separate GPL-3.0-only Rust command
+under `native/bootpatch`, using the pinned `android-bootimg` parser, CPIO
+reader/writer and repacker. The Compose sheet selects a boot image, KMI and a
+matching `zkfc.ko` (or a KMI-specific bundled module), then invokes the helper
+to inject the module and the standalone `zkinit` adapter into the selected
+ramdisk and repack a new image.
+
+`zkinit` attempts to load `/zkfc.ko` and then chainloads `/init.real`, falling
+back to `/system/bin/init` when needed. This is an experimental early-boot
+adapter, not full KernelSU-Next parity: it does not implement kallsyms
+relocation, vermagic repair/retry, direct partition flashing, or AVB signing.
+A structurally validated image is not proof that the device will boot or that

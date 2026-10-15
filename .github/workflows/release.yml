@@ -33,7 +33,35 @@ jobs:
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+      - name: Download KMI-specific zkfc.ko artifacts
+        uses: actions/download-artifact@v8.0.0
+        with:
+          pattern: '*-zkfc-lkm'
+          path: lkm-artifacts
+      - name: Lay out .ko into module/lkm/<kmi>-<abidir>
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for d in lkm-artifacts/*-zkfc-lkm; do
+            base=$(basename "$d")
+            arch=${base%%-*}
+            rest=${base#*-}; kmi=${rest%-zkfc-lkm}
+            case "$arch" in
+              aarch64) abidir=arm64 ;;
+              x86_64)  abidir=x86_64 ;;
+              *) echo "unknown arch '$arch' in $base"; continue ;;
+            esac
+            ko=$(find "$d" -name '*_zkfc.ko' | head -1)
+            [ -f "$ko" ] || { echo "no .ko in $d"; continue; }
+            mkdir -p "module/lkm/$kmi-$abidir"
+            cp "$ko" "module/lkm/$kmi-$abidir/zkfc.ko"
+          done
+          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
+      - name: Stage KMI-specific LKM assets in the manager APK
+        run: tools/bootpatch/stage-module-assets.sh module
+      - name: Build boot-patch backend
+        uses: ./.github/actions/build-bootpatch
       - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Validate release signing secrets
@@ -186,31 +214,6 @@ jobs:
           set -euo pipefail
           mkdir -p module/zperf/catalog
           cp rust/zperfd/profiles/*.toml module/zperf/catalog/
-
-      - name: Download zkfc.ko artifacts
-        uses: actions/download-artifact@v8.0.0
-        with:
-          pattern: '*-zkfc-lkm'
-          path: lkm-artifacts
-
-      - name: Lay out .ko into module/lkm/<kmi>-<abidir>
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          for d in lkm-artifacts/*-zkfc-lkm; do
-            base=$(basename "$d")
-            arch=${base%%-*}
-            rest=${base#*-}; kmi=${rest%-zkfc-lkm}
-            case "$arch" in
-              aarch64) abidir=arm64 ;;
-              x86_64)  abidir=x86_64 ;;
-              *) echo "unknown arch '$arch' in $base"; continue ;;
-            esac
-            ko=$(find "$d" -name '*_zkfc.ko' | head -1)
-            [ -f "$ko" ] || { echo "no .ko in $d"; continue; }
-            mkdir -p "module/lkm/$kmi-$abidir"
-            cp "$ko" "module/lkm/$kmi-$abidir/zkfc.ko"
-          done
 
       - name: Package module + checksum manifest
         run: |

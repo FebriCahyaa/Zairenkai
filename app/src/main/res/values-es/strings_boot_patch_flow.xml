@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="patch_flow_method_file">Seleccionar archivo (recomendado)</string>
+    <string name="patch_flow_method_file_sub">Parchea un boot.img o init_boot.img compatible con el LKM ZKFC correspondiente.</string>
+    <string name="patch_flow_method_direct">Instalación directa</string>
+    <string name="patch_flow_method_direct_sub">Instala directamente en la ranura de arranque activa.</string>
+    <string name="patch_flow_method_inactive">Instalar en ranura inactiva (después de OTA)</string>
+    <string name="patch_flow_method_inactive_sub">Prepara la siguiente ranura tras una actualización del sistema.</string>
+    <string name="patch_flow_method_anykernel">Instalar AnyKernel (.zip)</string>
+    <string name="patch_flow_method_anykernel_sub">Abre un paquete AnyKernel compatible en tu gestor root.</string>
+    <string name="patch_flow_mode_unavailable">No disponible en esta versión</string>
+    <string name="patch_flow_summary">Selecciona una imagen boot/init_boot compatible y el módulo ZKFC compilado para el KMI objetivo; después genera una imagen parcheada. Zairenkai guarda un archivo y no flashea particiones.</string>
+    <string name="patch_flow_title">Integrar Zairenkai en la imagen de arranque</string>
+    <string name="patch_flow_pick_image">Seleccionar boot.img o init_boot.img</string>
+    <string name="patch_flow_selected_image">Imagen: %1$s</string>
+    <string name="patch_flow_pick_module">Selecciona un zkfc.ko compatible (opcional si el APK incluye el KMI elegido)</string>
+    <string name="patch_flow_selected_module">Módulo: %1$s</string>
+    <string name="patch_flow_kmi_title">KMI del kernel objetivo</string>
+    <string name="patch_flow_kmi_not_selected">Selecciona el KMI del dispositivo</string>
+    <string name="patch_flow_kmi_choose">Elegir KMI</string>
+    <string name="patch_flow_kmi_help">El KMI elegido se compara con vermagic del módulo antes de reconstruir la imagen.</string>
+    <string name="patch_flow_kmi_dialog_title">Seleccionar KMI del kernel</string>
+    <string name="patch_flow_warning">Usa una imagen del mismo dispositivo y ROM. AVB no se vuelve a firmar: se requiere un bootloader desbloqueado o una configuración de firma compatible. La aplicación puede fallar por la verificación de firmas de módulos o por un KMI distinto. Conserva una imagen de recuperación funcional.</string>
+    <string name="patch_flow_action">Parchear imagen</string>
+    <string name="patch_flow_running">Extrayendo, añadiendo ZKFC y reconstruyendo…</string>
+    <string name="patch_flow_success">Parche completado y estructura verificada. Elige dónde guardar la imagen resultante.</string>
+    <string name="patch_flow_save">Guardar imagen parcheada</string>
+    <string name="patch_flow_saving">Guardando imagen parcheada…</string>
+    <string name="patch_flow_saved">Imagen parcheada guardada correctamente.</string>
+    <string name="patch_flow_error">Error al parchear</string>
+    <string name="patch_flow_direct_unavailable">La escritura directa y la instalación en la ranura inactiva aún no están implementadas. Usa el parcheo de archivos o un paquete AnyKernel compatible.</string>
+    <string name="patch_flow_kmi_detecting">Detectando el KMI de la imagen seleccionada…</string>
+    <string name="patch_flow_kmi_detected">KMI detectado en la imagen: %1$s</string>
+    <string name="patch_flow_kmi_manual">No se pudo detectar el KMI del kernel en esta imagen. Selecciona el KMI de destino manualmente.</string>
+<string name="patch_flow_module_bundled_hint">Un APK de lanzamiento puede usar el módulo incluido para el KMI seleccionado. Elige un archivo para sustituirlo o si no hay uno compatible incluido.</string></resources>

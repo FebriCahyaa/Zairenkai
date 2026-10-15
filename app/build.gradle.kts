@@ -199,6 +199,10 @@ android {
         language { enableSplit = false }
     }
     packaging {
+        // Standalone GPL boot-patch executables are packaged under jniLibs so
+        // Android extracts them to nativeLibraryDir for direct process execution.
+        // They are intentionally not loaded into the proprietary JVM process.
+        jniLibs { useLegacyPackaging = true }
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
 }

@@ -30,6 +30,9 @@ on:
       - "gradle.properties"
       - ".github/workflows/app-apks.yml"
       - ".github/workflows/build-module.yml"
+      - ".github/actions/build-bootpatch/action.yml"
+      - "native/bootpatch/**"
+      - "tools/bootpatch/**"
   workflow_dispatch:
 
 permissions:
@@ -87,7 +90,20 @@ jobs:
       - name: Install SDK platform 37
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+      - name: Download module artifact for embedded KMI assets
+        uses: actions/download-artifact@v8.0.0
+        with:
+          name: module-zip
+          path: module-artifact
+      - name: Stage module package and embedded KMI assets
+        run: |
+          set -euo pipefail
+          cp module-artifact/Zairenkai-module.zip ./Zairenkai-module.zip
+          cp module-artifact/SHA256SUMS ./SHA256SUMS
+          tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip
+      - name: Build boot-patch backend
+        uses: ./.github/actions/build-bootpatch
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
@@ -97,11 +113,6 @@ jobs:
       # Optimized, debug-signed, NOT debuggable — safe to hand out, ~4 MB.
       - name: Build debug-signed APK
         run: ./gradlew :app:assembleStandardPreview --stacktrace
-
-      - name: Download module artifact
-        uses: actions/download-artifact@v8.0.0
-        with:
-          name: module-zip
 
       - name: Stage APK, manifest and checksums
         id: stage
@@ -170,7 +181,20 @@ jobs:
       - name: Install SDK platform 37
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+      - name: Download module artifact for embedded KMI assets
+        uses: actions/download-artifact@v8.0.0
+        with:
+          name: module-zip
+          path: module-artifact
+      - name: Stage module package and embedded KMI assets
+        run: |
+          set -euo pipefail
+          cp module-artifact/Zairenkai-module.zip ./Zairenkai-module.zip
+          cp module-artifact/SHA256SUMS ./SHA256SUMS
+          tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip
+      - name: Build boot-patch backend
+        uses: ./.github/actions/build-bootpatch
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
@@ -287,11 +311,6 @@ jobs:
             exit 1
           }
           echo "Verified: APK signature schemes v1, v2 and v3 are present; signer matches the configured keystore."
-
-      - name: Download module artifact
-        uses: actions/download-artifact@v8.0.0
-        with:
-          name: module-zip
 
       - name: Stage APK, manifest and checksums
         id: stage
