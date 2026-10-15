@@ -133,6 +133,7 @@ fun HomeScreen(
 
     BrandBackdrop(arcY = { -0.34f }, modifier = Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            val dashboardMaxWidth = this.maxWidth
             Column(
                 Modifier
                     .widthIn(max = 760.dp)
@@ -197,7 +198,7 @@ fun HomeScreen(
                     // Use a balanced two-column layout on wide displays; preserve the single-column
                     // reading order on phones and narrow split-screen windows.
                     val orderStart = 6
-                    if (maxWidth >= 760.dp && engineStatus != null && showThermal) {
+                    if (dashboardMaxWidth >= 760.dp && engineStatus != null && showThermal) {
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -425,10 +426,11 @@ private fun ThermalCard(t: ThermalStatus?, modifier: Modifier = Modifier) {
         }
         val tone = bandTone(t.band)
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val gaugeSize = if (maxWidth < 320.dp) 104.dp else 128.dp
+            val cardMaxWidth = this.maxWidth
+            val gaugeSize = if (cardMaxWidth < 320.dp) 104.dp else 128.dp
             Row(verticalAlignment = Alignment.CenterVertically) {
                 HeadroomGauge(t.headroomFraction, toneGraphic(tone), Modifier.size(gaugeSize))
-                Spacer(Modifier.width(if (maxWidth < 320.dp) 12.dp else 18.dp))
+                Spacer(Modifier.width(if (cardMaxWidth < 320.dp) 12.dp else 18.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TonePill(bandLabel(t.band)?.let { stringResource(it) } ?: t.band, tone)
                     t.temperatureCelsius?.let { Fact(stringResource(R.string.home_thermal_hottest), "%.1f °C".format(it)) }

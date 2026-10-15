@@ -29,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import com.zairenkai.app.R
 import com.zairenkai.app.ui.icons.ZkIcons
 
@@ -76,17 +75,15 @@ fun LanguageSheet(onDismiss: () -> Unit) {
                         stringResource(R.string.language_system_current, system.getDisplayName(system))
                     } else null
                     LanguageOption(title, subtitle, selected = lang == current) {
-                        // Run the transition in the Activity scope, not the sheet's
-                        // composition scope. onDismiss removes LanguageSheet from
-                        // composition and would cancel a coroutine launched by
-                        // rememberCoroutineScope before the locale was applied.
-                        val owner = activity
-                        val transitionScope = owner?.lifecycleScope ?: scope
-                        transitionScope.launch {
+                        scope.launch {
                             sheet.hide()
-                            onDismiss()
+                            val owner = activity
                             if (lang != current && owner != null) {
+                                // AppLocale.apply persists the preference before Activity.recreate().
+                                // Recreation also dismisses this sheet and reloads localized resources.
                                 AppLocale.apply(owner, lang)
+                            } else {
+                                onDismiss()
                             }
                         }
                     }

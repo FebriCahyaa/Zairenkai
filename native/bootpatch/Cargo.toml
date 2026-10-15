@@ -20,7 +20,7 @@ bench = false
 [dependencies]
 anyhow = "1"
 regex-lite = "0.1"
-rustix = { git = "https://github.com/KernelSU2/rustix.git", rev = "4a53fbc", features = ["fs", "runtime", "system"] }
+rustix = { git = "https://github.com/KernelSU2/rustix.git", rev = "4a53fbc7cb7a07cabe87125cc21dbc27db316259", features = ["fs", "runtime", "system"] }
 android-bootimg = { git = "https://github.com/5ec1cff/android_bootimg", rev = "150425b027c76ea104c82e408571651f2181b2c2" }
 
 [profile.release]
