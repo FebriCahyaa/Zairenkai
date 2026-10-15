@@ -105,10 +105,19 @@ fn run() -> Result<()> {
     validate_module_arch(&module_data)?;
     validate_init_arch(&init_data)?;
     let expected_init_machine = u16::from_le_bytes([init_data[18], init_data[19]]);
-    let module_kmi = detect_module_kmi(&module_data)
-        .context("could not determine ZKFC module KMI from its vermagic")?;
-    ensure!(module_kmi == kmi,
-        "KMI mismatch: selected {kmi}, but module vermagic identifies {module_kmi}");
+    let branch_verified = validate_module_kmi(&module_data, &kmi)
+        .context("could not validate ZKFC module vermagic against the selected KMI")?;
+    if branch_verified {
+        println!("- ZKFC module vermagic confirms Android KMI branch: {kmi}");
+    } else {
+        let version = kmi.split_once('-')
+            .map(|(_, version)| version)
+            .unwrap_or("unknown");
+        println!("- WARNING: ZKFC vermagic confirms Linux {version}, but does not encode the Android KMI branch.");
+        println!("- The selected branch {kmi} cannot be verified from vermagic alone.");
+        println!("- Continue only if this module was built specifically for {kmi}.");
+    }
+    let module_kmi = kmi.clone();
     println!("- Preparing boot image parser");
 
     let boot_image = BootImage::parse(&boot_data).context("unsupported or malformed Android boot image")?;
@@ -260,30 +269,69 @@ fn validate_init_arch(data: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn detect_module_kmi(data: &[u8]) -> Result<String> {
+fn validate_module_kmi(data: &[u8], expected_kmi: &str) -> Result<bool> {
     let marker = b"vermagic=";
     let start = data.windows(marker.len()).position(|window| window == marker)
         .ok_or_else(|| anyhow!("missing vermagic field in module .modinfo"))?;
     let rest = &data[start + marker.len()..];
     let end = rest.iter().position(|byte| *byte == 0)
         .ok_or_else(|| anyhow!("unterminated vermagic field"))?;
-    let vermagic = std::str::from_utf8(&rest[..end]).context("module vermagic is not ASCII/UTF-8")?;
+    let vermagic = std::str::from_utf8(&rest[..end])
+        .context("module vermagic is not ASCII/UTF-8")?;
     let release = vermagic.split_whitespace().next().unwrap_or_default();
     let release_parts: Vec<&str> = release.split('-').collect();
-    let version = release_parts.first().context("vermagic has no kernel release")?;
-    let mut version_parts = version.split('.');
-    let major = version_parts.next().context("vermagic has no major version")?;
-    let minor = version_parts.next().context("vermagic has no minor version")?;
-    ensure!(!major.is_empty() && !minor.is_empty()
-        && major.bytes().all(|b| b.is_ascii_digit())
-        && minor.bytes().all(|b| b.is_ascii_digit()),
-        "invalid kernel version in module vermagic");
-    let android = release_parts.iter()
-        .find(|part| part.strip_prefix("android").is_some_and(|digits| !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())))
-        .context("vermagic does not identify an Android KMI branch")?;
-    Ok(format!("{android}-{major}.{minor}"))
-}
+    let version = release_parts.first()
+        .context("vermagic has no kernel release")?;
 
+    let mut version_parts = version.split('.');
+    let major = version_parts.next()
+        .context("vermagic has no major version")?;
+    let minor = version_parts.next()
+        .context("vermagic has no minor version")?;
+
+    ensure!(
+        !major.is_empty()
+            && !minor.is_empty()
+            && major.bytes().all(|b| b.is_ascii_digit())
+            && minor.bytes().all(|b| b.is_ascii_digit()),
+        "invalid kernel version in module vermagic"
+    );
+
+    let actual_version = format!("{major}.{minor}");
+    let (expected_android, expected_version) = expected_kmi
+        .split_once('-')
+        .context("selected KMI must use androidNN-X.Y format")?;
+    let android_digits = expected_android.strip_prefix("android").unwrap_or_default();
+
+    ensure!(
+        !android_digits.is_empty()
+            && android_digits.bytes().all(|b| b.is_ascii_digit()),
+        "invalid Android KMI branch: {expected_android}"
+    );
+    ensure!(
+        actual_version == expected_version,
+        "module vermagic targets Linux {actual_version}, but selected KMI {expected_kmi} requires Linux {expected_version}"
+    );
+
+    let actual_android = release_parts.iter()
+        .find(|part| {
+            part.strip_prefix("android").is_some_and(|digits| {
+                !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+            })
+        })
+        .copied();
+
+    match actual_android {
+        Some(branch) => {
+            ensure!(
+                branch == expected_android,
+                "module vermagic identifies {branch}-{actual_version}, but selected KMI is {expected_kmi}"
+            );
+            Ok(true)
+        }
+        None => Ok(false),
+    }
+}
 
 /// Match KernelSU-Next's kernel-byte KMI detection so a boot.img with a kernel
 /// is checked independently of the user-selected module KMI. init_boot and
@@ -348,8 +396,8 @@ fn inject_runtime_payloads(
     }
     validate_init_arch(&init_data)?;
     validate_module_arch(&module_data)?;
-    ensure!(detect_module_kmi(&module_data)? == module_kmi,
-        "module KMI does not match requested boot-patch KMI");
+    validate_module_kmi(&module_data, module_kmi)
+        .context("module vermagic does not match requested boot-patch KMI")?;
 
     println!("- Installing Zairenkai init wrapper");
     cpio.add(INIT_ENTRY, CpioEntry::regular(0o755, Box::new(init_data)))
@@ -413,8 +461,8 @@ fn verify_output(
     let module = cpio.entry_by_name(MODULE_ENTRY).and_then(CpioEntry::data)
         .ok_or_else(|| anyhow!("patched image contains an unreadable zkfc.ko"))?;
     validate_module_arch(module).context("patched module verification failed")?;
-    ensure!(detect_module_kmi(module)? == expected_kmi,
-        "patched image contains a ZKFC module for a different KMI");
+    validate_module_kmi(module, expected_kmi)
+        .context("patched image contains a ZKFC module with incompatible vermagic")?;
 
     ensure!(cpio.exists(INIT_ENTRY), "patched image does not contain the Zairenkai init wrapper");
     ensure!(cpio.exists(ORIGINAL_INIT_ENTRY) == expected_original_init,
@@ -469,16 +517,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn detects_supported_kmi_from_vermagic() {
-        let mut module = b"prefix-vermagic=6.6.42-android15-12-gabcdef SMP preempt mod_unload\0suffix".to_vec();
-        assert_eq!(detect_module_kmi(&module).unwrap(), "android15-6.6");
-        module.clear();
+    fn validates_android_branch_when_vermagic_contains_it() {
+        let module = b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0";
+        assert!(validate_module_kmi(module, "android15-6.6").unwrap());
     }
 
     #[test]
-    fn rejects_module_for_other_kmi() {
-        let module = b"vermagic=5.10.198-android12-9-gabc SMP preempt\0";
-        assert_eq!(detect_module_kmi(module).unwrap(), "android12-5.10");
+    fn allows_missing_branch_only_when_kernel_version_matches() {
+        let module = b"vermagic=5.10.198-gabc SMP preempt\0";
+        assert!(!validate_module_kmi(module, "android12-5.10").unwrap());
+        assert!(validate_module_kmi(module, "android13-5.15").is_err());
+    }
+
+    #[test]
+    fn rejects_conflicting_android_branch() {
+        let module = b"vermagic=5.10.198-android13-9-gabc SMP preempt\0";
+        assert!(validate_module_kmi(module, "android12-5.10").is_err());
     }
 
     #[test]
