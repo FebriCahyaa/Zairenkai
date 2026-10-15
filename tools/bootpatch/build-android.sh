@@ -12,6 +12,7 @@ command -v rustup >/dev/null || { echo "rustup is required to add Android target
 command -v cargo-ndk >/dev/null || { echo "Install cargo-ndk: cargo install cargo-ndk --locked" >&2; exit 1; }
 : "${ANDROID_NDK_HOME:=${ANDROID_HOME:-$HOME/Android/Sdk}/ndk/30.0.16248370}"
 export ANDROID_NDK_HOME
+export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
 export CARGO_TARGET_DIR="$TARGET"
 test -d "$ANDROID_NDK_HOME/toolchains/llvm" || {
     echo "Android NDK not found at $ANDROID_NDK_HOME; install NDK 30.0.16248370 or set ANDROID_NDK_HOME" >&2
