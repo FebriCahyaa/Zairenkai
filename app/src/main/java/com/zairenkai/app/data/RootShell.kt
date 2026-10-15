@@ -141,7 +141,7 @@ object RootShell {
                         withContext(NonCancellable + Dispatchers.IO) { destroyProcess(process) }
                     }
                 }
-                launch(Dispatchers.IO) { runCatching { process.errorStream.use { e -> val buf = ByteArray(4096); while (e.read(buf) >= 0) Unit } } }
+                launch(Dispatchers.IO) { runCatching { process.errorStream.use { e -> val buf = ByteArray(4096); while (e.read(buf) >= 0) { /* Drain stderr to prevent pipe blockage. */ } } } }
                 val reader = process.inputStream.bufferedReader()
                 try {
                     while (true) {

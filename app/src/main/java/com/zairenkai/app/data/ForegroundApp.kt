@@ -26,7 +26,7 @@ class ForegroundApp(context: Context) {
     fun hasUsageAccess(): Boolean {
         val appOps = app.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = runCatching {
-            appOps.unsafeCheckOpNoThrow(
+            appOps.checkOpNoThrow(
                 AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), app.packageName,
             )
         }.getOrDefault(AppOpsManager.MODE_IGNORED)
@@ -43,9 +43,7 @@ class ForegroundApp(context: Context) {
                 val e = UsageEvents.Event()
                 while (events.hasNextEvent()) {
                     events.getNextEvent(e)
-                    if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
-                        e.eventType == UsageEvents.Event.ACTIVITY_RESUMED
-                    ) {
+                    if (e.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                         last = e.packageName
                     }
                 }

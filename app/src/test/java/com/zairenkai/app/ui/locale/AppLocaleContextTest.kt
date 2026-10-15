@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = android.app.Application::class)
 class AppLocaleContextTest {
-    private fun context(): Context = RuntimeEnvironment.getApplication<android.app.Application>()
+    private fun context(): Context = RuntimeEnvironment.getApplication()
 
     private fun reset(context: Context) {
         context.getSharedPreferences("zk_locale", Context.MODE_PRIVATE)

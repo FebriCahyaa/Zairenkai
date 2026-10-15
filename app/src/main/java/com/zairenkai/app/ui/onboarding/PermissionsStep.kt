@@ -89,7 +89,7 @@ fun permissionStatus(context: Context): Map<AppPermission, Boolean> {
     }
     val ops = context.getSystemService(AppOpsManager::class.java)
     val usage = runCatching {
-        ops.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), pkg) == AppOpsManager.MODE_ALLOWED
+        ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), pkg) == AppOpsManager.MODE_ALLOWED
     }.getOrDefault(false)
     val battery = runCatching { context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(pkg) }.getOrDefault(false)
     return mapOf(AppPermission.NOTIFICATIONS to notif, AppPermission.USAGE_ACCESS to usage, AppPermission.BATTERY to battery)

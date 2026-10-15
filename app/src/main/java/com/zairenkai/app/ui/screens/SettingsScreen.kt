@@ -11,6 +11,7 @@ package com.zairenkai.app.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.content.ClipData
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -71,9 +72,9 @@ import com.zairenkai.app.R
 import com.zairenkai.app.data.AppSettings
 import com.zairenkai.app.ui.SettingsViewModel
 import com.zairenkai.app.ui.VmFactory
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.launch
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import com.zairenkai.app.ui.device.DeviceEntryCard
@@ -412,7 +413,7 @@ fun LogsScreen(factory: VmFactory, onBack: () -> Unit) {
     val settings by vm.settings.collectAsState(initial = AppSettings())
     val log by vm.log.collectAsState()
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     DisposableEffect(Unit) {
         vm.startLog()
@@ -480,7 +481,16 @@ fun LogsScreen(factory: VmFactory, onBack: () -> Unit) {
                                 Spacer(Modifier.width(8.dp))
                                 Text(stringResource(R.string.settings_log_generate), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            OutlinedButton(onClick = { clipboard.setText(AnnotatedString(vm.logText())); status = copiedMsg }) {
+                            OutlinedButton(onClick = {
+                                scope.launch {
+                                    val copied = runCatching {
+                                        clipboard.setClipEntry(
+                                            ClipEntry(ClipData.newPlainText("Zairenkai logs", vm.logText())),
+                                        )
+                                    }.isSuccess
+                                    status = if (copied) copiedMsg else failMsg
+                                }
+                            }) {
                                 Icon(ZkIcons.Copy, null, Modifier.size(18.dp))
                             }
                         }
