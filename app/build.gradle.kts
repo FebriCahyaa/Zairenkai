@@ -55,9 +55,15 @@ fun certificateSha256(file: File, storePassword: String, alias: String): String 
         .joinToString("") { "%02X".format(it) }
 }
 
-// The spoofed variant only changes the package name; override with
-// -PspoofedAppId=<id>. Default stays within our own namespace.
-val spoofedAppId = (project.findProperty("spoofedAppId") as String?) ?: "com.zairenkai.app.spoofed"
+// CI supplies a randomized package ID for the spoofed flavor. Keep the
+// Kotlin/Android namespace stable so R and BuildConfig remain deterministic.
+// Local builds use the existing predictable fallback unless overridden.
+val spoofedAppId = providers.gradleProperty("spoofedAppId")
+    .orElse("com.zairenkai.app.spoofed")
+    .get()
+require(spoofedAppId.matches(Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))) {
+    "Invalid spoofed application ID '$spoofedAppId'. Pass a valid Android ID via -PspoofedAppId=<id>."
+}
 
 android {
     namespace = "com.zairenkai.app"

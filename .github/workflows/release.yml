@@ -23,6 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
+      - name: Generate randomized spoofed application ID
+        id: spoofed_app_id
+        run: |
+          set -euo pipefail
+          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
+          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
+            echo "::error::Generated spoofed application ID is invalid"
+            exit 1
+          }
+          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
+          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
+
       - uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
@@ -94,7 +106,7 @@ jobs:
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
           ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleStandardRelease :app:testStandardDebugUnitTest --stacktrace
+        run: ./gradlew :app:assembleStandardRelease :app:assembleSpoofedRelease :app:testStandardDebugUnitTest "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
 
       - name: Enforce v1/v2/v3 signing and verify release APK
         env:
@@ -169,6 +181,17 @@ jobs:
           }
           echo "APK signature schemes v1/v2/v3 and keystore fingerprint verified."
 
+      - name: Sign and verify spoofed release APK
+        env:
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
+          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
+          tools/ci/verify-release-apk.sh "$APK" app/build/zk-release.jks
+
       - name: Set up Rust
         run: |
           rustup toolchain install 1.99.0 --profile minimal
@@ -226,11 +249,22 @@ jobs:
           cd ..
           sha256sum Zairenkai-module.zip
 
+      - name: Stage spoofed release APK
+        run: |
+          set -euo pipefail
+          SRC="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
+          [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
+          cp "$SRC" Zairenkai-spoofed-release.apk
+          unzip -t Zairenkai-spoofed-release.apk >/dev/null
+          sha256sum Zairenkai-spoofed-release.apk > Zairenkai-spoofed-release.apk.sha256
+
       - name: Publish release
         uses: softprops/action-gh-release@v3.0.2
         with:
           files: |
             Zairenkai-module.zip
             app/build/outputs/apk/standard/release/*.apk
+            Zairenkai-spoofed-release.apk
+            Zairenkai-spoofed-release.apk.sha256
             module/SHA256SUMS
           generate_release_notes: true

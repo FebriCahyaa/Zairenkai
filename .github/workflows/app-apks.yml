@@ -33,6 +33,7 @@ on:
       - ".github/actions/build-bootpatch/action.yml"
       - "native/bootpatch/**"
       - "tools/bootpatch/**"
+      - "tools/ci/**"
   workflow_dispatch:
 
 permissions:
@@ -107,12 +108,24 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
+      - name: Generate randomized spoofed application ID
+        id: spoofed_app_id
+        run: |
+          set -euo pipefail
+          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
+          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
+            echo "::error::Generated spoofed application ID is invalid"
+            exit 1
+          }
+          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
+          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
+
       - name: Unit tests
         run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
 
       # Optimized, debug-signed, NOT debuggable — safe to hand out, ~4 MB.
       - name: Build debug-signed APK
-        run: ./gradlew :app:assembleStandardPreview --stacktrace
+        run: ./gradlew :app:assembleStandardPreview :app:assembleSpoofedPreview "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
 
       - name: Stage APK, manifest and checksums
         id: stage
@@ -137,6 +150,17 @@ jobs:
           echo "ver=$VNAME" >> "$GITHUB_OUTPUT"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Stage spoofed preview APK
+        run: |
+          set -euo pipefail
+          SRC="$(find app/build/outputs/apk/spoofed/preview -type f -name '*.apk' -print -quit)"
+          [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Spoofed preview APK not found"; exit 1; }
+          APK="Zairenkai-spoofed-debug.apk"
+          cp "$SRC" "$APK"
+          unzip -t "$APK" >/dev/null
+          SHA="$(sha256sum "$APK" | cut -d' ' -f1)"
+          echo "$SHA  $APK" > "$APK.sha256"
+
       - name: Publish debug prerelease
         uses: softprops/action-gh-release@v3.0.2
         with:
@@ -149,6 +173,9 @@ jobs:
             module (`zkfc.ko` per KMI + zperfd/zkfctl) in `Zairenkai-module.zip`.
             Optimized like release but published early and less tested.
 
+            The spoofed APK uses a fresh randomized application ID per run. It installs
+            separately and is intended for manual installation, not in-place updates.
+
             Version: `${{ steps.stage.outputs.ver }}`
             APK SHA-256: `${{ steps.stage.outputs.sha }}`
 
@@ -156,6 +183,8 @@ jobs:
           files: |
             Zairenkai-debug.apk
             Zairenkai-debug.apk.sha256
+            Zairenkai-spoofed-debug.apk
+            Zairenkai-spoofed-debug.apk.sha256
             version-debug.json
             Zairenkai-module.zip
             SHA256SUMS
@@ -198,6 +227,18 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
+      - name: Generate randomized spoofed application ID
+        id: spoofed_app_id
+        run: |
+          set -euo pipefail
+          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
+          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
+            echo "::error::Generated spoofed application ID is invalid"
+            exit 1
+          }
+          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
+          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
+
       - name: Unit tests
         run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
 
@@ -231,7 +272,7 @@ jobs:
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
           ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleStandardRelease --stacktrace
+        run: ./gradlew :app:assembleStandardRelease :app:assembleSpoofedRelease "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
 
       - name: Enforce v1/v2/v3 signing and verify release APK
         env:
@@ -312,6 +353,17 @@ jobs:
           }
           echo "Verified: APK signature schemes v1, v2 and v3 are present; signer matches the configured keystore."
 
+      - name: Sign and verify spoofed release APK
+        env:
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
+          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
+          tools/ci/verify-release-apk.sh "$APK" app/build/zk-release.jks
+
       - name: Stage APK, manifest and checksums
         id: stage
         run: |
@@ -338,6 +390,17 @@ jobs:
           echo "ver=$VNAME" >> "$GITHUB_OUTPUT"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Stage spoofed release APK
+        run: |
+          set -euo pipefail
+          SRC="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
+          [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
+          APK="Zairenkai-spoofed-release.apk"
+          cp "$SRC" "$APK"
+          unzip -t "$APK" >/dev/null
+          SHA="$(sha256sum "$APK" | cut -d' ' -f1)"
+          echo "$SHA  $APK" > "$APK.sha256"
+
       - name: Publish release
         uses: softprops/action-gh-release@v3.0.2
         with:
@@ -356,9 +419,14 @@ jobs:
             APK SHA-256: `${{ steps.stage.outputs.sha }}`
 
             Verify before installing: `sha256sum Zairenkai-release.apk`
+
+            `Zairenkai-spoofed-release.apk` uses a randomized application ID. It installs
+            separately and must be installed manually, not used as an in-place update.
           files: |
             Zairenkai-release.apk
             Zairenkai-release.apk.sha256
+            Zairenkai-spoofed-release.apk
+            Zairenkai-spoofed-release.apk.sha256
             version-release.json
             Zairenkai-module.zip
             SHA256SUMS

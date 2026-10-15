@@ -4,9 +4,9 @@ name: Android app
 on:
   push:
     branches: [main, ccr-076d8b15-osiupp]
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/android.yml", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", ".github/actions/build-bootpatch/action.yml"]
+    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/android.yml", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", ".github/actions/build-bootpatch/action.yml"]
   pull_request:
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", ".github/actions/build-bootpatch/action.yml"]
+    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", ".github/actions/build-bootpatch/action.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -42,11 +42,22 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
+      - name: Generate randomized spoofed application ID
+        id: spoofed_app_id
+        run: |
+          set -euo pipefail
+          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
+          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
+            echo "::error::Generated spoofed application ID is invalid"
+            exit 1
+          }
+          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
+          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
+
       # Debug builds are auto-signed with Android's debug key — no release key
-      # needed. assembleDebug builds BOTH flavors: standard and the
-      # spoofed-package variant (different applicationId, for side-by-side).
+      # needed. The spoofed flavor receives a fresh applicationId for this run.
       - name: Assemble debug APKs (standard + spoofed)
-        run: ./gradlew :app:assembleStandardDebug :app:assembleSpoofedDebug --stacktrace
+        run: ./gradlew :app:assembleStandardDebug :app:assembleSpoofedDebug "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
 
       - name: Unit tests (engine JSON contracts, tweak outcomes)
         run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
