@@ -39,7 +39,10 @@ class AppLanguageTest {
         val root = listOf(File("app/src/main/res"), File("src/main/res"))
             .first { it.resolve("values").isDirectory }
         val baseDir = root.resolve("values")
-        val idDir = root.resolve("values-id")
+        // Android versions before API 35 use the legacy Indonesian resource
+        // qualifier `in`; Android 15+ may request the ISO language code `id`.
+        // Keep both resource directories byte-for-byte aligned for all SDKs.
+        val resourceDirs = listOf(root.resolve("values-in"), root.resolve("values-id"))
         val factory = DocumentBuilderFactory.newInstance()
 
         fun translatableNames(file: File): Set<String> {
@@ -58,11 +61,24 @@ class AppLanguageTest {
             return result
         }
 
-        baseDir.listFiles { f -> f.extension == "xml" }.orEmpty().forEach { baseFile ->
-            val idFile = idDir.resolve(baseFile.name)
-            val missing = translatableNames(baseFile) - translatableNames(idFile)
-            assertEquals("Missing Indonesian translation(s) in ${baseFile.name}", emptySet<String>(), missing)
+        val baseFiles = baseDir.listFiles { f -> f.extension == "xml" }.orEmpty()
+        resourceDirs.forEach { localeDir ->
+            baseFiles.forEach { baseFile ->
+                val localizedFile = localeDir.resolve(baseFile.name)
+                val missing = translatableNames(baseFile) - translatableNames(localizedFile)
+                assertEquals(
+                    "Missing Indonesian translation(s) in ${localeDir.name}/${baseFile.name}",
+                    emptySet<String>(),
+                    missing,
+                )
+            }
         }
+
+        val canonical = resourceDirs.first().listFiles { f -> f.extension == "xml" }.orEmpty()
+            .associate { it.name to it.readText() }
+        val isoCode = resourceDirs.last().listFiles { f -> f.extension == "xml" }.orEmpty()
+            .associate { it.name to it.readText() }
+        assertEquals("values-in and values-id resources must stay in sync", canonical, isoCode)
     }
 
 }

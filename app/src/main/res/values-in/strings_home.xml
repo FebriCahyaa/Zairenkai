@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Greeting by time of day (pagi 04-10, siang 11-14, sore 15-17, malam 18-03) -->
+    <string name="home_greeting_morning">Selamat pagi</string>
+    <string name="home_greeting_midday">Selamat siang</string>
+    <string name="home_greeting_afternoon">Selamat sore</string>
+    <string name="home_greeting_night">Selamat malam</string>
+
+    <!-- One-line summary under the greeting -->
+    <string name="home_summary_checking">Memeriksa sistem…</string>
+    <string name="home_summary_no_root">Akses root dibutuhkan</string>
+    <string name="home_summary_ready">Semua sistem siap</string>
+    <string name="home_summary_safe_mode">Performa berjalan dalam mode aman</string>
+    <string name="home_summary_api_outdated">API ZKFC perlu diperbarui</string>
+    <string name="home_section_performance_title">Performa</string>
+    <string name="home_section_performance_subtitle">Profil aktif, ruang termal, dan aktivitas boost</string>
+    <string name="home_section_device_title">Perangkat &amp; framework</string>
+    <string name="home_section_device_subtitle">Detail kernel, arsitektur, dan ZKFC</string>
+    <plurals name="home_summary_attention">
+        <item quantity="other">%d komponen perlu perhatian</item>
+    </plurals>
+
+    <!-- Component strip -->
+    <string name="home_chip_token">Token</string>
+    <!-- %1$s: component name, %2$s: its state -->
+    <string name="home_chip_a11y">%1$s: %2$s</string>
+
+    <!-- Active profile -->
+    <string name="home_mode_label">Profil aktif</string>
+    <string name="home_mode_default">Bawaan engine, belum dipilih</string>
+    <string name="home_mode_change">Ganti profil</string>
+
+    <!-- Thermal (bands come from zperfd) -->
+    <string name="home_thermal_title">Termal</string>
+    <string name="home_thermal_hottest">Suhu tertinggi</string>
+    <string name="home_thermal_headroom">ruang</string>
+    <!-- %1$s: headroom, e.g. 72% -->
+    <string name="home_thermal_headroom_a11y">Ruang termal %1$s</string>
+    <string name="home_band_nominal">Normal</string>
+    <string name="home_band_warm">Hangat</string>
+    <string name="home_band_hot">Panas</string>
+    <string name="home_band_critical">Kritis</string>
+    <string name="home_band_unknown">Belum diketahui</string>
+
+    <string name="home_licensee">Pemegang lisensi</string>
+    <string name="home_install_title">Zairenkai belum terpasang</string>
+    <string name="home_install_body">Pasang modul kernel Zairenkai untuk mengaktifkan framework ZKFC dan engine. Berlaku untuk kernel GKI.</string>
+    <string name="home_install_action">Cara pasang</string>
+    <string name="install_sheet_title">Pasang Zairenkai</string>
+    <string name="install_sheet_sub">Zairenkai berjalan sebagai modul kernel. Pemasangan ini untuk kernel GKI.</string>
+    <string name="install_method_file">Pilih berkas modul (.zip)</string>
+    <string name="install_method_file_sub">Paket modul Zairenkai atau AnyKernel.</string>
+    <string name="install_method_direct">Pasang langsung (disarankan)</string>
+    <string name="install_method_direct_sub">Pasang ke slot aktif pada kernel GKI.</string>
+    <string name="install_method_inactive">Pasang ke slot nonaktif (setelah OTA)</string>
+    <string name="install_method_inactive_sub">Setelah pembaruan sistem, pasang ke slot berikutnya.</string>
+    <string name="install_method_anykernel">Pasang AnyKernel (.zip)</string>
+    <string name="install_method_anykernel_sub">Flash paket AnyKernel berisi Zairenkai.</string>
+    <string name="install_pick">Pilih berkas .zip</string>
+    <string name="install_picked">Terpilih: %1$s</string>
+    <string name="install_continue">Lanjutkan</string>
+    <string name="install_steps">Demi keamanan, Zairenkai tidak mem-flash kernel langsung dari aplikasi. Setelah memilih berkas, lanjutkan di pengelola root/modul kamu untuk mem-flash, lalu reboot.</string>
+    <string name="install_no_handler">Tidak ada aplikasi yang bisa membuka berkas ini. Flash manual lewat pengelola modul, lalu reboot.</string>
+    <string name="boot_patch_title">Ganti kernel di boot.img</string>
+    <string name="boot_patch_body">Pilih boot.img bawaan ROM/pabrik dan payload kernel yang kompatibel (misalnya Image atau Image.gz). Zairenkai hanya mengganti bagian kernel, memperbarui boot ID legacy jika berlaku, memverifikasi hasil, lalu menyimpan berkas baru. Ramdisk/CPIO tidak diubah, partisi tidak di-flash, dan AVB tidak ditandatangani ulang. Pastikan kernel cocok dan bootloader mengizinkan image modifikasi.</string>
+    <string name="boot_patch_pick">Pilih boot.img sumber</string>
+    <string name="boot_patch_pick_kernel">Pilih payload kernel</string>
+    <string name="boot_patch_save">Patch dan simpan image baru</string>
+    <string name="boot_patch_selected_boot">Boot image: %1$s</string>
+    <string name="boot_patch_selected_kernel">Kernel: %1$s</string>
+    <string name="boot_patch_need_both">Pilih boot image dan payload kernel sebelum melanjutkan.</string>
+    <string name="boot_patch_working">Mem-patch dan memverifikasi…</string>
+    <string name="boot_patch_success_prefix">Patch berhasil diverifikasi.</string>
+    <string name="boot_patch_success">Patch berhasil diverifikasi.
+Header v%1$d, page %2$d byte.
+Ukuran kernel: %3$s → %4$s.
+SHA-256: %5$s
+Output: %6$s</string>
+    <string name="boot_patch_failed">Proses patch gagal. Berkas output mungkin kosong atau tidak lengkap; hapus sebelum mencoba lagi. Detail ada di bawah.</string>
+    <string name="boot_patch_ok">Readable — header v%1$d, %2$d-byte page. Round-trip check passed.</string>
+    <string name="boot_patch_sizes">kernel %1$s · ramdisk %2$s</string>
+    <string name="boot_patch_unsupported">Zairenkai cannot rebuild this image exactly, so patching is refused.</string>
+    <string name="boot_patch_notboot">That file is not a supported Android boot image.</string>
+</resources>

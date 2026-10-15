@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="dashboard_settings">Pengaturan</string>
+
+    <!-- Safe mode banner -->
+    <string name="dashboard_safe_mode_title">Mode Aman aktif</string>
+    <string name="dashboard_safe_mode_body">Boot sebelumnya gagal/restart mendadak, jadi profil performa dipulihkan ke baseline. Keluar dari mode aman hanya setelah penyebabnya diperiksa.</string>
+    <string name="dashboard_safe_mode_exit">Keluar mode aman</string>
+
+    <!-- API banner -->
+    <string name="dashboard_api_outdated_title">API ZKFC usang</string>
+    <string name="dashboard_api_outdated_body">Kernel memakai ZKFC API lama. Perbarui kernel/ZKFC ke versi terbaru agar fitur performa bekerja penuh.</string>
+
+    <!-- Stat tiles -->
+    <string name="dashboard_zkfc_status">Status ZKFC</string>
+    <string name="dashboard_license">Lisensi API</string>
+
+    <!-- License states -->
+    <string name="dashboard_license_valid">Valid</string>
+    <string name="dashboard_license_missing">Belum ada</string>
+    <string name="dashboard_license_api_outdated">API usang</string>
+    <string name="dashboard_license_expired">Kedaluwarsa</string>
+    <string name="dashboard_license_no_owner_key">Tanpa kunci</string>
+    <string name="dashboard_license_revoked">Dicabut</string>
+    <string name="dashboard_license_subkey_scope">Di luar cakupan</string>
+
+    <!-- Device section -->
+    <string name="dashboard_device">Perangkat</string>
+    <string name="dashboard_arch">Arsitektur</string>
+    <string name="dashboard_kernel_type">Tipe kernel</string>
+    <string name="dashboard_kernel">Kernel</string>
+    <string name="dashboard_hook_mode">Mode hook</string>
+    <string name="dashboard_build">Build</string>
+
+    <!-- Thermal section -->
+    <string name="dashboard_control_zone">Zona kontrol</string>
+    <string name="dashboard_critical_trip">Batas kritis</string>
+    <string name="dashboard_thermal_no_evidence">Engine belum melaporkan data termal yang cukup.</string>
+
+    <!-- Active performance section -->
+    <string name="dashboard_active_performance">Performa aktif</string>
+    <string name="dashboard_input_boost">Input boost</string>
+    <string name="dashboard_idle">Idle</string>
+    <string name="dashboard_boosted_tasks">Task di-boost</string>
+    <string name="dashboard_cpufreq_requests">Permintaan cpufreq</string>
+    <string name="dashboard_thermal">Thermal</string>
+    <string name="dashboard_thermal_mitigating">Mitigasi aktif</string>
+    <string name="dashboard_thermal_normal">Normal</string>
+    <string name="dashboard_reset_boosts">Reset performa</string>
+
+    <!-- System status (dashboard) -->
+    <string name="dashboard_system_status">Status sistem</string>
+    <string name="dashboard_not_available">Tidak tersedia</string>
+    <string name="dashboard_needs_zkfc">Butuh framework ZKFC</string>
+    <string name="dashboard_zkfc_fields_unavailable">Arsitektur hook, API, dan build ZKFC tampil setelah framework ZKFC aktif.</string>
+    <string name="dashboard_boost_unavailable">Status boost dibaca dari framework ZKFC dan belum tersedia.</string>
+    <string name="dashboard_without_module">Tanpa modul, Monitor tetap menampilkan baterai dan RAM dari Android. CPU, GPU, termal, perekam FPS, profil, dan tweak butuh modul Zairenkai.</string>
+    <string name="dashboard_details_show">Detail teknis</string>
+    <string name="dashboard_details_hide">Sembunyikan detail</string>
+    <string name="dashboard_copy_diagnostics">Salin diagnostik</string>
+</resources>

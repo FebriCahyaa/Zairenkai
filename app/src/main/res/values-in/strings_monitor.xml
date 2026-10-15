@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Sampling state (MonitorViewModel) -->
+    <string name="monitor_error_no_response">zkfctl tidak merespons</string>
+
+    <!-- Hub header -->
+    <string name="monitor_title">Monitor</string>
+    <string name="monitor_subtitle">Performa perangkat, secara langsung</string>
+    <string name="monitor_status_paused">PAUSED</string>
+    <string name="monitor_status_live">LIVE</string>
+    <string name="monitor_status_connecting">MENGHUBUNGKAN</string>
+    <!-- Root telemetry missing: only Android data (battery, RAM) is live. -->
+    <string name="mon_status_basic">DATA DASAR</string>
+    <string name="monitor_open_history">Riwayat penggunaan</string>
+
+    <!-- Missing Zairenkai module (no root telemetry) -->
+    <string name="mon_needs_module">Butuh modul Zairenkai</string>
+    <string name="mon_needs_module_detail">Data CPU, GPU dan termal dibaca lewat root. Baterai dan RAM tetap tampil tanpa modul.</string>
+    <string name="mon_banner_module">CPU, GPU, termal, dan perekam FPS butuh modul Zairenkai. Baterai dan RAM tetap dipantau dari Android.</string>
+    <string name="mon_banner_dismiss">Tutup</string>
+
+    <!-- Generic -->
+    <string name="monitor_waiting_first_sample">Menunggu sampel pertama</string>
+    <string name="monitor_sensor_unavailable">Sensor tidak tersedia</string>
+    <string name="monitor_gpu_util_read">Utilisasi terbaca</string>
+    <string name="mon_stat_min">Minimum</string>
+    <string name="mon_stat_avg">Rata-rata</string>
+    <string name="mon_stat_max">Maksimum</string>
+    <string name="mon_yes">Ya</string>
+    <string name="mon_no">Tidak</string>
+    <!-- %1$d hours, %2$d minutes -->
+    <string name="mon_duration_hm">%1$d j %2$d m</string>
+    <string name="mon_duration_m" tools:ignore="PluralsCandidate">%1$d menit</string>
+
+    <!-- Hub: FPS card -->
+    <string name="mon_fps_card_title">MONITOR FPS</string>
+    <string name="mon_fps_card_empty">Pantau game Anda</string>
+    <!-- %1$s: app name -->
+    <string name="mon_fps_card_recording">Merekam %1$s sekarang</string>
+    <string name="mon_fps_card_waiting">Perekam aktif, menunggu aplikasi yang dipantau dibuka</string>
+    <!-- %1$s: app name, %2$s: 1% low FPS -->
+    <string name="mon_fps_card_last">Sesi terakhir: %1$s · 1%% low %2$s FPS</string>
+    <string name="mon_fps_card_hint">Pilih game atau aplikasi, lalu dapatkan analisis FPS lengkap setiap kali dimainkan.</string>
+    <string name="mon_fps_auto_on">Otomatis</string>
+    <plurals name="mon_fps_watched">
+        <item quantity="other">%1$d aplikasi</item>
+    </plurals>
+    <plurals name="mon_fps_sessions">
+        <item quantity="other">%1$d sesi</item>
+    </plurals>
+
+    <!-- Hub: CPU / thermal / memory cards -->
+    <!-- %1$d: online cores, %2$s: highest frequency -->
+    <plurals name="mon_cpu_card_detail">
+        <item quantity="other">%1$d core · puncak %2$s</item>
+    </plurals>
+    <plurals name="mon_thermal_zones">
+        <item quantity="other">%1$d zona termal</item>
+    </plurals>
+    <string name="mon_memory_title">Memori</string>
+    <!-- %1$s used GB, %2$s total GB -->
+    <string name="mon_memory_used">%1$s / %2$s GB terpakai</string>
+
+    <!-- CPU / GPU / thermal screen -->
+    <string name="mon_cpu_screen_title">CPU &amp; GPU</string>
+    <string name="mon_cpu_load">beban</string>
+    <string name="mon_cpu_cores">Core</string>
+    <!-- %1$d: online cores, %2$d: detected cores -->
+    <string name="monitor_cores_count" tools:ignore="PluralsCandidate">%1$d online · %2$d terdeteksi</string>
+    <string name="mon_cpu_clusters">Cluster</string>
+    <string name="mon_cpu_peak">Frekuensi puncak</string>
+    <string name="mon_cpu_load_history">Beban CPU rata-rata</string>
+    <string name="mon_cpu_clusters_title">Cluster CPU</string>
+    <string name="mon_cpu_clusters_sub">Frekuensi saat ini dalam rentang hardware tiap cluster</string>
+    <!-- %1$s: load, e.g. "42%" -->
+    <string name="mon_cpu_cluster_load">beban %1$s</string>
+    <!-- %1$d: core count, %2$s: core list -->
+    <plurals name="mon_cpu_cluster_cores">
+        <item quantity="other">%1$d core · %2$s</item>
+    </plurals>
+    <string name="mon_cpu_freq_history">Riwayat frekuensi cluster</string>
+    <string name="mon_cluster_all">Semua core</string>
+    <string name="mon_cluster_efficiency">Efisiensi</string>
+    <string name="mon_cluster_balanced">Seimbang</string>
+    <string name="mon_cluster_performance">Performa</string>
+    <string name="mon_cluster_prime">Prime</string>
+    <string name="monitor_cores_title">Aktivitas per-core</string>
+    <string name="mon_cpu_cores_sub">Beban dan frekuensi tiap core, warna sesuai cluster</string>
+    <string name="monitor_core_off">OFF</string>
+    <string name="monitor_core_freq_na">Frekuensi n/a</string>
+    <string name="mon_cpu_platform">Platform</string>
+    <string name="mon_cpu_kernel">Kernel</string>
+    <string name="mon_cpu_policies">Kebijakan cpufreq</string>
+    <string name="mon_cpu_governors">Governor</string>
+    <string name="mon_gpu_busy">sibuk</string>
+    <string name="mon_gpu_freq">Frekuensi</string>
+    <string name="mon_gpu_range">Rentang</string>
+    <string name="mon_gpu_of_max">Dari maksimum</string>
+    <string name="mon_gpu_busy_history">Utilisasi GPU</string>
+    <string name="mon_gpu_freq_history">Frekuensi GPU</string>
+    <string name="mon_gpu_info">Info GPU</string>
+    <string name="mon_gpu_driver">Penyedia frekuensi</string>
+    <string name="mon_gpu_opps">Langkah frekuensi (OPP)</string>
+    <string name="mon_gpu_min">Frekuensi minimum</string>
+    <string name="mon_gpu_max">Frekuensi maksimum</string>
+    <string name="monitor_thermal_title">Thermal</string>
+    <string name="mon_thermal_hottest">Zona terpanas</string>
+    <string name="monitor_thermal_empty_title">Belum ada pembacaan</string>
+    <string name="monitor_thermal_empty_detail">Kernel atau vendor belum mengekspos zona thermal yang valid.</string>
+    <string name="monitor_thermal_zone_fallback">Thermal zone</string>
+    <string name="mon_thermal_note">Warna hanya panduan visual. Batas termal berbeda di tiap perangkat dan diatur oleh kernel serta vendor.</string>
+
+    <!-- Battery screen -->
+    <string name="mon_battery_title">Baterai</string>
+    <string name="mon_battery_charging">Mengisi daya</string>
+    <!-- %1$s: duration until full -->
+    <string name="mon_battery_charging_eta">Mengisi · penuh dalam %1$s</string>
+    <string name="mon_battery_discharging">Tidak mengisi</string>
+    <string name="mon_battery_full">Penuh</string>
+    <string name="mon_battery_not_charging">Terhubung, tidak mengisi</string>
+    <string name="mon_battery_unknown">Tidak diketahui</string>
+    <string name="mon_battery_power">Daya</string>
+    <string name="mon_battery_current">Arus</string>
+    <string name="mon_battery_level">Level</string>
+    <string name="mon_battery_temp">Suhu</string>
+    <string name="mon_battery_voltage">Tegangan</string>
+    <string name="mon_battery_remaining">Sisa muatan</string>
+    <!-- %1$s: signed current in mA -->
+    <string name="mon_battery_current_value">%1$s mA</string>
+    <!-- %1$d: health percent -->
+    <string name="mon_battery_health_short">Kesehatan %1$d%%</string>
+    <plurals name="mon_battery_cycles_short">
+        <item quantity="other">%1$d siklus</item>
+    </plurals>
+    <string name="mon_battery_chart_title">Diagram pengisian</string>
+    <plurals name="mon_battery_chart_sub">
+        <item quantity="other">%1$d menit terakhir</item>
+    </plurals>
+    <string name="mon_battery_chart_sub_seconds">Kurang dari satu menit terakhir</string>
+    <string name="mon_battery_chart_sub_empty">Mengumpulkan data</string>
+    <string name="mon_plug_ac">Charger dinding (AC)</string>
+    <string name="mon_plug_usb">USB</string>
+    <string name="mon_plug_wireless">Nirkabel</string>
+    <string name="mon_plug_dock">Dock</string>
+    <string name="mon_plug_none">Tidak terhubung</string>
+    <string name="mon_charger_title">Charger</string>
+    <string name="mon_charger_input_w">Daya masuk</string>
+    <string name="mon_charger_to_battery">Ke baterai</string>
+    <string name="mon_charger_input_v">Tegangan masuk</string>
+    <string name="mon_charger_input_a">Arus masuk</string>
+    <string name="mon_charger_phase">Fase pengisian</string>
+    <string name="mon_charger_not_reported">Perangkat ini tidak melaporkan tegangan dan arus dari charger.</string>
+    <string name="mon_charger_needs_module">Daya, tegangan dan arus dari charger dibaca lewat modul Zairenkai.</string>
+    <string name="mon_health_title">Kesehatan baterai (estimasi)</string>
+    <string name="mon_health_sub">Kapasitas penuh yang diperkirakan fuel gauge dibanding kapasitas desain</string>
+    <!-- %1$d full-charge mAh, %2$d design mAh -->
+    <string name="mon_health_capacity">%1$d mAh dari %2$d mAh kapasitas desain</string>
+    <plurals name="mon_health_cycles_label">
+        <item quantity="other">siklus pengisian</item>
+    </plurals>
+    <string name="mon_health_not_reported">Perangkat ini tidak melaporkan kapasitas desain baterai.</string>
+    <string name="mon_health_needs_module">Kapasitas penuh dan desain dibaca lewat modul Zairenkai.</string>
+    <string name="mon_health_status">Status</string>
+    <string name="mon_health_cycles">Jumlah siklus</string>
+    <string name="mon_cycles_source_android">Sumber: Android (BatteryManager). Angka ini dari HAL baterai vendor; sebagian vendor menghitung siklus dengan cara berbeda.</string>
+    <string name="mon_cycles_source_kernel">Sumber: kernel (power_supply cycle_count).</string>
+    <!-- %1$d: cycle count reported by the kernel node -->
+    <string name="mon_cycles_kernel_differs" tools:ignore="PluralsCandidate">Kernel melaporkan angka berbeda: %1$d.</string>
+    <string name="mon_health_tech">Teknologi</string>
+    <string name="mon_health_good">Baik</string>
+    <string name="mon_health_overheat">Terlalu panas</string>
+    <string name="mon_health_dead">Rusak</string>
+    <string name="mon_health_over_voltage">Tegangan berlebih</string>
+    <string name="mon_health_cold">Terlalu dingin</string>
+    <string name="mon_health_failure">Gagal</string>
+    <string name="mon_electrical_title">Kelistrikan</string>
+    <string name="mon_battery_note">Arus dan daya dibaca dari kernel setiap detik. Sebagian perangkat melaporkan rata-rata atau memperbaruinya tiap beberapa detik.</string>
+
+    <!-- Memory detail -->
+    <string name="mon_memory_open">Buka detail memori</string>
+    <string name="mon_mem_title">Memori &amp; ZRAM</string>
+    <string name="mon_mem_ram_title">RAM</string>
+    <!-- %1$s used, %2$s total, e.g. "5,1 / 7,7 GB" -->
+    <string name="mon_mem_ram_used">%1$s / %2$s terpakai</string>
+    <string name="mon_mem_breakdown">Rincian</string>
+    <string name="mon_mem_used">Terpakai</string>
+    <string name="mon_mem_cached">Cache</string>
+    <string name="mon_mem_buffers">Buffer</string>
+    <string name="mon_mem_free">Bebas</string>
+    <string name="mon_mem_available">Tersedia</string>
+    <string name="mon_mem_total">Total</string>
+    <string name="mon_mem_slab">Slab (reclaimable)</string>
+    <string name="mon_zram_title">ZRAM</string>
+    <string name="mon_zram_sub">Swap terkompresi di RAM</string>
+    <string name="mon_zram_none">Tidak ada perangkat ZRAM aktif</string>
+    <string name="mon_zram_stored">Data tersimpan</string>
+    <string name="mon_zram_compressed">Setelah dikompres</string>
+    <string name="mon_zram_ratio">Rasio kompresi</string>
+    <string name="mon_zram_total">Memori ZRAM dipakai</string>
+    <string name="mon_zram_saved">RAM dihemat</string>
+    <string name="mon_zram_disksize">Kapasitas</string>
+    <!-- %1$.1f: compression ratio, e.g. 2.8x -->
+    <string name="mon_zram_ratio_value">%1$.1f×</string>
+    <string name="mon_swap_title">Area swap</string>
+    <!-- %1$s used, %2$s size -->
+    <string name="mon_swap_row">%1$s / %2$s</string>
+    <string name="mon_mem_note">Angka dibaca langsung dari /proc/meminfo, /proc/swaps, dan sysfs ZRAM kernel. RAM tidak butuh root; sebagian node ZRAM dibaca lewat root bila tersedia.</string>
+
+    <!-- Per-app battery -->
+    <string name="mon_apps_title">Aplikasi boros baterai</string>
+    <string name="mon_apps_sub">Estimasi Android sejak pengisian penuh terakhir</string>
+    <string name="mon_apps_needs_root">Butuh akses root untuk membaca estimasi batterystats Android.</string>
+    <string name="mon_apps_empty">Belum ada estimasi pemakaian per aplikasi.</string>
+    <string name="mon_apps_system">Sistem</string>
+    <!-- %1$.0f: milliamp-hours, e.g. 45 mAh -->
+    <string name="mon_apps_mah">%1$.0f mAh</string>
+    <string name="mon_apps_show_system">Tampilkan proses sistem</string>
+    <string name="mon_apps_note">Estimasi ini milik Android (dumpsys batterystats), bukan pengukuran Zairenkai. Nilainya perkiraan dan dapat berbeda dari pemakaian nyata.</string>
+
+    <!-- ZKFC runtime -->
+    <string name="monitor_zkfc_title">ZKFC runtime</string>
+    <string name="monitor_zkfc_thermal_tripped">Thermal guard sedang membatasi performa</string>
+    <string name="monitor_zkfc_input_boost">Input boost aktif</string>
+    <string name="monitor_zkfc_normal">Kontrol kernel berjalan normal</string>
+</resources>

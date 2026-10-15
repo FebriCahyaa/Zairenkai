@@ -48,6 +48,8 @@ class AppLocaleContextTest {
         AppLocale.ensureDefaultLocale(context)
         assertTrue(context.getSharedPreferences("zk_locale", Context.MODE_PRIVATE)
             .getBoolean("framework_locale_synced", false))
+        assertEquals(AppLanguage.INDONESIAN, AppLocale.current(context))
+        assertEquals("Bahasa", AppLocale.wrap(context).getString(R.string.setup_language))
 
         // Simulate an external change from Android Settings > App language.
         context.getSystemService(LocaleManager::class.java).applicationLocales =

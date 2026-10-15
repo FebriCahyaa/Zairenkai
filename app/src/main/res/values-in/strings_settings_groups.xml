@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <string name="settings_section_device">Perangkat</string>
+    <string name="settings_section_performance">Performa</string>
+    <string name="settings_section_privacy">Izin &amp; privasi</string>
+    <string name="settings_section_diagnostics">Diagnostik</string>
+    <string name="settings_section_about">Tentang</string>
+    <string name="settings_permissions_title">Izin aplikasi</string>
+    <string name="settings_legal_sub">Ketentuan, risiko, privasi, dan merek dagang</string>
+    <string name="settings_logs_title">Log ZKFC</string>
+    <string name="settings_logs_sub">Level %1$s · log langsung dari kernel</string>
+    <string name="settings_hero_sub">Versi %1$s · Ketuk untuk info aplikasi</string>
+    <plurals name="settings_permissions_sub">
+        <item quantity="other">%1$d dari %2$d diizinkan</item>
+    </plurals>
+</resources>
