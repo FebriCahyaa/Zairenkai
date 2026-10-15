@@ -118,7 +118,9 @@ object AppLocale {
         } else {
             false
         }
-        val frameworkAfter = if (frameworkApplied) readFrameworkLocale(activity) else null
+        val frameworkAfter = if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && frameworkApplied
+        ) readFrameworkLocale(activity) else null
         // A changed framework locale causes Android to recreate the Activity
         // because locale|layoutDirection are intentionally not consumed in the
         // manifest. If the framework value did not change (for example, an old
