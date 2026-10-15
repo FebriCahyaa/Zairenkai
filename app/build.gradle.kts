@@ -335,15 +335,20 @@ dependencies {
 // Robolectric needs an Android framework jar at test time. Resolve it through
 // Gradle (same repositories, proxy and cache as every other dependency) and
 // run Robolectric offline against it, instead of letting it download on its own.
-val robolectricRuntime: Configuration by configurations.creating
+// Keep each SDK version in its own configuration: Gradle conflict resolution
+// otherwise selects only one version of android-all-instrumented, leaving the
+// other SDK requested by @Config(sdk = [...]) absent from the offline directory.
+val robolectricRuntime = configurations.create("robolectricRuntime")
+val robolectricApi32Runtime = configurations.create("robolectricApi32Runtime")
 dependencies {
     // Provide every SDK used by @Config tests; offline Robolectric resolves jars by exact filename.
-    robolectricRuntime(libs.robolectric.android.all)
-    robolectricRuntime(libs.robolectric.android.api32)
+    add(robolectricRuntime.name, libs.robolectric.android.all)
+    add(robolectricApi32Runtime.name, libs.robolectric.android.api32)
 }
 val robolectricJars = layout.buildDirectory.dir("robolectric-jars")
-val copyRobolectricJars by tasks.registering(Copy::class) {
+val copyRobolectricJars = tasks.register<Copy>("copyRobolectricJars") {
     from(robolectricRuntime)
+    from(robolectricApi32Runtime)
     into(robolectricJars)
 }
 tasks.withType<Test>().configureEach {
