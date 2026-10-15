@@ -39,12 +39,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="locale|layoutDirection"
             android:theme="@style/Theme.Zairenkai.Splash"
             android:windowSoftInputMode="adjustResize">
-            <!-- locale|layoutDirection: a per-app language change (Android 13+)
-                 updates the running activity in place, so Compose recomposes
-                 with the new strings and fades instead of the activity restarting. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

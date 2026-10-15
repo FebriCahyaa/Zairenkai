@@ -49,75 +49,143 @@ enum class AppLanguage(val tag: String?, val endonym: String?) {
 }
 
 object AppLocale {
+    private data class FrameworkLocale(val available: Boolean, val tag: String?)
+
     private const val PREFS = "zk_locale"
     private const val KEY = "tag"
     private const val KEY_INIT = "initialized"
+    // True only after LocaleManager accepted our last per-app locale. This lets
+    // Android 13+ distinguish an intentional "System default" (empty framework
+    // locale list) from an API failure where the stored preference is fallback.
+    private const val KEY_FRAMEWORK_SYNCED = "framework_locale_synced"
     /** Zairenkai is an Indonesian-first app, so the very first launch opens in
      *  Indonesian (setup included) rather than following an English device. */
     private const val DEFAULT_TAG = "id"
 
-    /*
-     * The chosen language tag is kept in our own preference and applied by
-     * wrapping every Activity/Service base context on ALL Android versions.
-     * We do NOT depend on the framework LocaleManager (Android 13+): with a
-     * plain (non-AppCompat) theme its per-app locale was not switching the UI
-     * — the app stayed English even when Indonesian was selected. Wrapping the
-     * context with createConfigurationContext always loads values-<tag>.
-     */
-
     /**
-     * On the first ever launch, default the app language to Indonesian so the
-     * setup flow is in Indonesian. Runs once; afterwards the user's own choice
-     * (including "follow system") is kept. Call from Application.onCreate.
+     * First launch defaults to Indonesian (including onboarding). On Android
+     * 13+, migrate an existing saved language to LocaleManager once. After the
+     * framework accepts a locale, its value is authoritative so changes made in
+     * Android's App language settings are not overwritten by a stale preference.
      */
     fun ensureDefaultLocale(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_INIT, false)) return
-        prefs.edit(commit = true) {
-            if (prefs.getString(KEY, null) == null) putString(KEY, DEFAULT_TAG)
-            putBoolean(KEY_INIT, true)
+        val initialized = prefs.getBoolean(KEY_INIT, false)
+        if (!initialized) {
+            prefs.edit(commit = true) {
+                if (prefs.getString(KEY, null) == null) putString(KEY, DEFAULT_TAG)
+                putBoolean(KEY_INIT, true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    putBoolean(KEY_FRAMEWORK_SYNCED, false)
+                }
+            }
         }
-        // Keep the system per-app-language list in sync where available (best
-        // effort only — the context wrap is what actually applies the locale).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            runCatching { syncFramework(context, DEFAULT_TAG) }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !prefs.getBoolean(KEY_FRAMEWORK_SYNCED, false)
+        ) {
+            // Fresh installs and upgrades from versions that only stored a tag
+            // need a one-time migration. If no tag is stored, retain System.
+            val legacyTag = prefs.getString(KEY, null)
+            if (legacyTag != null || !initialized) {
+                syncFramework(context, legacyTag ?: DEFAULT_TAG)
+            }
         }
     }
 
-    fun current(context: Context): AppLanguage = AppLanguage.fromTag(stored(context))
+    fun current(context: Context): AppLanguage = AppLanguage.fromTag(effectiveTag(context))
 
     /**
-     * Switch the app language: persist the choice and recreate the activity so
-     * its base context is re-wrapped with the new locale. ViewModels survive
-     * the recreation, so in-progress screens keep their state.
+     * Persist the choice on every Android version. Android 13+ normally
+     * recreates the activity when applicationLocales changes; the explicit
+     * recreate remains the fallback when LocaleManager is unavailable/fails.
      */
     fun apply(activity: Activity, language: AppLanguage) {
         activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit(commit = true) {
             if (language.tag == null) remove(KEY) else putString(KEY, language.tag)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                putBoolean(KEY_FRAMEWORK_SYNCED, false)
+            }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            runCatching { syncFramework(activity, language.tag) }
+
+        val frameworkBefore = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            readFrameworkLocale(activity)
+        } else {
+            null
         }
-        activity.recreate()
+        val frameworkApplied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            syncFramework(activity, language.tag)
+        } else {
+            false
+        }
+        val frameworkAfter = if (frameworkApplied) readFrameworkLocale(activity) else null
+        // A changed framework locale causes Android to recreate the Activity
+        // because locale|layoutDirection are intentionally not consumed in the
+        // manifest. If the framework value did not change (for example, an old
+        // wrapper still forced Indonesian while LocaleManager was already set
+        // to System), recreate explicitly to remove the stale context override.
+        val frameworkWillRecreate = frameworkBefore?.available == true &&
+            frameworkAfter?.available == true && frameworkBefore.tag != frameworkAfter.tag
+        if (!frameworkWillRecreate) activity.recreate()
     }
 
-    /** Apply the stored language to an Activity/Service base context. */
+    /** Apply the effective app language to Activity/Service contexts. */
     fun wrap(base: Context): Context {
-        val tag = stored(base) ?: return base
+        val tag = effectiveTag(base) ?: return base
+        val desiredLocales = LocaleList.forLanguageTags(tag)
+        if (desiredLocales.isEmpty()) return base
+
         val config = Configuration(base.resources.configuration)
-        config.setLocales(LocaleList.forLanguageTags(tag))
+        config.setLocales(desiredLocales)
+        config.setLayoutDirection(Locale.forLanguageTag(tag))
         return base.createConfigurationContext(config)
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun syncFramework(context: Context, tag: String?) {
-        val lm = context.getSystemService(LocaleManager::class.java) ?: return
-        lm.applicationLocales =
-            if (tag.isNullOrBlank()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
+    /**
+     * Android's per-app locale is authoritative when it has a selected tag.
+     * An empty list means "System default" only after our last sync succeeded;
+     * otherwise keep using the stored tag as a safe fallback.
+     */
+    private fun effectiveTag(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val savedTag = prefs.getString(KEY, null)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return savedTag
+
+        val framework = readFrameworkLocale(context)
+        if (!framework.available) return savedTag
+        return framework.tag ?: if (prefs.getBoolean(KEY_FRAMEWORK_SYNCED, false)) null else savedTag
     }
 
-    private fun stored(context: Context): String? =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun readFrameworkLocale(context: Context): FrameworkLocale {
+        return try {
+            val manager = context.getSystemService(LocaleManager::class.java)
+                ?: return FrameworkLocale(available = false, tag = null)
+            val tag = manager.applicationLocales.toLanguageTags().takeIf { it.isNotBlank() }
+            FrameworkLocale(available = true, tag = tag)
+        } catch (_: Exception) {
+            FrameworkLocale(available = false, tag = null)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun syncFramework(context: Context, tag: String?): Boolean {
+        return try {
+            val manager = context.getSystemService(LocaleManager::class.java) ?: return false
+            manager.applicationLocales =
+                if (tag.isNullOrBlank()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit(commit = true) {
+                putBoolean(KEY_FRAMEWORK_SYNCED, true)
+            }
+            true
+        } catch (_: Exception) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit(commit = true) {
+                putBoolean(KEY_FRAMEWORK_SYNCED, false)
+            }
+            false
+        }
+    }
+
 }
 
 /** The Activity behind a (possibly wrapped) Compose context. */

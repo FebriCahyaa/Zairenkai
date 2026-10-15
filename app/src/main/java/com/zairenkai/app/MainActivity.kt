@@ -38,7 +38,7 @@ import com.zairenkai.app.ui.theme.ZairenkaiTheme
 import com.zairenkai.app.ui.theme.applySystemBars
 
 class MainActivity : ComponentActivity() {
-    // Android 12 per-app language (Android 13+ is handled by the framework).
+    // Apply the saved per-app language before Compose reads any resources.
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLocale.wrap(newBase))
     }
@@ -80,9 +80,9 @@ class MainActivity : ComponentActivity() {
                     tertiary = cs.tertiary,
                     glass = GlassConfig(enabled = s?.glass ?: false),
                 ) {
-                    // A language change (handled in place on Android 13+, see the
-                    // manifest) swaps every string at once; a short fade turns that
-                    // into a soft transition instead of a flicker.
+                    // A locale change updates the configuration. On Android 13+
+                    // the framework recreates the Activity; on Android 12 the app
+                    // explicitly recreates it after saving the chosen language.
                     val locales = LocalConfiguration.current.locales
                     val fade = remember { Animatable(1f) }
                     var seen by remember { mutableStateOf(locales) }

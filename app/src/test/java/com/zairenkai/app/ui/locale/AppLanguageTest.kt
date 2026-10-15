@@ -9,6 +9,7 @@ package com.zairenkai.app.ui.locale
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 class AppLanguageTest {
     @Test
@@ -33,4 +34,35 @@ class AppLanguageTest {
         val declared = Regex("""android:name="([^"]+)"""").findAll(xml).map { it.groupValues[1] }.toList()
         assertEquals(AppLanguage.entries.mapNotNull { it.tag }, declared)
     }
+    @Test
+    fun indonesianResourcesCoverEveryTranslatableDefaultString() {
+        val root = listOf(File("app/src/main/res"), File("src/main/res"))
+            .first { it.resolve("values").isDirectory }
+        val baseDir = root.resolve("values")
+        val idDir = root.resolve("values-id")
+        val factory = DocumentBuilderFactory.newInstance()
+
+        fun translatableNames(file: File): Set<String> {
+            if (!file.exists()) return emptySet()
+            val doc = factory.newDocumentBuilder().parse(file)
+            val result = linkedSetOf<String>()
+            val nodes = doc.documentElement.childNodes
+            for (index in 0 until nodes.length) {
+                val node = nodes.item(index)
+                if (node.nodeType != org.w3c.dom.Node.ELEMENT_NODE) continue
+                if (node.nodeName !in setOf("string", "plurals", "string-array")) continue
+                val name = node.attributes?.getNamedItem("name")?.nodeValue ?: continue
+                val translatable = node.attributes?.getNamedItem("translatable")?.nodeValue
+                if (translatable != "false") result += name
+            }
+            return result
+        }
+
+        baseDir.listFiles { f -> f.extension == "xml" }.orEmpty().forEach { baseFile ->
+            val idFile = idDir.resolve(baseFile.name)
+            val missing = translatableNames(baseFile) - translatableNames(idFile)
+            assertEquals("Missing Indonesian translation(s) in ${baseFile.name}", emptySet<String>(), missing)
+        }
+    }
+
 }
