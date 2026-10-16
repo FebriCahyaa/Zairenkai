@@ -84,6 +84,8 @@ def spdx(name: str | None, url: str | None) -> str:
     words = set(re.findall(r"[a-z0-9.-]+", n))
     if "apache" in n:
         return "Apache-2.0"
+    if "bouncy castle" in n:
+        return "Bouncy-Castle-License"
     if "mit" in words or "mit-license" in n or "/mit" in n:
         return "MIT"
     if "bsd" in n:

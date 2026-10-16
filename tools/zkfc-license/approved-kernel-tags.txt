@@ -1,0 +1,3 @@
+# One exact, owner-approved CONFIG_ZKFC_LICENSEE_TAG per line.
+# Add tags through a reviewed commit only after approving the matching license request.
+# The issuer workflow fails closed when the file has no matching tag.

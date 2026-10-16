@@ -4,7 +4,6 @@ name: Release
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,9 +16,14 @@ jobs:
   package:
     name: Package release
     needs: lkm
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    environment: production-signing
     permissions:
       contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
       - uses: actions/checkout@v7.0.1
 
@@ -249,6 +253,15 @@ jobs:
           }
           echo "APK signature schemes v1/v2/v3 and keystore fingerprint verified."
 
+      - name: Stage standard release APK
+        run: |
+          set -euo pipefail
+          SRC="$(find app/build/outputs/apk/standard/release -type f -name '*.apk' -print -quit)"
+          [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Standard release APK not found"; exit 1; }
+          cp "$SRC" Zairenkai-standard-release.apk
+          unzip -t Zairenkai-standard-release.apk >/dev/null
+          sha256sum Zairenkai-standard-release.apk > Zairenkai-standard-release.apk.sha256
+
       - name: Sign and verify spoofed release APK
         env:
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
@@ -269,13 +282,94 @@ jobs:
           unzip -t Zairenkai-spoofed-release.apk >/dev/null
           sha256sum Zairenkai-spoofed-release.apk > Zairenkai-spoofed-release.apk.sha256
 
+      - name: Stage module checksum manifest
+        run: cp module/SHA256SUMS Zairenkai-module-SHA256SUMS
+
+      - name: Test release metadata generator
+        run: python3 tools/ci/test_release_manifest.py
+
+      - name: Verify API contract and prepare metadata signer
+        run: |
+          set -euo pipefail
+          python3 tools/ci/check-api-major.py
+          python3 -m pip install --disable-pip-version-check cryptography
+          grep -q '^-----BEGIN PUBLIC KEY-----' app/src/main/assets/security/update-metadata-public-key.pem || {
+            echo "::error::The pinned update metadata public key is not provisioned; refusing an unsigned official release."
+            exit 1
+          }
+
+      - name: Generate release manifest
+        run: |
+          set -euo pipefail
+          python3 tools/ci/test_release_manifest.py
+          python3 tools/ci/test-metadata-signature.py
+          python3 tools/ci/test-verify-metadata.py
+          python3 tools/ci/test-verify-release-manifest.py
+          python3 tools/ci/generate-release-manifest.py \
+            --version "$GITHUB_REF_NAME" \
+            --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
+
+      - name: Sign release manifest
+        env:
+          ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
+          ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
+        run: python3 tools/ci/sign-metadata.py --input Zairenkai-release-manifest.json --output Zairenkai-release-manifest.json.sig
+
+      - name: Verify signed release manifest and artifact hashes
+        run: python3 tools/ci/verify-release-manifest.py --manifest Zairenkai-release-manifest.json --signature Zairenkai-release-manifest.json.sig
+
+      - name: Generate release checksums
+        run: |
+          set -euo pipefail
+          sha256sum \
+            Zairenkai-module.zip \
+            Zairenkai-standard-release.apk \
+            Zairenkai-spoofed-release.apk \
+            Zairenkai-module-SHA256SUMS \
+            Zairenkai-release-manifest.json \
+            Zairenkai-release-manifest.json.sig \
+            > Zairenkai-release-SHA256SUMS
+
+      # Keyless provenance is separate from the ZKFC license key and APK upload key.
+      # These attestations bind the output hashes to the GitHub Actions build identity.
+      - name: Attest module ZIP provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: Zairenkai-module.zip
+
+      - name: Attest standard APK provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: Zairenkai-standard-release.apk
+
+      - name: Attest spoofed APK provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: Zairenkai-spoofed-release.apk
+
+      - name: Attest release manifest provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: Zairenkai-release-manifest.json
+
+      - name: Attest release checksum manifest provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: Zairenkai-release-SHA256SUMS
+
       - name: Publish release
         uses: softprops/action-gh-release@v3.0.2
         with:
           files: |
             Zairenkai-module.zip
-            app/build/outputs/apk/standard/release/*.apk
+            Zairenkai-standard-release.apk
+            Zairenkai-standard-release.apk.sha256
             Zairenkai-spoofed-release.apk
             Zairenkai-spoofed-release.apk.sha256
-            module/SHA256SUMS
+            Zairenkai-module-SHA256SUMS
+            Zairenkai-release-manifest.json
+            Zairenkai-release-manifest.json.sig
+            Zairenkai-release-SHA256SUMS
           generate_release_notes: true

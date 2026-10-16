@@ -125,4 +125,34 @@
     <string name="subsystem_role_thermoguard">サーマルセーフティ</string>
     <string name="subsystem_role_zperfd">ランタイムオーケストレーション</string>
     <string name="subsystem_role_zkfc">カーネルオーソリティ</string>
+
+    <!-- Verified root module installation and explicit API token import -->
+    <string name="system_module_title">Zairenkai root モジュール</string>
+    <string name="system_module_build_id">ビルド ID</string>
+    <string name="system_module_api_major">ZKFC API メジャーバージョン</string>
+    <string name="system_module_desc">この APK に含まれる検証済み root モジュールをインストールまたは更新します。Magisk と KernelSU の CLI に対応しています。それ以外の管理アプリでは、エクスポートした ZIP を使用できます。</string>
+    <string name="system_module_install_button">モジュールをインストール / 更新</string>
+    <string name="system_module_installing">検証してインストールしています…</string>
+    <string name="system_module_install_success">モジュールのインストール要求が受け付けられました。Android を再起動してから、エンジンの状態を再確認してください。</string>
+    <string name="system_module_not_embedded">この APK にはリリース用モジュールが含まれていません。APK をビルドする前にモジュール ZIP をビルドして配置してください。</string>
+    <string name="system_module_apk_modified">APK の署名者が想定された証明書と一致しないため、モジュールのインストールをブロックしました。</string>
+    <string name="system_module_integrity_failed">APK に含まれるモジュール ZIP の SHA-256 が、ビルド時に固定された値と一致しません。</string>
+    <string name="system_module_archive_invalid">モジュール ZIP または SHA256SUMS マニフェストが無効です。</string>
+    <string name="system_module_install_failed">root 管理アプリでモジュールをインストールできませんでした。診断情報を確認し、必要に応じて ZIP を手動でインストールしてください。</string>
+    <string name="system_module_manual_required">対応する Magisk / KernelSU インストーラー CLI が見つかりません。検証済み ZIP をエクスポートし、root 管理アプリからインストールしてください。</string>
+    <string name="system_module_share_button">検証済みモジュール ZIP を共有</string>
+    <string name="system_module_share_title">Zairenkai モジュール ZIP を共有</string>
+    <string name="system_module_confirm_title">Zairenkai モジュールをインストールしますか？</string>
+    <string name="system_module_confirm_message">同梱モジュールを現在の root 管理アプリに渡します。既存の Zairenkai モジュールが置き換えまたは更新される場合があり、変更の適用には再起動が必要です。</string>
+    <string name="system_module_confirm_install">モジュールをインストール</string>
+    <string name="system_module_confirm_cancel">キャンセル</string>
+    <string name="system_token_install_button">API トークンをインストール（.zkl）</string>
+    <string name="system_token_installing">トークンを確認しています…</string>
+    <string name="system_token_install_valid">トークンを検証してインストールしました。ライセンス対象機能を利用できます。</string>
+    <string name="system_token_owner_key_missing">カーネルに ZKFC オーナー公開鍵が設定されていません。オーナーがカーネルを正しく設定するまでトークンを検証できません。</string>
+    <string name="system_token_wrong_kernel">このトークンは別のカーネルまたはライセンスタグに紐付けられています。</string>
+    <string name="system_token_expired">このトークンは期限切れです。</string>
+    <string name="system_token_revoked">このトークンは失効しています。</string>
+    <string name="system_token_bad_signature">トークンの署名検証に失敗しました。</string>
+    <string name="system_token_install_result">トークンの状態：%1$s</string>
 </resources>

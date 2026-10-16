@@ -37,6 +37,9 @@ enum class UpdateChannel(val tag: String, val manifestAsset: String, val apkAsse
     /** Raw download URL of this channel's manifest. */
     fun manifestUrl(repo: String = REPO): String = "${downloadBase(repo)}/$manifestAsset"
 
+    /** Detached signature asset; required for the stable production channel. */
+    fun signatureUrl(repo: String = REPO): String = "${manifestUrl(repo)}.sig"
+
     /** Human-facing releases page for this channel (browser fallback). */
     fun pageUrl(repo: String = REPO): String = when (this) {
         RELEASE -> "https://github.com/$repo/releases/latest"
@@ -60,8 +63,12 @@ data class ReleaseManifest(
     val versionName: String,
     /** Direct download URL of the APK (falls back to the channel's stable name). */
     val apkUrl: String,
-    /** Lowercase hex SHA-256 of the APK, verified after download. Empty if absent. */
+    /** Lowercase, 64-character SHA-256 of the APK, required and checked after download. */
     val sha256: String,
+    /** Kernel/API contract supported by this release. */
+    val apiMajor: Int,
+    /** Unique CI build identity, not a license token or secret. */
+    val buildId: String,
 ) {
     /** True when this build is newer than [installedVersionCode]. */
     fun isNewerThan(installedVersionCode: Int): Boolean = versionCode > installedVersionCode
@@ -72,16 +79,29 @@ data class ReleaseManifest(
         /** Parse a channel manifest; null if it is missing required fields. */
         fun parse(json: String, channel: UpdateChannel, repo: String = UpdateChannel.REPO): ReleaseManifest? {
             val o = runCatching { lenient.parseToJsonElement(json).jsonObject }.getOrNull() ?: return null
+            val schema = o["schemaVersion"]?.jsonPrimitive?.intOrNull ?: return null
+            if (schema != 1) return null
             val code = o["versionCode"]?.jsonPrimitive?.intOrNull ?: return null
             val name = o["versionName"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotEmpty() } ?: return null
-            if (code < 0) return null
+            val apiMajor = o["apiMajor"]?.jsonPrimitive?.intOrNull ?: return null
+            val buildId = o["buildId"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+            if (code < 1 || apiMajor < 1 || buildId.length > 160 || buildId.any { it.isISOControl() }) return null
             val apk = o["apkUrl"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
                 ?: "${channel.downloadBase(repo)}/${channel.apkAsset}"
+            val parsedUrl = runCatching { java.net.URI(apk) }.getOrNull() ?: return null
+            if (parsedUrl.scheme != "https" || parsedUrl.host != "github.com" ||
+                parsedUrl.userInfo != null || parsedUrl.port !in listOf(-1, 443) ||
+                parsedUrl.query != null || parsedUrl.fragment != null ||
+                !parsedUrl.path.orEmpty().contains("/releases/")) return null
+            val sha = (o["sha256"]?.jsonPrimitive?.contentOrNull ?: "").trim().lowercase()
+            if (!sha.matches(Regex("[0-9a-f]{64}"))) return null
             return ReleaseManifest(
                 versionCode = code,
                 versionName = name,
                 apkUrl = apk,
-                sha256 = (o["sha256"]?.jsonPrimitive?.contentOrNull ?: "").trim().lowercase(),
+                sha256 = sha,
+                apiMajor = apiMajor,
+                buildId = buildId,
             )
         }
     }

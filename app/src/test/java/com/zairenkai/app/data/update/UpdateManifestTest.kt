@@ -15,12 +15,14 @@ import org.junit.Test
 
 class UpdateManifestTest {
     @Test fun parsesAndComparesVersion() {
-        val json = """{"versionCode":5,"versionName":"1.2.0","apkUrl":"https://x/app.apk","sha256":"ABCDEF"}"""
+        val json = """{"schemaVersion":1,"versionCode":5,"versionName":"1.2.0","apkUrl":"https://github.com/FebriCahyaa/Zairenkai/releases/download/v1.2.0/Zairenkai-release.apk","sha256":"${"A".repeat(64)}","apiMajor":1,"buildId":"deadbeef-12-1"}"""
         val m = ReleaseManifest.parse(json, UpdateChannel.RELEASE)!!
         assertEquals(5, m.versionCode)
         assertEquals("1.2.0", m.versionName)
-        assertEquals("https://x/app.apk", m.apkUrl)
-        assertEquals("abcdef", m.sha256)               // normalised to lowercase
+        assertEquals("https://github.com/FebriCahyaa/Zairenkai/releases/download/v1.2.0/Zairenkai-release.apk", m.apkUrl)
+        assertEquals("a".repeat(64), m.sha256)          // normalized to lowercase
+        assertEquals(1, m.apiMajor)
+        assertEquals("deadbeef-12-1", m.buildId)
         assertTrue(m.isNewerThan(2))
         assertFalse(m.isNewerThan(5))
         assertFalse(m.isNewerThan(9))
@@ -28,15 +30,26 @@ class UpdateManifestTest {
 
     @Test fun fallsBackToStableApkName() {
         // No apkUrl in the manifest -> derive the channel's stable asset URL.
-        val m = ReleaseManifest.parse("""{"versionCode":2,"versionName":"1.1.0"}""", UpdateChannel.DEBUG)!!
+        val m = ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":2,"versionName":"1.1.0","apiMajor":1,"buildId":"deadbeef-1-1","sha256":"${"b".repeat(64)}"}""", UpdateChannel.DEBUG)!!
         assertTrue(m.apkUrl.endsWith("/releases/download/preview/Zairenkai-debug.apk"))
-        assertEquals("", m.sha256)
+        assertEquals("b".repeat(64), m.sha256)
     }
 
     @Test fun refusesJunkOrMissingFields() {
         assertNull(ReleaseManifest.parse("not json", UpdateChannel.RELEASE))
-        assertNull(ReleaseManifest.parse("""{"versionName":"1.0"}""", UpdateChannel.RELEASE))   // no code
-        assertNull(ReleaseManifest.parse("""{"versionCode":1}""", UpdateChannel.RELEASE))        // no name
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionName":"1.0"}""", UpdateChannel.RELEASE))   // no code
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1}""", UpdateChannel.RELEASE))        // no name
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1,"versionName":"1.0","apiMajor":1,"buildId":"b","sha256":"bad"}""", UpdateChannel.RELEASE))
+    }
+
+
+    @Test fun refusesUnsupportedSchemaAndUnsafeUrls() {
+        val hash = "${"c".repeat(64)}"
+        val base = "\"versionCode\":1,\"versionName\":\"1.0.0\",\"apiMajor\":1,\"buildId\":\"build-1\",\"sha256\":\"$hash\""
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":2,$base}""", UpdateChannel.RELEASE))
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":0,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash"}""", UpdateChannel.RELEASE))
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash","apkUrl":"https://user@github.com/FebriCahyaa/Zairenkai/releases/latest/download/app.apk"}""", UpdateChannel.RELEASE))
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash","apkUrl":"https://github.com:8443/FebriCahyaa/Zairenkai/releases/latest/download/app.apk"}""", UpdateChannel.RELEASE))
     }
 
     @Test fun buildTypeSelectsChannel() {
@@ -50,6 +63,7 @@ class UpdateManifestTest {
         // (v1.2.0, …) still maps to a stable URL; DEBUG stays on "preview".
         assertTrue(UpdateChannel.RELEASE.manifestUrl().endsWith("/releases/latest/download/version-release.json"))
         assertTrue(UpdateChannel.DEBUG.manifestUrl().endsWith("/releases/download/preview/version-debug.json"))
+        assertTrue(UpdateChannel.RELEASE.signatureUrl().endsWith("/releases/latest/download/version-release.json.sig"))
         assertTrue(UpdateChannel.RELEASE.pageUrl().endsWith("/releases/latest"))
         assertTrue(UpdateChannel.DEBUG.pageUrl().endsWith("/releases/tag/preview"))
     }
