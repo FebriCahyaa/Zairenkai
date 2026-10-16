@@ -4,9 +4,9 @@ name: Android app
 on:
   push:
     branches: [main, ccr-076d8b15-osiupp]
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/android.yml", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", ".github/actions/build-bootpatch/action.yml"]
+    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/android.yml", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", ".github/actions/build-bootpatch/action.yml"]
   pull_request:
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", ".github/actions/build-bootpatch/action.yml"]
+    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", ".github/actions/build-bootpatch/action.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -64,6 +64,21 @@ jobs:
 
       - name: Lint
         run: ./gradlew :app:lintStandardDebug --stacktrace
+
+      # Keep the complete HTML/SARIF/text reports even when lint fails. The first
+      # exception line in Gradle output often hides the remaining findings.
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: lint-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            app/build/reports/lint-results-standardDebug.html
+            app/build/reports/lint-results-standardDebug.sarif
+            app/build/reports/lint-results-standardDebug.xml
+            app/build/intermediates/lint_intermediate_text_report/standardDebug/lintReportStandardDebug/lint-results-standardDebug.txt
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload standard debug APK
         uses: actions/upload-artifact@v7.0.1

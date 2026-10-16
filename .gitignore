@@ -43,3 +43,6 @@ __pycache__/
 /kernel/license/zkfc_license.inc
 /kernel/license/zkfc_bundle.inc
 /kernel/license/zkfc_crl.inc
+
+# Public update-metadata verification key is intentionally tracked.
+!app/src/main/assets/security/update-metadata-public-key.pem
