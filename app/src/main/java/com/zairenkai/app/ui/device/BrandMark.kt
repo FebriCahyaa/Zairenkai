@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -133,9 +134,10 @@ private fun officialLogoRes(brand: DeviceBrand): Int {
     val style = brandStyle(brand)
     if (style.officialLogo != null) return style.officialLogo
     val context = LocalContext.current
-    return remember(brand) {
+    val resources = LocalResources.current
+    return remember(brand, resources, context.packageName) {
         @Suppress("DiscouragedApi")
-        context.resources.getIdentifier("brand_${brand.name.lowercase()}", "drawable", context.packageName)
+        resources.getIdentifier("brand_${brand.name.lowercase()}", "drawable", context.packageName)
     }
 }
 

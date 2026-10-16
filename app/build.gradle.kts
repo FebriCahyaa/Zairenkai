@@ -61,6 +61,15 @@ val zkfcApiMajor = runCatching {
         .find(project.file("../tools/zkfc-license/zkfc_license.py").readText())
         ?.groupValues?.get(1)?.toInt()
 }.getOrNull() ?: 1
+val kernelUapiApiMajor = runCatching {
+    Regex("#define\\s+ZKFC_API_MAJOR\\s+(\\d+)")
+        .find(project.file("../kernel/include/uapi/linux/zkfc.h").readText())
+        ?.groupValues?.get(1)?.toInt()
+}.getOrNull() ?: -1
+require(zkfcApiMajor == kernelUapiApiMajor) {
+    "ZKFC API major mismatch: token issuer=$zkfcApiMajor, kernel UAPI=$kernelUapiApiMajor. " +
+        "Update both contracts deliberately before shipping."
+}
 
 /** Return the SHA-256 fingerprint of the X.509 certificate used by this keystore alias. */
 fun certificateSha256(file: File, storePassword: String, alias: String): String {
@@ -385,6 +394,8 @@ dependencies {
     // Provide every SDK used by @Config tests; offline Robolectric resolves jars by exact filename.
     add(robolectricRuntime.name, libs.robolectric.android.all)
     add(robolectricApi32Runtime.name, libs.robolectric.android.api32)
+    // Provides Ed25519 verification on Android 12+ without depending on platform provider availability.
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
 }
 val robolectricJars = layout.buildDirectory.dir("robolectric-jars")
 val copyRobolectricJars = tasks.register<Copy>("copyRobolectricJars") {

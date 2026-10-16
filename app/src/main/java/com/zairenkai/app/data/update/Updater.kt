@@ -38,15 +38,31 @@ sealed interface CheckResult {
 class Updater(private val context: Context) {
     private val timeoutMs = 15_000
 
+    private companion object {
+        const val MAX_MANIFEST_BYTES = 1024 * 1024
+        const val MAX_SIGNATURE_BYTES = 16 * 1024
+    }
+
     /** Check [channel] against [installedVersionCode]. Runs off the main thread. */
     suspend fun check(channel: UpdateChannel, installedVersionCode: Int): CheckResult =
         withContext(Dispatchers.IO) {
-            val body = runCatching { get(channel.manifestUrl()) }.getOrElse { e ->
+            val body = runCatching { get(channel.manifestUrl(), MAX_MANIFEST_BYTES) }.getOrElse { e ->
                 return@withContext CheckResult.Failed(
                     if (e is java.io.FileNotFoundException) CheckResult.Reason.NOT_PUBLISHED
                     else CheckResult.Reason.NO_NETWORK,
                 )
             } ?: return@withContext CheckResult.Failed(CheckResult.Reason.NOT_PUBLISHED)
+            if (channel == UpdateChannel.RELEASE) {
+                val signature = runCatching { get(channel.signatureUrl(), MAX_SIGNATURE_BYTES) }.getOrNull()
+                    ?: return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
+                if (!SignedMetadataVerifier.verifyAsset(
+                        context,
+                        channel.manifestAsset,
+                        body.toByteArray(Charsets.UTF_8),
+                        signature.toByteArray(Charsets.US_ASCII),
+                    )
+                ) return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
+            }
             val manifest = ReleaseManifest.parse(body, channel)
                 ?: return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
             if (manifest.isNewerThan(installedVersionCode)) CheckResult.Available(manifest)
@@ -55,8 +71,8 @@ class Updater(private val context: Context) {
 
     /**
      * Download the APK to the app cache, reporting progress in [0f,1f] (or -1f
-     * when the total size is unknown). Verifies the SHA-256 when the manifest
-     * carries one. Returns the file, or null on any failure.
+     * when the total size is unknown). The manifest parser requires a SHA-256
+     * digest, which is checked after download. Returns null on any failure.
      */
     suspend fun download(manifest: ReleaseManifest, onProgress: (Float) -> Unit): File? =
         withContext(Dispatchers.IO) {
@@ -100,9 +116,29 @@ class Updater(private val context: Context) {
         context.startActivity(intent)
     }
 
-    private fun get(urlStr: String): String? {
+    private fun get(urlStr: String, maxBytes: Int): String? {
         val conn = open(urlStr)
-        return conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }.also { conn.disconnect() }
+        try {
+            if (conn.contentLengthLong > maxBytes) {
+                throw java.io.IOException("Update metadata exceeds the allowed size")
+            }
+            val bytes = conn.inputStream.use { input ->
+                val out = java.io.ByteArrayOutputStream(minOf(maxBytes, 4096))
+                val buffer = ByteArray(4096)
+                var total = 0
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    if (total > maxBytes) throw java.io.IOException("Update metadata exceeds the allowed size")
+                    out.write(buffer, 0, count)
+                }
+                out.toByteArray()
+            }
+            return bytes.toString(Charsets.UTF_8)
+        } finally {
+            conn.disconnect()
+        }
     }
 
     private fun open(urlStr: String): HttpURLConnection {
@@ -112,22 +148,42 @@ class Updater(private val context: Context) {
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = timeoutMs
                 readTimeout = timeoutMs
-                instanceFollowRedirects = true
+                instanceFollowRedirects = false
                 setRequestProperty("Accept", "application/octet-stream, application/json")
                 setRequestProperty("User-Agent", "Zairenkai-Updater")
             }
             val code = conn.responseCode
-            // GitHub asset URLs redirect to a signed CDN URL; follow cross-protocol.
-            if (code in 300..399 && redirects < 5) {
-                val loc = conn.getHeaderField("Location") ?: break
+            // Keep redirects manual so an HTTP downgrade is rejected before any
+            // redirected bytes are accepted. GitHub uses HTTPS redirects to its CDN.
+            if (code in 300..399) {
+                if (redirects >= 5) {
+                    conn.disconnect()
+                    throw java.io.IOException("Too many redirects while fetching update data")
+                }
+                val loc = conn.getHeaderField("Location")
+                if (loc.isNullOrBlank()) {
+                    conn.disconnect()
+                    throw java.io.IOException("Update redirect did not provide a Location")
+                }
+                val nextUrl = URL(url, loc)
                 conn.disconnect()
-                url = URL(url, loc)
+                if (!nextUrl.protocol.equals("https", ignoreCase = true)) {
+                    throw java.io.IOException("Refusing an HTTPS downgrade during update download")
+                }
+                url = nextUrl
                 redirects++
                 continue
             }
+            if (code == HttpURLConnection.HTTP_NOT_FOUND) {
+                conn.disconnect()
+                throw java.io.FileNotFoundException(url.toString())
+            }
+            if (code !in 200..299) {
+                conn.disconnect()
+                throw java.io.IOException("Update server returned HTTP $code")
+            }
             return conn
         }
-        return url.openConnection() as HttpURLConnection
     }
 
     private fun sha256(file: File): String {

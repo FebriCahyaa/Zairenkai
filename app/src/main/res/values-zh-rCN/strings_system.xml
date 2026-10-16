@@ -125,4 +125,34 @@
     <string name="subsystem_role_thermoguard">温控安全</string>
     <string name="subsystem_role_zperfd">运行时编排</string>
     <string name="subsystem_role_zkfc">内核权限</string>
+
+    <!-- Verified root module installation and explicit API token import -->
+    <string name="system_module_title">Zairenkai Root 模块</string>
+    <string name="system_module_build_id">构建 ID</string>
+    <string name="system_module_api_major">ZKFC API 主版本</string>
+    <string name="system_module_desc">安装或更新此 APK 内经过验证的 Root 模块。支持通过 Magisk 和 KernelSU CLI 安装；其他管理器可使用导出的 ZIP。</string>
+    <string name="system_module_install_button">安装 / 更新模块</string>
+    <string name="system_module_installing">正在验证并安装…</string>
+    <string name="system_module_install_success">模块安装请求已被接受。请重启 Android，然后重新检查引擎状态。</string>
+    <string name="system_module_not_embedded">此 APK 不包含正式发布模块。请先构建模块 ZIP 并将其放入构建目录，再构建 APK。</string>
+    <string name="system_module_apk_modified">APK 签名证书与预期证书不匹配，已阻止安装模块。</string>
+    <string name="system_module_integrity_failed">内置模块 ZIP 的 SHA-256 与构建时固定的值不匹配。</string>
+    <string name="system_module_archive_invalid">模块 ZIP 或其 SHA256SUMS 清单无效。</string>
+    <string name="system_module_install_failed">Root 管理器无法安装模块。请查看诊断信息，必要时手动安装导出的 ZIP。</string>
+    <string name="system_module_manual_required">未找到受支持的 Magisk / KernelSU 安装 CLI。请导出经过验证的 ZIP，并通过 Root 管理器安装。</string>
+    <string name="system_module_share_button">分享已验证的模块 ZIP</string>
+    <string name="system_module_share_title">分享 Zairenkai 模块 ZIP</string>
+    <string name="system_module_confirm_title">安装 Zairenkai 模块？</string>
+    <string name="system_module_confirm_message">这会将内置模块提交给当前 Root 管理器，可能替换或更新现有的 Zairenkai 模块。更改生效前需要重启。</string>
+    <string name="system_module_confirm_install">安装模块</string>
+    <string name="system_module_confirm_cancel">取消</string>
+    <string name="system_token_install_button">安装 API 令牌（.zkl）</string>
+    <string name="system_token_installing">正在检查令牌…</string>
+    <string name="system_token_install_valid">令牌已验证并安装。现在应可使用已授权的功能。</string>
+    <string name="system_token_owner_key_missing">内核尚未配置 ZKFC 所有者公钥。在所有者正确配置内核构建之前，无法验证令牌。</string>
+    <string name="system_token_wrong_kernel">此令牌绑定到其他内核或许可证标签。</string>
+    <string name="system_token_expired">此令牌已过期。</string>
+    <string name="system_token_revoked">此令牌已被撤销。</string>
+    <string name="system_token_bad_signature">令牌签名验证失败。</string>
+    <string name="system_token_install_result">令牌状态：%1$s</string>
 </resources>

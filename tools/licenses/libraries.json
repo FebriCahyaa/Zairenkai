@@ -2128,6 +2128,22 @@
     }
    ]
   },
+  "org.bouncycastle:bcprov-jdk18on": {
+   "name": "Bouncy Castle Crypto Package",
+   "description": "JCA/JCE and lightweight cryptographic APIs; used for Ed25519 update-metadata verification across supported Android versions.",
+   "developers": [
+    "The Legion of the Bouncy Castle Inc."
+   ],
+   "website": "https://www.bouncycastle.org/",
+   "source": "https://github.com/bcgit/bc-java",
+   "licenses": [
+    {
+     "spdx": "Bouncy-Castle-License",
+     "name": "Bouncy Castle License",
+     "url": "https://www.bouncycastle.org/licence.html"
+    }
+   ]
+  },
   "org.jetbrains.kotlin:kotlin-stdlib": {
    "name": "Kotlin Stdlib",
    "description": "Kotlin Standard Library",

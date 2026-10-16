@@ -1,0 +1,227 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+name: Issue scoped ZKFC token
+
+on:
+  workflow_dispatch:
+    inputs:
+      licensee:
+        description: Approved kernel project or licensee name
+        required: true
+        type: string
+      kernel_tag:
+        description: Exact CONFIG_ZKFC_LICENSEE_TAG (must be allowlisted)
+        required: true
+        type: string
+      recipient_age_public_key:
+        description: Age public recipient key; the resulting grant is encrypted for this recipient before upload
+        required: true
+        type: string
+      validity_days:
+        description: Grant validity
+        required: true
+        type: choice
+        options: [30, 90, 180, 365]
+        default: 90
+      features:
+        description: Requested feature set (still constrained by the delegated subkey)
+        required: true
+        type: choice
+        options:
+          - input_boost
+          - task_boost
+          - input_boost,task_boost
+          - input_boost,task_boost,cpufreq_qos
+          - all
+        default: input_boost,task_boost
+      flags:
+        description: Grant flags (owner flag is intentionally not available)
+        required: true
+        type: choice
+        options: [none, developer, commercial]
+        default: developer
+
+permissions: {}
+
+jobs:
+  validate-request:
+    name: Validate approved token request
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      source_sha: ${{ steps.commit.outputs.commit }}
+    steps:
+      - name: Checkout protected default branch
+        id: checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Validate request and tag allowlist
+        env:
+          LICENSEE: ${{ inputs.licensee }}
+          KERNEL_TAG: ${{ inputs.kernel_tag }}
+          VALIDITY_DAYS: ${{ inputs.validity_days }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/$DEFAULT_BRANCH" ]] || {
+            echo "::error::Token issuance is allowed only from the protected default branch."
+            exit 1
+          }
+          [[ "$KERNEL_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,62}$ ]] || {
+            echo "::error::Invalid kernel tag format."
+            exit 1
+          }
+          [[ "$LICENSEE" =~ ^[A-Za-z0-9][-A-Za-z0-9 ._/+]{2,62}$ ]] || {
+            echo "::error::Licensee must be 3–63 safe printable ASCII characters."
+            exit 1
+          }
+          [[ "$VALIDITY_DAYS" =~ ^(30|90|180|365)$ ]] || {
+            echo "::error::Unsupported validity period."
+            exit 1
+          }
+          grep -Fqx "$KERNEL_TAG" tools/zkfc-license/approved-kernel-tags.txt || {
+            echo "::error::Kernel tag is not on the approved allowlist. Review and add it in a separate commit first."
+            exit 1
+          }
+          if grep -Eq '^[[:space:]]*#define[[:space:]]+ZKFC_OWNER_KEY_PROVISIONED[[:space:]]+0([[:space:]]|$)' kernel/security/zkfc_owner_key.h; then
+            echo "::error::The owner public key is not provisioned; refusing to issue tokens."
+            exit 1
+          fi
+          echo "Token request validated for the allowlisted kernel tag."
+
+      - name: Export checked-out commit
+        id: commit
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  issue:
+    name: Issue limited grant after approval
+    needs: validate-request
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment: zkfc-token-issuer
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the exact reviewed source commit
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ needs.validate-request.outputs.source_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Select tag-scoped delegated issuer secret
+        id: select_issuer
+        env:
+          KERNEL_TAG: ${{ inputs.kernel_tag }}
+        run: |
+          set -euo pipefail
+          SECRET_SUFFIX="$(python3 - "$KERNEL_TAG" <<'PY'
+          import re, sys
+          tag = sys.argv[1]
+          if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,62}", tag):
+              raise SystemExit("invalid kernel tag")
+          slug = re.sub(r"_+", "_", re.sub(r"[^A-Za-z0-9]", "_", tag)).strip("_").upper()
+          print(slug)
+          PY
+          )"
+          echo "secret_name=ZKFC_SUBKEY_${SECRET_SUFFIX}" >> "$GITHUB_OUTPUT"
+
+      - name: Issue and verify scoped token
+        env:
+          ZKFC_SUBKEY_BASE64: ${{ secrets[steps.select_issuer.outputs.secret_name] }}
+          LICENSEE: ${{ inputs.licensee }}
+          KERNEL_TAG: ${{ inputs.kernel_tag }}
+          VALIDITY_DAYS: ${{ inputs.validity_days }}
+          FEATURES: ${{ inputs.features }}
+          REQUEST_FLAGS: ${{ inputs.flags }}
+          RECIPIENT_AGE_PUBLIC_KEY: ${{ inputs.recipient_age_public_key }}
+          RUN_ID: ${{ github.run_id }}
+          API_SOURCE: tools/zkfc-license/zkfc_license.py
+        run: |
+          set -euo pipefail
+          [[ -n "$ZKFC_SUBKEY_BASE64" ]] || {
+            echo "::error::Missing scoped environment secret ${{ steps.select_issuer.outputs.secret_name }} in zkfc-token-issuer."
+            exit 1
+          }
+          [[ "$RECIPIENT_AGE_PUBLIC_KEY" == age1* && "$RECIPIENT_AGE_PUBLIC_KEY" != *[[:space:]]* && ${#RECIPIENT_AGE_PUBLIC_KEY} -le 160 ]] || {
+            echo "::error::Provide a valid Age public recipient key; raw grants are never published from this public repository."
+            exit 1
+          }
+
+          sudo apt-get update
+          sudo apt-get install --yes age
+          command -v age >/dev/null
+
+          python -m venv "$RUNNER_TEMP/zkfc-venv"
+          PY="$RUNNER_TEMP/zkfc-venv/bin/python"
+          "$PY" -m pip install --disable-pip-version-check cryptography
+          # Do not issue a grant against the script API level if the kernel UAPI
+          # advertises a different major; keep issuance on the same contract.
+          "$PY" tools/ci/check-api-major.py
+
+          ISSUER_DIR="$RUNNER_TEMP/zkfc-issuer"
+          KEY_DIR="$ISSUER_DIR/ledger"
+          OUT_DIR="$ISSUER_DIR/out"
+          SUBKEY="$ISSUER_DIR/issuer.zksub"
+          mkdir -p "$KEY_DIR" "$OUT_DIR" "$GITHUB_WORKSPACE/issued-grant"
+          chmod 0700 "$ISSUER_DIR" "$KEY_DIR" "$OUT_DIR"
+          printf '%s' "$ZKFC_SUBKEY_BASE64" | base64 --decode > "$SUBKEY"
+          chmod 0600 "$SUBKEY"
+
+          FLAGS="$REQUEST_FLAGS"
+          [[ "$FLAGS" == "none" ]] && FLAGS=""
+          API_MAJOR="$("$PY" - "$API_SOURCE" <<'PY'
+          import re, sys
+          source = open(sys.argv[1], encoding="utf-8").read()
+          match = re.search(r"^API_MAJOR\s*=\s*(\d+)\s*$", source, re.M)
+          if not match:
+              raise SystemExit("API_MAJOR was not found")
+          print(match.group(1))
+          PY
+          )"
+          PREFIX="$OUT_DIR/ZKFC-${RUN_ID}"
+
+          "$PY" "$API_SOURCE" --key-dir "$KEY_DIR" issue \
+            --subkey "$SUBKEY" \
+            --licensee "$LICENSEE" \
+            --tag "$KERNEL_TAG" \
+            --api-major "$API_MAJOR" \
+            --days "$VALIDITY_DAYS" \
+            --features "$FEATURES" \
+            --flags "$FLAGS" \
+            --out "$PREFIX"
+
+          # The verifier checks both the owner's signature over the delegated
+          # certificate and the subkey signature over the grant; never publish
+          # an output unless the full chain validates against the committed key.
+          "$PY" "$API_SOURCE" verify "$PREFIX.zkl" --tag "$KERNEL_TAG"
+          (cd "$OUT_DIR" && sha256sum "$(basename "$PREFIX").zkl" "$(basename "$PREFIX").inc" > SHA256SUMS)
+
+          # This is a public repository: never upload the raw license grant.
+          # Encrypt the token, kernel include and their internal hashes to the
+          # approved recipient's Age public key; only ciphertext leaves the runner.
+          ARCHIVE="$ISSUER_DIR/ZKFC-${RUN_ID}.tar.gz"
+          tar -C "$OUT_DIR" -czf "$ARCHIVE" \
+            "$(basename "$PREFIX").zkl" "$(basename "$PREFIX").inc" SHA256SUMS
+          mkdir -p "$GITHUB_WORKSPACE/issued-grant"
+          ENCRYPTED="$GITHUB_WORKSPACE/issued-grant/ZKFC-${RUN_ID}.tar.gz.age"
+          age --recipient "$RECIPIENT_AGE_PUBLIC_KEY" --output "$ENCRYPTED" "$ARCHIVE"
+          (cd "$GITHUB_WORKSPACE/issued-grant" && sha256sum "$(basename "$ENCRYPTED")" > SHA256SUMS)
+          rm -f "$ARCHIVE" "$PREFIX.zkl" "$PREFIX.inc" "$OUT_DIR/SHA256SUMS" "$SUBKEY"
+          echo "Issued and verified a scoped grant. Only recipient-encrypted bytes and their SHA-256 will be uploaded."
+
+      - name: Upload recipient-encrypted grant artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: zairenkai-zkfc-grant-${{ github.run_id }}
+          path: issued-grant/*
+          if-no-files-found: error
+          retention-days: 3
