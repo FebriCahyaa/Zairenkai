@@ -10,6 +10,39 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets.Companion.navigationBars
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -108,51 +141,33 @@ fun ZairenkaiRoot(container: AppContainer) {
             // Detail screens (monitor/battery, settings, …) show no bottom bar at
             // all — and reserve no space for one, so hiding it leaves no empty
             // box. Their own CollapsingScaffold supplies the bottom inset.
-            if (onTopLevel)
-            NavigationBar(
-                containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
-                    MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary, glass,
-                ),
-                tonalElevation = 0.dp,
-                windowInsets = NavigationBarDefaults.windowInsets,
-                // Collapse the bar's RESERVED height as it hides (not just a
-                // translate inside a fixed slot, which left an empty box): the
-                // full-height bar is drawn in a shrinking, bottom-anchored box so
-                // it slides off-screen while the content fills the reclaimed space.
-                modifier = Modifier
-                    .onSizeChanged { if (it.height > 0) barHeightPx = it.height }
-                    .layout { measurable, constraints ->
-                        val placeable = measurable.measure(constraints)
-                        val visible = (placeable.height - barOffsetPx).roundToInt()
-                            .coerceIn(0, placeable.height)
-                        layout(placeable.width, visible) { placeable.place(0, 0) }
+            if (onTopLevel) {
+                FloatingZairenkaiNavBar(
+                    current = current,
+                    containerColor = com.zairenkai.app.ui.theme.glassContainerColor(
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.primary,
+                        glass,
+                    ),
+                    modifier = Modifier
+                        // Clip the translated bar to its shrinking slot. Measure the
+                        // inner content before shrinking so the full height is retained.
+                        .clipToBounds()
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val visible = (placeable.height - barOffsetPx).roundToInt()
+                                .coerceIn(0, placeable.height)
+                            layout(placeable.width, visible) { placeable.place(0, 0) }
+                        }
+                        .onSizeChanged { if (it.height > 0) barHeightPx = it.height },
+                    onNavigate = { dest ->
+                        nav.navigate(dest.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
-            ) {
-                bottomDests.forEach { dest ->
-                    // Detail routes ("monitor/battery") keep their tab highlighted.
-                    val selected = current?.hierarchy?.any {
-                        it.route == dest.route || it.route?.startsWith(dest.route + "/") == true
-                    } == true
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            nav.navigate(dest.route) {
-                                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(dest.icon, contentDescription = stringResource(dest.label)) },
-                        label = { Text(stringResource(dest.label)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
+                )
             }
         },
     ) { inner ->
@@ -261,3 +276,171 @@ fun ZairenkaiRoot(container: AppContainer) {
         }
     }
 }
+
+/**
+ * Floating, icon-only navigation inspired by KernelSU-Next's moving selection
+ * pill, adapted to Zairenkai's Material 3 theme and route model.
+ * All top-level destinations remain accessible by touch and TalkBack.
+ */
+@Composable
+private fun FloatingZairenkaiNavBar(
+    current: androidx.navigation.NavDestination?,
+    containerColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+    onNavigate: (Dest) -> Unit,
+) {
+    val destinations = bottomDests
+    val selectedIndex = destinations.indexOfFirst { dest ->
+        current?.hierarchy?.any { entry ->
+            entry.route == dest.route || entry.route?.startsWith(dest.route + "/") == true
+        } == true
+    }.let { if (it >= 0) it else 0 }
+
+    var dragging by remember { mutableStateOf(false) }
+    var dragTargetIndex by remember { mutableIntStateOf(selectedIndex) }
+    LaunchedEffect(selectedIndex) {
+        if (!dragging) dragTargetIndex = selectedIndex
+    }
+    val latestOnNavigate by rememberUpdatedState(onNavigate)
+    val haptic = LocalHapticFeedback.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val density = LocalDensity.current
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            // Unlike the stock edge-to-edge NavigationBar, this floating pill
+            // sits above Android's gesture/navigation area, like KSU-Next.
+            .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+    ) {
+        val horizontalPadding = when {
+            maxWidth > 600.dp -> 32.dp
+            maxWidth > 400.dp -> 16.dp
+            else -> 8.dp
+        }
+        val itemSpacing = 4.dp
+        val containerPadding = 7.dp
+        val itemSize = minOf(
+            56.dp,
+            (maxWidth - horizontalPadding * 2 - containerPadding * 2 - itemSpacing * (destinations.size - 1)) / destinations.size,
+        ).coerceAtLeast(44.dp)
+        val navBarWidth = itemSize * destinations.size +
+            itemSpacing * (destinations.size - 1) + containerPadding * 2
+        val itemSizePx = with(density) { itemSize.toPx() }
+        val itemSpacingPx = with(density) { itemSpacing.toPx() }
+        val containerPaddingPx = with(density) { containerPadding.toPx() }
+
+        val visualIndex: (Int) -> Int = { index ->
+            if (isRtl) destinations.lastIndex - index else index
+        }
+        val displayedIndex = if (dragging) dragTargetIndex else selectedIndex
+        val animatedVisualIndex by animateFloatAsState(
+            targetValue = visualIndex(displayedIndex).toFloat(),
+            animationSpec = if (dragging) {
+                spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+            } else {
+                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+            },
+            label = "zairenkai-nav-selection",
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = horizontalPadding, vertical = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Surface(
+                modifier = Modifier.width(navBarWidth),
+                shape = RoundedCornerShape(26.dp),
+                color = containerColor,
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .pointerInput(destinations.size, selectedIndex, isRtl, itemSizePx, itemSpacingPx) {
+                            detectDragGestures(
+                                onDragStart = { point ->
+                                    val visual = ((point.x - containerPaddingPx) / (itemSizePx + itemSpacingPx))
+                                        .toInt().coerceIn(0, destinations.lastIndex)
+                                    dragTargetIndex = if (isRtl) destinations.lastIndex - visual else visual
+                                    dragging = true
+                                },
+                                onDragEnd = {
+                                    val target = destinations.getOrNull(dragTargetIndex)
+                                    dragging = false
+                                    if (target != null && dragTargetIndex != selectedIndex) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                        latestOnNavigate(target)
+                                    }
+                                },
+                                onDragCancel = { dragging = false },
+                                onDrag = { change, _ ->
+                                    change.consume()
+                                    val visual = ((change.position.x - containerPaddingPx) / (itemSizePx + itemSpacingPx))
+                                        .toInt().coerceIn(0, destinations.lastIndex)
+                                    dragTargetIndex = if (isRtl) destinations.lastIndex - visual else visual
+                                },
+                            )
+                        },
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = containerPadding),
+                    ) {
+                        val indicatorOffset = ((itemSizePx + itemSpacingPx) * animatedVisualIndex).roundToInt()
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .offset { IntOffset(indicatorOffset, 0) }
+                                .size(itemSize)
+                                .graphicsLayer {
+                                    val scale = if (dragging) 1.07f else 1f
+                                    scaleX = scale
+                                    scaleY = scale
+                                }
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            destinations.forEachIndexed { index, dest ->
+                                val visuallySelected = index == displayedIndex
+                                Box(
+                                    modifier = Modifier
+                                        .size(itemSize)
+                                        .clip(RoundedCornerShape(18.dp))
+                                        .selectable(
+                                            selected = index == selectedIndex,
+                                            role = Role.Tab,
+                                            onClick = {
+                                                if (index != selectedIndex) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                    onNavigate(dest)
+                                                }
+                                            },
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = dest.icon,
+                                        contentDescription = stringResource(dest.label),
+                                        tint = if (visuallySelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
