@@ -174,7 +174,7 @@ jobs:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          ./gradlew :app:testStandardCanaryUnitTest :app:assembleStandardCanary \
+          ./gradlew :app:test :app:assembleStandardCanary \
             "-PversionCode=${{ steps.version.outputs.code }}" \
             "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
       - name: Verify Canary APK signer and signature schemes

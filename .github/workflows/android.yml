@@ -68,7 +68,7 @@ jobs:
       - name: Unit tests (engine JSON contracts, tweak outcomes)
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: ./gradlew :app:testStandardCanaryUnitTest :app:testStandardReleaseUnitTest "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --no-daemon --stacktrace
+        run: ./gradlew :app:test "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --no-daemon --stacktrace
 
       # Exercise the optimized Canary variant in CI. A non-minified build does not
       # run R8, so it cannot catch reflectively loaded crypto mappings being stripped.

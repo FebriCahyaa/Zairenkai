@@ -145,7 +145,7 @@ jobs:
             exit 1
           }
           VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$VERSION_NAME" --channel release)"
-          ./gradlew :app:testStandardReleaseUnitTest :app:assembleStandardRelease \
+          ./gradlew :app:test :app:assembleStandardRelease \
             "-PversionCode=$VERSION_CODE" "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
 
       - name: Enforce v1/v2/v3 signing and verify release APK
