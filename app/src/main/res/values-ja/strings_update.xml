@@ -8,7 +8,7 @@
     <string name="update_installed">インストール済みバージョン</string>
     <string name="update_channel_of">%1$s チャンネルから更新</string>
     <string name="update_channel_release">リリース</string>
-    <string name="update_channel_debug">デバッグ</string>
+    <string name="update_channel_canary">Canary</string>
 
     <!-- アプリ内での確認・ダウンロード・インストール -->
     <string name="update_status_idle">GitHub で新しいビルドを確認します。</string>
@@ -24,9 +24,10 @@
     <string name="update_retry">再試行</string>
     <string name="update_open_browser">代わりにブラウザで開く</string>
     <string name="update_download_failed">ダウンロードに失敗したか、ファイルがチェックサムと一致しませんでした。再試行してください。</string>
-    <string name="update_fail_network">GitHub に接続できませんでした。接続を確認して再試行してください。</string>
+    <string name="update_fail_network">更新サーバーに接続できませんでした。接続を確認して再試行してください。</string>
     <string name="update_fail_notpublished">このチャンネルにはまだビルドが公開されていません。</string>
     <string name="update_fail_manifest">更新情報を読み取れませんでした。</string>
+    <string name="update_fail_server">このビルドには License Server の URL が設定されていません。公式の Canary または Release をインストールしてください。</string>
 
     <string name="update_auto_title">更新を自動で確認</string>
     <string name="update_auto_sub">オンのとき、この画面を開くたびに GitHub を確認します。オフにするとアプリは完全にオフラインのままになります。</string>
@@ -37,9 +38,9 @@
     <string name="update_release_body">安定した、最適化・署名済みのビルドです。日常利用に推奨します。GitHub の最新リリースを開きます。</string>
     <string name="update_open_release">リリースページを開く</string>
 
-    <string name="update_debug_title">デバッグビルド</string>
-    <string name="update_debug_body">プレビュービルドです。最新の変更を早めに試せるよう公開されています。リリースより検証は少なめです。GitHub のプレビューを開きます。</string>
-    <string name="update_open_debug">プレビューページを開く</string>
+    <string name="update_canary_title">Canary ビルド</string>
+    <string name="update_canary_body">Release より先に最近の変更を試せる、最適化された先行ビルドです。公式の署名 ID を使用し、署名済み更新メタデータを検証します。GitHub の Canary リリースページを開きます。</string>
+    <string name="update_open_canary">Canary ページを開く</string>
 
     <string name="update_privacy_note">アプリは確認またはダウンロードのときだけ GitHub に接続します。識別子は送信せず、バックグラウンドで確認することもありません。ダウンロードはインストール前に公開された SHA-256 と照合されます。</string>
 
@@ -51,7 +52,7 @@
     <string name="changelog_1_1_0_redesign">ホーム・モニター・調整・プロファイル・システムを、落ち着いたグループ化レイアウトに刷新しました。</string>
     <string name="changelog_1_1_0_monitor">モニターにアプリ別のバッテリー使用量、RAM と ZRAM の詳細、.zip でエクスポートできる ZKFC ログを追加しました。</string>
     <string name="changelog_1_1_0_language">アプリごとの言語、新しいテーマ設定、ブランドを認識する端末情報。</string>
-    <string name="changelog_1_1_0_update">デバッグとリリースのビルドを提供するこのアプリ更新画面と、この変更履歴。</string>
+    <string name="changelog_1_1_0_update">このアプリ更新画面は Canary と Release のチャンネルに対応しました。</string>
 
     <string name="changelog_1_0_0_first">Zairenkai の初回リリース。</string>
     <string name="changelog_1_0_0_engine">起動時に対応する GKI モジュールを読み込み、保存したプロファイルを再適用します。</string>

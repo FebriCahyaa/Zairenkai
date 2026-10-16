@@ -50,3 +50,7 @@ contract. Do not embed the private signing key in the APK, module, or kernel.
 with full root access can replace both files and the manifest; the release APK
 pin protects the initial embedded ZIP only. See `docs/security/API_TOKENS.md`
 for the trust boundary and opt-in per-build token helper.
+
+## Module updater channels
+
+Canary packaging stamps `updateJson` to `/v1/updates/module/canary`; tagged stable releases use `/v1/updates/module/release`. The License Server returns bounded metadata that points to the corresponding official GitHub Releases module ZIP. The package version code follows the GitHub Actions run ID, shared across workflows, so a later Canary/Release package does not automatically appear to be a downgrade just because its channel uses a different version-code range. APK version codes remain independently derived from the Android app version/channel.

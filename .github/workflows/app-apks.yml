@@ -1,18 +1,8 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-# One run, both builds, kept apart — and each build is a complete module, like
-# KSU-Next: the manager APK *and* the flashable kernel module (zkfc.ko per KMI
-# + zperfd/zkfctl). The debug build goes out as a GitHub *prerelease* (tag
-# "preview"); the stable build goes out as a versioned GitHub release. The
-# stable job is opt-in via ZK_RELEASE_ENABLED and uses only protected environment
-# credentials; forks can run the debug lane without production signing authority.
-#
-# Each channel also publishes a small version-<channel>.json with a stable APK
-# name, so the in-app "Update app" screen can check and download without
-# scraping a release page:
-#   debug   -> .../releases/download/preview/{Zairenkai-debug.apk, version-debug.json}
-#   release -> .../releases/latest/download/{Zairenkai-release.apk, version-release.json}
-# The release is tagged with its version (v1.1.0, …); /releases/latest/download
-# keeps the updater's URL stable across versions.
+# Build and publish only the signed, optimized Canary channel from the development
+# branch. Version-tagged stable Release builds are handled only by release.yml.
+# The app updater receives signed metadata via the License Server Worker; APK bytes
+# remain on GitHub Releases. No debug or randomized-application-ID APK is published.
 name: App APKs
 
 on:
@@ -53,172 +43,38 @@ jobs:
   config:
     runs-on: ubuntu-latest
     outputs:
-      has_signing: ${{ steps.c.outputs.has_signing }}
+      has_canary: ${{ steps.c.outputs.has_canary }}
     steps:
       - id: c
         env:
-          RELEASE_ENABLED: ${{ vars.ZK_RELEASE_ENABLED }}
+          CANARY_ENABLED: ${{ vars.ZK_CANARY_ENABLED }}
         run: |
           set -euo pipefail
-          if [[ "$RELEASE_ENABLED" == "true" ]]; then
-            echo "has_signing=true" >> "$GITHUB_OUTPUT"
-            echo "Official release job enabled; credentials will be validated in its protected environment."
+          if [[ "$CANARY_ENABLED" == "true" ]]; then
+            echo "has_canary=true" >> "$GITHUB_OUTPUT"
+            echo "Canary publication enabled; credentials will be validated in the protected canary-signing environment."
           else
-            echo "has_signing=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Official release skipped. Set repository variable ZK_RELEASE_ENABLED=true after configuring production-signing."
+            echo "has_canary=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Canary publication skipped. Set ZK_CANARY_ENABLED=true after configuring canary-signing."
           fi
 
   # The .ko half: build the flashable module once; both channels bundle it.
   module:
+    needs: config
+    if: needs.config.outputs.has_canary == 'true'
     uses: ./.github/workflows/build-module.yml
 
-  # --- Debug channel: installable debug-signed APK + module -> prerelease -----
-  debug:
-    name: Debug build (prerelease)
-    needs: module
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7.0.1
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: temurin
-          java-version: "21"
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4.0.4
-        with:
-          packages: platform-tools
-      - name: Install SDK platform 37
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
-      - name: Download module artifact for embedded KMI assets
-        uses: actions/download-artifact@v8.0.0
-        with:
-          name: module-zip
-          path: module-artifact
-      - name: Stage module package and embedded KMI assets
-        run: |
-          set -euo pipefail
-          cp module-artifact/Zairenkai-module.zip ./Zairenkai-module.zip
-          cp module-artifact/SHA256SUMS ./SHA256SUMS
-          tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip
-      - name: Build boot-patch backend
-        uses: ./.github/actions/build-bootpatch
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.4.0
-
-      - name: Generate randomized spoofed application ID
-        id: spoofed_app_id
-        run: |
-          set -euo pipefail
-          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
-          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
-            echo "::error::Generated spoofed application ID is invalid"
-            exit 1
-          }
-          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
-          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
-
-      - name: Verify security metadata contracts
-        run: |
-          set -euo pipefail
-          python3 tools/ci/check-api-major.py
-          python3 tools/ci/test-api-major.py
-          python3 tools/ci/test-update-manifest.py
-          python3 -m pip install --disable-pip-version-check cryptography
-          python3 tools/ci/test-metadata-signature.py
-          python3 tools/ci/test-verify-metadata.py
-          python3 tools/ci/test-verify-release-manifest.py
-
-      - name: Unit tests
-        run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
-
-      # Optimized, debug-signed, NOT debuggable — safe to hand out, ~4 MB.
-      - name: Build debug-signed APK
-        run: ./gradlew :app:assembleStandardPreview :app:assembleSpoofedPreview "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
-
-      - name: Stage APK, manifest and checksums
-        id: stage
-        run: |
-          set -euo pipefail
-          SRC=$(find app/build/outputs/apk/standard/preview -name '*.apk' | head -1)
-          APK="Zairenkai-debug.apk"            # stable name for the in-app updater
-          cp "$SRC" "$APK"
-          unzip -t "$APK" >/dev/null            # reject a bad zip before publishing
-          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
-          echo "$SHA  $APK" > "$APK.sha256"
-          VNAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
-          VCODE=$(grep -m1 'versionCode' app/build.gradle.kts | sed -E 's/[^0-9]*([0-9]+).*/\1/')
-          API_MAJOR=$(python3 tools/ci/check-api-major.py --print)
-          BUILD_ID="${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          python3 tools/ci/generate-update-manifest.py \
-            --apk "$APK" --output version-debug.json \
-            --version-name "$VNAME" --version-code "$VCODE" \
-            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/preview/$APK" \
-            --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$GITHUB_SHA"
-          echo "ver=$VNAME" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Stage spoofed preview APK
-        run: |
-          set -euo pipefail
-          SRC="$(find app/build/outputs/apk/spoofed/preview -type f -name '*.apk' -print -quit)"
-          [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Spoofed preview APK not found"; exit 1; }
-          APK="Zairenkai-spoofed-debug.apk"
-          cp "$SRC" "$APK"
-          unzip -t "$APK" >/dev/null
-          SHA="$(sha256sum "$APK" | cut -d' ' -f1)"
-          echo "$SHA  $APK" > "$APK.sha256"
-
-      - name: Publish debug prerelease
-        uses: softprops/action-gh-release@v3.0.2
-        with:
-          tag_name: preview
-          name: "Zairenkai debug build"
-          prerelease: true
-          body: |
-            **Debug build** — a complete module: the debug-signed manager APK
-            (installs without the release keystore) plus the flashable kernel
-            module (`zkfc.ko` per KMI + zperfd/zkfctl) in `Zairenkai-module.zip`.
-            Optimized like release but published early and less tested.
-
-            The spoofed APK uses a fresh randomized application ID per run. It installs
-            separately and is intended for manual installation, not in-place updates.
-
-            Version: `${{ steps.stage.outputs.ver }}`
-            APK SHA-256: `${{ steps.stage.outputs.sha }}`
-
-            Verify before installing: `sha256sum Zairenkai-debug.apk`
-          files: |
-            Zairenkai-debug.apk
-            Zairenkai-debug.apk.sha256
-            Zairenkai-spoofed-debug.apk
-            Zairenkai-spoofed-debug.apk.sha256
-            version-debug.json
-            Zairenkai-module.zip
-            SHA256SUMS
-
-  # --- Release channel: signed release APK + module -> full release -----------
-  release:
-    name: Release build (release)
+  # --- Canary channel: signed, optimized prerelease --------------------------
+  canary:
+    name: Canary build (signed prerelease)
     needs: [config, module]
-    if: >-
-      needs.config.outputs.has_signing == 'true' &&
-      (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
-       startsWith(github.ref, 'refs/tags/v'))
+    if: needs.config.outputs.has_canary == 'true'
     runs-on: ubuntu-latest
-    # Metadata signatures are production trust anchors. Protect this environment
-    # with required reviewers and restrict allowed refs to the protected release branch/tags.
-    environment: production-signing
+    environment: canary-signing
     permissions:
       contents: write
-      id-token: write
       attestations: write
-      artifact-metadata: write
+      id-token: write
     steps:
       - uses: actions/checkout@v7.0.1
 
@@ -231,8 +87,9 @@ jobs:
         uses: android-actions/setup-android@v4.0.4
         with:
           packages: platform-tools
-      - name: Install SDK platform 37
+      - name: Install Android SDK platform and NDK
         run: |
+          set -euo pipefail
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
       - name: Download module artifact for embedded KMI assets
@@ -245,294 +102,125 @@ jobs:
           set -euo pipefail
           cp module-artifact/Zairenkai-module.zip ./Zairenkai-module.zip
           cp module-artifact/SHA256SUMS ./SHA256SUMS
+          cp module-artifact/module-update-canary.json ./module-update-canary.json
           tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip
       - name: Build boot-patch backend
         uses: ./.github/actions/build-bootpatch
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
-      - name: Generate randomized spoofed application ID
-        id: spoofed_app_id
+      - name: Validate Canary signing and update-server configuration
+        env:
+          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+          ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
+          ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
-          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
-            echo "::error::Generated spoofed application ID is invalid"
+          for name in ZK_KEYSTORE_BASE64 ZK_KEYSTORE_PASSWORD ZK_KEY_ALIAS ZK_KEY_PASSWORD \
+                      ZKFC_METADATA_SIGNING_KEY_B64 ZKFC_METADATA_SIGNING_PASSPHRASE; do
+            [[ -n "${!name:-}" ]] || { echo "::error::Missing required canary-signing secret: $name"; exit 1; }
+          done
+          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
+            echo "::error::Set ZKFC_LICENSE_SERVER_URL in canary-signing as an HTTPS origin without a path."
             exit 1
           }
-          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
-          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
-
-      - name: Verify security metadata contracts
-        run: |
-          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check cryptography
           python3 tools/ci/check-api-major.py
           python3 tools/ci/test-api-major.py
           python3 tools/ci/test-update-manifest.py
-          python3 -m pip install --disable-pip-version-check cryptography
+          python3 tools/ci/test-version-code.py
           python3 tools/ci/test-metadata-signature.py
           python3 tools/ci/test-verify-metadata.py
-          python3 tools/ci/test-verify-release-manifest.py
 
-      - name: Unit tests
-        run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
+      - name: Compute Canary version code
+        id: version
+        run: |
+          set -euo pipefail
+          BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$BASE_VERSION" --channel canary --run-number "$GITHUB_RUN_NUMBER")"
+          echo "base=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "name=${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
-      - name: Validate release signing secrets
+      - name: Unit tests and build signed Canary APK
         env:
           ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
           ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          for name in ZK_KEYSTORE_BASE64 ZK_KEYSTORE_PASSWORD ZK_KEY_ALIAS ZK_KEY_PASSWORD; do
-            if [[ -z "${!name:-}" ]]; then
-              echo "::error::Missing required Actions secret: $name"
-              exit 1
-            fi
-          done
-          mkdir -p "$RUNNER_TEMP/zairenkai-signing"
-          KEYSTORE="$RUNNER_TEMP/zairenkai-signing/release.p12"
-          printf '%s' "$ZK_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
-          keytool -list -keystore "$KEYSTORE" \
-            -storepass:env ZK_KEYSTORE_PASSWORD -alias "$ZK_KEY_ALIAS" >/dev/null
-          keytool -certreq -alias "$ZK_KEY_ALIAS" -keystore "$KEYSTORE" \
-            -storepass:env ZK_KEYSTORE_PASSWORD -keypass:env ZK_KEY_PASSWORD \
-            -file "$RUNNER_TEMP/zairenkai-signing/release-check.csr" >/dev/null
-          echo "Release keystore, alias, and key credentials are valid."
-
-      - name: Build and sign release APK
-        env:
-          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleStandardRelease :app:assembleSpoofedRelease "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
-
-      - name: Enforce v1/v2/v3 signing and verify release APK
+          ./gradlew :app:testStandardCanaryUnitTest :app:assembleStandardCanary \
+            "-PversionCode=${{ steps.version.outputs.code }}" \
+            "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
+      - name: Verify Canary APK signer and signature schemes
         env:
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
           ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          APK="$(find app/build/outputs/apk/standard/release -type f -name '*.apk' -print -quit)"
-          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Release APK not found"; exit 1; }
-          BT="$ANDROID_HOME/build-tools/37.0.0"
-          APKSIGNER="$BT/apksigner"
-          KEYSTORE="app/build/zk-release.jks"
-          [[ -x "$APKSIGNER" ]] || { echo "::error::apksigner not found: $APKSIGNER"; exit 1; }
-          [[ -f "$KEYSTORE" ]] || { echo "::error::Gradle did not materialize the release keystore"; exit 1; }
-          # Explicitly sign all required schemes instead of weakening verification.
-          APKSIGNER="${APKSIGNER:-$BT/apksigner}"
-          [[ -x "$APKSIGNER" ]] || { echo "::error::apksigner not found: $APKSIGNER"; exit 1; }
-          if keytool -list -storetype PKCS12 -keystore "$KEYSTORE" \
-              -storepass:env ZK_KEYSTORE_PASSWORD -alias "$ZK_KEY_ALIAS" >/dev/null 2>&1; then
-            KS_TYPE=PKCS12
-          elif keytool -list -storetype JKS -keystore "$KEYSTORE" \
-              -storepass:env ZK_KEYSTORE_PASSWORD -alias "$ZK_KEY_ALIAS" >/dev/null 2>&1; then
-            KS_TYPE=JKS
-          else
-            echo "::error::Release keystore cannot be opened as PKCS12 or JKS"
-            exit 1
-          fi
-          "$APKSIGNER" sign \
-            --ks "$KEYSTORE" \
-            --ks-type "$KS_TYPE" \
-            --ks-key-alias "$ZK_KEY_ALIAS" \
-            --ks-pass env:ZK_KEYSTORE_PASSWORD \
-            --key-pass env:ZK_KEY_PASSWORD \
-            --min-sdk-version 23 \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --v3-signing-enabled true \
-            "$APK"
-
-
-          VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose --min-sdk-version 23 "$APK" 2>&1)" || {
-            printf '%s\n' "$VERIFY_OUTPUT"
-            echo "::error::apksigner could not verify the APK"
-            exit 1
-          }
-          printf '%s\n' "$VERIFY_OUTPUT"
-          for scheme in \
-            'Verified using v1 scheme (JAR signing): true' \
-            'Verified using v2 scheme (APK Signature Scheme v2): true' \
-            'Verified using v3 scheme (APK Signature Scheme v3): true'; do
-            if ! grep -Fq "$scheme" <<< "$VERIFY_OUTPUT"; then
-              echo "::error::Required APK signature scheme is missing: $scheme"
-              exit 1
-            fi
-          done
-
-          EXPECTED="$(keytool -exportcert -alias "$ZK_KEY_ALIAS" -keystore "$KEYSTORE" \
-            -storepass:env ZK_KEYSTORE_PASSWORD | sha256sum | awk '{print toupper($1)}')"
-          CERT_OUTPUT="$("$APKSIGNER" verify --print-certs "$APK" 2>&1)" || {
-            printf '%s\n' "$CERT_OUTPUT"
-            echo "::error::Could not inspect APK signing certificate"
-            exit 1
-          }
-          ACTUAL="$(printf '%s\n' "$CERT_OUTPUT" |
-            awk '/certificate SHA-256 digest:/ {
-              sub(/^.*certificate SHA-256 digest:[[:space:]]*/, "")
-              gsub(/[^[:xdigit:]]/, "")
-              if (length($0) == 64) { print toupper($0); exit }
-            }')"
-          [[ "$EXPECTED" =~ ^[A-F0-9]{64}$ ]] || { echo "::error::Could not calculate keystore certificate SHA-256"; exit 1; }
-          [[ "$ACTUAL" =~ ^[A-F0-9]{64}$ ]] || { echo "::error::Could not read APK certificate SHA-256"; exit 1; }
-          [[ "$ACTUAL" == "$EXPECTED" ]] || {
-            echo "::error::APK signer does not match the configured release keystore certificate"
-            echo "Keystore SHA-256: $EXPECTED"
-            echo "APK SHA-256:      $ACTUAL"
-            exit 1
-          }
-          echo "Verified: APK signature schemes v1, v2 and v3 are present; signer matches the configured keystore."
-
-      - name: Sign and verify spoofed release APK
-        env:
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          APK="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
-          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
+          APK="$(find app/build/outputs/apk/standard/canary -type f -name '*.apk' -print -quit)"
+          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Canary APK not found"; exit 1; }
           tools/ci/verify-release-apk.sh "$APK" app/build/zk-release.jks
 
-      - name: Stage APK, manifest and checksums
+      - name: Stage Canary APK and signed update manifest
         id: stage
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          SRC=$(find app/build/outputs/apk/standard/release -name '*.apk' | head -1)
-          APK="Zairenkai-release.apk"           # stable name for the in-app updater
-          cp "$SRC" "$APK"
-          unzip -t "$APK" >/dev/null
-          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
-          echo "$SHA  $APK" > "$APK.sha256"
-          VNAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
-          VCODE=$(grep -m1 'versionCode' app/build.gradle.kts | sed -E 's/[^0-9]*([0-9]+).*/\1/')
-          API_MAJOR=$(python3 tools/ci/check-api-major.py --print)
-          BUILD_ID="${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          # The versioned APK is exposed through this stable latest-release URL.
-          python3 tools/ci/generate-update-manifest.py \
-            --apk "$APK" --output version-release.json \
-            --version-name "$VNAME" --version-code "$VCODE" \
-            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/latest/download/$APK" \
-            --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$GITHUB_SHA"
-          echo "ver=$VNAME" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Stage spoofed release APK
-        run: |
-          set -euo pipefail
-          SRC="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
-          [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
-          APK="Zairenkai-spoofed-release.apk"
+          SRC="$(find app/build/outputs/apk/standard/canary -type f -name '*.apk' -print -quit)"
+          APK="Zairenkai-canary.apk"
           cp "$SRC" "$APK"
           unzip -t "$APK" >/dev/null
           SHA="$(sha256sum "$APK" | cut -d' ' -f1)"
           echo "$SHA  $APK" > "$APK.sha256"
+          API_MAJOR="$(python3 tools/ci/check-api-major.py --print)"
+          BUILD_ID="${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python3 tools/ci/generate-update-manifest.py \
+            --apk "$APK" --output version-canary.json \
+            --version-name "${{ steps.version.outputs.name }}" \
+            --version-code "${{ steps.version.outputs.code }}" \
+            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/canary/$APK" \
+            --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$GITHUB_SHA"
+          echo "ver=${{ steps.version.outputs.name }}" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Stage module checksum manifest
-        run: cp SHA256SUMS Zairenkai-module-SHA256SUMS
-
-      - name: Test and generate release manifest
-        run: |
-          set -euo pipefail
-          python3 tools/ci/test_release_manifest.py
-          python3 tools/ci/test-metadata-signature.py
-          python3 tools/ci/test-verify-metadata.py
-          python3 tools/ci/test-verify-release-manifest.py
-          python3 tools/ci/generate-release-manifest.py \
-            --version "v${{ steps.stage.outputs.ver }}" \
-            --commit "$GITHUB_SHA" \
-            --run-id "$GITHUB_RUN_ID" \
-            --run-attempt "$GITHUB_RUN_ATTEMPT"
-
-      - name: Check API contract and prepare metadata signer
-        run: |
-          set -euo pipefail
-          python3 tools/ci/check-api-major.py
-          python3 -m pip install --disable-pip-version-check cryptography
-          grep -q '^-----BEGIN PUBLIC KEY-----' app/src/main/assets/security/update-metadata-public-key.pem || {
-            echo "::error::The pinned update metadata public key is not provisioned. Run tools/release/setup-metadata-signing-key.py on a trusted workstation and commit the public key."
-            exit 1
-          }
-
-      - name: Sign stable update manifest
+      - name: Sign and verify Canary update metadata
         env:
           ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
           ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
-        run: python3 tools/ci/sign-metadata.py --input version-release.json --output version-release.json.sig
-
-      - name: Verify signed stable update manifest before publication
-        run: python3 tools/ci/verify-metadata.py --input version-release.json --signature version-release.json.sig
-
-      - name: Sign release artifact manifest
-        env:
-          ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
-          ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
-        run: python3 tools/ci/sign-metadata.py --input Zairenkai-release-manifest.json --output Zairenkai-release-manifest.json.sig
-
-      - name: Verify release manifest and all artifact hashes
-        run: python3 tools/ci/verify-release-manifest.py --manifest Zairenkai-release-manifest.json --signature Zairenkai-release-manifest.json.sig
-
-      - name: Generate final release checksums
         run: |
           set -euo pipefail
-          sha256sum \
-            Zairenkai-release.apk \
-            Zairenkai-spoofed-release.apk \
-            Zairenkai-module.zip \
-            Zairenkai-module-SHA256SUMS \
-            version-release.json \
-            version-release.json.sig \
-            Zairenkai-release-manifest.json \
-            Zairenkai-release-manifest.json.sig \
-            > Zairenkai-release-SHA256SUMS
+          python3 tools/ci/sign-metadata.py --input version-canary.json --output version-canary.json.sig
+          python3 tools/ci/verify-metadata.py --input version-canary.json --signature version-canary.json.sig
 
-      - name: Attest official release assets
-        uses: actions/attest@v4
-        with:
-          subject-path: |
-            Zairenkai-release.apk
-            Zairenkai-module.zip
-            version-release.json
-            version-release.json.sig
-            Zairenkai-release-manifest.json
-            Zairenkai-release-manifest.json.sig
-            Zairenkai-release-SHA256SUMS
-
-      - name: Publish release
+      - name: Publish Canary prerelease
         uses: softprops/action-gh-release@v3.0.2
         with:
-          # Versioned tag (e.g. v1.1.0). softprops creates it with GITHUB_TOKEN,
-          # which does not re-trigger the v*-tag release.yml workflow.
-          tag_name: v${{ steps.stage.outputs.ver }}
-          name: "Zairenkai v${{ steps.stage.outputs.ver }}"
-          prerelease: false
-          make_latest: true
+          tag_name: canary
+          name: "Zairenkai Canary"
+          prerelease: true
           body: |
-            **Release build** — a complete module: the stable, officially signed
-            manager APK plus the flashable kernel module (`zkfc.ko` per KMI +
-            zperfd/zkfctl) in `Zairenkai-module.zip`. Recommended for everyday use.
+            **Canary build** — optimized and non-debuggable. It uses the official APK signing identity,
+            verifies signed update metadata, and bundles the checksum-verified Zairenkai module.
+            Canary is for early testing; use Release for normal daily use.
 
             Version: `${{ steps.stage.outputs.ver }}`
             APK SHA-256: `${{ steps.stage.outputs.sha }}`
 
-            Verify before installing: `sha256sum Zairenkai-release.apk`
-
-            `Zairenkai-spoofed-release.apk` uses a randomized application ID. It installs
-            separately and must be installed manually, not used as an in-place update.
+            Verify before installing: `sha256sum Zairenkai-canary.apk`
           files: |
-            Zairenkai-release.apk
-            Zairenkai-release.apk.sha256
-            Zairenkai-spoofed-release.apk
-            Zairenkai-spoofed-release.apk.sha256
-            version-release.json
-            version-release.json.sig
-            Zairenkai-release-manifest.json
-            Zairenkai-release-manifest.json.sig
-            Zairenkai-release-SHA256SUMS
+            Zairenkai-canary.apk
+            Zairenkai-canary.apk.sha256
+            version-canary.json
+            version-canary.json.sig
             Zairenkai-module.zip
-            Zairenkai-module-SHA256SUMS
+            SHA256SUMS
+            module-update-canary.json

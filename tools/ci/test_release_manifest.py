@@ -27,7 +27,6 @@ class ReleaseManifestTest(unittest.TestCase):
         (self.root / "tools/zkfc-license/zkfc_license.py").write_text("API_MAJOR = 2\n", encoding="utf-8")
         (self.root / "Zairenkai-standard-release.apk").write_bytes(b"test-standard-apk")
         (self.root / "Zairenkai-module.zip").write_bytes(b"test-module-zip")
-        (self.root / "Zairenkai-spoofed-release.apk").write_bytes(b"test-spoofed-apk")
         (self.root / "Zairenkai-module-SHA256SUMS").write_text("test checksum list\n", encoding="utf-8")
 
     def tearDown(self) -> None:
@@ -48,6 +47,7 @@ class ReleaseManifestTest(unittest.TestCase):
         self.assertIn("Zairenkai-module.zip", entries)
         self.assertEqual(entries["Zairenkai-module.zip"]["sha256"], hashlib.sha256(b"test-module-zip").hexdigest())
         self.assertEqual(entries["Zairenkai-standard-release.apk"]["size_bytes"], len(b"test-standard-apk"))
+        self.assertNotIn("Zairenkai-spoofed-release.apk", entries)
 
     def test_manifest_supports_stable_updater_apk_filename(self) -> None:
         (self.root / "Zairenkai-standard-release.apk").unlink()

@@ -8,7 +8,7 @@
     <string name="update_installed">Versión instalada</string>
     <string name="update_channel_of">Actualizaciones del canal %1$s</string>
     <string name="update_channel_release">versión</string>
-    <string name="update_channel_debug">depuración</string>
+    <string name="update_channel_canary">canary</string>
 
     <!-- Comprobar / descargar / instalar dentro de la app -->
     <string name="update_status_idle">Busca en GitHub una compilación más reciente.</string>
@@ -24,9 +24,10 @@
     <string name="update_retry">Reintentar</string>
     <string name="update_open_browser">Abrir en el navegador</string>
     <string name="update_download_failed">La descarga falló o el archivo no coincidió con su suma de verificación. Reinténtalo.</string>
-    <string name="update_fail_network">No se pudo conectar con GitHub. Revisa tu conexión y reinténtalo.</string>
+    <string name="update_fail_network">No se pudo conectar con el servidor de actualizaciones. Comprueba la conexión y vuelve a intentarlo.</string>
     <string name="update_fail_notpublished">Aún no hay ninguna compilación publicada en este canal.</string>
     <string name="update_fail_manifest">No se pudo leer la información de la actualización.</string>
+    <string name="update_fail_server">Esta compilación no tiene configurada la URL del License Server. Instala una compilación oficial Canary o Release.</string>
 
     <string name="update_auto_title">Buscar actualizaciones automáticamente</string>
     <string name="update_auto_sub">Cuando está activado, la app consulta GitHub cada vez que se abre esta pantalla. Desactívalo para mantener la app totalmente sin conexión.</string>
@@ -37,9 +38,9 @@
     <string name="update_release_body">La compilación estable, optimizada y firmada. Recomendada para el uso diario. Abre la última versión en GitHub.</string>
     <string name="update_open_release">Abrir la página de versiones</string>
 
-    <string name="update_debug_title">Compilación de depuración</string>
-    <string name="update_debug_body">La compilación de vista previa, publicada antes para que pruebes los cambios más recientes. Menos probada que la versión. Abre la vista previa en GitHub.</string>
-    <string name="update_open_debug">Abrir la página de vista previa</string>
+    <string name="update_canary_title">Compilación Canary</string>
+    <string name="update_canary_body">Compilación optimizada de acceso anticipado para probar cambios recientes antes de Release. Usa la identidad de firma oficial y verifica los metadatos firmados de actualización. Abre la página Canary de GitHub.</string>
+    <string name="update_open_canary">Abrir la página Canary</string>
 
     <string name="update_privacy_note">La app solo se conecta a GitHub cuando compruebas o descargas: no envía identificadores ni consulta en segundo plano. Las descargas se verifican con su SHA-256 publicado antes de instalar.</string>
 
@@ -51,7 +52,7 @@
     <string name="changelog_1_1_0_redesign">Inicio, Monitor, Ajustes, Perfiles y Sistema se rediseñaron con un diseño agrupado más sereno.</string>
     <string name="changelog_1_1_0_monitor">Monitor añade el uso de batería por app, el detalle de RAM y ZRAM y un registro ZKFC que puedes exportar como .zip.</string>
     <string name="changelog_1_1_0_language">Idioma por app, nuevos controles de tema e identidad del dispositivo según la marca.</string>
-    <string name="changelog_1_1_0_update">Esta pantalla Actualizar app, que ofrece una compilación de depuración y una de versión, además de este registro de cambios.</string>
+    <string name="changelog_1_1_0_update">Esta pantalla de actualización ahora ofrece los canales Canary y Release, además de este registro de cambios.</string>
 
     <string name="changelog_1_0_0_first">Primera versión de Zairenkai.</string>
     <string name="changelog_1_0_0_engine">Carga el módulo GKI correspondiente al arrancar y vuelve a aplicar tu perfil guardado.</string>

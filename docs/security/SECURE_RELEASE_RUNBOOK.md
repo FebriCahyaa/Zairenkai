@@ -9,7 +9,8 @@ The checked-in update-metadata public key intentionally remains `UNPROVISIONED` 
 Create both environments under **Settings → Environments**. Do not store these credentials as repository-wide secrets.
 
 - `production-signing`: require at least one reviewer and use custom deployment ref policies that explicitly allow the repository's protected default branch and the `v*` release-tag pattern. Put all APK/metadata signing secrets here: `ZK_KEYSTORE_BASE64`, `ZK_KEYSTORE_PASSWORD`, `ZK_KEY_ALIAS`, `ZK_KEY_PASSWORD`, `ZKFC_METADATA_SIGNING_KEY_B64`, `ZKFC_METADATA_SIGNING_PASSPHRASE`.
-- Repository **Actions variable** `ZK_RELEASE_ENABLED=true` opts in to publishing signed stable releases. Leave it unset/false until the protected environment and signing secrets are configured. It is only an opt-in switch, not a security credential; the workflow separately validates every secret inside the protected environment.
+- Repository **Actions variable** `ZKFC_LICENSE_SERVER_URL` must contain the deployed production Worker's HTTPS origin (no path). This non-secret variable is read by CI and both distribution workflows.
+- The Canary workflow is enabled only when repository variable `ZK_CANARY_ENABLED=true`. Stable Release publication is tag-driven by `.github/workflows/release.yml` (`v*`) and separately validates all credentials within `production-signing`; it is not triggered by ordinary branch pushes.
 - `zkfc-token-issuer`: require reviewer approval, prevent self-review if available, and allow only the protected default branch. This environment receives tag-scoped delegated issuer credentials below.
 
 Protect the default branch with required reviews and prevent untrusted pull-request workflows from accessing release environments.
@@ -90,16 +91,16 @@ Use a separate subkey for every approved kernel tag. The owner-signed subkey cer
 
 ## 4. Release flow and checks
 
-The trusted build workflow:
+The trusted Release workflow (`.github/workflows/release.yml`, triggered by version tags such as `v1.1.0`) and the Canary workflow (`.github/workflows/app-apks.yml`, enabled on the development branch) follow this division:
 
 1. checks that `tools/zkfc-license/zkfc_license.py:API_MAJOR` equals `kernel/include/uapi/linux/zkfc.h:ZKFC_API_MAJOR`;
 2. builds the Android app, engine binaries and module archive;
-3. generates an update manifest containing schema version, app version, API major, CI build ID, commit identity and APK SHA-256;
-4. signs the exact stable manifest bytes with Ed25519, bound to the file name, payload digest and public-key ID;
-5. verifies the detached Ed25519 signature and every artifact hash against the signed release manifest, publishes both the update manifest and release artifact manifest with their `.sig` files, and emits GitHub artifact attestations;
+3. generates the channel-specific update manifest containing schema version, app version, API major, CI build ID, commit identity and APK SHA-256;
+4. signs the exact manifest bytes with Ed25519, bound to the file name, payload digest and public-key ID;
+5. verifies the detached Ed25519 signature and every artifact hash against the signed release manifest, publishes the update manifest and release artifact manifest with their `.sig` files, and emits GitHub artifact attestations;
 6. fails closed for official signing when the public key is unprovisioned, a signing secret is absent, the signing key does not match the pinned key, or API major definitions disagree.
 
-The stable updater verifies the detached signature before parsing the release manifest and verifies APK SHA-256 after download. After downloading release assets, any user can verify the manifest and listed artifact bytes with `python3 tools/ci/verify-release-manifest.py --manifest Zairenkai-release-manifest.json --signature Zairenkai-release-manifest.json.sig`. The kernel does not consume network metadata; it independently verifies signed license tokens/certificates, binding, API major, expiry, revocation and feature scope at the kernel boundary.
+The app updater fetches signed Canary/Release metadata through the License Server's bounded read-only proxy, verifies the detached signature before parsing the manifest, and verifies APK SHA-256 after download. After downloading release assets, any user can verify the manifest and listed artifact bytes with `python3 tools/ci/verify-release-manifest.py --manifest Zairenkai-release-manifest.json --signature Zairenkai-release-manifest.json.sig`. The kernel does not consume network metadata; it independently verifies signed license tokens/certificates, binding, API major, expiry, revocation and feature scope at the kernel boundary.
 
 ## 5. Security boundaries
 

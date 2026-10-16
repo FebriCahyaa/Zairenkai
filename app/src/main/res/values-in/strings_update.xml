@@ -8,7 +8,7 @@
     <string name="update_installed">Versi terpasang</string>
     <string name="update_channel_of">Pembaruan dari kanal %1$s</string>
     <string name="update_channel_release">rilis</string>
-    <string name="update_channel_debug">debug</string>
+    <string name="update_channel_canary">canary</string>
 
     <!-- Periksa / unduh / pasang di dalam aplikasi -->
     <string name="update_status_idle">Periksa GitHub untuk build yang lebih baru.</string>
@@ -24,9 +24,10 @@
     <string name="update_retry">Coba lagi</string>
     <string name="update_open_browser">Buka di peramban saja</string>
     <string name="update_download_failed">Unduhan gagal, atau berkas tidak cocok dengan checksum-nya. Coba lagi.</string>
-    <string name="update_fail_network">Tidak bisa menjangkau GitHub. Periksa koneksimu lalu coba lagi.</string>
+    <string name="update_fail_network">Tidak bisa menjangkau server pembaruan. Periksa koneksi lalu coba lagi.</string>
     <string name="update_fail_notpublished">Belum ada build yang dipublikasikan di kanal ini.</string>
     <string name="update_fail_manifest">Informasi pembaruan tidak bisa dibaca.</string>
+    <string name="update_fail_server">URL License Server belum dikonfigurasi pada build ini. Pasang build Canary atau Release resmi.</string>
 
     <string name="update_auto_title">Periksa pembaruan otomatis</string>
     <string name="update_auto_sub">Bila aktif, aplikasi memeriksa GitHub setiap layar ini dibuka. Matikan agar aplikasi tetap sepenuhnya luring.</string>
@@ -37,9 +38,9 @@
     <string name="update_release_body">Build stabil, teroptimasi, dan tertandatangani. Disarankan untuk pemakaian sehari-hari. Membuka rilis terbaru di GitHub.</string>
     <string name="update_open_release">Buka halaman rilis</string>
 
-    <string name="update_debug_title">Build debug</string>
-    <string name="update_debug_body">Build pratinjau, dirilis lebih awal agar kamu bisa mencoba perubahan terbaru. Lebih sedikit diuji daripada rilis. Membuka pratinjau di GitHub.</string>
-    <string name="update_open_debug">Buka halaman pratinjau</string>
+    <string name="update_canary_title">Build Canary</string>
+    <string name="update_canary_body">Build akses awal yang dioptimalkan untuk mencoba perubahan terbaru sebelum Release. Build ini memakai identitas penandatanganan resmi dan memverifikasi metadata pembaruan bertanda tangan. Membuka halaman rilis Canary di GitHub.</string>
+    <string name="update_open_canary">Buka halaman Canary</string>
 
     <string name="update_privacy_note">Aplikasi hanya menghubungi GitHub saat kamu memeriksa atau mengunduh — tidak mengirim identitas apa pun dan tidak pernah memeriksa di latar belakang. Unduhan diverifikasi terhadap SHA-256 yang dipublikasikan sebelum dipasang.</string>
 
@@ -51,7 +52,7 @@
     <string name="changelog_1_1_0_redesign">Beranda, Monitor, Tweak, Profil, dan Sistem dirombak dengan tata letak berkelompok yang lebih tenang.</string>
     <string name="changelog_1_1_0_monitor">Monitor menambahkan penggunaan baterai per aplikasi, detail RAM dan ZRAM, serta log ZKFC yang bisa diekspor sebagai .zip.</string>
     <string name="changelog_1_1_0_language">Bahasa per aplikasi, kontrol tema baru, dan identitas perangkat yang mengenali merek.</string>
-    <string name="changelog_1_1_0_update">Layar Update aplikasi ini, yang menyediakan build debug dan rilis, beserta changelog ini.</string>
+    <string name="changelog_1_1_0_update">Layar pembaruan kini menyediakan kanal Canary dan Release, beserta changelog ini.</string>
 
     <string name="changelog_1_0_0_first">Rilis pertama Zairenkai.</string>
     <string name="changelog_1_0_0_engine">Memuat modul GKI yang cocok saat boot dan menerapkan kembali profil tersimpanmu.</string>

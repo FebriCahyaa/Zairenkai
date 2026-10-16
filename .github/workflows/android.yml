@@ -42,35 +42,36 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
-      - name: Generate randomized spoofed application ID
-        id: spoofed_app_id
+      - name: Validate update server configuration
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
-          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
-            echo "::error::Generated spoofed application ID is invalid"
+          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
+            echo "::error::Set ZKFC_LICENSE_SERVER_URL as a GitHub Actions variable (HTTPS origin, no path)."
             exit 1
           }
-          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
-          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
 
-      # Debug builds are auto-signed with Android's debug key — no release key
-      # needed. The spoofed flavor receives a fresh applicationId for this run.
-      - name: Assemble debug APKs (standard + spoofed)
-        run: ./gradlew :app:assembleStandardDebug :app:assembleSpoofedDebug "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
+      # Distribution variants are optimized, non-debuggable Canary and Release only.
+      - name: Assemble Canary and Release
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+        run: ./gradlew :app:assembleStandardCanary :app:assembleStandardRelease "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
 
       - name: Unit tests (engine JSON contracts, tweak outcomes)
-        run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+        run: ./gradlew :app:testStandardCanaryUnitTest :app:testStandardReleaseUnitTest "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
 
-      # Exercise the optimized preview variant in CI. A debug-only build does not
+      # Exercise the optimized Canary variant in CI. A non-minified build does not
       # run R8, so it cannot catch reflectively loaded crypto mappings being stripped.
       - name: Validate R8 keeps Ed25519 provider mappings
         run: |
           set -euo pipefail
-          ./gradlew :app:assembleStandardPreview --stacktrace
+          ./gradlew :app:assembleStandardCanary "-PlicenseServerUrl=${{ vars.ZKFC_LICENSE_SERVER_URL }}" --stacktrace
           USAGE="$(find app/build/outputs/mapping -type f -name usage.txt -print -quit)"
           [[ -n "$USAGE" && -f "$USAGE" ]] || {
-            echo "::error::R8 usage.txt was not produced for the minified preview build."
+            echo "::error::R8 usage.txt was not produced for the minified Canary build."
             exit 1
           }
           if grep -Fq 'org.bouncycastle.jcajce.provider.asymmetric.EdEC$Mappings' "$USAGE"; then
@@ -80,7 +81,7 @@ jobs:
           echo 'PASS: EdEC$Mappings was not reported as removed by R8.'
 
       - name: Lint
-        run: ./gradlew :app:lintStandardDebug --stacktrace
+        run: ./gradlew :app:lintStandardCanary --stacktrace
 
       # Keep the complete HTML/SARIF/text reports even when lint fails. The first
       # exception line in Gradle output often hides the remaining findings.
@@ -90,23 +91,9 @@ jobs:
         with:
           name: lint-reports-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            app/build/reports/lint-results-standardDebug.html
-            app/build/reports/lint-results-standardDebug.sarif
-            app/build/reports/lint-results-standardDebug.xml
-            app/build/intermediates/lint_intermediate_text_report/standardDebug/lintReportStandardDebug/lint-results-standardDebug.txt
+            app/build/reports/lint-results-standardCanary.html
+            app/build/reports/lint-results-standardCanary.sarif
+            app/build/reports/lint-results-standardCanary.xml
+            app/build/intermediates/lint_intermediate_text_report/standardCanary/lintReportStandardCanary/lint-results-standardCanary.txt
           if-no-files-found: warn
           retention-days: 7
-
-      - name: Upload standard debug APK
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: zairenkai-standard-debug
-          path: app/build/outputs/apk/standard/debug/*.apk
-          if-no-files-found: error
-
-      - name: Upload spoofed debug APK
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: zairenkai-spoofed-debug
-          path: app/build/outputs/apk/spoofed/debug/*.apk
-          if-no-files-found: error

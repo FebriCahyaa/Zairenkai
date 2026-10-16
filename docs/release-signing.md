@@ -2,7 +2,7 @@
 
 ## Existing Actions secrets
 
-The release workflows use these **repository Actions secrets**:
+The release workflows use these **Actions secrets** in the protected `production-signing` environment:
 
 | Secret | Value |
 | --- | --- |
@@ -11,7 +11,7 @@ The release workflows use these **repository Actions secrets**:
 | `ZK_KEY_ALIAS` | Exact alias inside the keystore |
 | `ZK_KEY_PASSWORD` | Private-key password (for PKCS#12, use the same password as the keystore) |
 
-Set them under **Settings → Secrets and variables → Actions → Repository secrets**.
+Set the four signing secrets under **Settings → Environments → production-signing → Environment secrets**. Set `ZKFC_LICENSE_SERVER_URL` as a **repository Actions variable** under **Settings → Secrets and variables → Actions → Variables** so ordinary CI jobs can read it too. It must be the production Worker HTTPS origin without a path or trailing slash. It is configuration, not a secret.
 Do not put values into workflow YAML, `gradle.properties`, source files, commits, or build logs.
 
 ## Important: reuse the same key
@@ -36,7 +36,7 @@ The script creates a local PKCS#12 RSA-4096 release keystore with a validity of 
 The CI release build runs:
 
 ```bash
-./gradlew :app:assembleStandardRelease :app:testStandardDebugUnitTest --stacktrace
+./gradlew :app:testStandardCanaryUnitTest :app:testStandardReleaseUnitTest :app:assembleStandardRelease -PlicenseServerUrl=https://<your-worker-origin> --stacktrace
 ```
 
 It then runs `apksigner verify --verbose` and requires all three schemes to report `true`:

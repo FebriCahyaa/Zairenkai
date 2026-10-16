@@ -96,14 +96,29 @@ fun certificateSha256(file: File, storePassword: String, alias: String): String 
         .joinToString("") { "%02X".format(it) }
 }
 
-// CI supplies a randomized package ID for the spoofed flavor. Keep the
-// Kotlin/Android namespace stable so R and BuildConfig remain deterministic.
-// Local builds use the existing predictable fallback unless overridden.
-val spoofedAppId = providers.gradleProperty("spoofedAppId")
-    .orElse("com.zairenkai.app.spoofed")
+// Update manifests are proxied by the License Server. Production CI must provide
+// ZKFC_LICENSE_SERVER_URL (or -PlicenseServerUrl); empty is allowed only for
+// local compilation and makes the in-app updater fail closed with a clear error.
+val appVersionCode = providers.gradleProperty("versionCode")
+    .orNull
+    ?.toIntOrNull()
+    ?: 2
+require(appVersionCode in 1..2_100_000_000) {
+    "versionCode must be between 1 and 2100000000."
+}
+val canaryBuildId = System.getenv("GITHUB_RUN_NUMBER")?.trim()?.takeIf { it.matches(Regex("[0-9]{1,9}")) } ?: "local"
+
+val licenseServerUrl = providers.gradleProperty("licenseServerUrl")
+    .orElse(providers.environmentVariable("ZKFC_LICENSE_SERVER_URL"))
+    .orElse("")
     .get()
-require(spoofedAppId.matches(Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))) {
-    "Invalid spoofed application ID '$spoofedAppId'. Pass a valid Android ID via -PspoofedAppId=<id>."
+    .trim()
+    .trimEnd('/')
+require(
+    licenseServerUrl.isBlank() ||
+        Regex("^https://[A-Za-z0-9.-]+(?::443)?$").matches(licenseServerUrl)
+) {
+    "ZKFC_LICENSE_SERVER_URL must be an HTTPS origin without a path."
 }
 
 android {
@@ -114,15 +129,16 @@ android {
         applicationId = "com.zairenkai.app"
         minSdk = 31
         targetSdk = 37
-        versionCode = 2
+        versionCode = appVersionCode
         versionName = "1.1.0"
         vectorDrawables { useSupportLibrary = true }
-        // Expected signer (SHA-256). Empty => self-check reports "unknown" and
-        // never blocks (debug/spoofed). Set for official release below.
+        // Expected signer (SHA-256). Local unsigned builds report "unknown";
+        // official Canary and Release builds pin the certificate below.
         buildConfigField("String", "EXPECTED_CERT_SHA256", "\"\"")
         buildConfigField("String", "EMBEDDED_MODULE_SHA256", "\"$embeddedModuleSha256\"")
         buildConfigField("String", "ZKFC_BUILD_ID", "\"$buildId\"")
         buildConfigField("int", "ZKFC_API_MAJOR", "$zkfcApiMajor")
+        buildConfigField("String", "ZKFC_LICENSE_SERVER_URL", "\"$licenseServerUrl\"")
     }
 
     signingConfigs {
@@ -176,11 +192,6 @@ android {
             dimension = "distribution"
             isDefault = true
         }
-        create("spoofed") {
-            dimension = "distribution"
-            applicationId = spoofedAppId
-            versionNameSuffix = "-spoofed"
-        }
     }
 
     buildTypes {
@@ -207,22 +218,25 @@ android {
             isDebuggable = true
             // Debug is auto-signed by Android's debug keystore; no release key needed.
         }
-        // The build to sideload on real devices: R8-optimized and resource-shrunk
-        // exactly like release (~4 MB, and it runs like release), but signed
-        // with the debug key so it needs no release keystore. Not debuggable:
-        // a debuggable build is not optimized by R8, runs Compose noticeably
-        // slower on ART, and lets any adb user `run-as` into the app's private
-        // files, including the ZKFC token copy.
-        create("preview") {
+        // Canary is a separate package identity but remains minified and non-debuggable.
+        // When official signing material is available it uses the same trusted signer
+        // as Release; it is never published with Android's debug certificate.
+        create("canary") {
             initWith(getByName("release"))
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = ".canary"
+            versionNameSuffix = "-canary.$canaryBuildId"
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
-            signingConfig = signingConfigs.getByName("debug")
+            val cfg = signingConfigs.getByName("release")
+            signingConfig = if (
+                cfg.storeFile?.isFile == true &&
+                !cfg.storePassword.isNullOrBlank() &&
+                !cfg.keyAlias.isNullOrBlank() &&
+                !cfg.keyPassword.isNullOrBlank()
+            ) cfg else null
             matchingFallbacks += "release"
-            // Not the official signer -> self-check reports "unknown", not "modified".
-            buildConfigField("String", "EXPECTED_CERT_SHA256", "\"\"")
+            buildConfigField("String", "EXPECTED_CERT_SHA256", "\"$releaseCertificateSha256\"")
         }
     }
 
@@ -257,13 +271,11 @@ android {
     }
 }
 
-// Debug dex is unminified (~30 MB). With minSdk >= 28 AGP stores dex
-// uncompressed, which only helps a store-delivered release; for a debug APK
-// that is copied around as a CI artifact it doubles the file and the room
-// for transfer corruption ("Bad file CRC" installs). Compress it there only.
+// Do not create or publish debug APK variants. Automated validation and distributable
+// builds use the optimized Canary and Release variants only.
 androidComponents {
-    onVariants(selector().withBuildType("debug")) { variant ->
-        variant.packaging.dex.useLegacyPackaging.set(true)
+    beforeVariants(selector().withBuildType("debug")) { variant ->
+        variant.enable = false
     }
 }
 

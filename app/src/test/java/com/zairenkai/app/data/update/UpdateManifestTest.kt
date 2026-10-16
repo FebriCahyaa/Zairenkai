@@ -30,8 +30,8 @@ class UpdateManifestTest {
 
     @Test fun fallsBackToStableApkName() {
         // No apkUrl in the manifest -> derive the channel's stable asset URL.
-        val m = ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":2,"versionName":"1.1.0","apiMajor":1,"buildId":"deadbeef-1-1","sha256":"${"b".repeat(64)}"}""", UpdateChannel.DEBUG)!!
-        assertTrue(m.apkUrl.endsWith("/releases/download/preview/Zairenkai-debug.apk"))
+        val m = ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":2,"versionName":"1.1.0","apiMajor":1,"buildId":"deadbeef-1-1","sha256":"${"b".repeat(64)}"}""", UpdateChannel.CANARY)!!
+        assertTrue(m.apkUrl.endsWith("/releases/download/canary/Zairenkai-canary.apk"))
         assertEquals("b".repeat(64), m.sha256)
     }
 
@@ -50,21 +50,22 @@ class UpdateManifestTest {
         assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":0,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash"}""", UpdateChannel.RELEASE))
         assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash","apkUrl":"https://user@github.com/FebriCahyaa/Zairenkai/releases/latest/download/app.apk"}""", UpdateChannel.RELEASE))
         assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash","apkUrl":"https://github.com:8443/FebriCahyaa/Zairenkai/releases/latest/download/app.apk"}""", UpdateChannel.RELEASE))
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash","apkUrl":"https://github.com/FebriCahyaa/Zairenkai/releases/latest/download/Zairenkai-canary.apk"}""", UpdateChannel.RELEASE))
+        assertNull(ReleaseManifest.parse("""{"schemaVersion":1,"versionCode":1,"versionName":"1.0.0","apiMajor":1,"buildId":"build-1","sha256":"$hash","apkUrl":"https://github.com/FebriCahyaa/Zairenkai/releases/download/canary/Zairenkai-release.apk"}""", UpdateChannel.CANARY))
     }
 
     @Test fun buildTypeSelectsChannel() {
         assertEquals(UpdateChannel.RELEASE, UpdateChannel.forBuildType("release"))
-        assertEquals(UpdateChannel.DEBUG, UpdateChannel.forBuildType("debug"))
-        assertEquals(UpdateChannel.DEBUG, UpdateChannel.forBuildType("preview"))
+        assertEquals(UpdateChannel.RELEASE, UpdateChannel.forBuildType("debug"))
+        assertEquals(UpdateChannel.CANARY, UpdateChannel.forBuildType("canary"))
     }
 
     @Test fun urlsPointAtTheChannel() {
-        // RELEASE resolves through /releases/latest/download so a versioned tag
-        // (v1.2.0, …) still maps to a stable URL; DEBUG stays on "preview".
-        assertTrue(UpdateChannel.RELEASE.manifestUrl().endsWith("/releases/latest/download/version-release.json"))
-        assertTrue(UpdateChannel.DEBUG.manifestUrl().endsWith("/releases/download/preview/version-debug.json"))
-        assertTrue(UpdateChannel.RELEASE.signatureUrl().endsWith("/releases/latest/download/version-release.json.sig"))
+        // Signed metadata is proxied through License Server; APK downloads remain on Releases.
+        assertTrue(UpdateChannel.RELEASE.manifestUrl("https://license.example").endsWith("/v1/updates/release"))
+        assertTrue(UpdateChannel.CANARY.manifestUrl("https://license.example").endsWith("/v1/updates/canary"))
+        assertTrue(UpdateChannel.RELEASE.signatureUrl("https://license.example").endsWith("/v1/updates/release.sig"))
         assertTrue(UpdateChannel.RELEASE.pageUrl().endsWith("/releases/latest"))
-        assertTrue(UpdateChannel.DEBUG.pageUrl().endsWith("/releases/tag/preview"))
+        assertTrue(UpdateChannel.CANARY.pageUrl().endsWith("/releases/tag/canary"))
     }
 }

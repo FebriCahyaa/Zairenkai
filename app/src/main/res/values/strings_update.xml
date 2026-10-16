@@ -8,7 +8,7 @@
     <string name="update_installed">Installed version</string>
     <string name="update_channel_of">Updates from the %1$s channel</string>
     <string name="update_channel_release">release</string>
-    <string name="update_channel_debug">debug</string>
+    <string name="update_channel_canary">canary</string>
 
     <!-- In-app check / download / install -->
     <string name="update_status_idle">Check GitHub for a newer build.</string>
@@ -24,9 +24,10 @@
     <string name="update_retry">Try again</string>
     <string name="update_open_browser">Open in browser instead</string>
     <string name="update_download_failed">Download failed, or the file did not match its checksum. Try again.</string>
-    <string name="update_fail_network">Couldn\'t reach GitHub. Check your connection and try again.</string>
+    <string name="update_fail_network">Couldn’t reach the update server. Check your connection and try again.</string>
     <string name="update_fail_notpublished">No build is published on this channel yet.</string>
     <string name="update_fail_manifest">The update information couldn\'t be read.</string>
+    <string name="update_fail_server">This build has no License Server URL configured. Install an official Canary or Release build.</string>
 
     <string name="update_auto_title">Check for updates automatically</string>
     <string name="update_auto_sub">When on, the app checks GitHub each time this screen opens. Turn off to keep the app fully offline.</string>
@@ -37,9 +38,9 @@
     <string name="update_release_body">The stable, optimised and signed build. Recommended for everyday use. Opens the latest release on GitHub.</string>
     <string name="update_open_release">Open the release page</string>
 
-    <string name="update_debug_title">Debug build</string>
-    <string name="update_debug_body">The preview build, published early so you can try the newest changes. Less tested than the release. Opens the preview on GitHub.</string>
-    <string name="update_open_debug">Open the preview page</string>
+    <string name="update_canary_title">Canary build</string>
+    <string name="update_canary_body">An early-access, optimized build for trying recent changes before Release. It uses the official signing identity and verifies signed update metadata. Opens the Canary release page on GitHub.</string>
+    <string name="update_open_canary">Open the Canary page</string>
 
     <string name="update_privacy_note">The app only contacts GitHub when you check or download — it sends no identifiers and never polls in the background. Downloads are verified against their published SHA-256 before install.</string>
 
@@ -51,7 +52,7 @@
     <string name="changelog_1_1_0_redesign">Home, Monitor, Tweaks, Profiles and System were redesigned with a calmer, grouped layout.</string>
     <string name="changelog_1_1_0_monitor">Monitor adds battery usage by app, RAM and ZRAM detail, and a ZKFC log you can export as a .zip.</string>
     <string name="changelog_1_1_0_language">Per-app language, new theme controls and brand-aware device identity.</string>
-    <string name="changelog_1_1_0_update">This Update app screen, offering a debug and a release build, plus this changelog.</string>
+    <string name="changelog_1_1_0_update">This Update screen now supports the Canary and Release channels, plus this changelog.</string>
 
     <string name="changelog_1_0_0_first">First release of Zairenkai.</string>
     <string name="changelog_1_0_0_engine">Loads the matching GKI module at boot and re-applies your saved profile.</string>

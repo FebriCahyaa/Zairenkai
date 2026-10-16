@@ -348,7 +348,7 @@ screens (CPU & GPU, Battery, FPS, FPS session).
 ## Tests and screenshots
 
 ```
-./gradlew :app:testStandardDebugUnitTest
+./gradlew :app:testStandardCanaryUnitTest -PlicenseServerUrl=https://<your-worker-origin>
 ```
 
 - **Home:** `HomeUiTest` (ready, missing module, no root, checking, safe mode; light and dark, viewport and full page) and `HomeModelTest` (greeting, summary, thermal bands).
@@ -370,7 +370,7 @@ screens (CPU & GPU, Battery, FPS, FPS session).
 
 These steps need hardware and have not been run here.
 
-1. Install the debug APK. Switch the system theme and the app's Theme
+1. Install a locally signed Canary APK. Switch the system theme and the app's Theme
    (Settings → Theme) in all four combinations. The status and navigation
    icons must stay readable on every setup step and on the main tabs, in
    gesture and three-button navigation.

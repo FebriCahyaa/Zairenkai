@@ -14,7 +14,7 @@ contributions under `kernel/` are additionally GPL-2.0-only.
   `*.inc`), and keystores are git-ignored — keep it that way.
 - Kernel code follows the Linux kernel coding style; run `checkpatch` where you
   can. Userspace C targets C11, `-Wall -Wextra`.
-- The app is Kotlin + Compose; keep `./gradlew :app:lintDebug` clean.
+- The app is Kotlin + Compose; keep `./gradlew :app:lintStandardCanary` clean.
 
 ## Building / testing
 
@@ -24,7 +24,7 @@ contributions under `kernel/` are additionally GPL-2.0-only.
 | Kernel module (host) | `make -C kernel KDIR=/lib/modules/$(uname -r)/build modules` |
 | GKI LKM | `kernel/gki/build_lkm.sh <kmi> --kernel-dir <gki-out>` |
 | Engine | `userspace/build.sh host` |
-| App | `./gradlew :app:assembleDebug` |
+| App | `./gradlew :app:assembleStandardCanary -PlicenseServerUrl=https://<your-worker-origin>` |
 
 CI runs the crypto vectors, a host module compile, the NDK engine build and the
 app build on every PR (`.github/workflows/`).

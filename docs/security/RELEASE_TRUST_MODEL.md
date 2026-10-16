@@ -24,13 +24,15 @@ for `approved-kernel-tags.txt`.
 
 ## Metadata signatures and update behavior
 
-The stable updater downloads `version-release.json` and its detached
-`version-release.json.sig` from GitHub Releases. The signature covers the exact
-manifest bytes and binds the asset name, a SHA-256 of the manifest, and the
-public-key identifier. Missing, malformed, mismatched, or invalid signatures
-fail closed as `BAD_MANIFEST`; the app does not silently fall back to an
-unsigned stable manifest. Preview/debug builds use the preview channel and are
-not production trust anchors.
+The updater fetches `version-release.json` / `version-canary.json` and the
+matching detached signature through the configured License Server routes
+`/v1/updates/release` and `/v1/updates/canary`. The Worker proxies bounded
+metadata from the official GitHub Releases assets; it never proxies APK bytes.
+The signature covers the exact manifest bytes and binds the asset name, a
+SHA-256 of the manifest, and the public-key identifier. Both channels fail
+closed as `BAD_MANIFEST` when the signature is absent or invalid. Canary and
+Release builds are non-debuggable and use the configured official APK signer.
+The debug build type is disabled for distribution tasks.
 
 Every release manifest records `apiMajor`, `buildId`, commit, version and the
 SHA-256/size of artifacts. The CI consistency check requires
@@ -66,11 +68,17 @@ signing identity, then uses `zkfctl`/ZKFC as the authoritative license verifier.
 3. Review and commit only
    `app/src/main/assets/security/update-metadata-public-key.pem`. Never commit
    the private key, passphrase, decoded token, APK keystore, or subkey file.
-4. Required secrets in `production-signing` are
+4. Configure the non-secret Actions **repository variable** `ZKFC_LICENSE_SERVER_URL`
+   as the HTTPS origin of the deployed production Worker (for example,
+   `https://your-worker.workers.dev`, without a trailing path). The build/CI
+   workflows also need this value, so do not scope it only to an environment.
+5. Required secrets in `production-signing` and `canary-signing` are
    `ZKFC_METADATA_SIGNING_KEY_B64` and `ZKFC_METADATA_SIGNING_PASSPHRASE`. CI
    refuses official metadata signing when either is missing or the private key
-   does not match the public key pinned in the app.
-5. Rotate by provisioning the replacement key, updating the pinned public key,
+   does not match the public key pinned in the app. Signing keys should be the
+   same metadata trust anchor for both channels, unless a deliberate staged key
+   rotation is underway.
+6. Rotate by provisioning the replacement key, updating the pinned public key,
    and shipping an app update with the new pin before retiring the old public
    key. A rotation changes the app trust anchor; do not rotate casually.
 

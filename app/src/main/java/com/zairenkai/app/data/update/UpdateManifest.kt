@@ -11,6 +11,7 @@
  */
 package com.zairenkai.app.data.update
 
+import com.zairenkai.app.BuildConfig
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -22,38 +23,35 @@ enum class UpdateChannel(val tag: String, val manifestAsset: String, val apkAsse
     /** Stable, officially signed build, published as a full GitHub release. */
     RELEASE("release", "version-release.json", "Zairenkai-release.apk"),
 
-    /** Debug-signed preview build, published as a GitHub prerelease. */
-    DEBUG("preview", "version-debug.json", "Zairenkai-debug.apk");
+    /** Early-access build, signed and published as the fixed canary prerelease. */
+    CANARY("canary", "version-canary.json", "Zairenkai-canary.apk");
 
-    /** Stable download base for this channel's assets. RELEASE uses
-     *  /releases/latest/download/, which GitHub resolves to the newest
-     *  (non-prerelease) release whatever its version tag; the DEBUG prerelease
-     *  stays on the fixed "preview" tag. */
+    /** GitHub Releases hosts APK bytes; the License Server proxies signed metadata. */
     fun downloadBase(repo: String = REPO): String = when (this) {
         RELEASE -> "https://github.com/$repo/releases/latest/download"
-        DEBUG -> "https://github.com/$repo/releases/download/$tag"
+        CANARY -> "https://github.com/$repo/releases/download/canary"
     }
 
-    /** Raw download URL of this channel's manifest. */
-    fun manifestUrl(repo: String = REPO): String = "${downloadBase(repo)}/$manifestAsset"
+    /** Update metadata always enters the app through our License Server API. */
+    fun manifestUrl(serverBaseUrl: String = BuildConfig.ZKFC_LICENSE_SERVER_URL): String =
+        "${serverBaseUrl.trimEnd('/')}/v1/updates/$tag"
 
-    /** Detached signature asset; required for the stable production channel. */
-    fun signatureUrl(repo: String = REPO): String = "${manifestUrl(repo)}.sig"
+    /** Detached metadata signature is proxied by the same server route. */
+    fun signatureUrl(serverBaseUrl: String = BuildConfig.ZKFC_LICENSE_SERVER_URL): String =
+        "${manifestUrl(serverBaseUrl)}.sig"
 
-    /** Human-facing releases page for this channel (browser fallback). */
+    /** Human-facing Releases page for a manual/browser fallback. */
     fun pageUrl(repo: String = REPO): String = when (this) {
         RELEASE -> "https://github.com/$repo/releases/latest"
-        DEBUG -> "https://github.com/$repo/releases/tag/preview"
+        CANARY -> "https://github.com/$repo/releases/tag/canary"
     }
 
     companion object {
         const val REPO = "FebriCahyaa/Zairenkai"
 
-        /** The channel a given build type updates along. A debug-signed build
-         *  (debug or the optimized "preview") can only be replaced in place by
-         *  another debug-signed build, so it follows the debug channel. */
+        /** Only the Canary and Release distribution channels are supported. */
         fun forBuildType(buildType: String): UpdateChannel =
-            if (buildType.equals("release", ignoreCase = true)) RELEASE else DEBUG
+            if (buildType.equals("canary", ignoreCase = true)) CANARY else RELEASE
     }
 }
 
@@ -85,14 +83,18 @@ data class ReleaseManifest(
             val name = o["versionName"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotEmpty() } ?: return null
             val apiMajor = o["apiMajor"]?.jsonPrimitive?.intOrNull ?: return null
             val buildId = o["buildId"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
-            if (code < 1 || apiMajor < 1 || buildId.length > 160 || buildId.any { it.isISOControl() }) return null
+            if (code !in 1..2_100_000_000 || apiMajor < 1 || apiMajor > 999 ||
+                !name.matches(Regex("v?\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?")) ||
+                buildId.length > 160 || buildId.any { it.isISOControl() }) return null
             val apk = o["apkUrl"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
                 ?: "${channel.downloadBase(repo)}/${channel.apkAsset}"
             val parsedUrl = runCatching { java.net.URI(apk) }.getOrNull() ?: return null
+            val assetPath = parsedUrl.path.orEmpty()
             if (parsedUrl.scheme != "https" || parsedUrl.host != "github.com" ||
                 parsedUrl.userInfo != null || parsedUrl.port !in listOf(-1, 443) ||
                 parsedUrl.query != null || parsedUrl.fragment != null ||
-                !parsedUrl.path.orEmpty().contains("/releases/")) return null
+                !assetPath.startsWith("/$repo/releases/") ||
+                assetPath.substringAfterLast('/') != channel.apkAsset) return null
             val sha = (o["sha256"]?.jsonPrimitive?.contentOrNull ?: "").trim().lowercase()
             if (!sha.matches(Regex("[0-9a-f]{64}"))) return null
             return ReleaseManifest(

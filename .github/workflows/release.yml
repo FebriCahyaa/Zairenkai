@@ -9,13 +9,28 @@ permissions:
   contents: read
 
 jobs:
-  # The .ko half: build zkfc.ko per KMI the KernelSU-Next way (DDK containers).
+  validate_tag:
+    name: Validate stable Release tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a stable semantic version tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::Release tags must be stable vMAJOR.MINOR.PATCH (no -rc, -beta, or other prerelease suffix). Use Canary for prerelease builds."
+            exit 1
+          }
+
+  # Validate tag shape before starting the expensive kernel matrix.
   lkm:
+    needs: validate_tag
     uses: ./.github/workflows/build-lkm.yml
 
   package:
     name: Package release
-    needs: lkm
+    needs: [validate_tag, lkm]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: production-signing
@@ -34,18 +49,6 @@ jobs:
           else
             echo "ZKFC owner public key is provisioned."
           fi
-
-      - name: Generate randomized spoofed application ID
-        id: spoofed_app_id
-        run: |
-          set -euo pipefail
-          app_id="$(python3 tools/ci/generate-spoofed-app-id.py)"
-          [[ "$app_id" =~ ^[a-z]{6}\.[a-z]{6}\.[a-z]{6}$ ]] || {
-            echo "::error::Generated spoofed application ID is invalid"
-            exit 1
-          }
-          echo "application_id=$app_id" >> "$GITHUB_OUTPUT"
-          echo "Generated a per-build-job randomized package ID for the spoofed flavor."
 
       - uses: actions/setup-java@v6.0.1
         with:
@@ -158,6 +161,25 @@ jobs:
           mkdir -p module/zperf/catalog
           cp rust/zperfd/profiles/*.toml module/zperf/catalog/
 
+      - name: Stamp Release module version and update endpoint
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
+            echo "::error::Set repository Actions variable ZKFC_LICENSE_SERVER_URL to the production Worker HTTPS origin."
+            exit 1
+          }
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          VERSION_CODE="$GITHUB_RUN_ID"
+          python3 tools/ci/test-configure-module-update.py
+          python3 tools/ci/configure-module-update.py \
+            --module-dir module --channel release --version-name "$TAG_VERSION" \
+            --version-code "$VERSION_CODE" --server-url "$ZKFC_LICENSE_SERVER_URL" \
+            --zip-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${GITHUB_REF_NAME}/Zairenkai-module.zip" \
+            --changelog-url "https://github.com/FebriCahyaa/Zairenkai/releases/tag/${GITHUB_REF_NAME}" \
+            --metadata-output module-update-release.json
+
       - name: Package module + checksum manifest
         run: |
           set -euo pipefail
@@ -172,13 +194,28 @@ jobs:
       - name: Embed verified root module in APK assets
         run: tools/bootpatch/stage-embedded-module.sh Zairenkai-module.zip
 
-      - name: Build APKs with the embedded module
+      - name: Build and test official Release APK
         env:
           ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
           ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
           ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleStandardRelease :app:assembleSpoofedRelease :app:testStandardDebugUnitTest "-PspoofedAppId=${{ steps.spoofed_app_id.outputs.application_id }}" --stacktrace
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
+            echo "::error::Set ZKFC_LICENSE_SERVER_URL in production-signing as an HTTPS origin without a path."
+            exit 1
+          }
+          VERSION_NAME="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$VERSION_NAME" == "$TAG_VERSION" ]] || {
+            echo "::error::Release tag '$TAG_VERSION' must match app versionName '$VERSION_NAME'."
+            exit 1
+          }
+          VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$VERSION_NAME" --channel release)"
+          ./gradlew :app:testStandardReleaseUnitTest :app:assembleStandardRelease \
+            "-PversionCode=$VERSION_CODE" "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
 
       - name: Enforce v1/v2/v3 signing and verify release APK
         env:
@@ -258,29 +295,18 @@ jobs:
           set -euo pipefail
           SRC="$(find app/build/outputs/apk/standard/release -type f -name '*.apk' -print -quit)"
           [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Standard release APK not found"; exit 1; }
-          cp "$SRC" Zairenkai-standard-release.apk
-          unzip -t Zairenkai-standard-release.apk >/dev/null
-          sha256sum Zairenkai-standard-release.apk > Zairenkai-standard-release.apk.sha256
-
-      - name: Sign and verify spoofed release APK
-        env:
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          APK="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
-          [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
-          tools/ci/verify-release-apk.sh "$APK" app/build/zk-release.jks
-
-      - name: Stage spoofed release APK
-        run: |
-          set -euo pipefail
-          SRC="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
-          [[ -n "$SRC" && -f "$SRC" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
-          cp "$SRC" Zairenkai-spoofed-release.apk
-          unzip -t Zairenkai-spoofed-release.apk >/dev/null
-          sha256sum Zairenkai-spoofed-release.apk > Zairenkai-spoofed-release.apk.sha256
+          cp "$SRC" Zairenkai-release.apk
+          unzip -t Zairenkai-release.apk >/dev/null
+          sha256sum Zairenkai-release.apk > Zairenkai-release.apk.sha256
+          VERSION_NAME="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$VERSION_NAME" --channel release)"
+          API_MAJOR="$(python3 tools/ci/check-api-major.py --print)"
+          BUILD_ID="${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python3 tools/ci/generate-update-manifest.py \
+            --apk Zairenkai-release.apk --output version-release.json \
+            --version-name "$VERSION_NAME" --version-code "$VERSION_CODE" \
+            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${GITHUB_REF_NAME}/Zairenkai-release.apk" \
+            --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$GITHUB_SHA"
 
       - name: Stage module checksum manifest
         run: cp module/SHA256SUMS Zairenkai-module-SHA256SUMS
@@ -302,6 +328,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/ci/test_release_manifest.py
+          python3 tools/ci/test-version-code.py
+          python3 tools/ci/test-update-manifest.py
           python3 tools/ci/test-metadata-signature.py
           python3 tools/ci/test-verify-metadata.py
           python3 tools/ci/test-verify-release-manifest.py
@@ -310,6 +338,15 @@ jobs:
             --commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT"
+
+      - name: Sign stable update manifest
+        env:
+          ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
+          ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
+        run: python3 tools/ci/sign-metadata.py --input version-release.json --output version-release.json.sig
+
+      - name: Verify signed stable update manifest
+        run: python3 tools/ci/verify-metadata.py --input version-release.json --signature version-release.json.sig
 
       - name: Sign release manifest
         env:
@@ -325,8 +362,10 @@ jobs:
           set -euo pipefail
           sha256sum \
             Zairenkai-module.zip \
-            Zairenkai-standard-release.apk \
-            Zairenkai-spoofed-release.apk \
+            Zairenkai-release.apk \
+            module-update-release.json \
+            version-release.json \
+            version-release.json.sig \
             Zairenkai-module-SHA256SUMS \
             Zairenkai-release-manifest.json \
             Zairenkai-release-manifest.json.sig \
@@ -342,12 +381,22 @@ jobs:
       - name: Attest standard APK provenance
         uses: actions/attest@v4
         with:
-          subject-path: Zairenkai-standard-release.apk
+          subject-path: Zairenkai-release.apk
 
-      - name: Attest spoofed APK provenance
+      - name: Attest module updater metadata provenance
         uses: actions/attest@v4
         with:
-          subject-path: Zairenkai-spoofed-release.apk
+          subject-path: module-update-release.json
+
+      - name: Attest signed updater metadata provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: version-release.json
+
+      - name: Attest updater metadata signature provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: version-release.json.sig
 
       - name: Attest release manifest provenance
         uses: actions/attest@v4
@@ -364,10 +413,11 @@ jobs:
         with:
           files: |
             Zairenkai-module.zip
-            Zairenkai-standard-release.apk
-            Zairenkai-standard-release.apk.sha256
-            Zairenkai-spoofed-release.apk
-            Zairenkai-spoofed-release.apk.sha256
+            Zairenkai-release.apk
+            Zairenkai-release.apk.sha256
+            version-release.json
+            version-release.json.sig
+            module-update-release.json
             Zairenkai-module-SHA256SUMS
             Zairenkai-release-manifest.json
             Zairenkai-release-manifest.json.sig

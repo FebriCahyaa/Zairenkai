@@ -71,7 +71,7 @@ Run from the repository root:
 cargo test --manifest-path native/bootpatch/Cargo.toml
 cargo fmt --manifest-path native/bootpatch/Cargo.toml -- --check
 bash -n module/customize.sh module/service.sh
-./gradlew :app:assembleDebug
+./gradlew :app:assembleStandardCanary -PlicenseServerUrl=https://<your-worker-origin>
 ```
 
 Native unit tests cover KMI extraction, kernel-family validation, CPIO init

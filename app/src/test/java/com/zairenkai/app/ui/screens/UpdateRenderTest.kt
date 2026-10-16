@@ -34,7 +34,7 @@ class UpdateRenderTest {
         ReleaseManifest(
             versionCode = 3,
             versionName = "1.2.0",
-            apkUrl = "https://github.com/FebriCahyaa/Zairenkai/releases/download/preview/Zairenkai-debug.apk",
+            apkUrl = "https://github.com/FebriCahyaa/Zairenkai/releases/download/canary/Zairenkai-canary.apk",
             sha256 = "a".repeat(64),
             apiMajor = 1,
             buildId = "update-render-test",
@@ -47,7 +47,7 @@ class UpdateRenderTest {
                 UpdateContent(
                     state = state,
                     autoCheck = true,
-                    channel = UpdateChannel.DEBUG,
+                    channel = UpdateChannel.CANARY,
                     onBack = {},
                     onCheck = {},
                     onDownload = {},

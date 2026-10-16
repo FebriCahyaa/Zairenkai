@@ -11,7 +11,7 @@
     <string name="system_integrity_title">App integrity</string>
     <string name="system_sig_official">Official (signature matches)</string>
     <string name="system_sig_modified">Modified / repackaged</string>
-    <string name="system_sig_unknown">Not verified (debug/spoofed)</string>
+    <string name="system_sig_unknown">Not verified (signer unavailable)</string>
     <string name="system_label_signature_fingerprint">Signature fingerprint</string>
 
     <!-- Runtime architecture entry -->

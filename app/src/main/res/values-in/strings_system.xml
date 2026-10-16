@@ -11,7 +11,7 @@
     <string name="system_integrity_title">Integritas aplikasi</string>
     <string name="system_sig_official">Resmi (tanda tangan cocok)</string>
     <string name="system_sig_modified">Termodifikasi / dikemas ulang</string>
-    <string name="system_sig_unknown">Tidak diverifikasi (debug/spoofed)</string>
+    <string name="system_sig_unknown">Tidak terverifikasi (sertifikat tidak tersedia)</string>
     <string name="system_label_signature_fingerprint">Sidik tanda tangan</string>
 
     <!-- Runtime architecture entry -->

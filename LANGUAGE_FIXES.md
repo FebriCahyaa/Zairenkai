@@ -19,4 +19,4 @@ Base: `FebriCahyaa/Zairenkai`, branch `ccr-076d8b15-osiupp`, commit
 - Verified the supported locale list still matches the app's `AppLanguage` declarations.
 - Verified source invariants for Activity-scope selection and framework locale resolution.
 
-The Gradle test task could not reach compilation in this environment because the Gradle 9.8.1 distribution is not cached and `services.gradle.org` could not be resolved. Run `./gradlew :app:testStandardDebugUnitTest` in an environment with the configured Gradle distribution and dependencies available before releasing an APK.
+The Gradle test task could not reach compilation in this environment because the Gradle 9.8.1 distribution is not cached and `services.gradle.org` could not be resolved. Run `./gradlew :app:testStandardCanaryUnitTest -PlicenseServerUrl=https://<your-worker-origin>` in an environment with the configured Gradle distribution and dependencies available before releasing an APK.

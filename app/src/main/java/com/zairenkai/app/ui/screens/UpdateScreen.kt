@@ -128,7 +128,7 @@ internal fun UpdateContent(
 
             BrowserFallbackCard(
                 onOpenRelease = { onOpenUrl(com.zairenkai.app.data.update.UpdateChannel.RELEASE.pageUrl()) },
-                onOpenDebug = { onOpenUrl(com.zairenkai.app.data.update.UpdateChannel.DEBUG.pageUrl()) },
+                onOpenCanary = { onOpenUrl(com.zairenkai.app.data.update.UpdateChannel.CANARY.pageUrl()) },
             )
 
             ChangelogCard()
@@ -140,7 +140,7 @@ internal fun UpdateContent(
 private fun channelLabelRes(channel: com.zairenkai.app.data.update.UpdateChannel): Int =
     when (channel) {
         com.zairenkai.app.data.update.UpdateChannel.RELEASE -> R.string.update_channel_release
-        com.zairenkai.app.data.update.UpdateChannel.DEBUG -> R.string.update_channel_debug
+        com.zairenkai.app.data.update.UpdateChannel.CANARY -> R.string.update_channel_canary
     }
 
 @Composable
@@ -241,6 +241,7 @@ private fun StatusCard(
 }
 
 private fun failReasonRes(reason: CheckResult.Reason): Int = when (reason) {
+    CheckResult.Reason.SERVER_NOT_CONFIGURED -> R.string.update_fail_server
     CheckResult.Reason.NO_NETWORK -> R.string.update_fail_network
     CheckResult.Reason.NOT_PUBLISHED -> R.string.update_fail_notpublished
     CheckResult.Reason.BAD_MANIFEST -> R.string.update_fail_manifest
@@ -275,7 +276,7 @@ private fun AutoCheckRow(checked: Boolean, onChange: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun BrowserFallbackCard(onOpenRelease: () -> Unit, onOpenDebug: () -> Unit) {
+private fun BrowserFallbackCard(onOpenRelease: () -> Unit, onOpenCanary: () -> Unit) {
     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.update_browser_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -283,8 +284,8 @@ private fun BrowserFallbackCard(onOpenRelease: () -> Unit, onOpenDebug: () -> Un
             OutlinedButton(onClick = onOpenRelease, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.update_open_release))
             }
-            OutlinedButton(onClick = onOpenDebug, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.update_open_debug))
+            OutlinedButton(onClick = onOpenCanary, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.update_open_canary))
             }
         }
     }

@@ -18,6 +18,7 @@ package com.zairenkai.app.data.update
 
 import android.content.Context
 import android.content.Intent
+import com.zairenkai.app.BuildConfig
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,7 +33,7 @@ sealed interface CheckResult {
     data class Available(val manifest: ReleaseManifest) : CheckResult
     data class Failed(val reason: Reason) : CheckResult
 
-    enum class Reason { NO_NETWORK, NOT_PUBLISHED, BAD_MANIFEST }
+    enum class Reason { SERVER_NOT_CONFIGURED, NO_NETWORK, NOT_PUBLISHED, BAD_MANIFEST }
 }
 
 class Updater(private val context: Context) {
@@ -46,23 +47,25 @@ class Updater(private val context: Context) {
     /** Check [channel] against [installedVersionCode]. Runs off the main thread. */
     suspend fun check(channel: UpdateChannel, installedVersionCode: Int): CheckResult =
         withContext(Dispatchers.IO) {
+            if (BuildConfig.ZKFC_LICENSE_SERVER_URL.isBlank()) {
+                return@withContext CheckResult.Failed(CheckResult.Reason.SERVER_NOT_CONFIGURED)
+            }
             val body = runCatching { get(channel.manifestUrl(), MAX_MANIFEST_BYTES) }.getOrElse { e ->
                 return@withContext CheckResult.Failed(
                     if (e is java.io.FileNotFoundException) CheckResult.Reason.NOT_PUBLISHED
                     else CheckResult.Reason.NO_NETWORK,
                 )
             } ?: return@withContext CheckResult.Failed(CheckResult.Reason.NOT_PUBLISHED)
-            if (channel == UpdateChannel.RELEASE) {
-                val signature = runCatching { get(channel.signatureUrl(), MAX_SIGNATURE_BYTES) }.getOrNull()
-                    ?: return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
-                if (!SignedMetadataVerifier.verifyAsset(
-                        context,
-                        channel.manifestAsset,
-                        body.toByteArray(Charsets.UTF_8),
-                        signature.toByteArray(Charsets.US_ASCII),
-                    )
-                ) return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
-            }
+            // Both Canary and Release are signed: no unsigned channel fallback.
+            val signature = runCatching { get(channel.signatureUrl(), MAX_SIGNATURE_BYTES) }.getOrNull()
+                ?: return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
+            if (!SignedMetadataVerifier.verifyAsset(
+                    context,
+                    channel.manifestAsset,
+                    body.toByteArray(Charsets.UTF_8),
+                    signature.toByteArray(Charsets.US_ASCII),
+                )
+            ) return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
             val manifest = ReleaseManifest.parse(body, channel)
                 ?: return@withContext CheckResult.Failed(CheckResult.Reason.BAD_MANIFEST)
             if (manifest.isNewerThan(installedVersionCode)) CheckResult.Available(manifest)

@@ -44,7 +44,7 @@ signature=$sig
 
     @Test fun rejectsWrongFilename() {
         val (envelope, key) = envelope()
-        assertFalse(SignedMetadataVerifier.verify(payload, "version-debug.json", envelope, key))
+        assertFalse(SignedMetadataVerifier.verify(payload, "version-canary.json", envelope, key))
     }
 
     @Test fun rejectsUnprovisionedOrMalformedKey() {

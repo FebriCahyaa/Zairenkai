@@ -39,15 +39,14 @@ def main() -> int:
     parser.add_argument("--run-attempt", default=os.environ.get("GITHUB_RUN_ATTEMPT", "1"))
     args = parser.parse_args()
 
-    # app-apks.yml publishes the stable updater name, while the tag-driven
-    # release.yml uses an explicit "standard" name. Bind whichever is present.
+    # Both release workflows publish the same stable APK name. Retain the
+    # standard filename as a compatibility fallback for older prepared artifacts.
     standard_apk = ROOT / "Zairenkai-standard-release.apk"
     if not standard_apk.is_file():
         standard_apk = ROOT / "Zairenkai-release.apk"
     candidates = [
         ROOT / "Zairenkai-module.zip",
         standard_apk,
-        ROOT / "Zairenkai-spoofed-release.apk",
         ROOT / "Zairenkai-module-SHA256SUMS",
     ]
     files = []
@@ -62,7 +61,6 @@ def main() -> int:
     required = {
         "Zairenkai-module.zip",
         standard_apk.name,
-        "Zairenkai-spoofed-release.apk",
         "Zairenkai-module-SHA256SUMS",
     }
     missing = required - {item["path"] for item in files}

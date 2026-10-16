@@ -124,11 +124,11 @@ sysfs state directly. `zkfctl` remains the low-level diagnostic and license
 management CLI, while `/dev/zkfc` remains the kernel authority for licensed
 performance controls.
 
+For the Play Protect warning, distribution and signer checks, see [`docs/security/PLAY_PROTECT.md`](docs/security/PLAY_PROTECT.md).
+
 ## Build
 
-- **App:** `./gradlew :app:assembleDebug` (AGP 9.4.1, Gradle 9.8.1, Kotlin 2.4.21,
-  SDK 37). See [`app/`](app) and [`docs/release-signing.md`](docs/release-signing.md)
-  for the release keystore, GitHub Actions secrets, and v1/v2/v3 signature checks.
+- **App:** CI distributes only optimized `standardCanary` and `standardRelease` APKs; the Android `debug` variant is disabled. For local CI-equivalent checks, run `./gradlew :app:testStandardCanaryUnitTest :app:testStandardReleaseUnitTest` and set `-PlicenseServerUrl=https://<your-worker-origin>`. See [`app/`](app) and [`docs/release-signing.md`](docs/release-signing.md) for signing, server configuration, and v1/v2/v3 signature checks.
 - **Engine:** `rust/zperfd` (resident Rust daemon) plus `userspace/zkfctl` (C CLI/compatibility engine).
   See [`rust/zperfd/`](rust/zperfd) and [`userspace/`](userspace). CI/release builds pin Rust
   to the reviewed stable toolchain declared in [`rust-toolchain.toml`](rust-toolchain.toml).

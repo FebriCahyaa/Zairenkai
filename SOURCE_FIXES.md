@@ -61,7 +61,7 @@ Base source: `FebriCahyaa/Zairenkai`, branch `ccr-076d8b15-osiupp`, commit
    `tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip`.
 3. Run `cargo test --manifest-path native/bootpatch/Cargo.toml`,
    `cargo fmt --manifest-path native/bootpatch/Cargo.toml -- --check`, and
-   `./gradlew :app:assembleDebug` in a fully provisioned build environment.
+   `./gradlew :app:assembleStandardCanary -PlicenseServerUrl=https://<your-worker-origin>` in a fully provisioned build environment.
 4. Keep stock `boot.img` and `init_boot.img` backups. If the device has
    `init_boot.img`, patch that image and pair it with `boot.img` from the same
    ROM/build. Do not flash until the selected `zkfc.ko` is built for a compatible
