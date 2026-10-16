@@ -40,6 +40,9 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
     val vm: SystemViewModel = viewModel(factory = factory)
     val ui by vm.ui.collectAsState()
     val ctx = LocalContext.current
+    // Compose tracks resource configuration changes through stringResource.
+    // Capture the current translated value here, not via Context.getString in a callback.
+    val moduleShareTitle = stringResource(R.string.system_module_share_title)
     var confirmModuleInstall by remember { mutableStateOf(false) }
     val tokenPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.installToken(uri)
@@ -55,7 +58,7 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
                     clipData = ClipData.newUri(ctx.contentResolver, "Zairenkai module ZIP", uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                ctx.startActivity(Intent.createChooser(send, ctx.getString(R.string.system_module_share_title)))
+                ctx.startActivity(Intent.createChooser(send, moduleShareTitle))
             }
         }
     }
