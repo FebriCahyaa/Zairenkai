@@ -34,6 +34,7 @@
     <string name="perm_not_granted">未許可</string>
     <string name="perm_needed">機能に必要</string>
     <string name="perm_recommended">推奨</string>
+    <string name="perm_optional">任意</string>
     <string name="perm_allow">許可</string>
     <string name="perm_open_settings">設定を開く</string>
     <plurals name="setup_done_permissions">
