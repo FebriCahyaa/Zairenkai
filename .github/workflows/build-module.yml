@@ -1,21 +1,115 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-# Reusable: build the flashable Zairenkai module — the per-KMI kernel modules
-# (zkfc.ko, built the KernelSU-Next way via DDK containers in build-lkm.yml),
-# the zperfd/zkfctl userspace binaries, the zperf catalog and a checksum
-# manifest — and hand it back as the `module-zip` artifact (Zairenkai-module.zip
-# + SHA256SUMS). Callers add the APK and publish. This is the ".ko half" of a
-# KSU-Next-style release: manager APK + kernel module, built together in CI.
+# Reusable module build following KernelSU-Next's split build/aggregate pattern:
+# one DDK job per KMI, then one packaging job that publishes a single artifact.
 name: Build module
 
 on:
   workflow_call:
+    inputs:
+      channel:
+        description: Update channel to stamp into module metadata.
+        required: false
+        default: canary
+        type: string
+      version_name:
+        description: Stable X.Y.Z version for Release; ignored for Canary.
+        required: false
+        default: ''
+        type: string
+      ddk_release:
+        description: ddk-min image release tag.
+        required: false
+        default: '20260828'
+        type: string
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Module build channel
+        required: true
+        default: canary
+        type: choice
+        options:
+          - canary
+          - release
+      version_name:
+        description: Stable X.Y.Z version for Release (for example 1.1.0)
+        required: false
+        default: ''
+        type: string
+      ddk_release:
+        description: ddk-min image release tag
+        required: false
+        default: '20260828'
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: module-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  # The .ko half: build zkfc.ko per KMI the KernelSU-Next way (DDK containers).
+  validate:
+    name: Validate module build inputs
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.meta.outputs.channel }}
+      version_name: ${{ steps.meta.outputs.version_name }}
+      server_url: ${{ steps.meta.outputs.server_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate channel, version and update server
+        id: meta
+        env:
+          REQUESTED_CHANNEL: ${{ inputs.channel || 'canary' }}
+          REQUESTED_VERSION: ${{ inputs.version_name || '' }}
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          CHANNEL="$REQUESTED_CHANNEL"
+          [[ "$CHANNEL" == canary || "$CHANNEL" == release ]] || {
+            echo "::error::Channel must be canary or release."
+            exit 1
+          }
+          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
+            echo "::error::Set ZKFC_LICENSE_SERVER_URL to the HTTPS origin of the License Server Worker (no path)."
+            exit 1
+          }
+
+          BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [[ "$CHANNEL" == canary ]]; then
+            VERSION_NAME="${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}"
+            URL_TAG=canary
+          else
+            [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+              echo "::error::Release module builds must run from a stable vMAJOR.MINOR.PATCH tag."
+              exit 1
+            }
+            VERSION_NAME="${REQUESTED_VERSION#v}"
+            [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+              echo "::error::Release version_name must be stable X.Y.Z."
+              exit 1
+            }
+            [[ "$VERSION_NAME" == "${GITHUB_REF_NAME#v}" ]] || {
+              echo "::error::Release version must match the current Git tag."
+              exit 1
+            }
+            [[ "$VERSION_NAME" == "$BASE_VERSION" ]] || {
+              echo "::error::Release tag/version must match app/build.gradle.kts versionName ($BASE_VERSION)."
+              exit 1
+            }
+            URL_TAG="$GITHUB_REF_NAME"
+          fi
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "server_url=${ZKFC_LICENSE_SERVER_URL%/}" >> "$GITHUB_OUTPUT"
+          echo "Validated module channel=$CHANNEL version=$VERSION_NAME versionCode=$VERSION_CODE tag=$URL_TAG"
+
+  # Same KMI matrix pattern used by KernelSU-Next: isolated reusable DDK builds.
   lkm:
+    name: Build zkfc.ko matrix
+    needs: validate
     strategy:
       fail-fast: false
       matrix:
@@ -31,130 +125,152 @@ jobs:
     uses: ./.github/workflows/ddk-lkm-zkfc.yml
     with:
       kmi: ${{ matrix.kmi }}
+      ddk_release: ${{ inputs.ddk_release || '20260828' }}
 
   package:
-    name: Package flashable module
-    needs: lkm
+    name: Package flashable module (${{ needs.validate.outputs.channel }})
+    needs: [validate, lkm]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
 
-      - name: Set up Rust
+      - name: Set up Rust toolchain
         run: |
           rustup toolchain install 1.99.0 --profile minimal
           rustup component add rustfmt clippy --toolchain 1.99.0
           rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
-      - uses: android-actions/setup-android@v4.0.4
+
+      - name: Cache Rust build outputs
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          cache-targets: true
+
+      - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
-      - name: Install NDK
-        run: sdkmanager "ndk;30.0.16248370"
 
-      - name: Build zperfd and validate workspace
+      - name: Install NDK r30 and accept licenses
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "ndk;30.0.16248370"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
+
+      - name: Build and test Rust workspace
         working-directory: rust
-        env:
-          NDK: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
         run: |
           set -euo pipefail
           cargo fmt --check
           cargo test --workspace --all-targets --locked
           cargo clippy --workspace --all-targets --all-features -- -D warnings
-          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          cargo build -p zperfd --release --locked
+
+      - name: Build zperfd for Android ABIs
+        working-directory: rust
+        run: |
+          set -euo pipefail
+          TC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
           export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TC/aarch64-linux-android31-clang"
           export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$TC/x86_64-linux-android31-clang"
-          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            target="${t%%:*}"; abi="${t##*:}"
+          for item in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            target="${item%%:*}"
+            abi="${item##*:}"
             cargo build -p zperfd --release --target "$target" --locked
-            mkdir -p "../module/bin/$abi"
-            cp "target/$target/release/zperfd" "../module/bin/$abi/zperfd"
+            install -D "target/$target/release/zperfd" "../module/bin/$abi/zperfd"
             "$TC/llvm-strip" "../module/bin/$abi/zperfd"
           done
 
-      - name: Build zkfctl userspace
+      - name: Build zkfctl for Android ABIs
         run: |
           set -euo pipefail
-          NDK="$ANDROID_HOME/ndk/30.0.16248370"
-          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            triple="${t%%:*}"; abi="${t##*:}"
+          TC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          for item in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            target="${item%%:*}"
+            abi="${item##*:}"
             mkdir -p "module/bin/$abi"
-            "$TC/${triple}31-clang" -std=c11 -O2 -Wall -Wextra -Werror \
+            "$TC/${target}31-clang" -std=c11 -O2 -Wall -Wextra -Werror \
               -fstack-protector-strong -fPIE -pie \
               -I kernel/include/uapi -I userspace/include -I userspace/lib \
               userspace/lib/*.c userspace/zkfctl/main.c -o "module/bin/$abi/zkfctl"
             "$TC/llvm-strip" "module/bin/$abi/zkfctl"
           done
 
-      - name: Stage zperf catalog
-        run: |
-          set -euo pipefail
-          mkdir -p module/zperf/catalog
-          cp rust/zperfd/profiles/*.toml module/zperf/catalog/
-
-      - name: Download zkfc.ko artifacts
-        uses: actions/download-artifact@v8.0.0
+      - name: Download KMI artifacts
+        uses: actions/download-artifact@v7
         with:
           pattern: '*-zkfc-lkm'
           path: lkm-artifacts
 
-      - name: Lay out .ko into module/lkm/<kmi>-<abidir>
+      - name: Assemble module tree and verify matrix completeness
         run: |
           set -euo pipefail
-          # Artifact dirs are named "<arch>-<kmi>-zkfc-lkm" holding "<kmi>_zkfc.ko".
-          # customize.sh looks for lkm/<KMI>-<ABIDIR>/zkfc.ko (ABIDIR = arm64|x86_64).
+          mkdir -p module/zperf/catalog
+          cp rust/zperfd/profiles/*.toml module/zperf/catalog/
           shopt -s nullglob
+          count=0
           for d in lkm-artifacts/*-zkfc-lkm; do
             base=$(basename "$d")
             arch=${base%%-*}
-            rest=${base#*-}; kmi=${rest%-zkfc-lkm}
+            rest=${base#*-}
+            kmi=${rest%-zkfc-lkm}
             case "$arch" in
               aarch64) abidir=arm64 ;;
-              x86_64)  abidir=x86_64 ;;
-              *) echo "unknown arch '$arch' in $base"; continue ;;
+              x86_64) abidir=x86_64 ;;
+              *) echo "::error::Unexpected LKM artifact architecture: $arch"; exit 1 ;;
             esac
-            ko=$(find "$d" -name '*_zkfc.ko' | head -1)
-            [ -f "$ko" ] || { echo "no .ko in $d"; continue; }
+            ko=$(find "$d" -type f -name '*_zkfc.ko' -print -quit)
+            [[ -n "$ko" && -f "$ko" ]] || { echo "::error::No zkfc.ko in $d"; exit 1; }
             mkdir -p "module/lkm/$kmi-$abidir"
-            cp "$ko" "module/lkm/$kmi-$abidir/zkfc.ko"
-            sha256sum "module/lkm/$kmi-$abidir/zkfc.ko" | tee "module/lkm/$kmi-$abidir/zkfc.ko.sha256"
+            install -m 0644 "$ko" "module/lkm/$kmi-$abidir/zkfc.ko"
+            sha256sum "module/lkm/$kmi-$abidir/zkfc.ko" > "module/lkm/$kmi-$abidir/zkfc.ko.sha256"
+            count=$((count + 1))
           done
-
-      - name: Stamp Canary module version and update endpoint
-        env:
-          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: |
-          set -euo pipefail
-          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
-            echo "::error::Set repository Actions variable ZKFC_LICENSE_SERVER_URL to the production Worker HTTPS origin."
+          [[ "$count" -eq 16 ]] || {
+            echo "::error::Expected 16 KMI/architecture kernel modules, received $count."
             exit 1
           }
-          BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
-          VERSION_CODE="$GITHUB_RUN_ID"
-          VERSION_NAME="${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}"
-          python3 tools/ci/test-configure-module-update.py
-          python3 tools/ci/configure-module-update.py \
-            --module-dir module --channel canary --version-name "$VERSION_NAME" \
-            --version-code "$VERSION_CODE" --server-url "$ZKFC_LICENSE_SERVER_URL" \
-            --zip-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/canary/Zairenkai-module.zip" \
-            --changelog-url "https://github.com/FebriCahyaa/Zairenkai/releases/tag/canary" \
-            --metadata-output module-update-canary.json
 
-      - name: Package module + checksum manifest
+      - name: Stamp channel-specific module update metadata
+        env:
+          CHANNEL: ${{ needs.validate.outputs.channel }}
+          VERSION_NAME: ${{ needs.validate.outputs.version_name }}
+          ZKFC_LICENSE_SERVER_URL: ${{ needs.validate.outputs.server_url }}
         run: |
           set -euo pipefail
-          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
+          python3 tools/ci/test-configure-module-update.py
+          python3 tools/ci/test-module-version-code.py
+          VERSION_CODE="$(python3 tools/ci/module-version-code.py)"
+          echo "Using monotonic module versionCode=$VERSION_CODE for channel=$CHANNEL"
+          URL_TAG=canary
+          if [[ "$CHANNEL" == release ]]; then URL_TAG="$GITHUB_REF_NAME"; fi
+          python3 tools/ci/configure-module-update.py \
+            --module-dir module --channel "$CHANNEL" --version-name "$VERSION_NAME" \
+            --version-code "$VERSION_CODE" --server-url "$ZKFC_LICENSE_SERVER_URL" \
+            --zip-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${URL_TAG}/Zairenkai-module.zip" \
+            --changelog-url "https://github.com/FebriCahyaa/Zairenkai/releases/tag/${URL_TAG}" \
+            --metadata-output "module-update-${CHANNEL}.json"
+
+      - name: Package module and generate checksums
+        run: |
+          set -euo pipefail
+          test -n "$(find module/lkm -type f -name 'zkfc.ko' -print -quit)"
           : > module/SHA256SUMS
           (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
           (cd module && zip -r9 ../Zairenkai-module.zip . -x '*.git*')
           cp module/SHA256SUMS SHA256SUMS
           sha256sum Zairenkai-module.zip
+          unzip -t Zairenkai-module.zip >/dev/null
 
       - name: Upload module artifact
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7
         with:
           name: module-zip
           path: |
             Zairenkai-module.zip
             SHA256SUMS
-            module-update-canary.json
+            module-update-${{ needs.validate.outputs.channel }}.json
           if-no-files-found: error
+          retention-days: 7

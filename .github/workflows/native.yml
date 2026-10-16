@@ -6,26 +6,34 @@ on:
     # The active development branch diverges from main and is pushed to
     # directly, so it must run the same native gates as main.
     branches: [main, ccr-076d8b15-osiupp]
-    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "database/**", "module/zperf/database/**", "tools/**", ".github/workflows/native.yml"]
+    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "native/bootpatch/**", "database/**", "module/**", "tools/**", "rust-toolchain.toml", ".github/workflows/native.yml", ".github/workflows/build-module.yml", ".github/workflows/build-lkm.yml", ".github/workflows/ddk-lkm-zkfc.yml"]
   pull_request:
-    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "database/**", "module/zperf/database/**", "tools/**"]
+    branches: [main, ccr-076d8b15-osiupp]
+    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "native/bootpatch/**", "database/**", "module/**", "tools/**", "rust-toolchain.toml", ".github/workflows/native.yml", ".github/workflows/build-module.yml", ".github/workflows/build-lkm.yml", ".github/workflows/ddk-lkm-zkfc.yml"]
   workflow_dispatch:
 
-# Keep only the newest run per ref; lighten the hosted-runner load.
+permissions:
+  contents: read
+
+# Keep only the newest run per ref; independent validation jobs run in parallel,
+# following KernelSU-Next's split CI rather than serializing unrelated checks.
 concurrency:
   group: native-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Jobs are chained with `needs:` so at most one runs at a time. This fits a
-  # small concurrent-runner budget (they queue one after another instead of
-  # all at once).
+  # Independent tests intentionally have no artificial `needs:` dependency.
   crypto:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
       - name: Install deps
-        run: python3 -m pip install --quiet cryptography
+        run: python -m pip install --disable-pip-version-check cryptography
       - name: Generate vectors
         run: python3 tests/crypto/gen_vectors.py /tmp/vectors.txt
       - name: Build + run crypto tests (ASan/UBSan)
@@ -36,7 +44,6 @@ jobs:
           /tmp/crypto_test /tmp/vectors.txt
 
   data-plane:
-    needs: crypto
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -55,7 +62,6 @@ jobs:
         run: bash tests/control_plane_check.sh
 
   uapi-abi:
-    needs: crypto
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -72,7 +78,6 @@ jobs:
           /tmp/zkfc_token_test
 
   module-compile:
-    needs: [crypto, data-plane, uapi-abi]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -87,7 +92,6 @@ jobs:
           file kernel/zkfc.ko
 
   userspace:
-    needs: module-compile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -117,7 +121,6 @@ jobs:
           if-no-files-found: error
 
   rust:
-    needs: userspace
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -126,10 +129,14 @@ jobs:
           rustup toolchain install 1.99.0 --profile minimal
           rustup component add rustfmt clippy --toolchain 1.99.0
           rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
-      - name: Format + test Rust workspace
+      - name: Cache Rust dependencies and build outputs
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          cache-targets: true
+      - name: Build and test Rust workspace
         working-directory: rust
         run: |
-          cargo fmt --check
+          set -euo pipefail
           cargo build --release --locked
           cargo test --workspace --all-targets --locked
-          cargo clippy --workspace --all-targets --all-features -- -D warnings

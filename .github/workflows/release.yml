@@ -10,27 +10,33 @@ permissions:
 
 jobs:
   validate_tag:
-    name: Validate stable Release tag
+    name: Validate monotonic stable Release tag
     runs-on: ubuntu-latest
     steps:
-      - name: Require a stable semantic version tag
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Validate stable semantic version and monotonic release order
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-            echo "::error::Release tags must be stable vMAJOR.MINOR.PATCH (no -rc, -beta, or other prerelease suffix). Use Canary for prerelease builds."
-            exit 1
-          }
+          python3 tools/ci/test-validate-release-tag.py
+          python3 tools/ci/validate-release-tag.py --tag "$RELEASE_TAG"
 
-  # Validate tag shape before starting the expensive kernel matrix.
-  lkm:
+  # Build the module through the same reusable workflow as Canary. The only
+  # difference is the validated Release channel/version passed as inputs.
+  module:
+    name: Build Release module
     needs: validate_tag
-    uses: ./.github/workflows/build-lkm.yml
+    uses: ./.github/workflows/build-module.yml
+    with:
+      channel: release
+      version_name: ${{ github.ref_name }}
 
   package:
     name: Package release
-    needs: [validate_tag, lkm]
+    needs: [validate_tag, module]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: production-signing
@@ -61,34 +67,35 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
-      - name: Download KMI-specific zkfc.ko artifacts
-        uses: actions/download-artifact@v8.0.0
+      - name: Download channel-specific module artifact
+        uses: actions/download-artifact@v7
         with:
-          pattern: '*-zkfc-lkm'
-          path: lkm-artifacts
-      - name: Lay out .ko into module/lkm/<kmi>-<abidir>
+          name: module-zip
+          path: module-artifact
+
+      - name: Verify and unpack the reusable module artifact
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          for d in lkm-artifacts/*-zkfc-lkm; do
-            base=$(basename "$d")
-            arch=${base%%-*}
-            rest=${base#*-}; kmi=${rest%-zkfc-lkm}
-            case "$arch" in
-              aarch64) abidir=arm64 ;;
-              x86_64)  abidir=x86_64 ;;
-              *) echo "unknown arch '$arch' in $base"; continue ;;
-            esac
-            ko=$(find "$d" -name '*_zkfc.ko' | head -1)
-            [ -f "$ko" ] || { echo "no .ko in $d"; continue; }
-            mkdir -p "module/lkm/$kmi-$abidir"
-            cp "$ko" "module/lkm/$kmi-$abidir/zkfc.ko"
-          done
-          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
+          test -s module-artifact/Zairenkai-module.zip
+          test -s module-artifact/SHA256SUMS
+          test -s module-artifact/module-update-release.json
+          cp module-artifact/Zairenkai-module.zip Zairenkai-module.zip
+          cp module-artifact/SHA256SUMS SHA256SUMS
+          cp module-artifact/module-update-release.json module-update-release.json
+          unzip -t Zairenkai-module.zip >/dev/null
+          rm -rf module
+          mkdir -p module
+          unzip -q Zairenkai-module.zip -d module
+          test -s module/module.prop
+          test -n "$(find module/lkm -type f -name 'zkfc.ko' -print -quit)"
+          (cd module && sha256sum -c SHA256SUMS)
+
       - name: Stage KMI-specific LKM assets in the manager APK
         run: tools/bootpatch/stage-module-assets.sh module
+
       - name: Build boot-patch backend
         uses: ./.github/actions/build-bootpatch
+
       - uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Validate release signing secrets
@@ -114,82 +121,6 @@ jobs:
             -storepass:env ZK_KEYSTORE_PASSWORD -keypass:env ZK_KEY_PASSWORD \
             -file "$RUNNER_TEMP/zairenkai-signing/release-check.csr" >/dev/null
           echo "Release keystore, alias, and key credentials are valid."
-
-      - name: Set up Rust
-        run: |
-          rustup toolchain install 1.99.0 --profile minimal
-          rustup component add rustfmt clippy --toolchain 1.99.0
-          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
-      - name: Build zperfd and validate workspace
-        working-directory: rust
-        env:
-          NDK: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
-        run: |
-          set -euo pipefail
-          cargo fmt --check
-          cargo test --workspace --all-targets --locked
-          cargo clippy --workspace --all-targets --all-features -- -D warnings
-          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TC/aarch64-linux-android31-clang"
-          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$TC/x86_64-linux-android31-clang"
-          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            target="${t%%:*}"; abi="${t##*:}"
-            cargo build -p zperfd --release --target "$target" --locked
-            mkdir -p "../module/bin/$abi"
-            cp "target/$target/release/zperfd" "../module/bin/$abi/zperfd"
-            "$TC/llvm-strip" "../module/bin/$abi/zperfd"
-          done
-
-      - name: Build zkfctl userspace
-        run: |
-          set -euo pipefail
-          NDK="$ANDROID_HOME/ndk/30.0.16248370"
-          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            triple="${t%%:*}"; abi="${t##*:}"
-            mkdir -p "module/bin/$abi"
-            "$TC/${triple}31-clang" -std=c11 -O2 -Wall -Wextra -Werror \
-              -fstack-protector-strong -fPIE -pie \
-              -I kernel/include/uapi -I userspace/include -I userspace/lib \
-              userspace/lib/*.c userspace/zkfctl/main.c -o "module/bin/$abi/zkfctl"
-            "$TC/llvm-strip" "module/bin/$abi/zkfctl"
-          done
-
-      - name: Stage zperf catalog
-        run: |
-          set -euo pipefail
-          mkdir -p module/zperf/catalog
-          cp rust/zperfd/profiles/*.toml module/zperf/catalog/
-
-      - name: Stamp Release module version and update endpoint
-        env:
-          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: |
-          set -euo pipefail
-          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
-            echo "::error::Set repository Actions variable ZKFC_LICENSE_SERVER_URL to the production Worker HTTPS origin."
-            exit 1
-          }
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          VERSION_CODE="$GITHUB_RUN_ID"
-          python3 tools/ci/test-configure-module-update.py
-          python3 tools/ci/configure-module-update.py \
-            --module-dir module --channel release --version-name "$TAG_VERSION" \
-            --version-code "$VERSION_CODE" --server-url "$ZKFC_LICENSE_SERVER_URL" \
-            --zip-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${GITHUB_REF_NAME}/Zairenkai-module.zip" \
-            --changelog-url "https://github.com/FebriCahyaa/Zairenkai/releases/tag/${GITHUB_REF_NAME}" \
-            --metadata-output module-update-release.json
-
-      - name: Package module + checksum manifest
-        run: |
-          set -euo pipefail
-          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
-          : > module/SHA256SUMS
-          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
-          cd module
-          zip -r9 ../Zairenkai-module.zip . -x '*.git*'
-          cd ..
-          sha256sum Zairenkai-module.zip
 
       - name: Embed verified root module in APK assets
         run: tools/bootpatch/stage-embedded-module.sh Zairenkai-module.zip
@@ -314,11 +245,16 @@ jobs:
       - name: Test release metadata generator
         run: python3 tools/ci/test_release_manifest.py
 
+      - name: Set up Python for release metadata verification
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
       - name: Verify API contract and prepare metadata signer
         run: |
           set -euo pipefail
           python3 tools/ci/check-api-major.py
-          python3 -m pip install --disable-pip-version-check cryptography
+          python -m pip install --disable-pip-version-check cryptography
           grep -q '^-----BEGIN PUBLIC KEY-----' app/src/main/assets/security/update-metadata-public-key.pem || {
             echo "::error::The pinned update metadata public key is not provisioned; refusing an unsigned official release."
             exit 1

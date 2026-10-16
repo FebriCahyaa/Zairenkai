@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+name: Clippy check
+
+on:
+  push:
+    branches: [main, ccr-076d8b15-osiupp]
+    paths:
+      - 'rust/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/clippy.yml'
+  pull_request:
+    branches: [main, ccr-076d8b15-osiupp]
+    paths:
+      - 'rust/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/clippy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: '-Dwarnings'
+
+concurrency:
+  group: clippy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pinned Clippy
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup component add clippy --toolchain 1.99.0
+
+      - name: Cache Rust build outputs
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          cache-targets: true
+
+      - name: Run Clippy on Rust workspace
+        working-directory: rust
+        run: cargo +1.99.0 clippy --workspace --all-targets --all-features --locked -- -D warnings

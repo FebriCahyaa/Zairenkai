@@ -4,10 +4,14 @@ name: Android app
 on:
   push:
     branches: [main, ccr-076d8b15-osiupp]
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/android.yml", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", ".github/actions/build-bootpatch/action.yml"]
+    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "module/**", "rust/**", "kernel/**", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", "tools/release/**", ".github/workflows/android.yml", ".github/workflows/app-apks.yml", ".github/workflows/build-module.yml", ".github/workflows/release.yml", ".github/actions/build-bootpatch/action.yml", "rust-toolchain.toml"]
   pull_request:
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", ".github/actions/build-bootpatch/action.yml"]
+    branches: [main, ccr-076d8b15-osiupp]
+    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "module/**", "rust/**", "kernel/**", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", "tools/release/**", ".github/workflows/android.yml", ".github/workflows/app-apks.yml", ".github/workflows/build-module.yml", ".github/workflows/release.yml", ".github/actions/build-bootpatch/action.yml", "rust-toolchain.toml"]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: android-${{ github.ref }}
@@ -42,34 +46,37 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
 
-      - name: Validate update server configuration
+      - name: Validate optional update server configuration
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
-            echo "::error::Set ZKFC_LICENSE_SERVER_URL as a GitHub Actions variable (HTTPS origin, no path)."
+          if [[ -z "$ZKFC_LICENSE_SERVER_URL" ]]; then
+            echo "::notice::ZKFC_LICENSE_SERVER_URL is not configured. CI-only APKs will be built with the updater failing closed; distribution workflows require the variable."
+          elif [[ ! "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]]; then
+            echo "::error::ZKFC_LICENSE_SERVER_URL must be an HTTPS origin with no path."
             exit 1
-          }
+          fi
 
-      # Distribution variants are optimized, non-debuggable Canary and Release only.
-      - name: Assemble Canary and Release
+      # This is validation-only CI: no APK artifact is published from this workflow.
+      # Distribution builds are handled by App APKs (Canary) and Release (stable).
+      - name: Assemble optimized validation variants
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: ./gradlew :app:assembleStandardCanary :app:assembleStandardRelease "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
+        run: ./gradlew :app:assembleStandardCanary :app:assembleStandardRelease "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --no-daemon --stacktrace
 
       - name: Unit tests (engine JSON contracts, tweak outcomes)
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: ./gradlew :app:testStandardCanaryUnitTest :app:testStandardReleaseUnitTest "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --stacktrace
+        run: ./gradlew :app:testStandardCanaryUnitTest :app:testStandardReleaseUnitTest "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --no-daemon --stacktrace
 
       # Exercise the optimized Canary variant in CI. A non-minified build does not
       # run R8, so it cannot catch reflectively loaded crypto mappings being stripped.
       - name: Validate R8 keeps Ed25519 provider mappings
         run: |
           set -euo pipefail
-          ./gradlew :app:assembleStandardCanary "-PlicenseServerUrl=${{ vars.ZKFC_LICENSE_SERVER_URL }}" --stacktrace
-          USAGE="$(find app/build/outputs/mapping -type f -name usage.txt -print -quit)"
+          ./gradlew :app:assembleStandardCanary "-PlicenseServerUrl=${{ vars.ZKFC_LICENSE_SERVER_URL }}" --no-daemon --stacktrace
+          USAGE="$(find app/build/outputs/mapping -type f -name usage.txt -print | grep -i 'canary' | head -n 1 || true)"
           [[ -n "$USAGE" && -f "$USAGE" ]] || {
             echo "::error::R8 usage.txt was not produced for the minified Canary build."
             exit 1
@@ -81,7 +88,7 @@ jobs:
           echo 'PASS: EdEC$Mappings was not reported as removed by R8.'
 
       - name: Lint
-        run: ./gradlew :app:lintStandardCanary --stacktrace
+        run: ./gradlew :app:lintStandardCanary --no-daemon --stacktrace
 
       # Keep the complete HTML/SARIF/text reports even when lint fails. The first
       # exception line in Gradle output often hides the remaining findings.

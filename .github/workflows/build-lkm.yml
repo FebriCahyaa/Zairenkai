@@ -20,6 +20,9 @@ on:
         default: '20260828'
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   build-lkm-zkfc:
     strategy:

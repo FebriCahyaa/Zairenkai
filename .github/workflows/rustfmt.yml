@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+name: Rustfmt check
+
+on:
+  push:
+    branches: [main, ccr-076d8b15-osiupp]
+    paths:
+      - 'rust/**'
+      - 'native/bootpatch/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/rustfmt.yml'
+  pull_request:
+    branches: [main, ccr-076d8b15-osiupp]
+    paths:
+      - 'rust/**'
+      - 'native/bootpatch/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/rustfmt.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rustfmt-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Install pinned Rustfmt
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.99.0
+
+      - name: Check Rust workspace formatting
+        run: |
+          set -euo pipefail
+          cargo +1.99.0 fmt --manifest-path rust/Cargo.toml -- --check
+          cargo +1.99.0 fmt --manifest-path native/bootpatch/Cargo.toml -- --check
