@@ -3,6 +3,8 @@
 
 Flashable module that:
 
+- verifies the packaged `SHA256SUMS` before install and before boot-time payload execution; the official app additionally pins the complete module ZIP SHA-256 in its signed build;
+
 1. installs the compatibility CLI `zkfctl` to `/data/adb/zkfc/zkfctl`;
 2. installs/starts the resident `zperfd` policy engine;
 3. on GKI devices, prefers the detected KMI's `zkfc.ko`; on vendor kernels without a KMI marker it tries same-family candidates and relies on kernel vermagic/symbol checks
@@ -29,5 +31,22 @@ zperf/catalog/*.toml         validated device/mode profiles
 The release workflow fills `lkm/` and `bin/` from the kernel LKM matrix and the
 userspace build, then zips this directory into `Zairenkai-module.zip`.
 
-Performance features stay locked until a ZKFC API Token is installed from the
-app (Sistem → Lisensi API). Tokens are issued only by the project owner.
+The Scene/vtools adapter is stored in the module-owned `/data/adb/zperf/`
+namespace. For legacy integrations, `/data/powercfg.sh` and
+`/data/powercfg.json` are installed only when absent or already marked as
+Zairenkai-owned; a different module's existing files are preserved. Uninstall
+removes only marked global compatibility files. Uninstall stops/removes the
+module-owned executables and transient daemon files but preserves the user's
+`profile.toml`, `custom.toml`, mode preference, catalog/database cache, and
+owner-signed license/CRL so reinstalling does not erase user data.
+
+Performance features stay locked until a valid owner-signed ZKFC API Token is
+installed from the app (Sistem → Lisensi API) or embedded into a kernel build
+with an authorized `.inc` grant. A new app/commit build ID is metadata, not a
+new cryptographic API major; only bump `API_MAJOR` for an incompatible token/API
+contract. Do not embed the private signing key in the APK, module, or kernel.
+
+`SHA256SUMS` is an integrity/corruption check, not a digital signature. A user
+with full root access can replace both files and the manifest; the release APK
+pin protects the initial embedded ZIP only. See `docs/security/API_TOKENS.md`
+for the trust boundary and opt-in per-build token helper.

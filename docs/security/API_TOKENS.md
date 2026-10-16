@@ -79,6 +79,25 @@ tokens:
 tools/zkfc-license/zkfc_license.py revoke --serial 2 <license_id>
 ```
 
+## Per-build kernel integration (opt-in)
+
+A build ID and the licensing API major are separate values. The application records a new `ZKFC_BUILD_ID` for each CI commit, while `API_MAJOR` changes only when the signed token/API contract becomes incompatible. Re-signing a fresh token on every ordinary app version would add needless expiry/rotation problems; do not put a private signing key in an APK, kernel image, module ZIP, or public CI workflow.
+
+For a kernel build whose `CONFIG_ZKFC_LICENSEE_TAG` exactly matches the grant scope, use the helper before compiling. The direct-owner path requires the owner's local signing key:
+
+```sh
+ZKFC_AUTO_ISSUE_TOKEN=1 \
+ZKFC_LICENSEE="My Kernel Build" \
+ZKFC_TAG="my-kernel-tag" \
+ZKFC_TOKEN_DAYS=365 \
+bash tools/zkfc-license/auto-embed-token.sh
+# Then run the kernel build as usual.
+```
+
+A builder who was delegated a scoped issuance key uses the same helper with `ZKFC_SUBKEY_FILE=/secure/path/builder.zksub`; this places the signed certificate+token bundle in `kernel/license/zkfc_bundle.inc` rather than the direct-token `zkfc_license.inc`. The helper fails closed if the owner public key is not provisioned or the opposite token type already exists, preventing the kernel Makefile's precedence rules from silently selecting a stale grant. It writes the corresponding ignored `.zkl` file for import from Zairenkai → Sistem → Lisensi API. The direct-owner path prompts for the owner's passphrase unless `ZKFC_OWNER_PASSPHRASE` is supplied by a trusted, protected local/CI secret; never echo that variable or store it in build logs. Set `ZKFC_TOKEN_OUT=/secure/path/grant.zkl` to control runtime token output. Keep both direct and delegated private signing material outside the repository and never add it to public CI artifacts.
+
+Do not enable this helper in a public release job that anyone can trigger unless that job is protected by an approval boundary and the license scope is intentional. Public builds without authorized key material must continue without an embedded grant; the app should report `no_owner_key`/`missing` rather than silently manufacturing a license.
+
 ## Delegated issuance (subordinate keys)
 
 So the owner never has to share the owner signing key, issuance can be
@@ -117,3 +136,7 @@ is `tools/zkfc-license/test_chain.py`.
 | `expired`        | token or subkey past its expiry                      |
 | `revoked`        | token or subkey disabled by a revocation list        |
 | `subkey_scope`   | delegated token exceeds what its subkey allows       |
+
+## Module integrity scope
+
+The release APK pins the complete embedded module ZIP SHA-256, and the app verifies that pin before calling a root manager installer. The ZIP also carries `SHA256SUMS`, which is checked during packaging, installation, and at boot against the copied `zkfctl`/`zperfd` binaries. These checks detect accidental corruption and uncoordinated payload edits. A checksum manifest by itself is **not a digital signature**: an attacker with sufficient root access who can replace both a module file and its manifest can recompute the hashes. Do not interpret local SHA-256 checks as protection against a fully privileged adversary; stronger authenticity requires a detached release signature verified against a separately trusted public key.

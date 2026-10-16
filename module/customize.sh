@@ -5,6 +5,43 @@
 SKIPUNZIP=0
 
 ui_print "- Zairenkai ZKFC installer"
+
+# SHA-256 is enforced before any payload is copied or a kernel module is staged.
+# The APK installer also pins the whole ZIP hash in signed BuildConfig metadata.
+verify_payload_manifest() {
+  [ -s "$MODPATH/SHA256SUMS" ] || {
+    ui_print "! SHA256SUMS is missing; refusing an unverified module package."
+    return 1
+  }
+  # Detect missing or extra files, not only hash mismatches. Installer marker
+  # files and the KMI-selected copy are manager/runtime-created, not payload.
+  expected_count="$(awk 'NF >= 2 { n++ } END { print n + 0 }' "$MODPATH/SHA256SUMS")"
+  actual_count="$(find "$MODPATH" -type f \
+    ! -path "$MODPATH/SHA256SUMS" \
+    ! -path "$MODPATH/zkfc/zkfc.ko" \
+    ! -path "$MODPATH/disable" ! -path "$MODPATH/remove" \
+    ! -path "$MODPATH/update" ! -path "$MODPATH/auto_mount" \
+    ! -path "$MODPATH/skip_mount" ! -path "$MODPATH/.core" \
+    2>/dev/null | wc -l | tr -d '[:space:]')"
+  [ "$expected_count" = "$actual_count" ] || {
+    ui_print "! Module payload has missing or unlisted files (manifest=$expected_count files=$actual_count)."
+    return 1
+  }
+  if command -v sha256sum >/dev/null 2>&1; then
+    (cd "$MODPATH" && sha256sum -c SHA256SUMS)
+    return $?
+  fi
+  if command -v toybox >/dev/null 2>&1; then
+    (cd "$MODPATH" && toybox sha256sum -c SHA256SUMS)
+    return $?
+  fi
+  ui_print "! SHA-256 verification is unavailable on this device."
+  return 1
+}
+if ! verify_payload_manifest; then
+  abort "  module integrity verification failed; nothing was installed"
+fi
+
 ARCH64="$(getprop ro.product.cpu.abi)"
 API="$(getprop ro.build.version.sdk)"
 ui_print "  device abi: $ARCH64, api: $API"
@@ -39,10 +76,10 @@ if [ -n "$ANDROID_BRANCH" ] && [ -n "$KERNEL_FAMILY" ]; then
   KMI="$ANDROID_BRANCH-$KERNEL_FAMILY"
 fi
 ARCH64="$(getprop ro.product.cpu.abi)"
-ABIDIR="arm64"
 case "$ARCH64" in
-  arm64*) ABIDIR="arm64" ;;
-  x86_64) ABIDIR="x86_64" ;;
+  arm64-v8a|arm64*) USER_ABI="arm64-v8a"; ABIDIR="arm64" ;;
+  x86_64) USER_ABI="x86_64"; ABIDIR="x86_64" ;;
+  *) abort "  unsupported device ABI '$ARCH64'; refusing to install a mismatched userspace binary" ;;
 esac
 
 module_release() {
@@ -96,41 +133,47 @@ fi
 # Do not delete lkm candidates yet. service.sh tries matching-ABI and
 # matching-major/minor modules until the kernel creates /dev/zkfc, then stops.
 
-# Install the userspace engine.
-mkdir -p /data/adb/zkfc
-for abi in arm64-v8a arm64 x86_64; do
-  if [ -f "$MODPATH/bin/$abi/zkfctl" ]; then
-    cp "$MODPATH/bin/$abi/zkfctl" /data/adb/zkfc/zkfctl
-    break
-  fi
-done
-
-# ---- Install the zperfd performance engine + profile catalog ----
-mkdir -p /data/adb/zperf/catalog /data/adb/zperf/database
-for abi in arm64-v8a arm64 x86_64; do
-  if [ -f "$MODPATH/bin/$abi/zperfd" ]; then
-    cp "$MODPATH/bin/$abi/zperfd" /data/adb/zperf/zperfd
-    ui_print "- zperfd engine installed ($abi)"
-    break
-  fi
-done
+# Install only the userspace ABI that matches the running device. The old loop
+# always tried arm64-v8a first, even on x86_64 devices, which could leave a
+# present-but-unexecutable daemon and a misleading UI state.
+[ -x "$MODPATH/bin/$USER_ABI/zkfctl" ] || abort "  zkfctl binary missing for device ABI $USER_ABI"
+[ -x "$MODPATH/bin/$USER_ABI/zperfd" ] || abort "  zperfd binary missing for device ABI $USER_ABI"
+mkdir -p /data/adb/zkfc /data/adb/zperf/catalog /data/adb/zperf/database || abort "  cannot create runtime directories"
+cp -f "$MODPATH/bin/$USER_ABI/zkfctl" /data/adb/zkfc/zkfctl || abort "  failed to install zkfctl"
+chmod 0755 /data/adb/zkfc/zkfctl || abort "  failed to set zkfctl permissions"
+cp -f "$MODPATH/bin/$USER_ABI/zperfd" /data/adb/zperf/zperfd || abort "  failed to install zperfd"
+chmod 0755 /data/adb/zperf/zperfd || abort "  failed to set zperfd permissions"
+ui_print "- zkfctl installed ($USER_ABI)"
+ui_print "- zperfd engine installed ($USER_ABI)"
 if [ -d "$MODPATH/zperf/catalog" ]; then
   cp "$MODPATH"/zperf/catalog/*.toml /data/adb/zperf/catalog/ 2>/dev/null
 fi
 if [ -d "$MODPATH/zperf/database" ]; then
   cp -R "$MODPATH/zperf/database/." /data/adb/zperf/database/
 fi
-# Scene / vtools external-scheduler contract.
+# Namespaced Scene / vtools adapter. Never overwrite another app's global hook.
 if [ -f "$MODPATH/zperf/powercfg.sh" ]; then
-  cp "$MODPATH/zperf/powercfg.sh" /data/powercfg.sh && chmod 0755 /data/powercfg.sh
-  [ -f "$MODPATH/zperf/powercfg.json" ] && cp "$MODPATH/zperf/powercfg.json" /data/powercfg.json
-  ui_print "- Scene powercfg contract installed (/data/powercfg.sh)"
+  cp "$MODPATH/zperf/powercfg.sh" /data/adb/zperf/powercfg.sh && chmod 0755 /data/adb/zperf/powercfg.sh
+  [ -f "$MODPATH/zperf/powercfg.json" ] && cp "$MODPATH/zperf/powercfg.json" /data/adb/zperf/powercfg.json
+  if [ ! -e /data/powercfg.sh ] || grep -Fq '# Zairenkai <-> Scene/vtools external-scheduler contract.' /data/powercfg.sh; then
+    cp "$MODPATH/zperf/powercfg.sh" /data/powercfg.sh && chmod 0755 /data/powercfg.sh
+    ui_print "- Scene compatibility hook installed (/data/powercfg.sh)"
+  else
+    ui_print "- Preserved existing /data/powercfg.sh (not owned by Zairenkai)"
+    ui_print "  Namespaced adapter remains at /data/adb/zperf/powercfg.sh"
+  fi
+  if [ ! -e /data/powercfg.json ] || grep -Fq '"integration": "zairenkai.scene-interop"' /data/powercfg.json || grep -Fq '"version": "zairenkai-zperfd 1.0"' /data/powercfg.json; then
+    cp "$MODPATH/zperf/powercfg.json" /data/powercfg.json
+  else
+    ui_print "- Preserved existing /data/powercfg.json (not owned by Zairenkai)"
+  fi
 fi
 [ -f /data/adb/zperf/mode ] || echo balance > /data/adb/zperf/mode
 chmod 0700 /data/adb/zperf 2>/dev/null || true
 chmod 0600 /data/adb/zperf/mode 2>/dev/null || true
 
-rm -rf "$MODPATH/bin"
+# Keep the immutable payload under MODPATH: service.sh re-verifies it on every
+# boot and compares the installed runtime binaries with this trusted manifest.
 set_perm /data/adb/zkfc/zkfctl 0 0 0755 u:object_r:system_file:s0 2>/dev/null
 [ -f /data/adb/zperf/zperfd ] && set_perm /data/adb/zperf/zperfd 0 0 0755 u:object_r:system_file:s0 2>/dev/null
 set_perm_recursive "$MODPATH" 0 0 0755 0644

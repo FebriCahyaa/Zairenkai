@@ -125,9 +125,12 @@ defaults.
 
 ## Scene / vtools interop
 
-The module installs `/data/powercfg.sh` + `/data/powercfg.json`, the external
-scheduler contract Scene uses, so Scene can drive zperfd (and auto-disables
-conflicting modules such as uperf).
+The module installs its Scene/vtools adapter under `/data/adb/zperf/`. For
+legacy front-ends, it installs `/data/powercfg.sh` and `/data/powercfg.json`
+only when the paths are absent or already marked as Zairenkai-owned; an
+unrelated global hook is preserved. Scene can drive zperfd through the adapter
+(and can auto-disable conflicting modules such as uperf when configured by the
+front-end).
 
 ## Profiles
 

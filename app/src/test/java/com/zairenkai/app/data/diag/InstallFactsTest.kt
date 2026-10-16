@@ -45,6 +45,19 @@ class InstallFactsTest {
     }
 
     @Test
+    fun daemonStatusDoesNotTrustAStalePidAndCapturesRecentLogs() {
+        val facts = InstallProbe.parse(
+            out(
+                "zk=1", "engine=ok", "engine_pid_stale=1",
+                "engine_log=zperfd: profile error: missing profile;",
+            ),
+        )!!
+        assertFalse(facts.engineRunning)
+        assertTrue(facts.enginePidStale)
+        assertTrue(facts.engineLogTail.contains("profile error"))
+    }
+
+    @Test
     fun moduleFlagsAndPermissionsAreDistinguished() {
         assertEquals(ModuleState.UPDATE_PENDING, InstallProbe.parse(out("zk=1", "module_update=1"))!!.module)
         assertEquals(ModuleState.DISABLED, InstallProbe.parse(out("zk=1", "module=installed", "module_disable=1"))!!.module)

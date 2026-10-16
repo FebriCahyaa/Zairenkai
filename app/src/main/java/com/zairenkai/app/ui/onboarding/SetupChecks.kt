@@ -133,11 +133,21 @@ fun setupChecks(p: SetupProbe): List<SetupCheck> {
                 else R.string.setup_engine_missing_fix,
             ),
         )
-        status == null || !status.ok -> SetupCheck(
-            CheckId.ENGINE, CheckState.WARN,
-            uiText(if (p.facts != null && !p.facts.engineRunning) R.string.setup_engine_not_running else R.string.setup_engine_silent),
-            fix = uiText(R.string.setup_engine_silent_fix),
-        )
+        status == null || !status.ok -> {
+            val base = uiText(
+                if (p.facts != null && !p.facts.engineRunning) R.string.setup_engine_not_running
+                else R.string.setup_engine_silent,
+            )
+            val log = p.facts?.engineLogTail?.takeIf { it.isNotBlank() }
+            val detail = if (log == null) base else UiText.Join(
+                listOf(base, UiText.Raw("zperfd log: $log")),
+                " · ",
+            )
+            SetupCheck(
+                CheckId.ENGINE, CheckState.WARN, detail,
+                fix = uiText(R.string.setup_engine_silent_fix),
+            )
+        }
         else -> {
             val mode = Profiles.byMode(status.desired)?.let { uiText(it.nameRes) } ?: UiText.Raw(status.desired)
             val detail = when {

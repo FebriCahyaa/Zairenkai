@@ -28,7 +28,37 @@
     <string name="system_label_key_fingerprint">Sidik kunci</string>
     <string name="system_label_kernel_binding">Binding kernel</string>
     <string name="system_label_licensee">Pemegang lisensi</string>
-    <string name="system_license_note">Token API ditanam di kernel saat build dan diverifikasi di sana (tanda tangan Ed25519 pemilik). Aplikasi hanya membaca statusnya — kamu tidak perlu memasukkan token apa pun.</string>
+    <string name="system_license_note">Token ZKFC adalah lisensi yang ditandatangani pemilik dengan Ed25519. Kamu dapat memasang file .zkl di sini, atau build kernel dapat menanam lisensi untuk pemilik yang dituju. Private key penanda tangan tidak boleh ditanam di APK atau kernel.</string>
+
+    <!-- Verified module installation and explicit token import -->
+    <string name="system_module_title">Modul root Zairenkai</string>
+    <string name="system_module_build_id">ID build</string>
+    <string name="system_module_api_major">API major ZKFC</string>
+    <string name="system_module_desc">Pasang atau perbarui modul root terverifikasi yang disertakan dalam APK ini. CLI Magisk dan KernelSU didukung; pengelola lain dapat memakai ZIP yang diekspor.</string>
+    <string name="system_module_install_button">Pasang / perbarui modul</string>
+    <string name="system_module_installing">Memverifikasi dan memasang…</string>
+    <string name="system_module_install_success">Pengelola root menerima permintaan instalasi. Reboot Android, lalu periksa kembali status engine.</string>
+    <string name="system_module_not_embedded">APK ini tidak memuat modul rilis. Bangun ZIP modul dan stage sebelum membangun APK.</string>
+    <string name="system_module_apk_modified">Penanda tangan APK tidak cocok dengan sertifikat yang diharapkan. Instalasi modul diblokir.</string>
+    <string name="system_module_integrity_failed">SHA-256 ZIP modul tertanam tidak cocok dengan nilai yang dipatok saat build.</string>
+    <string name="system_module_archive_invalid">ZIP modul atau manifest SHA256SUMS tidak valid.</string>
+    <string name="system_module_install_failed">Pengelola root gagal memasang modul. Periksa detail diagnostik atau gunakan ZIP manual.</string>
+    <string name="system_module_manual_required">CLI installer Magisk/KernelSU tidak ditemukan. Ekspor ZIP terverifikasi lalu pasang melalui pengelola root.</string>
+    <string name="system_module_share_button">Bagikan ZIP modul terverifikasi</string>
+    <string name="system_module_share_title">Bagikan ZIP modul Zairenkai</string>
+    <string name="system_module_confirm_title">Pasang modul Zairenkai?</string>
+    <string name="system_module_confirm_message">Modul tertanam akan dikirim ke pengelola root aktif. Modul Zairenkai yang ada mungkin diperbarui/diganti dan perlu reboot agar perubahan aktif.</string>
+    <string name="system_module_confirm_install">Pasang modul</string>
+    <string name="system_module_confirm_cancel">Batal</string>
+    <string name="system_token_install_button">Pasang token API (.zkl)</string>
+    <string name="system_token_installing">Memeriksa token…</string>
+    <string name="system_token_install_valid">Token berhasil diverifikasi dan dipasang. Fitur berlisensi seharusnya sudah tersedia.</string>
+    <string name="system_token_owner_key_missing">Kernel belum memiliki public key pemilik ZKFC. Token tidak dapat divalidasi sampai build kernel diprovisikan oleh pemiliknya.</string>
+    <string name="system_token_wrong_kernel">Token ini terikat ke kernel/tag lisensi yang berbeda.</string>
+    <string name="system_token_expired">Token ini sudah kedaluwarsa.</string>
+    <string name="system_token_revoked">Token ini telah dicabut.</string>
+    <string name="system_token_bad_signature">Verifikasi tanda tangan token gagal.</string>
+    <string name="system_token_install_result">Status token: %1$s</string>
 
     <!-- Caller identity -->
     <string name="system_caller_title">Identitas pemanggil</string>

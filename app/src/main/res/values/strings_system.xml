@@ -28,7 +28,37 @@
     <string name="system_label_key_fingerprint">Key fingerprint</string>
     <string name="system_label_kernel_binding">Kernel binding</string>
     <string name="system_label_licensee">Licensee</string>
-    <string name="system_license_note">The API token is embedded in the kernel at build time and verified there (the owner’s Ed25519 signature). The app only reads its status — you never enter a token.</string>
+    <string name="system_license_note">A ZKFC token is an owner-signed Ed25519 license grant. You may install a .zkl file here, or a kernel build may embed a grant for its own intended licensee. The private signing key must never be embedded in the APK or kernel.</string>
+
+    <!-- Verified module installation and explicit token import -->
+    <string name="system_module_title">Zairenkai root module</string>
+    <string name="system_module_build_id">Build ID</string>
+    <string name="system_module_api_major">ZKFC API major</string>
+    <string name="system_module_desc">Install or update the verified root module embedded in this APK. Magisk and KernelSU CLI installation are supported; other managers can use the exported ZIP.</string>
+    <string name="system_module_install_button">Install / update module</string>
+    <string name="system_module_installing">Verifying and installing…</string>
+    <string name="system_module_install_success">Module installation was accepted. Reboot Android, then check the engine status again.</string>
+    <string name="system_module_not_embedded">This APK does not contain a release module. Build the module ZIP and stage it before building the APK.</string>
+    <string name="system_module_apk_modified">The APK signer does not match the expected certificate. Module installation is blocked.</string>
+    <string name="system_module_integrity_failed">The embedded module ZIP SHA-256 does not match the build-pinned value.</string>
+    <string name="system_module_archive_invalid">The module ZIP or its SHA256SUMS manifest is invalid.</string>
+    <string name="system_module_install_failed">The root manager could not install the module. Review the diagnostic detail and use the manual ZIP fallback if needed.</string>
+    <string name="system_module_manual_required">No supported Magisk/KernelSU installer CLI was found. Export the verified ZIP and install it through your root manager.</string>
+    <string name="system_module_share_button">Share verified module ZIP</string>
+    <string name="system_module_share_title">Share Zairenkai module ZIP</string>
+    <string name="system_module_confirm_title">Install Zairenkai module?</string>
+    <string name="system_module_confirm_message">This will submit the bundled module to the active root manager. It may replace/update the existing Zairenkai module and requires a reboot before changes take effect.</string>
+    <string name="system_module_confirm_install">Install module</string>
+    <string name="system_module_confirm_cancel">Cancel</string>
+    <string name="system_token_install_button">Install API token (.zkl)</string>
+    <string name="system_token_installing">Checking token…</string>
+    <string name="system_token_install_valid">Token verified and installed. Licensed features should now be available.</string>
+    <string name="system_token_owner_key_missing">The kernel has no provisioned ZKFC owner public key. A token cannot validate until the kernel build is provisioned by its owner.</string>
+    <string name="system_token_wrong_kernel">This token is bound to a different kernel/licensee tag.</string>
+    <string name="system_token_expired">This token has expired.</string>
+    <string name="system_token_revoked">This token has been revoked.</string>
+    <string name="system_token_bad_signature">Token signature verification failed.</string>
+    <string name="system_token_install_result">Token state: %1$s</string>
 
     <!-- Caller identity -->
     <string name="system_caller_title">Caller identity</string>

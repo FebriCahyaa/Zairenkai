@@ -2,6 +2,7 @@
 *.pem
 *.key
 *.zkl
+*.zksub
 *.zkcrl
 keys/
 .zkfc/
@@ -34,3 +35,11 @@ __pycache__/
 /app/src/main/jniLibs/
 /native/bootpatch/target/
 /app/src/main/assets/zkfc/
+
+# Generated, release-specific root module embedded into APKs
+/app/src/main/assets/embedded/
+
+# Owner-authorized grants generated locally for a specific kernel build
+/kernel/license/zkfc_license.inc
+/kernel/license/zkfc_bundle.inc
+/kernel/license/zkfc_crl.inc

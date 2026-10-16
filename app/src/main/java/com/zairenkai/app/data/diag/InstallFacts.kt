@@ -35,8 +35,12 @@ data class InstallFacts(
     val bundledKo: Boolean = false,
     val module: ModuleState = ModuleState.MISSING,
     val engine: BinState = BinState.MISSING,
-    /** zperfd.pid names a live process. */
+    /** zperfd.pid names a live process whose /proc executable/argv matches zperfd. */
     val engineRunning: Boolean = false,
+    /** A PID file exists but does not point at the real zperfd process. */
+    val enginePidStale: Boolean = false,
+    /** Last few daemon log lines, sanitized for a setup/support diagnostic. */
+    val engineLogTail: String = "",
     val tokenFile: Boolean = false,
     val abi: String = "",
     val kernel: String = "",
@@ -64,7 +68,8 @@ object InstallProbe {
         append("[ -f $MODULE/remove ] && echo module_remove=1; fi; ")
         append("[ -d $MODULE_UPDATE ] && echo module_update=1; ")
         append("if [ -e $ZPERFD ]; then if [ -x $ZPERFD ]; then echo engine=ok; else echo engine=noexec; fi; fi; ")
-        append("P=/data/adb/zperf/zperfd.pid; [ -f \$P ] && kill -0 \"\$(cat \$P)\" 2>/dev/null && echo engine_running=1; ")
+        append("P=/data/adb/zperf/zperfd.pid; if [ -f \"\$P\" ]; then PID=\"\$(cat \"\$P\" 2>/dev/null)\"; case \"\$PID\" in ''|*[!0-9]*) PID='';; esac; if [ -n \"\$PID\" ] && kill -0 \"\$PID\" 2>/dev/null; then EXE=\"\$(readlink \"/proc/\$PID/exe\" 2>/dev/null)\"; CMD=\"\$(tr '\\000' ' ' < \"/proc/\$PID/cmdline\" 2>/dev/null)\"; case \"\$EXE \$CMD\" in *'/data/adb/zperf/zperfd'*) echo engine_running=1 ;; *) echo engine_pid_stale=1 ;; esac; else echo engine_pid_stale=1; fi; fi; ")
+        append("if [ -f /data/adb/zperf/zperfd.log ]; then echo engine_log=\$(tail -n 8 /data/adb/zperf/zperfd.log 2>/dev/null | tr '\\n' ';' | tr '=' ':' | cut -c1-900); fi; ")
         append("[ -f /data/adb/zkfc/token.zkl ] && echo token=1; ")
         append("echo abi=\$(getprop ro.product.cpu.abi); ")
         append("echo kernel=\$(uname -r)")
@@ -101,6 +106,8 @@ object InstallProbe {
                 else -> BinState.MISSING
             },
             engineRunning = kv["engine_running"] == "1",
+            enginePidStale = kv["engine_pid_stale"] == "1",
+            engineLogTail = kv["engine_log"].orEmpty().take(900),
             tokenFile = kv["token"] == "1",
             abi = kv["abi"].orEmpty(),
             kernel = kv["kernel"].orEmpty(),

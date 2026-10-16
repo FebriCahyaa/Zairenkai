@@ -13,6 +13,10 @@ Provide **either** a delegated bundle **or** a direct token. When both are
 present the bundle wins. All of these are ignored by git, so they are never
 committed by accident.
 
+## Optional automatic refresh for a self-hosted build
+
+Authorized owners can use `tools/zkfc-license/auto-embed-token.sh` before the normal kernel build to generate a fresh tag-bound grant. It is deliberately opt-in (`ZKFC_AUTO_ISSUE_TOKEN=1`) and requires the provisioned owner public key plus either the matching owner private key or an owner-issued delegated `.zksub` (`ZKFC_SUBKEY_FILE=/secure/path/builder.zksub`). The helper writes the proper `.inc` type here and a `.zkl` for app import. See `docs/security/API_TOKENS.md`; never commit generated grant files or expose private key material in public CI logs.
+
 ## Delegated tokens (subordinate keys)
 
 The owner never shares the owner signing key. Instead the owner delegates

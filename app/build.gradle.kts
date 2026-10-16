@@ -30,6 +30,38 @@ val keystoreProps = Properties().apply {
 fun secret(env: String, prop: String): String? =
     (System.getenv(env) ?: keystoreProps.getProperty(prop))?.trim()?.takeIf { it.isNotEmpty() }
 
+// The release workflow stages the complete, checksum-manifested root module
+// before building APKs. Pin its archive SHA-256 into BuildConfig so the app can
+// authenticate the bundled bytes using the signed APK as the trust anchor.
+val embeddedModuleZip = project.file("src/main/assets/embedded/Zairenkai-module.zip")
+val embeddedModuleSha256 = if (embeddedModuleZip.isFile) {
+    val digest = MessageDigest.getInstance("SHA-256")
+    embeddedModuleZip.inputStream().buffered().use { input ->
+        val buffer = ByteArray(32 * 1024)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+    }
+    digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+} else ""
+val buildId = run {
+    val commit = System.getenv("GITHUB_SHA")?.trim()?.take(8)?.takeIf { it.isNotEmpty() }
+    val runId = System.getenv("GITHUB_RUN_ID")?.trim()?.takeIf { it.isNotEmpty() }
+    val attempt = System.getenv("GITHUB_RUN_ATTEMPT")?.trim()?.takeIf { it.isNotEmpty() }
+    when {
+        commit != null && runId != null -> "$commit-$runId-${attempt ?: "1"}"
+        commit != null -> System.getenv("GITHUB_SHA")!!.trim().take(12)
+        else -> "local"
+    }
+}
+val zkfcApiMajor = runCatching {
+    Regex("API_MAJOR\\s*=\\s*(\\d+)")
+        .find(project.file("../tools/zkfc-license/zkfc_license.py").readText())
+        ?.groupValues?.get(1)?.toInt()
+}.getOrNull() ?: 1
+
 /** Return the SHA-256 fingerprint of the X.509 certificate used by this keystore alias. */
 fun certificateSha256(file: File, storePassword: String, alias: String): String {
     var loaded: KeyStore? = null
@@ -79,6 +111,9 @@ android {
         // Expected signer (SHA-256). Empty => self-check reports "unknown" and
         // never blocks (debug/spoofed). Set for official release below.
         buildConfigField("String", "EXPECTED_CERT_SHA256", "\"\"")
+        buildConfigField("String", "EMBEDDED_MODULE_SHA256", "\"$embeddedModuleSha256\"")
+        buildConfigField("String", "ZKFC_BUILD_ID", "\"$buildId\"")
+        buildConfigField("int", "ZKFC_API_MAJOR", "$zkfcApiMajor")
     }
 
     signingConfigs {

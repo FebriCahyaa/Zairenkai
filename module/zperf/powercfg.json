@@ -1,5 +1,6 @@
 {
   "version": "zairenkai-zperfd 1.0",
+  "integration": "zairenkai.scene-interop",
   "author": "FebriCahyaa",
   "state": "/data/adb/zperf/mode",
   "module": "zperfd",

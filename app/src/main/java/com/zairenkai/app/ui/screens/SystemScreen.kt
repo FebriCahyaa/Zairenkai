@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 /*
- * System: identity (UID/GID/groups), API security reports, ZKFC license and
- * access policy. The API token is embedded in the kernel at build time and
- * verified there (Ed25519); the app only reads and reports its status — it
- * never asks the user to supply or install a token.
+ * System: identity (UID/GID/groups), API security reports, ZKFC license,
+ * access policy, and verified root-module/token installation.
  * Copyright (C) 2026 FebriCahyaa
  */
 package com.zairenkai.app.ui.screens
 
+import android.content.ClipData
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import com.zairenkai.app.data.ModuleInstallCode
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.io.File
 import com.zairenkai.app.R
 import com.zairenkai.app.data.SignatureGuard
 import com.zairenkai.app.data.SignatureState
@@ -35,6 +40,25 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
     val vm: SystemViewModel = viewModel(factory = factory)
     val ui by vm.ui.collectAsState()
     val ctx = LocalContext.current
+    var confirmModuleInstall by remember { mutableStateOf(false) }
+    val tokenPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.installToken(uri)
+    }
+    val shareModuleZip: () -> Unit = {
+        val zip = File(ctx.cacheDir, "updates/Zairenkai-module.zip")
+        if (zip.isFile) {
+            runCatching {
+                val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.updates", zip)
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/zip"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    clipData = ClipData.newUri(ctx.contentResolver, "Zairenkai module ZIP", uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                ctx.startActivity(Intent.createChooser(send, ctx.getString(R.string.system_module_share_title)))
+            }
+        }
+    }
 
     CollapsingScaffold(stringResource(R.string.system_title), onBack = null) { inner ->
         Column(
@@ -52,6 +76,47 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
                 LabeledRow(stringResource(R.string.system_label_status), txt, col)
                 SignatureGuard.currentSha256(ctx)?.let {
                     LabeledRow(stringResource(R.string.system_label_signature_fingerprint), it.take(16) + "…")
+                }
+            }
+
+            SectionCard(stringResource(R.string.system_module_title)) {
+                LabeledRow(stringResource(R.string.system_module_build_id), com.zairenkai.app.BuildConfig.ZKFC_BUILD_ID)
+                LabeledRow(stringResource(R.string.system_module_api_major), com.zairenkai.app.BuildConfig.ZKFC_API_MAJOR.toString())
+                Text(
+                    stringResource(R.string.system_module_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { confirmModuleInstall = true },
+                    enabled = !ui.moduleInstalling && sig != SignatureState.MODIFIED,
+                ) {
+                    if (ui.moduleInstalling) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(stringResource(if (ui.moduleInstalling) R.string.system_module_installing else R.string.system_module_install_button))
+                }
+                ui.moduleInstallCode?.let { code ->
+                    val (message, color) = when (code) {
+                        ModuleInstallCode.INSTALLED -> stringResource(R.string.system_module_install_success) to ZkGood
+                        ModuleInstallCode.NOT_BUNDLED -> stringResource(R.string.system_module_not_embedded) to ZkWarn
+                        ModuleInstallCode.APK_MODIFIED -> stringResource(R.string.system_module_apk_modified) to ZkBad
+                        ModuleInstallCode.HASH_MISMATCH -> stringResource(R.string.system_module_integrity_failed) to ZkBad
+                        ModuleInstallCode.INVALID_ARCHIVE -> stringResource(R.string.system_module_archive_invalid) to ZkBad
+                        ModuleInstallCode.ROOT_INSTALL_FAILED -> stringResource(R.string.system_module_install_failed) to ZkBad
+                        ModuleInstallCode.MANAGER_UNAVAILABLE -> stringResource(R.string.system_module_manual_required) to ZkWarn
+                    }
+                    Text(message, color = color, style = MaterialTheme.typography.bodyMedium)
+                    ui.moduleInstallDetail?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (ui.moduleZipReady) {
+                    OutlinedButton(onClick = shareModuleZip) {
+                        Text(stringResource(R.string.system_module_share_button))
+                    }
                 }
             }
 
@@ -84,6 +149,32 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 10.dp),
                 )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { tokenPicker.launch(arrayOf("*/*")) },
+                    enabled = !ui.tokenInstalling,
+                ) {
+                    if (ui.tokenInstalling) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(stringResource(if (ui.tokenInstalling) R.string.system_token_installing else R.string.system_token_install_button))
+                }
+                ui.tokenInstallCode?.let { code ->
+                    val (message, color) = when (code) {
+                        "valid" -> stringResource(R.string.system_token_install_valid) to ZkGood
+                        "no_owner_key" -> stringResource(R.string.system_token_owner_key_missing) to ZkBad
+                        "wrong_binding" -> stringResource(R.string.system_token_wrong_kernel) to ZkWarn
+                        "expired" -> stringResource(R.string.system_token_expired) to ZkWarn
+                        "revoked" -> stringResource(R.string.system_token_revoked) to ZkBad
+                        "bad_signature" -> stringResource(R.string.system_token_bad_signature) to ZkBad
+                        else -> stringResource(R.string.system_token_install_result, code) to ZkWarn
+                    }
+                    Text(message, color = color, style = MaterialTheme.typography.bodyMedium)
+                    ui.tokenInstallDetail?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
 
             ui.security?.user?.let { u ->
@@ -156,5 +247,24 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
                 }
             }
         }
+    }
+
+    if (confirmModuleInstall) {
+        AlertDialog(
+            onDismissRequest = { confirmModuleInstall = false },
+            title = { Text(stringResource(R.string.system_module_confirm_title)) },
+            text = { Text(stringResource(R.string.system_module_confirm_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmModuleInstall = false
+                    vm.installEmbeddedModule()
+                }) { Text(stringResource(R.string.system_module_confirm_install)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmModuleInstall = false }) {
+                    Text(stringResource(R.string.system_module_confirm_cancel))
+                }
+            },
+        )
     }
 }

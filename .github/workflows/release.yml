@@ -23,6 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
+      - name: Warn if ZKFC owner signing key is not provisioned
+        run: |
+          if grep -Eq '^[[:space:]]*#define[[:space:]]+ZKFC_OWNER_KEY_PROVISIONED[[:space:]]+0([[:space:]]|$)' kernel/security/zkfc_owner_key.h; then
+            echo "::warning::ZKFC_OWNER_KEY_PROVISIONED=0: licensed API tokens will be rejected until the owner public key is provisioned and the kernel/module is rebuilt. No fake token will be generated."
+          else
+            echo "ZKFC owner public key is provisioned."
+          fi
+
       - name: Generate randomized spoofed application ID
         id: spoofed_app_id
         run: |
@@ -100,7 +108,67 @@ jobs:
             -file "$RUNNER_TEMP/zairenkai-signing/release-check.csr" >/dev/null
           echo "Release keystore, alias, and key credentials are valid."
 
-      - name: Build and verify signed APK
+      - name: Set up Rust
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup component add rustfmt clippy --toolchain 1.99.0
+          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
+      - name: Build zperfd and validate workspace
+        working-directory: rust
+        env:
+          NDK: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
+        run: |
+          set -euo pipefail
+          cargo fmt --check
+          cargo test --workspace --all-targets --locked
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TC/aarch64-linux-android31-clang"
+          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$TC/x86_64-linux-android31-clang"
+          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            target="${t%%:*}"; abi="${t##*:}"
+            cargo build -p zperfd --release --target "$target" --locked
+            mkdir -p "../module/bin/$abi"
+            cp "target/$target/release/zperfd" "../module/bin/$abi/zperfd"
+            "$TC/llvm-strip" "../module/bin/$abi/zperfd"
+          done
+
+      - name: Build zkfctl userspace
+        run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/30.0.16248370"
+          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
+            triple="${t%%:*}"; abi="${t##*:}"
+            mkdir -p "module/bin/$abi"
+            "$TC/${triple}31-clang" -std=c11 -O2 -Wall -Wextra -Werror \
+              -fstack-protector-strong -fPIE -pie \
+              -I kernel/include/uapi -I userspace/include -I userspace/lib \
+              userspace/lib/*.c userspace/zkfctl/main.c -o "module/bin/$abi/zkfctl"
+            "$TC/llvm-strip" "module/bin/$abi/zkfctl"
+          done
+
+      - name: Stage zperf catalog
+        run: |
+          set -euo pipefail
+          mkdir -p module/zperf/catalog
+          cp rust/zperfd/profiles/*.toml module/zperf/catalog/
+
+      - name: Package module + checksum manifest
+        run: |
+          set -euo pipefail
+          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
+          : > module/SHA256SUMS
+          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
+          cd module
+          zip -r9 ../Zairenkai-module.zip . -x '*.git*'
+          cd ..
+          sha256sum Zairenkai-module.zip
+
+      - name: Embed verified root module in APK assets
+        run: tools/bootpatch/stage-embedded-module.sh Zairenkai-module.zip
+
+      - name: Build APKs with the embedded module
         env:
           ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
@@ -191,63 +259,6 @@ jobs:
           APK="$(find app/build/outputs/apk/spoofed/release -type f -name '*.apk' -print -quit)"
           [[ -n "$APK" && -f "$APK" ]] || { echo "::error::Spoofed release APK not found"; exit 1; }
           tools/ci/verify-release-apk.sh "$APK" app/build/zk-release.jks
-
-      - name: Set up Rust
-        run: |
-          rustup toolchain install 1.99.0 --profile minimal
-          rustup component add rustfmt clippy --toolchain 1.99.0
-          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
-      - name: Build zperfd and validate workspace
-        working-directory: rust
-        env:
-          NDK: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
-        run: |
-          set -euo pipefail
-          cargo fmt --check
-          cargo test --workspace --all-targets --locked
-          cargo clippy --workspace --all-targets --all-features -- -D warnings
-          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TC/aarch64-linux-android31-clang"
-          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$TC/x86_64-linux-android31-clang"
-          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            target="${t%%:*}"; abi="${t##*:}"
-            cargo build -p zperfd --release --target "$target" --locked
-            mkdir -p "../module/bin/$abi"
-            cp "target/$target/release/zperfd" "../module/bin/$abi/zperfd"
-            "$TC/llvm-strip" "../module/bin/$abi/zperfd"
-          done
-
-      - name: Build zkfctl userspace
-        run: |
-          set -euo pipefail
-          NDK="$ANDROID_HOME/ndk/30.0.16248370"
-          TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          for t in aarch64-linux-android:arm64-v8a x86_64-linux-android:x86_64; do
-            triple="${t%%:*}"; abi="${t##*:}"
-            mkdir -p "module/bin/$abi"
-            "$TC/${triple}31-clang" -std=c11 -O2 -Wall -Wextra -Werror \
-              -fstack-protector-strong -fPIE -pie \
-              -I kernel/include/uapi -I userspace/include -I userspace/lib \
-              userspace/lib/*.c userspace/zkfctl/main.c -o "module/bin/$abi/zkfctl"
-            "$TC/llvm-strip" "module/bin/$abi/zkfctl"
-          done
-
-      - name: Stage zperf catalog
-        run: |
-          set -euo pipefail
-          mkdir -p module/zperf/catalog
-          cp rust/zperfd/profiles/*.toml module/zperf/catalog/
-
-      - name: Package module + checksum manifest
-        run: |
-          set -euo pipefail
-          test -n "$(find module/lkm -name 'zkfc.ko' -print -quit)"
-          : > module/SHA256SUMS
-          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
-          cd module
-          zip -r9 ../Zairenkai-module.zip . -x '*.git*'
-          cd ..
-          sha256sum Zairenkai-module.zip
 
       - name: Stage spoofed release APK
         run: |
