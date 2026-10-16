@@ -90,6 +90,10 @@ class FpsMonitorService : Service() {
             val labels = AppLabels(this@FpsMonitorService)
             container.settings.settings.map { it.fpsWatch }.distinctUntilChanged().collectLatest { watch ->
                 val builder = FpsSessionBuilder()
+                // Share the app's real read-only hardware sampler while we record.
+                // Do not start it when the watch list is empty.
+                val holdsMonitor = watch.isNotEmpty()
+                if (holdsMonitor) container.live.acquire()
                 var misses = 0
                 try {
                     while (isActive) {
@@ -117,7 +121,28 @@ class FpsMonitorService : Service() {
                             val a = battery.read()
                             val current = BatteryMath.currentMa(a.currentRaw, a.status)
                             val power = BatteryMath.powerW(a.voltageV, current)?.let { abs(it) }
-                            builder.onBatch(b, a.tempC, power, labels::label)?.let { container.fpsStore.add(it) }
+                            val monitorState = container.live.state.value
+                            val monitorResult = monitorState.monitor.latest?.takeIf { it.ok }
+                            val onlineCpus = monitorResult?.cpu.orEmpty().filter { it.online }
+                            val validLoads = onlineCpus.mapNotNull { it.loadPct.takeIf { load -> load in 0..100 } }
+                            val validCpuFreqs = onlineCpus.mapNotNull { core ->
+                                core.curKhz.takeIf { it > 0 }?.div(1000f)
+                            }
+                            val thermalPeak = monitorResult?.thermal.orEmpty()
+                                .map { it.celsius }
+                                .filter { it in 1f..150f }
+                                .maxOrNull()
+                            val telemetry = FpsTelemetry(
+                                cpuLoadPct = validLoads.takeIf { it.isNotEmpty() }?.average()?.toFloat(),
+                                cpuFreqMhz = validCpuFreqs.maxOrNull(),
+                                gpuLoadPct = monitorResult?.gpu?.busyPct?.takeIf { it in 0..100 }?.toFloat(),
+                                // Match the unit conversion used by the live GPU monitor (Hz -> MHz).
+                                gpuFreqMhz = monitorResult?.gpu?.curFreq?.takeIf { it > 0 }?.div(1_000_000f),
+                                ramUsedPct = monitorState.memory?.usedPct?.toFloat(),
+                                batteryPct = monitorState.battery?.levelPct?.toFloat(),
+                                thermalC = thermalPeak,
+                            )
+                            builder.onBatch(b, a.tempC, power, labels::label, telemetry)?.let { container.fpsStore.add(it) }
                             val recording = builder.current
                             val before = _live.value.recording
                             _live.value = FpsLive(
@@ -145,6 +170,7 @@ class FpsMonitorService : Service() {
                     }
                 } finally {
                     builder.finish(labels::label)?.let { scope.launch { container.fpsStore.add(it) } }
+                    if (holdsMonitor) container.live.release()
                 }
             }
         }

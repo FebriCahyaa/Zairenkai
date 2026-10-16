@@ -8,6 +8,7 @@
 package com.zairenkai.app.ui.screens.monitor
 
 import com.zairenkai.app.ui.icons.ZkIcons
+import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -65,6 +66,8 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
         val st = rec.stats
         val drops = FpsAnalysis.drops(rec)
         val insights = FpsAnalysis.insights(rec, drops)
+
+        item { DeviceContextCard() }
 
         item {
             MonitorCard(shape = HeroShape, color = MaterialTheme.colorScheme.primaryContainer, padding = 20.dp) {
@@ -147,6 +150,127 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
                         formatY = { "%.0f°".format(it) },
                     )
                 }
+            }
+        }
+
+        // Session-aligned hardware history. Only render a chart when the source
+        // supplied enough real samples; unsupported sensors are intentionally omitted.
+        val samples = rec.seconds
+        if (samples.count { it.worstMs > 0f } >= 2) {
+            item {
+                val known = samples.map { it.worstMs }.filter { it > 0f }
+                MetricHistoryCard(
+                    title = stringResource(R.string.fps_frametime_title),
+                    values = samples.map { it.worstMs.takeIf { value -> value > 0f } },
+                    accent = ZkCpu,
+                    formatY = { "%.1f".format(it) },
+                    minV = 0f,
+                    maxV = ((known.maxOrNull() ?: 50f) * 1.12f).coerceAtLeast(1f),
+                    unitHint = "ms · peak per second",
+                )
+            }
+        }
+        if (samples.count { it.cpuLoadPct != null } >= 2) {
+            item {
+                MetricHistoryCard(
+                    title = stringResource(R.string.mon_cpu_load_history),
+                    values = samples.map { it.cpuLoadPct },
+                    accent = ZkCpu,
+                    formatY = { "%.0f%%".format(it) },
+                    minV = 0f,
+                    maxV = 100f,
+                )
+            }
+        }
+        if (samples.count { it.cpuFreqMhz != null } >= 2) {
+            item {
+                val known = samples.mapNotNull { it.cpuFreqMhz }
+                MetricHistoryCard(
+                    title = stringResource(R.string.mon_cpu_peak),
+                    values = samples.map { it.cpuFreqMhz },
+                    accent = ZkIndigo,
+                    formatY = { "%.0f".format(it) },
+                    minV = 0f,
+                    maxV = ((known.maxOrNull() ?: 1000f) * 1.12f).coerceAtLeast(1f),
+                    unitHint = "MHz",
+                )
+            }
+        }
+        if (samples.count { it.gpuLoadPct != null } >= 2) {
+            item {
+                MetricHistoryCard(
+                    title = stringResource(R.string.mon_gpu_busy_history),
+                    values = samples.map { it.gpuLoadPct },
+                    accent = ZkGpu,
+                    formatY = { "%.0f%%".format(it) },
+                    minV = 0f,
+                    maxV = 100f,
+                )
+            }
+        }
+        if (samples.count { it.gpuFreqMhz != null } >= 2) {
+            item {
+                val known = samples.mapNotNull { it.gpuFreqMhz }
+                MetricHistoryCard(
+                    title = stringResource(R.string.mon_gpu_freq_history),
+                    values = samples.map { it.gpuFreqMhz },
+                    accent = ZkAqua,
+                    formatY = { "%.0f".format(it) },
+                    minV = 0f,
+                    maxV = ((known.maxOrNull() ?: 500f) * 1.12f).coerceAtLeast(1f),
+                    unitHint = "MHz",
+                )
+            }
+        }
+        if (samples.count { it.thermalC != null } >= 2) {
+            item {
+                val known = samples.mapNotNull { it.thermalC }
+                MetricHistoryCard(
+                    title = stringResource(R.string.monitor_thermal_title),
+                    values = samples.map { it.thermalC },
+                    accent = ZkTemp,
+                    formatY = { "%.0f°".format(it) },
+                    minV = (known.minOrNull()!! - 4f).coerceAtLeast(0f),
+                    maxV = (known.maxOrNull()!! + 4f).coerceAtLeast(1f),
+                )
+            }
+        }
+        if (samples.count { it.ramUsedPct != null } >= 2) {
+            item {
+                MetricHistoryCard(
+                    title = stringResource(R.string.mon_mem_title),
+                    values = samples.map { it.ramUsedPct },
+                    accent = ZkIndigo,
+                    formatY = { "%.0f%%".format(it) },
+                    minV = 0f,
+                    maxV = 100f,
+                )
+            }
+        }
+        if (samples.count { it.powerW != null } >= 2) {
+            item {
+                val known = samples.mapNotNull { it.powerW }
+                MetricHistoryCard(
+                    title = stringResource(R.string.mon_battery_power),
+                    values = samples.map { it.powerW },
+                    accent = ZkGood,
+                    formatY = { "%.1f".format(it) },
+                    minV = 0f,
+                    maxV = ((known.maxOrNull() ?: 1f) * 1.15f).coerceAtLeast(1f),
+                    unitHint = "W",
+                )
+            }
+        }
+        if (samples.count { it.batteryPct != null } >= 2) {
+            item {
+                MetricHistoryCard(
+                    title = stringResource(R.string.mon_battery_level),
+                    values = samples.map { it.batteryPct },
+                    accent = ZkAqua,
+                    formatY = { "%.0f%%".format(it) },
+                    minV = 0f,
+                    maxV = 100f,
+                )
             }
         }
 
@@ -266,6 +390,102 @@ fun FpsSessionScreen(factory: VmFactory, sessionId: String, onBack: () -> Unit) 
             },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
+    }
+}
+
+@Composable
+private fun DeviceContextCard() {
+    val model = listOf(Build.MANUFACTURER, Build.MODEL)
+        .filter { it.isNotBlank() }
+        .distinct()
+        .joinToString(" ")
+    val kernel = System.getProperty("os.version").orEmpty().ifBlank { "—" }
+    MonitorCard(
+        shape = TileShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        padding = 14.dp,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(shape = TileShape, color = ZkIndigo.copy(alpha = 0.14f), modifier = Modifier.size(44.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(ZkIcons.Chip, null, tint = ZkIndigo, modifier = Modifier.size(23.dp))
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(model.ifBlank { Build.DEVICE }, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "Android ${Build.VERSION.RELEASE} · API ${Build.VERSION.SDK_INT}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "Kernel $kernel",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(stringResource(R.string.mon_cpu_platform), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(Build.HARDWARE.uppercase().ifBlank { "—" }, style = MaterialTheme.typography.titleSmall, color = ZkIndigo, fontWeight = FontWeight.Bold, maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricHistoryCard(
+    title: String,
+    values: List<Float?>,
+    accent: Color,
+    formatY: (Float) -> String,
+    minV: Float,
+    maxV: Float? = null,
+    unitHint: String? = null,
+) {
+    val known = values.filterNotNull()
+    if (known.size < 2) return
+    val high = maxV ?: ((known.maxOrNull() ?: 1f) * 1.12f).coerceAtLeast(minV + 1f)
+    val average = known.average().toFloat()
+    val peak = known.maxOrNull() ?: average
+    MonitorCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                unitHint?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(formatY(peak), style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.fps_stat_max), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        TimeSeriesChart(
+            listOf(ChartSeries(values, accent)),
+            Modifier.fillMaxWidth().height(156.dp),
+            minV = minV,
+            maxV = high,
+            yTicks = 3,
+            formatY = formatY,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("00:00", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Text(
+                "${stringResource(R.string.fps_stat_avg)} ${formatY(average)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                FpsAnalysis.clock(values.size),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

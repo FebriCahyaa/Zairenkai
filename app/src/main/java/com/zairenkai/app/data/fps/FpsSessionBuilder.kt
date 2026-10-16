@@ -23,7 +23,13 @@ class FpsSessionBuilder(
     private var lastWallMs = 0L
     private var refreshHz = 0f
     private var source = ""
-    private val samples = ArrayList<Triple<Long, Float?, Float?>>()
+    private data class TimedSample(
+        val timeMs: Long,
+        val tempC: Float?,
+        val powerW: Float?,
+        val telemetry: FpsTelemetry?,
+    )
+    private val samples = ArrayList<TimedSample>()
     private var awaySince: Long? = null
 
     /** The watched app being recorded, if any. */
@@ -36,7 +42,13 @@ class FpsSessionBuilder(
      * Feed one stream line with the battery temperature/power measured when
      * it arrived. Returns a session that just ended, if any.
      */
-    fun onBatch(b: FrameBatch, tempC: Float?, powerW: Float?, label: (String) -> String): FpsRecording? {
+    fun onBatch(
+        b: FrameBatch,
+        tempC: Float?,
+        powerW: Float?,
+        label: (String) -> String,
+        telemetry: FpsTelemetry? = null,
+    ): FpsRecording? {
         val fg = b.fg
         if (b.watched && fg != null) {
             val ended = if (pkg != null && pkg != fg) finish(label) else null
@@ -54,7 +66,7 @@ class FpsSessionBuilder(
                 if (count == presents.size) presents = presents.copyOf(presents.size * 2)
                 presents[count++] = t
             }
-            samples += Triple(b.tMs, tempC, powerW)
+            samples += TimedSample(b.tMs, tempC, powerW, telemetry)
             return ended
         }
         if (pkg == null) return null
@@ -70,7 +82,7 @@ class FpsSessionBuilder(
         val end = lastWallMs
         val hz = refreshHz
         val src = source
-        val temps = samples.toList()
+        val measurements = samples.toList()
         reset()
         if (frames.size < minFrames) return null
         val spanMs = (frames.last() - frames.first()) / 1_000_000
@@ -79,8 +91,18 @@ class FpsSessionBuilder(
         // Second i of the frame timeline ~ wall time start + i s; attach the nearest sample.
         val withEnv = seconds.mapIndexed { i, s ->
             val wall = start + i * 1000L
-            val near = temps.minByOrNull { kotlin.math.abs(it.first - wall) }
-            s.copy(tempC = near?.second, powerW = near?.third)
+            val near = measurements.minByOrNull { kotlin.math.abs(it.timeMs - wall) }
+            s.copy(
+                tempC = near?.tempC,
+                powerW = near?.powerW,
+                cpuLoadPct = near?.telemetry?.cpuLoadPct,
+                cpuFreqMhz = near?.telemetry?.cpuFreqMhz,
+                gpuLoadPct = near?.telemetry?.gpuLoadPct,
+                gpuFreqMhz = near?.telemetry?.gpuFreqMhz,
+                ramUsedPct = near?.telemetry?.ramUsedPct,
+                batteryPct = near?.telemetry?.batteryPct,
+                thermalC = near?.telemetry?.thermalC,
+            )
         }
         return FpsRecording(
             id = UUID.randomUUID().toString(),

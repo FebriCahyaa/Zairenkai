@@ -18,6 +18,26 @@ data class FpsSecond(
     val jank: Int = 0,
     val tempC: Float? = null,
     val powerW: Float? = null,
+    /** Sampled hardware values; null means the device did not report that sensor. */
+    val cpuLoadPct: Float? = null,
+    val cpuFreqMhz: Float? = null,
+    val gpuLoadPct: Float? = null,
+    val gpuFreqMhz: Float? = null,
+    val ramUsedPct: Float? = null,
+    val batteryPct: Float? = null,
+    /** Hottest plausible thermal-zone reading, distinct from battery temperature. */
+    val thermalC: Float? = null,
+)
+
+/** Optional read-only hardware sample captured during an FPS session. */
+data class FpsTelemetry(
+    val cpuLoadPct: Float? = null,
+    val cpuFreqMhz: Float? = null,
+    val gpuLoadPct: Float? = null,
+    val gpuFreqMhz: Float? = null,
+    val ramUsedPct: Float? = null,
+    val batteryPct: Float? = null,
+    val thermalC: Float? = null,
 )
 
 @Serializable

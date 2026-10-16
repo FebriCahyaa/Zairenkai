@@ -66,6 +66,38 @@ class FpsSessionBuilderTest {
     }
 
     @Test
+    fun telemetryIsAttachedToTheNearestPerSecondSample() {
+        val b = FpsSessionBuilder(minFrames = 60, minDurationMs = 5_000)
+        for (s in 0 until 7) {
+            b.onBatch(
+                batch(1_000L * s, "com.game", true, second(s)),
+                31f + s,
+                3.5f,
+                label,
+                FpsTelemetry(
+                    cpuLoadPct = 40f + s,
+                    cpuFreqMhz = 1200f + s * 10f,
+                    gpuLoadPct = 30f + s,
+                    gpuFreqMhz = 400f + s * 5f,
+                    ramUsedPct = 60f + s,
+                    batteryPct = 80f - s,
+                    thermalC = 55f + s,
+                ),
+            )
+        }
+        val rec = b.finish(label)
+        assertNotNull(rec)
+        rec!!
+        assertEquals(40f, rec.seconds.first().cpuLoadPct)
+        assertEquals(1200f, rec.seconds.first().cpuFreqMhz)
+        assertEquals(30f, rec.seconds.first().gpuLoadPct)
+        assertEquals(400f, rec.seconds.first().gpuFreqMhz)
+        assertEquals(60f, rec.seconds.first().ramUsedPct)
+        assertEquals(80f, rec.seconds.first().batteryPct)
+        assertEquals(55f, rec.seconds.first().thermalC)
+    }
+
+    @Test
     fun overlappingFramesAreNotCountedTwice() {
         val b = FpsSessionBuilder(minFrames = 1, minDurationMs = 0)
         b.onBatch(batch(0, "com.a", true, listOf(10, 20, 30)), null, null, label)
