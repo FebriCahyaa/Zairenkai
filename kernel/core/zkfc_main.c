@@ -95,6 +95,7 @@ static int zkfc_requirements(unsigned int cmd, u32 *cap, u32 *feat, bool *mutati
 		return 0;
 	case ZKFC_IOC_INSTALL_LICENSE:
 	case ZKFC_IOC_INSTALL_CRL:
+	case ZKFC_IOC_INSTALL_BUNDLE:
 		*cap = ZKFC_CAP_LICENSE;
 		*mutating = true;
 		return 0;
@@ -157,6 +158,8 @@ static long zkfc_dispatch(struct zkfc_session *s, unsigned int cmd, void *buf,
 		return 0;
 	case ZKFC_IOC_INSTALL_LICENSE:
 		return zkfc_license_install(buf);
+	case ZKFC_IOC_INSTALL_BUNDLE:
+		return zkfc_license_install_bundle(buf);
 	case ZKFC_IOC_INSTALL_CRL:
 		return zkfc_license_install_crl(buf);
 	case ZKFC_IOC_TASK_BOOST:
@@ -253,7 +256,9 @@ static long zkfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if ((_IOC_DIR(cmd) & _IOC_READ) && size && copy_to_user(uarg, buf, size))
 		ret = ret ?: -EFAULT;
 	if (mutating)
-		zkfc_sulog_add(cmd == ZKFC_IOC_INSTALL_LICENSE || cmd == ZKFC_IOC_INSTALL_CRL ?
+		zkfc_sulog_add(cmd == ZKFC_IOC_INSTALL_LICENSE ||
+			       cmd == ZKFC_IOC_INSTALL_BUNDLE ||
+			       cmd == ZKFC_IOC_INSTALL_CRL ?
 			       ZKFC_SU_LICENSE : ZKFC_SU_PRIV_OP,
 			       (int)ret, _IOC_NR(cmd), NULL);
 out:
@@ -315,6 +320,8 @@ static void zkfc_abi_checks(void)
 	/* The ABI must be identical for 64-bit and compat callers. */
 	BUILD_BUG_ON(sizeof(struct zkfc_license_payload) != 136);
 	BUILD_BUG_ON(sizeof(struct zkfc_license_token) != 200);
+	BUILD_BUG_ON(sizeof(struct zkfc_license_bundle) != 432);
+	BUILD_BUG_ON(_IOC_SIZE(ZKFC_IOC_INSTALL_BUNDLE) != 432);
 	BUILD_BUG_ON(sizeof(struct zkfc_crl) != 600);
 	BUILD_BUG_ON(sizeof(struct zkfc_version_info) != 160);
 	BUILD_BUG_ON(sizeof(struct zkfc_capability_info) != 168);

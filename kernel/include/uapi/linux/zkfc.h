@@ -26,7 +26,7 @@
  * the kernel version is lower than the version it requires.
  * ------------------------------------------------------------------------ */
 #define ZKFC_API_MAJOR 1
-#define ZKFC_API_MINOR 1
+#define ZKFC_API_MINOR 2
 #define ZKFC_API_PATCH 0
 #define ZKFC_MKVER(ma, mi, pa) ((((ma) & 0xff) << 16) | (((mi) & 0xff) << 8) | ((pa) & 0xff))
 #define ZKFC_VER_MAJOR(v) (((v) >> 16) & 0xff)
@@ -490,6 +490,8 @@ struct zkfc_sulog_read {
 /* License management (ZKFC_CAP_LICENSE) */
 #define ZKFC_IOC_INSTALL_LICENSE	_IOW(ZKFC_IOC_MAGIC, 0x08, struct zkfc_license_token)
 #define ZKFC_IOC_INSTALL_CRL		_IOW(ZKFC_IOC_MAGIC, 0x09, struct zkfc_crl)
+/* Runtime installation of an Owner-certified delegated token bundle. */
+#define ZKFC_IOC_INSTALL_BUNDLE	_IOW(ZKFC_IOC_MAGIC, 0x0A, struct zkfc_license_bundle)
 
 /* Performance (ZKFC_CAP_TUNE_PERF / ZKFC_CAP_TUNE_THERMAL, licensed) */
 #define ZKFC_IOC_TASK_BOOST		_IOWR(ZKFC_IOC_MAGIC, 0x10, struct zkfc_task_boost)

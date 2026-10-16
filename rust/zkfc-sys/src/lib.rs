@@ -13,7 +13,7 @@ use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
 
 pub const ZKFC_DEVICE_PATH: &str = "/dev/zkfc";
-pub const ZKFC_API_VERSION: u32 = (1u32 << 16) | (1u32 << 8);
+pub const ZKFC_API_VERSION: u32 = (1u32 << 16) | (2u32 << 8);
 pub const ZKFC_API_MIN_SUPPORTED: u32 = 1u32 << 16;
 const ZKFC_IOC_MAGIC: u32 = b'Z' as u32;
 

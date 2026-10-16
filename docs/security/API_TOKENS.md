@@ -54,14 +54,22 @@ ZKFC API Token  ──installed──▶  kernel verifies with the compiled-in p
    `zkfc-<id>.inc` (C bytes, for building into the kernel).
 4. **Delivery.** The owner sends you the `.zkl` file privately.
 
-## How to install a token
+## How to install a token or delegated bundle
 
 - **From the app:** *Sistem → Lisensi API → Pasang token (.zkl)*, pick the file.
   The app copies it and runs `zkfctl license install`.
-- **From the shell:** `zkfctl license install /sdcard/zkfc-<id>.zkl`
+- **From the shell:** `zkfctl license install /sdcard/zkfc-<id>.zkl`.
+  The CLI detects either a standalone `ZKFC API TOKEN` or an Owner-certified
+  `ZKFC DELEGATED TOKEN` bundle. The kernel verifies the standalone token or
+  the complete delegated chain before replacing the active grant.
+- **Runtime bundle ABI:** API minor 1.2 adds `ZKFC_IOC_INSTALL_BUNDLE` at ioctl
+  number `0x0A`; it accepts the 432-byte `{ owner-signed certificate, token }`
+  structure. Existing token v1 layout (136-byte payload + 64-byte signature)
+  and ioctl `ZKFC_IOC_INSTALL_LICENSE` remain unchanged.
 - **Built into the kernel:** drop `zkfc_license.inc` into
-  `kernel/license/zkfc_license.inc` before building (the Makefile defines
-  `ZKFC_EMBEDDED_LICENSE` automatically).
+  `kernel/license/zkfc_license.inc`, or the generated `zkfc_bundle.inc` into
+  `kernel/license/zkfc_bundle.inc`, before building. The Makefile chooses the
+  corresponding embedded path.
 
 ## For the owner: provisioning the signing key (one time)
 

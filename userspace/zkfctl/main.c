@@ -186,22 +186,31 @@ static int cmd_license(struct zkfc *z, struct zk_json *j, int argc, char **argv)
 {
 	if (argc >= 2 && !strcmp(argv[1], "install")) {
 		struct zkfc_license_token tok;
+		struct zkfc_license_bundle bundle;
+		bool delegated = false;
 		int r;
 
 		if (argc < 3)
 			return fail(j, "usage: license install <file.zkl>", EINVAL);
 		r = zkfc_parse_token_file(argv[2], &tok);
+		if (!r) {
+			r = zkfc_install_license(z, &tok);
+		} else {
+			r = zkfc_parse_bundle_file(argv[2], &bundle);
+			if (r)
+				return fail(j, "cannot parse token or delegated bundle", r);
+			delegated = true;
+			r = zkfc_install_bundle(z, &bundle);
+		}
 		if (r)
-			return fail(j, "cannot parse token file", r);
-		r = zkfc_install_license(z, &tok);
-		if (r)
-			return fail(j, "kernel rejected token", r);
+			return fail(j, delegated ? "kernel rejected delegated bundle" : "kernel rejected token", r);
 		if (mkdir("/data/adb/zkfc", 0700) != 0 && errno != EEXIST)
 			return fail(j, "cannot create persistent license directory", -errno);
-		chmod("/data/adb/zkfc", 0700);
+		if (chmod("/data/adb/zkfc", 0700) != 0)
+			return fail(j, "cannot secure persistent license directory", -errno);
 		r = persist_file_root(argv[2], "/data/adb/zkfc/token.zkl", 0600);
 		if (r)
-			return fail(j, "token accepted but persistence failed", r);
+			return fail(j, delegated ? "bundle accepted but persistence failed" : "token accepted but persistence failed", r);
 	} else if (argc >= 2 && !strcmp(argv[1], "crl")) {
 		struct zkfc_crl crl;
 		int r;

@@ -64,8 +64,10 @@ int main(void)
     EXPECT_OFFSET(struct zkfc_dev_security, licensee_tag, 160);
 
     if (check_ioctl(ZKFC_IOC_GET_CAPABILITIES, _IOR(ZKFC_IOC_MAGIC, 0x05, struct zkfc_capability_info), "GET_CAPABILITIES")) return 1;
+    if (check_ioctl(ZKFC_IOC_INSTALL_BUNDLE, _IOW(ZKFC_IOC_MAGIC, 0x0A, struct zkfc_license_bundle), "INSTALL_BUNDLE")) return 1;
+    if (_IOC_SIZE(ZKFC_IOC_INSTALL_BUNDLE) != sizeof(struct zkfc_license_bundle)) return 1;
     if (check_ioctl(ZKFC_IOC_POLICY_GET, _IOR(ZKFC_IOC_MAGIC, 0x30, struct zkfc_policy_table), "POLICY_GET")) return 1;
-    if (ZKFC_API_VERSION != ZKFC_MKVER(1, 1, 0)) return 1;
+    if (ZKFC_API_VERSION != ZKFC_MKVER(1, 2, 0)) return 1;
     if (ZKFC_API_MIN_SUPPORTED != ZKFC_MKVER(1, 0, 0)) return 1;
 
     puts("zkfc UAPI ABI checks passed");

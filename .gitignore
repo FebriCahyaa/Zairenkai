@@ -29,6 +29,7 @@ secring.*
 .kotlin/
 
 /rust/target/
+/userspace/out/
 __pycache__/
 
 # Generated Android boot-patch helper executables

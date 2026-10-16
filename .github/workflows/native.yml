@@ -63,6 +63,13 @@ jobs:
         run: |
           cc -std=c11 -Wall -Wextra -Werror -I. tests/abi/zkfc_uapi_test.c -o /tmp/zkfc_uapi_test
           /tmp/zkfc_uapi_test
+      - name: Compile and run license armor parser tests
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            -I kernel/include/uapi -I userspace/include -I userspace/lib \
+            tests/userspace/zk_token_test.c userspace/lib/zk_token.c \
+            -o /tmp/zkfc_token_test
+          /tmp/zkfc_token_test
 
   module-compile:
     needs: [crypto, data-plane, uapi-abi]

@@ -6,11 +6,11 @@
  * performance features of ZKFC for one licensee and, optionally, for one
  * kernel (binding = SHA-512("ZKFC-BIND-v1:" || CONFIG_ZKFC_LICENSEE_TAG)).
  *
- * Tokens can be embedded at build time (kernel/license/zkfc_license.inc) or
- * installed at runtime by root through ZKFC_IOC_INSTALL_LICENSE. Because the
- * signature is checked with the Owner's public key, runtime installation does
- * not weaken security. A signed revocation list (CRL) can disable leaked
- * tokens.
+ * Tokens can be embedded at build time or installed at runtime by root. Standalone
+ * tokens use ZKFC_IOC_INSTALL_LICENSE; Owner-certified delegated bundles use
+ * ZKFC_IOC_INSTALL_BUNDLE. The kernel verifies signatures against the compiled-in
+ * Owner public key, and invalid inputs never replace an active valid grant. A
+ * signed revocation list (CRL) can disable leaked tokens.
  *
  * Copyright (C) 2026 FebriCahyaa
  */
@@ -373,15 +373,22 @@ out:
 
 /*
  * Install a delegated bundle (owner-signed subkey cert + subkey-signed token).
- * Used by the build-time embed path. The whole chain is verified against the
- * Owner key and the token may not exceed what the certificate delegated; a
- * bundle that does not verify never replaces a working installation.
+ * Used by both the runtime ioctl and build-time embedding. The whole chain is
+ * verified against the Owner key and the token may not exceed the certificate's
+ * grant. A bundle that fails verification never replaces a working installation.
  */
 int zkfc_license_install_bundle(const struct zkfc_license_bundle *b)
 {
-	u32 state;
+	u32 state = ZKFC_LIC_MALFORMED;
+	bool throttled = false;
 
 	mutex_lock(&zkfc_lic_mutex);
+	if (zkfc_lic_fails >= ZKFC_LIC_FAIL_MAX &&
+	    time_before(jiffies, zkfc_lic_cooldown_until)) {
+		throttled = true;
+		goto out;
+	}
+
 	state = zkfc_eval_cert(&b->cert);
 	if (state == ZKFC_LIC_VALID) {
 		const struct zkfc_subkey_payload *cp = &b->cert.payload;
@@ -396,10 +403,18 @@ int zkfc_license_install_bundle(const struct zkfc_license_bundle *b)
 		zkfc_tok = b->token;
 		zkfc_have_tok = true;
 		zkfc_chained = true;
+		zkfc_lic_fails = 0;
 		zkfc_commit();
+	} else if (++zkfc_lic_fails >= ZKFC_LIC_FAIL_MAX) {
+		zkfc_lic_cooldown_until = jiffies + ZKFC_LIC_COOLDOWN;
 	}
+out:
 	mutex_unlock(&zkfc_lic_mutex);
 
+	if (throttled) {
+		zkfc_w("delegated API bundle install throttled (too many rejects)");
+		return -EAGAIN;
+	}
 	if (state == ZKFC_LIC_VALID)
 		zkfc_i("delegated API token %llx installed (subkey %llx) for '%.32s'",
 		       le64_to_cpu(b->token.payload.license_id),

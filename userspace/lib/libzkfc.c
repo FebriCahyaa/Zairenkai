@@ -93,6 +93,10 @@ int zkfc_install_license(struct zkfc *z, const struct zkfc_license_token *t)
 {
 	return zk_ioctl(z, ZKFC_IOC_INSTALL_LICENSE, (void *)t);
 }
+int zkfc_install_bundle(struct zkfc *z, const struct zkfc_license_bundle *b)
+{
+	return zk_ioctl(z, ZKFC_IOC_INSTALL_BUNDLE, (void *)b);
+}
 int zkfc_install_crl(struct zkfc *z, const struct zkfc_crl *c)
 {
 	return zk_ioctl(z, ZKFC_IOC_INSTALL_CRL, (void *)c);

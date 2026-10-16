@@ -29,6 +29,7 @@ int zkfc_capabilities(struct zkfc *z, struct zkfc_capability_info *c);
 
 /* License management (root). */
 int zkfc_install_license(struct zkfc *z, const struct zkfc_license_token *t);
+int zkfc_install_bundle(struct zkfc *z, const struct zkfc_license_bundle *b);
 int zkfc_install_crl(struct zkfc *z, const struct zkfc_crl *c);
 
 /* Performance (needs a valid token). */
@@ -55,8 +56,9 @@ const char *zkfc_log_level_str(uint32_t level);
 /* True when the kernel's API major is older than this build expects. */
 bool zkfc_api_outdated(const struct zkfc_version_info *v);
 
-/* Parse an armored ".zkl" token file into a token struct. 0 or -errno. */
+/* Parse armored .zkl files. These helpers decode only; the kernel verifies signatures. */
 int zkfc_parse_token_file(const char *path, struct zkfc_license_token *out);
+int zkfc_parse_bundle_file(const char *path, struct zkfc_license_bundle *out);
 int zkfc_parse_crl_file(const char *path, struct zkfc_crl *out);
 
 #endif
