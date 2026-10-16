@@ -31,7 +31,14 @@ class UpdateRenderTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val available = UpdateUiState.Available(
-        ReleaseManifest(versionCode = 3, versionName = "1.2.0", apkUrl = "https://example/x.apk", sha256 = ""),
+        ReleaseManifest(
+            versionCode = 3,
+            versionName = "1.2.0",
+            apkUrl = "https://github.com/FebriCahyaa/Zairenkai/releases/download/preview/Zairenkai-debug.apk",
+            sha256 = "a".repeat(64),
+            apiMajor = 1,
+            buildId = "update-render-test",
+        ),
     )
 
     private fun show(dark: Boolean, state: UpdateUiState) {
