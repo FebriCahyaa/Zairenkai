@@ -62,6 +62,23 @@ jobs:
       - name: Unit tests (engine JSON contracts, tweak outcomes)
         run: ./gradlew :app:testStandardDebugUnitTest --stacktrace
 
+      # Exercise the optimized preview variant in CI. A debug-only build does not
+      # run R8, so it cannot catch reflectively loaded crypto mappings being stripped.
+      - name: Validate R8 keeps Ed25519 provider mappings
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleStandardPreview --stacktrace
+          USAGE="$(find app/build/outputs/mapping -type f -name usage.txt -print -quit)"
+          [[ -n "$USAGE" && -f "$USAGE" ]] || {
+            echo "::error::R8 usage.txt was not produced for the minified preview build."
+            exit 1
+          }
+          if grep -Fq 'org.bouncycastle.jcajce.provider.asymmetric.EdEC$Mappings' "$USAGE"; then
+            echo '::error::R8 stripped EdEC$Mappings required for Ed25519 verification.'
+            exit 1
+          fi
+          echo 'PASS: EdEC$Mappings was not reported as removed by R8.'
+
       - name: Lint
         run: ./gradlew :app:lintStandardDebug --stacktrace
 

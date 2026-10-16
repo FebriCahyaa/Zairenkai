@@ -125,4 +125,34 @@
     <string name="subsystem_role_thermoguard">seguridad térmica</string>
     <string name="subsystem_role_zperfd">orquestación del runtime</string>
     <string name="subsystem_role_zkfc">autoridad del kernel</string>
+
+    <!-- Verified root module installation and explicit API token import -->
+    <string name="system_module_title">Módulo root de Zairenkai</string>
+    <string name="system_module_build_id">ID de compilación</string>
+    <string name="system_module_api_major">Versión principal de la API de ZKFC</string>
+    <string name="system_module_desc">Instala o actualiza el módulo root verificado incluido en este APK. Se admite la instalación mediante la CLI de Magisk y KernelSU; otros gestores pueden usar el ZIP exportado.</string>
+    <string name="system_module_install_button">Instalar / actualizar módulo</string>
+    <string name="system_module_installing">Verificando e instalando…</string>
+    <string name="system_module_install_success">La instalación del módulo fue aceptada. Reinicia Android y vuelve a comprobar el estado del motor.</string>
+    <string name="system_module_not_embedded">Este APK no contiene un módulo de lanzamiento. Compila el ZIP del módulo y añádelo antes de compilar el APK.</string>
+    <string name="system_module_apk_modified">El firmante del APK no coincide con el certificado esperado. Se bloqueó la instalación del módulo.</string>
+    <string name="system_module_integrity_failed">El SHA-256 del ZIP del módulo incluido no coincide con el valor fijado en la compilación.</string>
+    <string name="system_module_archive_invalid">El ZIP del módulo o su manifiesto SHA256SUMS no es válido.</string>
+    <string name="system_module_install_failed">El gestor root no pudo instalar el módulo. Revisa el diagnóstico y usa la instalación manual del ZIP si es necesario.</string>
+    <string name="system_module_manual_required">No se encontró una CLI compatible de Magisk/KernelSU. Exporta el ZIP verificado e instálalo desde tu gestor root.</string>
+    <string name="system_module_share_button">Compartir ZIP del módulo verificado</string>
+    <string name="system_module_share_title">Compartir ZIP del módulo Zairenkai</string>
+    <string name="system_module_confirm_title">¿Instalar el módulo Zairenkai?</string>
+    <string name="system_module_confirm_message">Se enviará el módulo incluido al gestor root activo. Puede reemplazar o actualizar el módulo Zairenkai existente y requiere reiniciar para aplicar los cambios.</string>
+    <string name="system_module_confirm_install">Instalar módulo</string>
+    <string name="system_module_confirm_cancel">Cancelar</string>
+    <string name="system_token_install_button">Instalar token API (.zkl)</string>
+    <string name="system_token_installing">Comprobando token…</string>
+    <string name="system_token_install_valid">Token verificado e instalado. Las funciones con licencia deberían estar disponibles.</string>
+    <string name="system_token_owner_key_missing">El kernel no tiene una clave pública de propietario de ZKFC configurada. El token no podrá validarse hasta que el propietario configure la compilación del kernel.</string>
+    <string name="system_token_wrong_kernel">Este token está vinculado a otro kernel o etiqueta de licencia.</string>
+    <string name="system_token_expired">Este token ha caducado.</string>
+    <string name="system_token_revoked">Este token ha sido revocado.</string>
+    <string name="system_token_bad_signature">La firma del token no es válida.</string>
+    <string name="system_token_install_result">Estado del token: %1$s</string>
 </resources>
