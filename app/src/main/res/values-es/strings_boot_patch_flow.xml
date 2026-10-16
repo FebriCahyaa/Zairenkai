@@ -36,4 +36,5 @@
     <string name="patch_flow_kmi_detecting">Detectando el KMI de la imagen seleccionada…</string>
     <string name="patch_flow_kmi_detected">KMI detectado en la imagen: %1$s</string>
     <string name="patch_flow_kmi_manual">No se pudo detectar el KMI del kernel en esta imagen. Selecciona el KMI de destino manualmente.</string>
-<string name="patch_flow_module_bundled_hint">Un APK de lanzamiento puede usar el módulo incluido para el KMI seleccionado. Elige un archivo para sustituirlo o si no hay uno compatible incluido.</string></resources>
+<string name="patch_flow_module_bundled_hint">Un APK de lanzamiento puede usar el módulo incluido para el KMI seleccionado. Elige un archivo para sustituirlo o si no hay uno compatible incluido.</string>    <string name="patch_flow_kmi_mismatch">El KMI seleccionado (%1$s) no coincide con el KMI detectado en la imagen (%2$s). Usa la rama detectada o verifica que la imagen corresponda al kernel deseado.</string>
+</resources>

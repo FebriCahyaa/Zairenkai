@@ -36,4 +36,5 @@
     <string name="patch_flow_kmi_detecting">Detecting KMI from selected image…</string>
     <string name="patch_flow_kmi_detected">Detected KMI from image: %1$s</string>
     <string name="patch_flow_kmi_manual">No Android KMI branch could be detected. Select it manually; the app will show the kernel release for diagnostics. KMI and symbol-version compatibility still need to match.</string>
-<string name="patch_flow_module_bundled_hint">A release APK can use its bundled module for the selected KMI. Choose a file only to override it or when no bundled match is available.</string></resources>
+<string name="patch_flow_module_bundled_hint">A release APK can use its bundled module for the selected KMI. Choose a file only to override it or when no bundled match is available.</string>    <string name="patch_flow_kmi_mismatch">Selected KMI (%1$s) does not match the KMI detected from the image (%2$s). Use the detected branch, or verify that this image is for the intended kernel.</string>
+</resources>

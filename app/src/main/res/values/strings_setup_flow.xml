@@ -37,7 +37,8 @@
     <string name="perm_allow">Allow</string>
     <string name="perm_open_settings">Open settings</string>
     <plurals name="setup_done_permissions">
-        <item quantity="one">App permissions: %1$d of %2$d allowed</item>
-        <item quantity="other">App permissions: %1$d of %2$d allowed</item>
+        <item quantity="one">%1$d optional permission enabled</item>
+        <item quantity="other">%1$d of %2$d optional permissions enabled</item>
     </plurals>
+    <string name="perm_optional">Optional</string>
 </resources>

@@ -12,6 +12,6 @@
     <string name="settings_logs_sub">Level %1$s · log langsung dari kernel</string>
     <string name="settings_hero_sub">Versi %1$s · Ketuk untuk info aplikasi</string>
     <plurals name="settings_permissions_sub">
-        <item quantity="other">%1$d dari %2$d diizinkan</item>
+        <item quantity="other">%1$d dari %2$d izin opsional aktif</item>
     </plurals>
 </resources>

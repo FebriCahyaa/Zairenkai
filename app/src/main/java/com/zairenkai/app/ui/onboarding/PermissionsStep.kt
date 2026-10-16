@@ -72,10 +72,10 @@ import com.zairenkai.app.ui.mascot.MascotState
 import com.zairenkai.app.ui.theme.ZkGood
 import com.zairenkai.app.ui.theme.statusInk
 
-enum class AppPermission(val title: Int, val body: Int, val icon: ImageVector, val required: Boolean) {
-    NOTIFICATIONS(R.string.perm_notifications_title, R.string.perm_notifications_body, ZkIcons.Bell, true),
-    USAGE_ACCESS(R.string.perm_usage_title, R.string.perm_usage_body, ZkIcons.Chart, true),
-    BATTERY(R.string.perm_battery_title, R.string.perm_battery_body, ZkIcons.Battery, false),
+enum class AppPermission(val title: Int, val body: Int, val icon: ImageVector, val recommended: Boolean) {
+    NOTIFICATIONS(R.string.perm_notifications_title, R.string.perm_notifications_body, ZkIcons.Bell, false),
+    USAGE_ACCESS(R.string.perm_usage_title, R.string.perm_usage_body, ZkIcons.Chart, false),
+    BATTERY(R.string.perm_battery_title, R.string.perm_battery_body, ZkIcons.Battery, true),
 }
 
 /** The current grant of each permission, read from the system. */
@@ -129,9 +129,9 @@ fun rememberPermissions(): Pair<Map<AppPermission, Boolean>, (AppPermission) -> 
 
 @Composable
 internal fun PermissionsStep(status: Map<AppPermission, Boolean>, onAction: (AppPermission) -> Unit) {
-    val allRequired = AppPermission.entries.filter { it.required }.all { status[it] == true }
+    val allGranted = AppPermission.entries.all { status[it] == true }
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Mascot(if (allRequired) MascotState.READY else MascotState.IDLE, size = 150.dp)
+        Mascot(if (allGranted) MascotState.READY else MascotState.IDLE, size = 150.dp)
     }
     StepTitle(stringResource(R.string.setup_perm_title), stringResource(R.string.setup_perm_body))
     AppPermission.entries.forEachIndexed { i, p -> PermissionRow(p, status[p] == true, Modifier.reveal(2 + i)) { onAction(p) } }
@@ -153,7 +153,7 @@ private fun PermissionRow(p: AppPermission, granted: Boolean, modifier: Modifier
                 Column(Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.titleSmall)
                     Text(
-                        stringResource(if (p.required) R.string.perm_needed else R.string.perm_recommended),
+                        stringResource(if (p.recommended) R.string.perm_recommended else R.string.perm_optional),
                         style = MaterialTheme.typography.labelMedium,
                         color = cs.onSurfaceVariant,
                     )

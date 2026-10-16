@@ -37,6 +37,7 @@
     <string name="perm_allow">Izinkan</string>
     <string name="perm_open_settings">Buka pengaturan</string>
     <plurals name="setup_done_permissions">
-        <item quantity="other">Izin aplikasi: %1$d dari %2$d diizinkan</item>
+        <item quantity="other">Izin opsional aktif: %1$d dari %2$d</item>
     </plurals>
+    <string name="perm_optional">Opsional</string>
 </resources>

@@ -446,15 +446,36 @@ fn kernel_identity(boot_image: &BootImage<'_>) -> Result<KernelIdentity> {
 
 fn parse_kernel_release(buffer: &[u8]) -> Result<String> {
     const MARKER: &[u8] = b"Linux version ";
-    let start = buffer.windows(MARKER.len()).position(|window| window == MARKER)
-        .ok_or_else(|| anyhow!("kernel payload does not contain a Linux version banner"))?;
-    let rest = &buffer[start + MARKER.len()..];
-    let end = rest.iter().position(|byte| byte.is_ascii_whitespace() || *byte == 0)
-        .unwrap_or(rest.len());
-    let release = std::str::from_utf8(&rest[..end]).context("kernel release banner is not UTF-8")?;
-    ensure!(!release.is_empty(), "kernel release banner is empty");
-    ensure!(release.bytes().all(|byte| byte.is_ascii_graphic()), "kernel release banner contains invalid characters");
-    Ok(release.to_owned())
+    let mut rejected: Option<String> = None;
+
+    // Kernel images contain many printable strings; do not trust the first
+    // occurrence of "Linux version" unless its token is a real major.minor
+    // release. Keep scanning in case an unrelated embedded string appears first.
+    for (start, window) in buffer.windows(MARKER.len()).enumerate() {
+        if window != MARKER {
+            continue;
+        }
+        let rest = &buffer[start + MARKER.len()..];
+        let end = rest.iter().position(|byte| byte.is_ascii_whitespace() || *byte == 0)
+            .unwrap_or(rest.len());
+        let Ok(candidate) = std::str::from_utf8(&rest[..end]) else {
+            continue;
+        };
+        if candidate.is_empty() || !candidate.bytes().all(|byte| byte.is_ascii_graphic()) {
+            continue;
+        }
+        if linux_version_family(candidate).is_ok() {
+            return Ok(candidate.to_owned());
+        }
+        if rejected.is_none() {
+            rejected = Some(candidate.to_owned());
+        }
+    }
+
+    if let Some(candidate) = rejected {
+        bail!("kernel payload contains no valid Linux major.minor release; rejected banner token '{candidate}'");
+    }
+    bail!("kernel payload does not contain a valid Linux version banner (expected major.minor[.patch])")
 }
 
 
@@ -667,6 +688,39 @@ mod tests {
         let module = b"vermagic=5.10.198-android13-9 SMP preempt mod_unload modversions aarch64\0";
         assert!(validate_module_kernel_family(module, "5.10.269-gki-gf198").is_ok());
         assert!(validate_module_kernel_family(module, "6.6.42-android15-12-gabcdef").is_err());
+    }
+
+    #[test]
+    fn kernel_release_parser_skips_invalid_banner_before_valid_release() {
+        let payload = b"Linux version invalid-banner\0embedded text\0Linux version 5.10.269-android12-9-gtest SMP preempt\0";
+        assert_eq!(parse_kernel_release(payload).unwrap(), "5.10.269-android12-9-gtest");
+    }
+
+    #[test]
+    fn kernel_release_parser_rejects_banner_without_major_minor() {
+        let payload = b"Linux version not-a-version\0Linux version 6\0";
+        assert!(parse_kernel_release(payload).is_err());
+    }
+
+    #[test]
+    fn parses_kernelsu_next_kmi_build_matrix_from_kernel_banner() {
+        let fixtures = [
+            ("5.10.198-android12-9-gabcdef", "android12-5.10"),
+            ("5.10.198-android13-9-gabcdef", "android13-5.10"),
+            ("5.15.123-android13-11-gabcdef", "android13-5.15"),
+            ("5.15.123-android14-11-gabcdef", "android14-5.15"),
+            ("6.1.123-android14-11-gabcdef", "android14-6.1"),
+            ("6.6.123-android15-11-gabcdef", "android15-6.6"),
+            ("6.12.123-android16-11-gabcdef", "android16-6.12"),
+            ("6.18.1-android17-1-gabcdef", "android17-6.18"),
+        ];
+        for (release, expected_kmi) in fixtures {
+            let mut payload = b"Linux version ".to_vec();
+            payload.extend_from_slice(release.as_bytes());
+            payload.extend_from_slice(b" SMP preempt\0");
+            assert_eq!(parse_kernel_release(&payload).unwrap(), release);
+            assert_eq!(parse_kernel_kmi(&payload).unwrap(), expected_kmi);
+        }
     }
 
     #[test]

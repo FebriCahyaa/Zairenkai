@@ -36,4 +36,5 @@
     <string name="patch_flow_kmi_detecting">選択したイメージから KMI を検出しています…</string>
     <string name="patch_flow_kmi_detected">イメージから検出した KMI: %1$s</string>
     <string name="patch_flow_kmi_manual">このイメージからカーネル KMI を検出できませんでした。対象の KMI を手動で選択してください。</string>
-<string name="patch_flow_module_bundled_hint">リリース APK は選択した KMI に対応する同梱モジュールを使用できます。上書きする場合、または同梱モジュールがない場合のみファイルを選択してください。</string></resources>
+<string name="patch_flow_module_bundled_hint">リリース APK は選択した KMI に対応する同梱モジュールを使用できます。上書きする場合、または同梱モジュールがない場合のみファイルを選択してください。</string>    <string name="patch_flow_kmi_mismatch">選択したKMI（%1$s）はイメージから検出されたKMI（%2$s）と一致しません。検出されたブランチを使うか、イメージが対象カーネルのものか確認してください。</string>
+</resources>

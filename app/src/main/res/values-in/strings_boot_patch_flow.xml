@@ -36,4 +36,5 @@
     <string name="patch_flow_kmi_detecting">Mendeteksi KMI dari image yang dipilih…</string>
     <string name="patch_flow_kmi_detected">KMI terdeteksi dari image: %1$s</string>
     <string name="patch_flow_kmi_manual">Cabang Android KMI tidak dapat dideteksi. Pilih secara manual; aplikasi akan menampilkan rilis kernel sebagai diagnosis. KMI dan kompatibilitas versi simbol tetap harus cocok.</string>
-<string name="patch_flow_module_bundled_hint">APK rilis dapat memakai modul bawaan yang cocok dengan KMI terpilih. Pilih berkas untuk menggantinya atau jika modul bawaan tidak tersedia.</string></resources>
+<string name="patch_flow_module_bundled_hint">APK rilis dapat memakai modul bawaan yang cocok dengan KMI terpilih. Pilih berkas untuk menggantinya atau jika modul bawaan tidak tersedia.</string>    <string name="patch_flow_kmi_mismatch">KMI pilihan (%1$s) tidak cocok dengan KMI yang terdeteksi dari image (%2$s). Gunakan cabang yang terdeteksi atau pastikan image berasal dari kernel yang dimaksud.</string>
+</resources>

@@ -55,13 +55,13 @@ import kotlinx.coroutines.launch
 
 private enum class ZairenkaiInstallMode(val title: Int, val subtitle: Int) {
     FILE(R.string.patch_flow_method_file, R.string.patch_flow_method_file_sub),
-    DIRECT(R.string.patch_flow_method_direct, R.string.patch_flow_method_direct_sub),
-    INACTIVE(R.string.patch_flow_method_inactive, R.string.patch_flow_method_inactive_sub),
     ANYKERNEL(R.string.patch_flow_method_anykernel, R.string.patch_flow_method_anykernel_sub),
 }
 
 private data class ZairenkaiKmiOption(val id: String, val label: String)
 
+// Keep this matrix aligned with KernelSU-Next's supported LKM KMI build targets
+// (kernel/build-all.sh). Choosing a label manually does not prove symbol ABI compatibility.
 private val zairenkaiKmiOptions = listOf(
     ZairenkaiKmiOption("android12-5.10", "Android 12 · 5.10"),
     ZairenkaiKmiOption("android13-5.10", "Android 13 · 5.10"),
@@ -110,6 +110,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
     val savingText = stringResource(R.string.patch_flow_saving)
     val successText = stringResource(R.string.patch_flow_success)
     val savedText = stringResource(R.string.patch_flow_saved)
+    val kmiMismatch = detectedKmi != null && selectedKmi != null && detectedKmi != selectedKmi
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -243,7 +244,6 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
             Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ZairenkaiInstallMode.entries.forEach { option ->
                     val selected = mode == option
-                    val unavailable = option == ZairenkaiInstallMode.DIRECT || option == ZairenkaiInstallMode.INACTIVE
                     Surface(
                         shape = RoundedCornerShape(18.dp),
                         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -259,13 +259,6 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                             Column(Modifier.weight(1f)) {
                                 Text(stringResource(option.title), style = MaterialTheme.typography.titleSmall)
                                 Text(stringResource(option.subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (unavailable) {
-                                    Text(
-                                        stringResource(R.string.patch_flow_mode_unavailable),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
                             }
                         }
                     }
@@ -304,24 +297,6 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
-                    FilledTonalButton(
-                        onClick = { modulePicker.launch(arrayOf("application/octet-stream", "*/*")) },
-                        enabled = !patching && !detectingKmi,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(ZkIcons.Package, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.patch_flow_pick_module))
-                    }
-                    moduleName?.let { Text(stringResource(R.string.patch_flow_selected_module, it), style = MaterialTheme.typography.bodySmall) }
-                    if (moduleName == null) {
-                        Text(
-                            stringResource(R.string.patch_flow_module_bundled_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
                     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(stringResource(R.string.patch_flow_kmi_title), style = MaterialTheme.typography.titleSmall)
@@ -334,6 +309,11 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                 Text(stringResource(R.string.patch_flow_kmi_choose))
                             }
                             when {
+                                kmiMismatch -> Text(
+                                    stringResource(R.string.patch_flow_kmi_mismatch, selectedKmi.orEmpty(), detectedKmi.orEmpty()),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
                                 detectingKmi -> Text(detectingKmiText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 detectedKmi != null -> Text(
                                     stringResource(R.string.patch_flow_kmi_detected, detectedKmi!!),
@@ -357,13 +337,35 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                         }
                     }
 
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.errorContainer) {
+                    FilledTonalButton(
+                        onClick = { modulePicker.launch(arrayOf("application/octet-stream", "*/*")) },
+                        enabled = !patching && !detectingKmi,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(ZkIcons.Package, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.patch_flow_pick_module))
+                    }
+                    moduleName?.let { Text(stringResource(R.string.patch_flow_selected_module, it), style = MaterialTheme.typography.bodySmall) }
+                    if (moduleName == null) {
                         Text(
-                            stringResource(R.string.patch_flow_warning),
-                            Modifier.padding(14.dp),
+                            stringResource(R.string.patch_flow_module_bundled_hint),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+
+                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
+                            Icon(ZkIcons.Shield, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                stringResource(R.string.patch_flow_warning),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
 
                     Button(
@@ -387,7 +389,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                 }
                             }
                         },
-                        enabled = imageUri != null && selectedKmi != null && outputFile == null && !patching && !detectingKmi,
+                        enabled = imageUri != null && selectedKmi != null && outputFile == null && !patching && !detectingKmi && !kmiMismatch,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (patching) {
@@ -425,16 +427,6 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                         enabled = anyKernelUri != null,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.install_continue)) }
-                }
-                ZairenkaiInstallMode.DIRECT, ZairenkaiInstallMode.INACTIVE -> {
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                        Text(
-                            stringResource(R.string.patch_flow_direct_unavailable),
-                            Modifier.padding(14.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                 }
             }
 
