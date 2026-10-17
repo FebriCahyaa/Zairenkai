@@ -62,10 +62,51 @@ def main() -> int:
         check((WORKFLOWS / name).is_file(), f"orchestrator reference {name} exists")
     check(len(referenced) >= 7, "orchestrator fans out into reusable component workflows")
     check("workflow-contracts" in main_text, "orchestrator runs workflow contract tests")
-    check("full_build" in main_text, "full KMI matrix is explicitly opt-in")
-    check("Zairenkai-canary-validation-unsigned.apk" in main_text,
-          "integrated APK is identified as unsigned CI validation output")
-    check("spoof" not in main_text.lower(), "CI does not generate spoofed package variants")
+    check("full_build" in main_text, "full KMI matrix is restricted to manual dispatch")
+    check('default: true' in main_text, "manual full-build input defaults to true")
+    check("Zairenkai-canary-validation-unsigned.apk" not in main_text,
+          "validation CI does not stage or publish an APK artifact")
+    check("assembleSpoof" not in main_text,
+          "central validation CI does not build a randomized Spoof distribution")
+
+    distribution = (WORKFLOWS / "app-apks.yml").read_text(encoding="utf-8")
+    release = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
+    gradle = (ROOT / "app" / "build.gradle.kts").read_text(encoding="utf-8")
+    module = (WORKFLOWS / "build-module.yml").read_text(encoding="utf-8")
+    check("ZK_CANARY_ENABLED" not in distribution,
+          "Canary cannot silently skip publication behind a feature flag")
+    check("assembleDebug" not in main_text + distribution + release and
+          "bundleDebug" not in main_text + distribution + release and
+          "testDebug" not in main_text + distribution + release,
+          "distribution workflows contain no debug build/test tasks")
+    check(r"^[a-z]{6}(\.[a-z]{6}){2}$" in distribution and
+          r"^[a-z]{6}(\.[a-z]{6}){2}$" in release,
+          "Canary and Release Spoof IDs follow three six-letter lowercase components")
+    check(":app:assembleStandardCanary" in distribution and ":app:assembleSpoofCanary" in distribution,
+          "Canary publishes standard and Spoof variants")
+    check("Zairenkai-canary-spoof.apk" in distribution,
+          "Canary attaches the Spoof APK")
+    check(":app:assembleStandardRelease" in release and ":app:assembleSpoofRelease" in release,
+          "stable Release builds standard and Spoof variants")
+    check("Zairenkai-spoofed-release.apk" in release,
+          "stable Release attaches the Spoof APK")
+    check("Zairenkai-KMI-modules.zip" in release and "Zairenkai-KMI-SHA256SUMS" in release,
+          "stable Release attaches the verified standalone KMI bundle")
+    check("--max-parents=0" not in (ROOT / "tools" / "ci" / "generate-changelog.py").read_text(encoding="utf-8"),
+          "changelog generator has no dead fallback branch")
+    check('beforeVariants(selector().withBuildType("debug"))' in gradle,
+          "Android debug variants are disabled at variant creation")
+    check("Zairenkai-KMI-modules.zip" in module and "kmi-bundle" in module,
+          "module workflow exports a standalone KMI bundle")
+    check('smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"' in module,
+          "License Server and D1 readiness are checked before the expensive KMI matrix")
+    check('smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"' in distribution and
+          'smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"' in release,
+          "Canary and stable Release recheck the live License Server before publishing")
+    check(distribution.count("smoke-update-server.py") >= 2 and release.count("smoke-update-server.py") >= 2,
+          "Canary and Release verify both the published APK manifest and module metadata through the live updater proxy")
+    check("test-smoke-update-server.py" in main_text,
+          "workflow contracts test updater-proxy smoke validation")
 
     native_text = (WORKFLOWS / "native.yml").read_text(encoding="utf-8")
     atlas_text = (WORKFLOWS / "atlas.yml").read_text(encoding="utf-8")

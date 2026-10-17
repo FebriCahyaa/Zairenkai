@@ -100,14 +100,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Upload validation APKs and R8 mappings
+      - name: Upload validation R8 mappings (no APKs)
         if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: android-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          name: android-r8-mappings-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            app/build/outputs/apk/standard/canary/*.apk
-            app/build/outputs/apk/standard/release/*.apk
             app/build/outputs/mapping/standardCanary/**
             app/build/outputs/mapping/standardRelease/**
           if-no-files-found: warn

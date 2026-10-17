@@ -27,6 +27,7 @@
     <string name="update_fail_network">Couldn’t reach the update server. Check your connection and try again.</string>
     <string name="update_fail_notpublished">No build is published on this channel yet.</string>
     <string name="update_fail_manifest">The update information couldn\'t be read.</string>
+    <string name="update_fail_spoofed">Automatic updates are disabled for Spoof builds because the package ID is randomized per build. Download a newer Spoof APK from GitHub Releases.</string>
     <string name="update_fail_server">This build has no License Server URL configured. Install an official Canary or Release build.</string>
 
     <string name="update_auto_title">Check for updates automatically</string>

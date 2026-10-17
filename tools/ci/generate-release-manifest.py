@@ -47,7 +47,14 @@ def main() -> int:
     candidates = [
         ROOT / "Zairenkai-module.zip",
         standard_apk,
+        ROOT / f"{standard_apk.name}.sha256",
+        ROOT / "Zairenkai-spoofed-release.apk",
+        ROOT / "Zairenkai-spoofed-release.apk.sha256",
+        ROOT / "Zairenkai-KMI-modules.zip",
+        ROOT / "Zairenkai-KMI-modules.zip.sha256",
+        ROOT / "Zairenkai-KMI-SHA256SUMS",
         ROOT / "Zairenkai-module-SHA256SUMS",
+        ROOT / "Zairenkai-CHANGELOG.md",
     ]
     files = []
     for path in candidates:
@@ -61,7 +68,14 @@ def main() -> int:
     required = {
         "Zairenkai-module.zip",
         standard_apk.name,
+        f"{standard_apk.name}.sha256",
+        "Zairenkai-spoofed-release.apk",
+        "Zairenkai-spoofed-release.apk.sha256",
+        "Zairenkai-KMI-modules.zip",
+        "Zairenkai-KMI-modules.zip.sha256",
+        "Zairenkai-KMI-SHA256SUMS",
         "Zairenkai-module-SHA256SUMS",
+        "Zairenkai-CHANGELOG.md",
     }
     missing = required - {item["path"] for item in files}
     if missing:

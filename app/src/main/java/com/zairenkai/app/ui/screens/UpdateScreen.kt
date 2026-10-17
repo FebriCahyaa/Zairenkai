@@ -241,6 +241,7 @@ private fun StatusCard(
 }
 
 private fun failReasonRes(reason: CheckResult.Reason): Int = when (reason) {
+    CheckResult.Reason.SPOOFED_BUILD -> R.string.update_fail_spoofed
     CheckResult.Reason.SERVER_NOT_CONFIGURED -> R.string.update_fail_server
     CheckResult.Reason.NO_NETWORK -> R.string.update_fail_network
     CheckResult.Reason.NOT_PUBLISHED -> R.string.update_fail_notpublished

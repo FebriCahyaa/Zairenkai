@@ -77,6 +77,7 @@ jobs:
             echo "::error::Set ZKFC_LICENSE_SERVER_URL to the HTTPS origin of the License Server Worker (no path)."
             exit 1
           }
+          python3 tools/ci/smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"
 
           BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
           if [[ "$CHANNEL" == canary ]]; then
@@ -266,6 +267,41 @@ jobs:
           cp module/SHA256SUMS SHA256SUMS
           sha256sum Zairenkai-module.zip
           unzip -t Zairenkai-module.zip >/dev/null
+
+      - name: Create standalone KMI module bundle and verify every KMI/architecture pair
+        run: |
+          set -euo pipefail
+          expected_kmis=(
+            android12-5.10 android13-5.10 android13-5.15 android14-5.15
+            android14-6.1 android15-6.6 android16-6.12 android17-6.18
+          )
+          for kmi in "${expected_kmis[@]}"; do
+            for arch in arm64 x86_64; do
+              ko="module/lkm/$kmi-$arch/zkfc.ko"
+              test -s "$ko" || { echo "::error::Missing KMI module: $ko"; exit 1; }
+              test -s "$ko.sha256" || { echo "::error::Missing checksum: $ko.sha256"; exit 1; }
+              (cd "$(dirname "$ko")" && sha256sum -c zkfc.ko.sha256)
+            done
+          done
+          count="$(find module/lkm -type f -name zkfc.ko | wc -l | tr -d ' ')"
+          [[ "$count" == 16 ]] || { echo "::error::Expected 16 KMI .ko files, found $count"; exit 1; }
+          rm -f Zairenkai-KMI-modules.zip Zairenkai-KMI-modules.zip.sha256 Zairenkai-KMI-SHA256SUMS
+          (cd module/lkm && zip -qr9 "$GITHUB_WORKSPACE/Zairenkai-KMI-modules.zip" .)
+          (cd module/lkm && find . -type f -name zkfc.ko -print0 | sort -z | xargs -0 sha256sum) > Zairenkai-KMI-SHA256SUMS
+          sha256sum Zairenkai-KMI-modules.zip > Zairenkai-KMI-modules.zip.sha256
+          unzip -t Zairenkai-KMI-modules.zip >/dev/null
+          echo "Verified 16 KMI binaries across 8 KMI lines and 2 architectures."
+
+      - name: Upload standalone KMI bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: kmi-bundle
+          path: |
+            Zairenkai-KMI-modules.zip
+            Zairenkai-KMI-modules.zip.sha256
+            Zairenkai-KMI-SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload module artifact
         uses: actions/upload-artifact@v7

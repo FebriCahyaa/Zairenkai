@@ -33,7 +33,7 @@ sealed interface CheckResult {
     data class Available(val manifest: ReleaseManifest) : CheckResult
     data class Failed(val reason: Reason) : CheckResult
 
-    enum class Reason { SERVER_NOT_CONFIGURED, NO_NETWORK, NOT_PUBLISHED, BAD_MANIFEST }
+    enum class Reason { SPOOFED_BUILD, SERVER_NOT_CONFIGURED, NO_NETWORK, NOT_PUBLISHED, BAD_MANIFEST }
 }
 
 class Updater(private val context: Context) {
@@ -47,6 +47,11 @@ class Updater(private val context: Context) {
     /** Check [channel] against [installedVersionCode]. Runs off the main thread. */
     suspend fun check(channel: UpdateChannel, installedVersionCode: Int): CheckResult =
         withContext(Dispatchers.IO) {
+            // Spoof application IDs are randomized per CI run. The standard
+            // signed update manifest cannot safely update that package identity.
+            if (BuildConfig.ZKFC_SPOOFED_BUILD) {
+                return@withContext CheckResult.Failed(CheckResult.Reason.SPOOFED_BUILD)
+            }
             if (BuildConfig.ZKFC_LICENSE_SERVER_URL.isBlank()) {
                 return@withContext CheckResult.Failed(CheckResult.Reason.SERVER_NOT_CONFIGURED)
             }

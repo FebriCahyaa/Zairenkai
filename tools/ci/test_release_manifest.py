@@ -26,8 +26,15 @@ class ReleaseManifestTest(unittest.TestCase):
         (self.root / "tools/zkfc-license").mkdir(parents=True)
         (self.root / "tools/zkfc-license/zkfc_license.py").write_text("API_MAJOR = 2\n", encoding="utf-8")
         (self.root / "Zairenkai-standard-release.apk").write_bytes(b"test-standard-apk")
+        (self.root / "Zairenkai-standard-release.apk.sha256").write_text("standard hash\n", encoding="utf-8")
         (self.root / "Zairenkai-module.zip").write_bytes(b"test-module-zip")
         (self.root / "Zairenkai-module-SHA256SUMS").write_text("test checksum list\n", encoding="utf-8")
+        (self.root / "Zairenkai-spoofed-release.apk").write_bytes(b"test-spoof-apk")
+        (self.root / "Zairenkai-spoofed-release.apk.sha256").write_text("spoof hash\n", encoding="utf-8")
+        (self.root / "Zairenkai-KMI-modules.zip").write_bytes(b"test-kmi-zip")
+        (self.root / "Zairenkai-KMI-modules.zip.sha256").write_text("kmi hash\n", encoding="utf-8")
+        (self.root / "Zairenkai-KMI-SHA256SUMS").write_text("KMI checksum list\n", encoding="utf-8")
+        (self.root / "Zairenkai-CHANGELOG.md").write_text("# Release changes\n", encoding="utf-8")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -47,11 +54,17 @@ class ReleaseManifestTest(unittest.TestCase):
         self.assertIn("Zairenkai-module.zip", entries)
         self.assertEqual(entries["Zairenkai-module.zip"]["sha256"], hashlib.sha256(b"test-module-zip").hexdigest())
         self.assertEqual(entries["Zairenkai-standard-release.apk"]["size_bytes"], len(b"test-standard-apk"))
-        self.assertNotIn("Zairenkai-spoofed-release.apk", entries)
+        self.assertIn("Zairenkai-standard-release.apk.sha256", entries)
+        self.assertIn("Zairenkai-spoofed-release.apk", entries)
+        self.assertIn("Zairenkai-KMI-modules.zip", entries)
+        self.assertIn("Zairenkai-KMI-SHA256SUMS", entries)
+        self.assertIn("Zairenkai-CHANGELOG.md", entries)
 
     def test_manifest_supports_stable_updater_apk_filename(self) -> None:
         (self.root / "Zairenkai-standard-release.apk").unlink()
+        (self.root / "Zairenkai-standard-release.apk.sha256").unlink()
         (self.root / "Zairenkai-release.apk").write_bytes(b"stable-updater-apk")
+        (self.root / "Zairenkai-release.apk.sha256").write_text("stable hash\n", encoding="utf-8")
         with patch.dict("os.environ", {"GITHUB_WORKFLOW": "unit-test"}, clear=False), patch(
             "sys.argv", [str(SCRIPT), "--output", "manifest.json", "--version", "v1.2.3"]
         ):
