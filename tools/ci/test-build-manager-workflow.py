@@ -70,6 +70,16 @@ def main() -> int:
     installer = (ROOT / "module" / "customize.sh").read_text(encoding="utf-8")
     check('! -path "$MODPATH/META-INF/*"' in installer and "archive-level installer" in installer,
           "on-device module integrity counts only files that are installed under MODPATH")
+    embedded_stager = (ROOT / "tools" / "bootpatch" / "stage-embedded-module.sh").read_text(encoding="utf-8")
+    payload_verifier = (ROOT / "tools" / "ci" / "test-module-payload-manifest.py").read_text(encoding="utf-8")
+    check("test-module-payload-manifest.py" in embedded_stager and
+          '--module-dir "$TMP/extracted"' in embedded_stager and
+          '--archive "$ZIP_PATH"' in embedded_stager,
+          "APK embedding uses the canonical META-INF-aware module payload verifier")
+    check('"META-INF/com/google/android/update-binary"' in payload_verifier and
+          '"META-INF/com/google/android/updater-script"' in payload_verifier and
+          "archive_meta_files != allowed_meta_files" in payload_verifier,
+          "module verifier allows only the two expected archive-level installer files")
     check("sync-metadata-signing-secrets.py" in (ROOT / "docs/security/SECURE_RELEASE_RUNBOOK.md").read_text(encoding="utf-8"),
           "runbook documents safe sync of the already-pinned metadata key to canary-signing")
     check((ROOT / "tools/release/sync-metadata-signing-secrets.py").is_file(),

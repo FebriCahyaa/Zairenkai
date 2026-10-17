@@ -69,55 +69,12 @@ mkdir -p "$TMP/extracted"
 unzip -q "$ZIP_PATH" -d "$TMP/extracted"
 [[ -s "$TMP/extracted/SHA256SUMS" ]] || { echo "error: SHA256SUMS is missing from module ZIP" >&2; exit 3; }
 
-# Hashes must cover the exact file set; an extra/unlisted executable or a
-# missing listed file is rejected before Gradle pins this archive into the APK.
-python3 - "$TMP/extracted" <<'PY'
-import hashlib
-import re
-import sys
-from pathlib import Path
-
-root = Path(sys.argv[1]).resolve()
-manifest = root / "SHA256SUMS"
-pattern = re.compile(r"^([0-9a-fA-F]{64})\s+(.+?)\s*$")
-expected = set()
-
-def normalize(raw):
-    raw = raw.removeprefix("*")
-    while raw.startswith("./"):
-        raw = raw[2:]
-    if not raw or raw.startswith("/") or "\\" in raw:
-        raise ValueError(f"unsafe checksum path: {raw!r}")
-    parts = raw.split("/")
-    if any(part in ("", ".", "..") for part in parts) or raw == "SHA256SUMS":
-        raise ValueError(f"unsafe checksum path: {raw!r}")
-    return "/".join(parts)
-
-try:
-    for line in manifest.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        match = pattern.fullmatch(line)
-        if not match:
-            raise ValueError("malformed SHA256SUMS line")
-        name = normalize(match.group(2))
-        if name in expected:
-            raise ValueError(f"duplicate manifest entry: {name}")
-        expected.add(name)
-    actual = set()
-    for path in root.rglob("*"):
-        if path.is_symlink():
-            raise ValueError(f"symbolic link is not permitted: {path.relative_to(root)}")
-        if path.is_file() and path.name != "SHA256SUMS":
-            actual.add(path.relative_to(root).as_posix())
-    if expected != actual:
-        raise ValueError(
-            f"manifest does not cover exact file set; unlisted={sorted(actual - expected)[:8]}, "
-            f"missing={sorted(expected - actual)[:8]}"
-        )
-except (OSError, ValueError) as exc:
-    raise SystemExit(f"error: manifest coverage check failed: {exc}")
-PY
+# Use the same manifest verifier as module packaging. Archive-level META-INF
+# installer files are consumed by the root manager and are not installed under
+# MODPATH, so they must not be counted as payload files in SHA256SUMS.
+python3 tools/ci/test-module-payload-manifest.py \
+  --module-dir "$TMP/extracted" \
+  --archive "$ZIP_PATH"
 (
   cd "$TMP/extracted"
   sha256sum --check SHA256SUMS

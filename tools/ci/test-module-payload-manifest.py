@@ -47,16 +47,35 @@ def verify(module_dir: Path, archive: Path) -> None:
         raise ValueError("payload manifest is empty")
 
     archive_files: set[str] = set()
+    archive_meta_files: set[str] = set()
     with zipfile.ZipFile(archive) as zf:
         bad = zf.testzip()
         if bad:
             raise ValueError(f"corrupt ZIP member: {bad}")
         for name in zf.namelist():
             clean = name.removeprefix("./").rstrip("/")
-            if not clean or clean == "SHA256SUMS" or clean == "META-INF" or clean.startswith("META-INF/"):
+            if not clean or clean == "SHA256SUMS":
+                continue
+            if clean == "META-INF" or clean.startswith("META-INF/"):
+                if not name.endswith("/"):
+                    archive_meta_files.add(clean)
                 continue
             if not name.endswith("/"):
                 archive_files.add(clean)
+
+    # Only the two expected recovery/root-manager installer entry points are
+    # allowed at archive level. They are intentionally outside MODPATH payload
+    # SHA256SUMS, but unexpected installer metadata must not be silently ignored.
+    allowed_meta_files = {
+        "META-INF/com/google/android/update-binary",
+        "META-INF/com/google/android/updater-script",
+    }
+    if archive_meta_files != allowed_meta_files:
+        raise ValueError(
+            "archive-level installer metadata mismatch; "
+            f"unlisted={sorted(archive_meta_files - allowed_meta_files)[:5]}, "
+            f"missing={sorted(allowed_meta_files - archive_meta_files)[:5]}"
+        )
 
     expected_files = {
         path.relative_to(module_dir).as_posix()
