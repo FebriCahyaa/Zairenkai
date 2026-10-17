@@ -81,11 +81,14 @@ fn run() -> Result<()> {
         };
 
         let module_kmi_info = if let Some(module_path) = args.kmi_reference_module.as_ref() {
-            ensure!(module_path.is_file(), "KMI reference vendor module does not exist");
-            let module_data = fs::read(module_path).context("failed to read KMI reference module")?;
-            let kmi = parse_kmi_from_module(&module_data).context(
-                "could not detect Android KMI from the selected vendor module vermagic",
-            )?;
+            ensure!(
+                module_path.is_file(),
+                "KMI reference vendor module does not exist"
+            );
+            let module_data =
+                fs::read(module_path).context("failed to read KMI reference module")?;
+            let kmi = parse_kmi_from_module(&module_data)
+                .context("could not detect Android KMI from the selected vendor module vermagic")?;
             Some((module_data, kmi))
         } else {
             None
@@ -109,7 +112,11 @@ fn run() -> Result<()> {
                 validate_module_kernel_family(&module_data, &identity.release).context(
                     "vendor module vermagic family does not match the target kernel release",
                 )?;
-                (Some(identity.release), Some(kmi), Some("vendor-module-vermagic"))
+                (
+                    Some(identity.release),
+                    Some(kmi),
+                    Some("vendor-module-vermagic"),
+                )
             } else {
                 (Some(identity.release), None, None)
             }
@@ -326,17 +333,17 @@ fn run() -> Result<()> {
     let kernel_release = identity.release.as_str();
     validate_module_kernel_family(&module_data, kernel_release)
         .context("ZKFC module Linux major/minor does not match the selected kernel family")?;
-    let reference_module_data =
-        if let Some(reference_module_path) = args.kmi_reference_module.as_ref() {
-            let data = fs::read(reference_module_path)
-                .context("failed to read KMI reference vendor module")?;
-            validate_module_kernel_family(&data, kernel_release).context(
-                "KMI reference vendor module Linux family does not match the target kernel",
-            )?;
-            Some(data)
-        } else {
-            None
-        };
+    let reference_module_data = if let Some(reference_module_path) =
+        args.kmi_reference_module.as_ref()
+    {
+        let data = fs::read(reference_module_path)
+            .context("failed to read KMI reference vendor module")?;
+        validate_module_kernel_family(&data, kernel_release)
+            .context("KMI reference vendor module Linux family does not match the target kernel")?;
+        Some(data)
+    } else {
+        None
+    };
     let reference_module_kmi = reference_module_data
         .as_deref()
         .map(parse_kmi_from_module)
@@ -848,10 +855,7 @@ fn inject_runtime_payloads(
     // module itself is compiled for the selected KMI.
     let patch_manifest = format!(
         "format=3\nkmi={}\nkmi_source={}\nkernel_release={}\nmodule={}\ninit_wrapper=zkinit\noriginal_init=init.real\npatcher=zkbootpatch-0.3.0\n",
-        module_kmi,
-        kmi_source,
-        kernel_release,
-        MODULE_ENTRY,
+        module_kmi, kmi_source, kernel_release, MODULE_ENTRY,
     );
     println!("- Adding Zairenkai KMI diagnostic manifest");
     cpio.add(
@@ -879,7 +883,8 @@ fn extract_ramdisk(ramdisk_image: &RamdiskImage<'_>) -> Result<(Cpio, Option<usi
                 "vendor_boot has no suitable init_boot-named or unnamed generic ramdisk fragment"
             ))?;
         let mut cpio_data = Vec::<u8>::new();
-        target.dump(&mut cpio_data, false)
+        target
+            .dump(&mut cpio_data, false)
             .context("failed to decompress selected vendor ramdisk fragment")?;
         return Ok((
             Cpio::load_from_data(&cpio_data)
@@ -912,7 +917,9 @@ fn verify_output(
     match image.get_header().get_version() {
         BootImageVersion::Android(version) if version >= 3 => {}
         BootImageVersion::Vendor(_) => {}
-        _ => bail!("repacked image is not a supported Android v3/v4 boot/init_boot/vendor_boot image"),
+        _ => bail!(
+            "repacked image is not a supported Android v3/v4 boot/init_boot/vendor_boot image"
+        ),
     }
     ensure!(
         image.get_blocks().get_ramdisk().is_some(),
@@ -985,7 +992,9 @@ fn verify_output(
     );
     let expected_kmi_source_line = format!("kmi_source={expected_kmi_source}");
     ensure!(
-        manifest.lines().any(|line| line == expected_kmi_source_line),
+        manifest
+            .lines()
+            .any(|line| line == expected_kmi_source_line),
         "patch manifest KMI provenance does not match the detected kernel metadata"
     );
     let expected_release_line = format!("kernel_release={expected_kernel_release}");
@@ -1066,19 +1075,22 @@ mod tests {
 
     #[test]
     fn parses_vendor_module_vermagic_as_kmi_fallback_like_kernelsu_next() {
-        let module = b"vermagic=5.10.269-android12-9-gki SMP preempt mod_unload modversions aarch64\0";
+        let module =
+            b"vermagic=5.10.269-android12-9-gki SMP preempt mod_unload modversions aarch64\0";
         assert_eq!(parse_kmi_from_module(module).unwrap(), "android12-5.10");
     }
 
     #[test]
     fn refuses_vendor_module_vermagic_without_android_branch_marker() {
-        let module = b"vermagic=5.10.269-gki-g18fe99112273 SMP preempt mod_unload modversions aarch64\0";
+        let module =
+            b"vermagic=5.10.269-gki-g18fe99112273 SMP preempt mod_unload modversions aarch64\0";
         assert!(parse_kmi_from_module(module).is_err());
     }
 
     #[test]
     fn refuses_vendor_module_kmi_outside_supported_matrix() {
-        let module = b"vermagic=5.10.269-android16-1-gtest SMP preempt mod_unload modversions aarch64\0";
+        let module =
+            b"vermagic=5.10.269-android16-1-gtest SMP preempt mod_unload modversions aarch64\0";
         assert!(parse_kmi_from_module(module).is_err());
     }
 
