@@ -115,6 +115,8 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
     val successText = stringResource(R.string.patch_flow_success)
     val savedText = stringResource(R.string.patch_flow_saved)
     val kmiMismatch = detectedKmi != null && selectedKmi != null && detectedKmi != selectedKmi
+    val kmiVerified = detectedKmi != null &&
+        (detectedKmiSource == "kernel-image" || detectedKmiSource == "vendor-module-vermagic")
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -412,9 +414,9 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                     )
                                 }
                                 imageUri != null -> Text(
-                                    stringResource(R.string.patch_flow_kmi_manual),
+                                    stringResource(R.string.patch_flow_kmi_unverified),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
                             detectedKernelRelease?.let { release ->
@@ -487,7 +489,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                 }
                             }
                         },
-                        enabled = imageUri != null && selectedKmi != null && outputFile == null && !patching && !detectingKmi && !kmiMismatch,
+                        enabled = imageUri != null && selectedKmi != null && kmiVerified && outputFile == null && !patching && !detectingKmi && !kmiMismatch,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (patching) {

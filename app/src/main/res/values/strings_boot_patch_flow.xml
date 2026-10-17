@@ -28,11 +28,12 @@
     <string name="patch_flow_kmi_title">Target kernel KMI</string>
     <string name="patch_flow_kmi_not_selected">Choose the KMI for this device</string>
     <string name="patch_flow_kmi_choose">Choose KMI</string>
-    <string name="patch_flow_kmi_help">The selected KMI and Linux major/minor family are checked against zkfc.ko. The kernel loader still validates symbol versions when it loads the module.</string>
+    <string name="patch_flow_kmi_unverified">This image does not expose a verifiable Android KMI. Select the matching boot.img or a vendor .ko from the exact same firmware build; manual KMI selection is blocked for safety.</string>
+    <string name="patch_flow_kmi_help">The selected KMI must be verified from the kernel banner or a vendor .ko from the exact same firmware. The patched image keeps Android /init unchanged and only attempts to load zkfc.ko after sys.boot_completed=1. The kernel still validates module symbols at load time.</string>
     <string name="patch_flow_kmi_dialog_title">Select kernel KMI</string>
-    <string name="patch_flow_warning">Use an image from the same device and ROM. AVB is not re-signed: an unlocked bootloader or compatible signing setup is required. Module signature enforcement or KMI mismatch can prevent loading. Keep a known-good recovery image.</string>
+    <string name="patch_flow_warning">Use boot/init_boot/vendor_boot images from the exact same device and ROM build. Android /init is left unchanged; zkfc.ko is loaded only after sys.boot_completed=1. AVB is not re-signed, and incompatible KMI or module-signature enforcement can still prevent loading. Keep a known-good stock image and recovery path; do not flash an untested image.</string>
     <string name="patch_flow_action">Patch image</string>
-    <string name="patch_flow_running">Unpacking, injecting ZKFC and repacking…</string>
+    <string name="patch_flow_running">Unpacking, preserving Android init, adding a delayed module trigger, and repacking…</string>
     <string name="patch_flow_success">Patch completed and verified structurally. Choose where to save the output image.</string>
     <string name="patch_flow_save">Save patched image</string>
     <string name="patch_flow_saving">Saving patched image…</string>

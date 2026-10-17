@@ -68,8 +68,10 @@ def main() -> int:
           "vendor_boot selects init_boot-named ramdisk first, then unnamed generic ramdisk")
     check("replace_vendor_ramdisk(index" in rust and "BootImageVersion::Vendor(_)" in rust,
           "vendor_boot repacking replaces only the selected generic ramdisk fragment")
-    check("Selected KMI {kmi} is a manual hint" in rust and 'kmi_source="manual"' not in rust,
-          "manual KMI selection remains explicitly unverified instead of being reported as detected")
+    check("manual branch selection is not safe" in rust and 'kmi_source="manual"' not in rust,
+          "branchless kernels require a KMI reference instead of accepting a manual branch guess")
+    check("init_wrapper=none" in rust and "sys.boot_completed=1" in rust and "INIT_RC_BACKUP_ENTRY" in rust,
+          "patcher preserves PID 1 and delays ZKFC loading until Android boot completion")
     check("never flashes a" in rust and "block device" in rust,
           "file patching remains non-destructive and does not silently flash a partition")
 
@@ -77,6 +79,12 @@ def main() -> int:
     sheet = (ROOT / "app/src/main/java/com/zairenkai/app/ui/home/ZairenkaiBootPatchSheet.kt").read_text(encoding="utf-8")
     check("--kmi-reference-module" in repository and "DETECTED_KMI_SOURCE=" in repository,
           "Android repository passes vendor .ko reference to the native detector and reads KMI provenance")
+    service = (ROOT / "module/service.sh").read_text(encoding="utf-8")
+    installer = (ROOT / "module/customize.sh").read_text(encoding="utf-8")
+    check("refusing speculative same-family module loads" in service and "refusing cross-KMI fallback" in service,
+          "runtime service refuses speculative same-family module loads when KMI is unknown")
+    check("refusing to guess between same-family modules" in installer and 'module_kmi "$PRIMARY"' in installer,
+          "installer requires exact KMI metadata instead of selecting a same-family module")
     check("kmiReferenceModulePicker" in sheet and "patch_flow_pick_kmi_reference_module" in sheet,
           "boot patch UI exposes vendor module fallback instead of requiring privileged /proc reads")
     check("BootPatchRepository.patch(" in sheet and "kmiReferenceModuleUri" in sheet,

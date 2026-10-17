@@ -65,10 +65,9 @@ if [ ! -d "$MODPATH/lkm" ] || [ -z "$(find "$MODPATH/lkm" -type f -name 'zkfc.ko
   ui_print "- No LKM payload; using the already-present built-in ZKFC endpoint."
 fi
 
-# Prefer the directory matching the kernel's Android KMI when it is exposed.
-# Some vendor kernels omit androidNN-X.Y from uname -r; in that case retain
-# candidates from the same Linux family/ABI and let the kernel loader validate
-# vermagic plus symbol CRCs. Do not arbitrarily claim that a KMI branch is known.
+# Fail closed when the running kernel does not expose an Android KMI branch.
+# Linux major/minor family alone is not enough to select a safe LKM; trying
+# android12/13/... modules in sequence can load an ABI-incompatible module.
 KREL="$(uname -r)"
 ui_print "- Kernel: $KREL"
 KERNEL_FAMILY="$(echo "$KREL" | cut -d- -f1 | awk -F. 'NF >= 2 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "." $2 }')"
@@ -95,46 +94,34 @@ module_family() {
   echo "$numeric" | awk -F. 'NF >= 2 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "." $2 }'
 }
 
-# Refuse a misleading "enabled" installation if neither a built-in endpoint
-# nor any module from the running kernel's Linux family is available.
-if [ ! -e /dev/zkfc ]; then
-  if [ -z "$KERNEL_FAMILY" ]; then
-    ui_print "! Cannot identify the running kernel's Linux major/minor family: $KREL"
-    abort "  refusing to guess which kernel module to load"
-  fi
-  family_match=0
-  while IFS= read -r candidate; do
-    [ -f "$candidate" ] || continue
-    if [ "$(module_family "$candidate")" = "$KERNEL_FAMILY" ]; then
-      family_match=1
-      break
-    fi
-  done <<EOF_MODULES
-$(find "$MODPATH/lkm" -type f -name 'zkfc.ko' 2>/dev/null | sort)
-EOF_MODULES
-  if [ "$family_match" -ne 1 ]; then
-    ui_print "! No zkfc.ko candidate targets Linux $KERNEL_FAMILY."
-    abort "  this module package cannot provide ZKFC for the running kernel"
-  fi
-fi
-
+# Refuse to install an inactive/misleading runtime unless the kernel already
+# exposes /dev/zkfc or an exact KMI/ABI module can be selected and validated.
 mkdir -p "$MODPATH/zkfc"
 PRIMARY="$MODPATH/lkm/$KMI-$ABIDIR/zkfc.ko"
-if [ -n "$KMI" ] && [ -f "$PRIMARY" ] && [ "$(module_family "$PRIMARY")" = "$KERNEL_FAMILY" ]; then
+module_kmi() {
+  release="$(module_release "$1")"
+  branch="$(echo "$release" | grep -oE 'android[0-9]+' | head -1)"
+  family="$(module_family "$1")"
+  [ -n "$branch" ] && [ -n "$family" ] && echo "$branch-$family"
+}
+if [ ! -e /dev/zkfc ]; then
+  if [ -z "$KMI" ]; then
+    ui_print "! Kernel release has no recognizable Android KMI branch: $KREL"
+    abort "  refusing to guess between same-family modules; use a kernel that exposes KMI or a built-in ZKFC driver"
+  fi
+  if [ ! -f "$PRIMARY" ] || [ "$(module_family "$PRIMARY")" != "$KERNEL_FAMILY" ] || [ "$(module_kmi "$PRIMARY")" != "$KMI" ]; then
+    ui_print "! No module validates for exact KMI/ABI $KMI-$ABIDIR and Linux family ${KERNEL_FAMILY:-unknown}."
+    abort "  refusing cross-KMI fallback to a module that may destabilize the system"
+  fi
   cp "$PRIMARY" "$MODPATH/zkfc/zkfc.ko"
-  ui_print "- Preferred KMI module staged: $KMI-$ABIDIR"
-  ui_print "  Other same-family candidates are retained as runtime fallbacks."
+  ui_print "- Exact KMI module staged: $KMI-$ABIDIR"
+elif [ -n "$KMI" ] && [ -f "$PRIMARY" ] && [ "$(module_kmi "$PRIMARY")" = "$KMI" ]; then
+  cp "$PRIMARY" "$MODPATH/zkfc/zkfc.ko"
+  ui_print "- Exact KMI module staged: $KMI-$ABIDIR"
 else
   rm -f "$MODPATH/zkfc/zkfc.ko"
-  if [ -n "$KMI" ]; then
-    ui_print "! No primary module for $KMI/$ABIDIR in Linux family ${KERNEL_FAMILY:-unknown}."
-  else
-    ui_print "! Kernel release has no recognizable Android KMI branch."
-  fi
-  ui_print "  Compatible same-family candidates will be tried at boot; the kernel loader checks module compatibility."
+  ui_print "- Existing /dev/zkfc endpoint detected; no speculative module staged."
 fi
-# Do not delete lkm candidates yet. service.sh tries matching-ABI and
-# matching-major/minor modules until the kernel creates /dev/zkfc, then stops.
 
 # Install only the userspace ABI that matches the running device. The old loop
 # always tried arm64-v8a first, even on x86_64 devices, which could leave a

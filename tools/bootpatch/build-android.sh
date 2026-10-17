@@ -26,21 +26,17 @@ test -f "$CRATE" || {
 }
 
 cd "$ROOT/native/bootpatch"
-cargo ndk -t arm64-v8a -t x86_64 --platform 31 build --release
+cargo ndk -t arm64-v8a -t x86_64 --platform 31 build --release --bin zkbootpatch
 
 for pair in "aarch64-linux-android:arm64-v8a" "x86_64-linux-android:x86_64"; do
     triple="${pair%%:*}"
     abi="${pair##*:}"
     source="$TARGET/$triple/release/zkbootpatch"
-    init_source="$TARGET/$triple/release/zkinit"
     dest="$JNI/$abi/libzkbootpatch.so"
-    init_dest="$JNI/$abi/libzkinit.so"
     test -x "$source" || { echo "missing target executable: $source" >&2; exit 1; }
-    test -x "$init_source" || { echo "missing target init wrapper: $init_source" >&2; exit 1; }
     mkdir -p "$(dirname "$dest")"
     install -m 0755 "$source" "$dest"
-    install -m 0755 "$init_source" "$init_dest"
-    if command -v file >/dev/null 2>&1; then file "$dest" "$init_dest"; fi
+    if command -v file >/dev/null 2>&1; then file "$dest"; fi
 done
 
-echo "Standalone GPL boot patcher and init wrapper prepared in app/src/main/jniLibs."
+echo "Standalone GPL boot patcher prepared in app/src/main/jniLibs (no PID-1 wrapper)."

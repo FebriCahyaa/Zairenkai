@@ -28,11 +28,12 @@
     <string name="patch_flow_kmi_title">KMI kernel target</string>
     <string name="patch_flow_kmi_not_selected">Pilih KMI perangkat ini</string>
     <string name="patch_flow_kmi_choose">Pilih KMI</string>
-    <string name="patch_flow_kmi_help">Cabang KMI dan keluarga Linux major/minor diperiksa terhadap zkfc.ko. Kernel loader tetap memvalidasi versi simbol saat modul dimuat.</string>
+    <string name="patch_flow_kmi_unverified">Image ini tidak menampilkan KMI Android yang dapat diverifikasi. Pilih boot.img yang cocok atau file .ko vendor dari build firmware yang persis sama; pemilihan KMI manual diblokir demi keamanan.</string>
+    <string name="patch_flow_kmi_help">KMI harus diverifikasi dari banner kernel atau file .ko vendor dari firmware yang persis sama. Image hasil patch tetap mempertahankan /init Android dan baru mencoba memuat zkfc.ko setelah sys.boot_completed=1. Kernel tetap memvalidasi simbol modul saat dimuat.</string>
     <string name="patch_flow_kmi_dialog_title">Pilih KMI kernel</string>
-    <string name="patch_flow_warning">Gunakan image dari perangkat dan ROM yang sama. AVB tidak ditandatangani ulang: diperlukan bootloader terbuka atau konfigurasi penandatanganan yang kompatibel. Kebijakan tanda tangan modul atau KMI yang tidak cocok dapat mencegah modul dimuat. Simpan image pemulihan yang diketahui berfungsi.</string>
+    <string name="patch_flow_warning">Gunakan image boot/init_boot/vendor_boot dari perangkat dan build ROM yang persis sama. /init Android tidak diganti; zkfc.ko baru dicoba dimuat setelah sys.boot_completed=1. AVB tidak ditandatangani ulang, dan KMI atau tanda tangan modul yang tidak cocok tetap bisa menggagalkan pemuatan. Simpan image stock dan jalur recovery yang diketahui berfungsi; jangan flash image yang belum diuji.</string>
     <string name="patch_flow_action">Patch image</string>
-    <string name="patch_flow_running">Membongkar, menyisipkan ZKFC, dan repack…</string>
+    <string name="patch_flow_running">Membongkar, mempertahankan init Android, menambahkan pemicu modul tertunda, lalu repack…</string>
     <string name="patch_flow_success">Patch selesai dan struktur output terverifikasi. Pilih lokasi untuk menyimpan image.</string>
     <string name="patch_flow_save">Simpan image hasil patch</string>
     <string name="patch_flow_saving">Menyimpan image hasil patch…</string>

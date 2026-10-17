@@ -7,6 +7,8 @@
 - Add storage-aware I/O safety and retain memory/ZRAM safety envelopes.
 
 ## Unreleased
+- Fail closed on branchless kernel releases: do not trial-load a different KMI module based only on Linux major/minor.
+- Validate the selected staged module's KMI metadata as well as its hash before `insmod`.
 - Harden zperfd path writes with component-by-component `openat()` resolution and `O_NOFOLLOW`.
 - Remove pseudo-locking of sysfs permissions; serialize writes through the durable transaction lock instead.
 - Add crash-corrupt journal rejection, boot-id fail-closed behavior, and same-boot dynamic-node baseline capture.

@@ -34,9 +34,8 @@ fi
 
 until [ -d /dev ]; do sleep 1; done
 
-# Load ZKFC if it is not already built in. Prefer the install-time KMI choice,
-# then let the kernel's vermagic/symbol-version checks reject incompatible
-# same-family candidates when a vendor kernel does not expose its KMI in uname.
+# Load ZKFC only when the running release identifies an Android KMI branch.
+# Linux major/minor family alone is not enough to safely choose among KMI builds.
 KREL="$(uname -r)"
 KERNEL_FAMILY="$(echo "$KREL" | cut -d- -f1 | awk -F. 'NF >= 2 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "." $2 }')"
 ANDROID_BRANCH="$(echo "$KREL" | grep -oE 'android[0-9]+' | head -1)"
@@ -57,6 +56,12 @@ module_family() {
   release="$(module_release "$1")"
   numeric="$(echo "$release" | cut -d- -f1)"
   echo "$numeric" | awk -F. 'NF >= 2 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "." $2 }'
+}
+module_kmi() {
+  release="$(module_release "$1")"
+  branch="$(echo "$release" | grep -oE 'android[0-9]+' | head -1)"
+  family="$(module_family "$1")"
+  [ -n "$branch" ] && [ -n "$family" ] && echo "$branch-$family"
 }
 
 # customize.sh stages a preferred copy at zkfc/zkfc.ko for fast boot loading.
@@ -82,8 +87,9 @@ try_module() {
   candidate="$1"
   [ -f "$candidate" ] || return 1
   candidate_family="$(module_family "$candidate")"
-  if [ -z "$KERNEL_FAMILY" ] || [ "$candidate_family" != "$KERNEL_FAMILY" ]; then
-    log -t zairenkai "skip module with family ${candidate_family:-unknown}: $candidate (kernel ${KERNEL_FAMILY:-unknown})"
+  candidate_kmi="$(module_kmi "$candidate")"
+  if [ -z "$KMI" ] || [ "$candidate_kmi" != "$KMI" ] || [ -z "$KERNEL_FAMILY" ] || [ "$candidate_family" != "$KERNEL_FAMILY" ]; then
+    log -t zairenkai "skip module with KMI=${candidate_kmi:-unknown} family=${candidate_family:-unknown}: $candidate (kernel KMI=${KMI:-unknown} family=${KERNEL_FAMILY:-unknown})"
     return 1
   fi
   LOAD_LOG="$(insmod "$candidate" 2>&1)"
@@ -107,38 +113,22 @@ try_module() {
 }
 
 if [ ! -e /dev/zkfc ]; then
-  selected="$MODDIR/zkfc/zkfc.ko"
-  if [ -f "$selected" ]; then
-    if [ -n "$KMI" ] && [ "$ABIDIR" != "unsupported" ] && verify_staged_ko "$selected" "./lkm/$KMI-$ABIDIR/zkfc.ko"; then
-      try_module "$selected"
-      selected_status=$?
-      [ "$selected_status" -eq 0 ] || [ "$selected_status" -eq 2 ] || selected_status=1
-    else
-      log -t zairenkai "staged zkfc.ko failed integrity check; refusing to load it and trying checksummed lkm candidates"
-      selected_status=1
-    fi
+  if [ -z "$KMI" ]; then
+    log -t zairenkai "kernel release does not expose an Android KMI branch ($KREL); refusing speculative same-family module loads"
   else
-    selected_status=1
-  fi
-
-  if [ ! -e /dev/zkfc ] && [ "$selected_status" -ne 2 ] && [ -d "$MODDIR/lkm" ]; then
-    while IFS= read -r candidate; do
-      [ -f "$candidate" ] || continue
-      case "$(basename "$(dirname "$candidate")")" in
-        *-"$ABIDIR") ;;
-        *) continue ;;
-      esac
-      [ -f "$selected" ] && cmp -s "$selected" "$candidate" && continue
-      try_module "$candidate"
-      candidate_status=$?
-      [ "$candidate_status" -eq 0 ] && break
-      [ "$candidate_status" -eq 2 ] && break
-    done <<EOF_MODULES
-$(find "$MODDIR/lkm" -type f -name 'zkfc.ko' 2>/dev/null | sort)
-EOF_MODULES
+    selected="$MODDIR/zkfc/zkfc.ko"
+    if [ -f "$selected" ] && verify_staged_ko "$selected" "./lkm/$KMI-$ABIDIR/zkfc.ko"; then
+      selected_kmi="$(module_kmi "$selected")"
+      if [ "$selected_kmi" = "$KMI" ] && [ "$(module_family "$selected")" = "$KERNEL_FAMILY" ]; then
+        try_module "$selected"
+      else
+        log -t zairenkai "staged module metadata does not match running KMI=$KMI family=${KERNEL_FAMILY:-unknown}; refusing to load it"
+      fi
+    else
+      log -t zairenkai "no integrity-verified staged module exists for exact KMI/ABI $KMI-$ABIDIR; refusing cross-KMI fallback"
+    fi
   fi
 fi
-
 if [ -e /dev/zkfc ]; then
   log -t zairenkai "ZKFC endpoint available at /dev/zkfc"
 else

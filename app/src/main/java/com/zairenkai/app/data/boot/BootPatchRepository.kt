@@ -72,10 +72,6 @@ object BootPatchRepository {
                 )
             }
 
-            val initWrapper = File(context.applicationInfo.nativeLibraryDir, "libzkinit.so")
-            if (!initWrapper.isFile || !initWrapper.canRead()) {
-                throw IOException("Zairenkai init wrapper is missing. Rebuild the APK with tools/bootpatch/build-android.sh.")
-            }
             val arguments = mutableListOf(
                 "--boot", bootFile.absolutePath,
             )
@@ -87,7 +83,6 @@ object BootPatchRepository {
             }
             arguments += listOf(
                 "--module", moduleFile.absolutePath,
-                "--init", initWrapper.absolutePath,
                 "--kmi", kmi,
                 "--out", outputFile.absolutePath,
             )

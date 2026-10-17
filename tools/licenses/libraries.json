@@ -2342,9 +2342,9 @@
   },
   {
    "id": "native:zkbootpatch",
-   "version": "0.2.0",
-   "name": "Zairenkai boot-image patcher and init adapter",
-   "description": "Standalone GPL-3.0-only Android boot-image patcher using android-bootimg and a Zairenkai init-chainloading adapter derived in part from KernelSU-Next ksuinit.",
+   "version": "0.4.0",
+   "name": "Zairenkai boot-image patcher",
+   "description": "Standalone GPL-3.0-only Android boot-image patcher using android-bootimg; preserves Android PID 1 and defers ZKFC loading until boot completion.",
    "developers": [
     "FebriCahyaa",
     "5ec1cff",

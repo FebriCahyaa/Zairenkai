@@ -17,10 +17,12 @@ use std::path::{Path, PathBuf};
 
 const MAX_BOOT_IMAGE: u64 = 256 * 1024 * 1024;
 const MAX_MODULE: u64 = 64 * 1024 * 1024;
-const MAX_INIT: u64 = 32 * 1024 * 1024;
 const MODULE_ENTRY: &str = "zkfc.ko";
 const INIT_ENTRY: &str = "init";
-const ORIGINAL_INIT_ENTRY: &str = "init.real";
+const INIT_RC_ENTRY: &str = "init.rc";
+const INIT_RC_BACKUP_ENTRY: &str = "init.zairenkai.original.rc";
+const INIT_RC_MARKER: &str = "# Zairenkai delayed ZKFC loader; do not load modules as PID 1.";
+const ORIGINAL_INIT_ENTRY: &str = "init.real"; // legacy patch marker; never overwrite an older patched image
 const SUPPORTED_KMIS: &[&str] = &[
     "android12-5.10",
     "android13-5.10",
@@ -40,7 +42,6 @@ struct Args {
     /// Optional vendor *.ko whose vermagic identifies the Android KMI, matching KernelSU-Next's fallback.
     kmi_reference_module: Option<PathBuf>,
     module: Option<PathBuf>,
-    init: Option<PathBuf>,
     kmi: Option<String>,
     out: Option<PathBuf>,
     detect_kmi: bool,
@@ -148,7 +149,6 @@ fn run() -> Result<()> {
         .boot
         .context("missing --boot <boot.img|init_boot.img|vendor_boot.img>")?;
     let module_path = args.module.context("missing --module <zkfc.ko>")?;
-    let init_path = args.init.context("missing --init <zkinit>")?;
     let kmi = args.kmi.context("missing --kmi <androidNN-X.Y>")?;
     let requested_output = args.out.context("missing --out <patched.img>")?;
     let output_path = absolute_path(&requested_output)?;
@@ -162,11 +162,6 @@ fn run() -> Result<()> {
         module_path.is_file(),
         "ZKFC module does not exist: {}",
         module_path.display()
-    );
-    ensure!(
-        init_path.is_file(),
-        "Zairenkai init wrapper does not exist: {}",
-        init_path.display()
     );
     if let Some(reference_path) = args.kernel_reference.as_ref() {
         validate_boot_file(reference_path)?;
@@ -187,7 +182,6 @@ fn run() -> Result<()> {
 
     let boot_meta = fs::metadata(&boot_path)?;
     let module_meta = fs::metadata(&module_path)?;
-    let init_meta = fs::metadata(&init_path)?;
     ensure!(
         boot_meta.len() > 0 && boot_meta.len() <= MAX_BOOT_IMAGE,
         "boot/init_boot image size is invalid or exceeds {} MiB",
@@ -198,15 +192,9 @@ fn run() -> Result<()> {
         "ZKFC module size is invalid or exceeds {} MiB",
         MAX_MODULE / (1024 * 1024)
     );
-    ensure!(
-        init_meta.len() > 0 && init_meta.len() <= MAX_INIT,
-        "Zairenkai init wrapper size is invalid or exceeds {} MiB",
-        MAX_INIT / (1024 * 1024)
-    );
 
     let canonical_input = fs::canonicalize(&boot_path)?;
     let canonical_module = fs::canonicalize(&module_path)?;
-    let canonical_init = fs::canonicalize(&init_path)?;
     ensure!(
         canonical_input != output_path,
         "output path must not overwrite the source boot/init_boot image"
@@ -230,10 +218,6 @@ fn run() -> Result<()> {
         "output path must not overwrite the source ZKFC module"
     );
     ensure!(
-        canonical_init != output_path,
-        "output path must not overwrite the Zairenkai init wrapper"
-    );
-    ensure!(
         output_path.parent().is_some_and(Path::exists),
         "output parent directory does not exist"
     );
@@ -241,20 +225,14 @@ fn run() -> Result<()> {
     println!("- Reading ramdisk target image");
     let boot_data = fs::read(&boot_path).context("failed to read ramdisk target image")?;
     let module_data = fs::read(&module_path).context("failed to read ZKFC module")?;
-    let init_data = fs::read(&init_path).context("failed to read Zairenkai init wrapper")?;
     validate_module_arch(&module_data)?;
-    validate_init_arch(&init_data)?;
-    let expected_init_machine = u16::from_le_bytes([init_data[18], init_data[19]]);
     let branch_verified = validate_module_kmi(&module_data, &kmi)
         .context("could not validate ZKFC module vermagic against the selected KMI")?;
-    if branch_verified {
-        println!("- ZKFC module vermagic confirms Android KMI branch: {kmi}");
-    } else {
-        println!("- WARNING: zkfc.ko vermagic does not encode the Android KMI branch.");
-        println!(
-            "- The selected branch {kmi} will be checked against the boot kernel when its banner allows it."
-        );
-    }
+    ensure!(
+        branch_verified,
+        "zkfc.ko vermagic does not identify an Android KMI branch; refusing to patch an image without verifiable module ABI metadata"
+    );
+    println!("- ZKFC module vermagic confirms Android KMI branch: {kmi}");
 
     let boot_image =
         BootImage::parse(&boot_data).context("unsupported or malformed Android boot image")?;
@@ -281,7 +259,7 @@ fn run() -> Result<()> {
         .context("selected image does not contain a usable generic init ramdisk; choose the matching boot.img, init_boot.img, or supported vendor_boot.img")?;
     ensure!(
         cpio.exists(INIT_ENTRY),
-        "selected ramdisk does not contain /init. Refusing to replace PID 1 in an image that cannot chainload the original init"
+        "selected ramdisk does not contain Android /init; refusing to patch an incomplete generic ramdisk"
     );
 
     // The target image may be init_boot.img (ramdisk but no kernel). In that
@@ -350,37 +328,11 @@ fn run() -> Result<()> {
         .transpose()
         .context("KMI reference module does not contain an Android KMI marker in vermagic")?;
 
-    let kmi_source = match identity.kmi.as_deref() {
-        Some(image_kmi) => {
-            ensure!(
-                image_kmi == kmi,
-                "selected KMI is {kmi}, but the referenced kernel identifies {image_kmi}"
-            );
-            if let Some(reference_kmi) = reference_module_kmi.as_deref() {
-                ensure!(
-                    reference_kmi == image_kmi,
-                    "kernel image KMI {image_kmi} conflicts with vendor module KMI {reference_kmi}; use files from the same firmware build"
-                );
-            }
-            "kernel-image"
-        }
-        None => {
-            if let Some(reference_kmi) = reference_module_kmi.as_deref() {
-                ensure!(
-                    reference_kmi == kmi,
-                    "selected KMI is {kmi}, but vendor module vermagic identifies {reference_kmi}"
-                );
-                println!(
-                    "- KMI detected from vendor module vermagic (KernelSU-Next fallback): {reference_kmi}"
-                );
-                "vendor-module-vermagic"
-            } else {
-                println!("- WARNING: kernel release has no recognizable Android KMI marker.");
-                println!("- Selected KMI {kmi} is a manual hint, not a verified kernel KMI.");
-                "manual"
-            }
-        }
-    };
+    let kmi_source = resolve_kmi_source(
+        identity,
+        &kmi,
+        reference_module_kmi.as_deref(),
+    )?;
     println!("- Verified target kernel release: {kernel_release}");
     println!(
         "- Module Linux family: {}",
@@ -388,15 +340,18 @@ fn run() -> Result<()> {
     );
     println!("- Target KMI label: {kmi}");
 
-    println!("- Injecting ZKFC into the existing generic ramdisk");
-    inject_runtime_payloads(
-        &mut cpio,
-        module_data,
-        init_data,
-        &kmi,
-        kernel_release,
-        kmi_source,
-    )?;
+    let original_init = cpio
+        .entry_by_name(INIT_ENTRY)
+        .and_then(CpioEntry::data)
+        .context("selected generic ramdisk has no readable /init")?
+        .to_vec();
+    let original_init_rc = cpio
+        .entry_by_name(INIT_RC_ENTRY)
+        .and_then(CpioEntry::data)
+        .context("selected generic ramdisk has no readable /init.rc; refusing an unsafe patch")?
+        .to_vec();
+    println!("- Injecting ZKFC without replacing Android PID 1");
+    inject_runtime_payloads(&mut cpio, module_data, &kmi, kernel_release, kmi_source)?;
 
     let mut new_cpio = Vec::<u8>::new();
     cpio.dump(&mut new_cpio)
@@ -420,7 +375,7 @@ fn run() -> Result<()> {
         MAX_BOOT_IMAGE / (1024 * 1024)
     );
 
-    println!("- Verifying patched image and original-init chain");
+    println!("- Verifying patched image and byte-for-byte preservation of Android init");
     verify_output(
         &patched_bytes,
         &kmi,
@@ -428,8 +383,8 @@ fn run() -> Result<()> {
         target_identity.as_ref().map(|i| i.release.as_str()),
         kernel_release,
         kmi_source,
-        expected_init_machine,
-        true,
+        &original_init,
+        &original_init_rc,
     )?;
     write_output_atomically(&output_path, &patched_bytes)?;
     println!("- Output file is written to");
@@ -438,9 +393,6 @@ fn run() -> Result<()> {
         "kernel-image" => println!("- Kernel image KMI marker matches the selected KMI."),
         "vendor-module-vermagic" => println!(
             "- KMI matches the selected vendor module vermagic using the KernelSU-Next fallback."
-        ),
-        _ => println!(
-            "- WARNING: KMI was selected manually; runtime module compatibility is not proven."
         ),
     }
     println!(
@@ -470,7 +422,7 @@ fn parse_args() -> Result<Args> {
     while let Some(flag) = iter.next() {
         if flag == "--help" || flag == "-h" {
             println!(
-                "Usage: zkbootpatch --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko] --module zkfc.ko --init zkinit --kmi androidNN-X.Y --out patched.img\n       zkbootpatch --detect-kmi --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko]"
+                "Usage: zkbootpatch --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko] --module zkfc.ko --kmi androidNN-X.Y --out patched.img\n       zkbootpatch --detect-kmi --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko]"
             );
             std::process::exit(0);
         }
@@ -486,7 +438,6 @@ fn parse_args() -> Result<Args> {
             "--kernel-reference" => args.kernel_reference = Some(PathBuf::from(value)),
             "--kmi-reference-module" => args.kmi_reference_module = Some(PathBuf::from(value)),
             "--module" => args.module = Some(PathBuf::from(value)),
-            "--init" => args.init = Some(PathBuf::from(value)),
             "--kmi" => args.kmi = Some(value),
             "--out" => args.out = Some(PathBuf::from(value)),
             _ => bail!("unknown argument '{flag}'"),
@@ -536,40 +487,6 @@ fn validate_module_arch(data: &[u8]) -> Result<()> {
     ensure!(
         machine == expected_machine,
         "ZKFC module architecture does not match this device/helper ABI (ELF machine {machine}, expected {expected_machine})"
-    );
-    Ok(())
-}
-
-fn validate_init_arch(data: &[u8]) -> Result<()> {
-    ensure!(data.len() >= 64, "Zairenkai init wrapper is truncated");
-    ensure!(
-        &data[..4] == b"\x7fELF",
-        "selected init wrapper is not an ELF executable"
-    );
-    ensure!(data[4] == 2, "Zairenkai init wrapper must be ELF64");
-    ensure!(
-        data[5] == 1,
-        "Zairenkai init wrapper must use little-endian ELF"
-    );
-    let elf_type = u16::from_le_bytes([data[16], data[17]]);
-    let machine = u16::from_le_bytes([data[18], data[19]]);
-    ensure!(
-        elf_type == 3,
-        "Zairenkai init wrapper must be a position-independent executable (ET_DYN)"
-    );
-    let expected_machine: u16 = if cfg!(target_arch = "aarch64") {
-        183 // EM_AARCH64
-    } else if cfg!(target_arch = "x86_64") {
-        62 // EM_X86_64
-    } else {
-        bail!(
-            "unsupported helper architecture: {}",
-            std::env::consts::ARCH
-        );
-    };
-    ensure!(
-        machine == expected_machine,
-        "Zairenkai init wrapper architecture does not match this device/helper ABI (ELF machine {machine}, expected {expected_machine})"
     );
     Ok(())
 }
@@ -805,35 +722,70 @@ fn parse_kernel_kmi(buffer: &[u8]) -> Result<String> {
         .ok_or_else(|| anyhow!("kernel payload does not contain a recognizable Android KMI string"))
 }
 
+fn resolve_kmi_source(
+    identity: &KernelIdentity,
+    selected_kmi: &str,
+    reference_module_kmi: Option<&str>,
+) -> Result<&'static str> {
+    match identity.kmi.as_deref() {
+        Some(image_kmi) => {
+            ensure!(
+                image_kmi == selected_kmi,
+                "selected KMI is {selected_kmi}, but the referenced kernel identifies {image_kmi}"
+            );
+            if let Some(reference_kmi) = reference_module_kmi {
+                ensure!(
+                    reference_kmi == image_kmi,
+                    "kernel image KMI {image_kmi} conflicts with vendor module KMI {reference_kmi}; use files from the same firmware build"
+                );
+            }
+            Ok("kernel-image")
+        }
+        None => {
+            let reference_kmi = reference_module_kmi.context(
+                "kernel release has no Android KMI marker. Select a vendor .ko from the exact same firmware/build to verify KMI; manual branch selection is not safe",
+            )?;
+            ensure!(
+                reference_kmi == selected_kmi,
+                "selected KMI is {selected_kmi}, but vendor module vermagic identifies {reference_kmi}"
+            );
+            Ok("vendor-module-vermagic")
+        }
+    }
+}
+
 fn inject_runtime_payloads(
     cpio: &mut Cpio,
     module_data: Vec<u8>,
-    init_data: Vec<u8>,
     module_kmi: &str,
     kernel_release: &str,
     kmi_source: &str,
-) -> Result<bool> {
+) -> Result<()> {
     ensure!(
         !cpio.is_magisk_patched(),
         "this image already appears to be Magisk-patched; restore a clean image before patching with Zairenkai"
     );
     ensure!(
         !cpio.exists(ORIGINAL_INIT_ENTRY),
-        "ramdisk already contains init.real; it may already be patched by another installer"
+        "ramdisk contains init.real from an older Zairenkai/third-party PID-1 patch; restore a clean stock image before continuing"
     );
     ensure!(
         !cpio.exists(MODULE_ENTRY) && !cpio.exists("zkfc_bootpatch.conf"),
         "ramdisk already contains Zairenkai patch markers; restore a clean image before patching again"
     );
-    let original_init_preserved = cpio.exists(INIT_ENTRY);
     ensure!(
-        original_init_preserved,
-        "ramdisk does not contain /init; refusing to install a PID 1 wrapper that cannot chainload Android init"
+        cpio.exists(INIT_ENTRY),
+        "ramdisk does not contain /init; refusing to patch an image without Android's original PID 1"
     );
-    println!("- Preserving original init as init.real");
-    cpio.mv(INIT_ENTRY, ORIGINAL_INIT_ENTRY)
-        .context("could not preserve original ramdisk /init as /init.real")?;
-    validate_init_arch(&init_data)?;
+    ensure!(
+        cpio.exists(INIT_RC_ENTRY),
+        "ramdisk does not contain /init.rc; refusing a patch that cannot install a delayed module-load trigger"
+    );
+    ensure!(
+        !cpio.exists(INIT_RC_BACKUP_ENTRY),
+        "ramdisk already contains init.zairenkai.original.rc; restore a clean stock image before continuing"
+    );
+
     validate_module_arch(&module_data)?;
     validate_module_kmi(&module_data, module_kmi)
         .context("module vermagic does not match requested boot-patch KMI")?;
@@ -841,20 +793,48 @@ fn inject_runtime_payloads(
         "module vermagic does not match the Linux major/minor family selected for this image",
     )?;
 
-    println!("- Installing Zairenkai init wrapper");
-    cpio.add(INIT_ENTRY, CpioEntry::regular(0o755, Box::new(init_data)))
-        .context("could not install Zairenkai init wrapper")?;
+    let original_rc = cpio
+        .entry_by_name(INIT_RC_ENTRY)
+        .and_then(CpioEntry::data)
+        .context("ramdisk /init.rc is not a readable regular file")?
+        .to_vec();
+    let original_rc_text = std::str::from_utf8(&original_rc)
+        .context("ramdisk /init.rc is not valid UTF-8; refusing to rewrite init configuration")?;
+    ensure!(
+        !original_rc_text.contains(INIT_RC_MARKER),
+        "init.rc already contains the Zairenkai delayed module-load marker; restore a clean stock image before continuing"
+    );
 
+    // Keep /init byte-for-byte intact. Preserve the original init.rc under a
+    // non-imported name, then add a late property trigger. The module is not
+    // loaded from PID 1; boot-critical Android services start first.
+    let mut updated_rc = original_rc;
+    if !updated_rc.ends_with(b"\n") {
+        updated_rc.push(b'\n');
+    }
+    updated_rc.extend_from_slice(
+        format!(
+            "\n{INIT_RC_MARKER}\non property:sys.boot_completed=1\n    insmod /{MODULE_ENTRY}\n"
+        )
+        .as_bytes(),
+    );
+    cpio.mv(INIT_RC_ENTRY, INIT_RC_BACKUP_ENTRY)
+        .context("could not preserve the original init.rc")?;
+    cpio.add(
+        INIT_RC_ENTRY,
+        CpioEntry::regular(0o644, Box::new(updated_rc)),
+    )
+    .context("could not install the delayed Zairenkai init trigger")?;
+
+    println!("- Kept Android /init unchanged; module load is deferred until sys.boot_completed=1");
     println!("- Adding ZKFC LKM");
     cpio.add(
         MODULE_ENTRY,
-        CpioEntry::regular(0o755, Box::new(module_data)),
+        CpioEntry::regular(0o644, Box::new(module_data)),
     )?;
 
-    // Diagnostic metadata is not a runtime module configuration file. The
-    // module itself is compiled for the selected KMI.
     let patch_manifest = format!(
-        "format=3\nkmi={}\nkmi_source={}\nkernel_release={}\nmodule={}\ninit_wrapper=zkinit\noriginal_init=init.real\npatcher=zkbootpatch-0.3.0\n",
+        "format=4\nkmi={}\nkmi_source={}\nkernel_release={}\nmodule={}\ninit_wrapper=none\noriginal_init=init\nmodule_load=property:sys.boot_completed\npatcher=zkbootpatch-0.4.0\n",
         module_kmi, kmi_source, kernel_release, MODULE_ENTRY,
     );
     println!("- Adding Zairenkai KMI diagnostic manifest");
@@ -862,7 +842,7 @@ fn inject_runtime_payloads(
         "zkfc_bootpatch.conf",
         CpioEntry::regular(0o644, Box::new(patch_manifest.into_bytes())),
     )?;
-    Ok(original_init_preserved)
+    Ok(())
 }
 
 fn extract_ramdisk(ramdisk_image: &RamdiskImage<'_>) -> Result<(Cpio, Option<usize>)> {
@@ -909,8 +889,8 @@ fn verify_output(
     expected_target_kernel_release: Option<&str>,
     expected_kernel_release: &str,
     expected_kmi_source: &str,
-    expected_init_machine: u16,
-    expected_original_init: bool,
+    expected_original_init: &[u8],
+    expected_original_init_rc: &[u8],
 ) -> Result<()> {
     let image =
         BootImage::parse(bytes).context("repacked file is not a valid Android boot image")?;
@@ -961,21 +941,35 @@ fn verify_output(
 
     ensure!(
         cpio.exists(INIT_ENTRY),
-        "patched image does not contain the Zairenkai init wrapper"
-    );
-    ensure!(
-        cpio.exists(ORIGINAL_INIT_ENTRY) == expected_original_init,
-        "patched image original-init preservation state changed unexpectedly"
+        "patched image lost Android's original /init"
     );
     let init = cpio
         .entry_by_name(INIT_ENTRY)
         .and_then(CpioEntry::data)
-        .ok_or_else(|| anyhow!("patched image contains an unreadable init wrapper"))?;
-    validate_init_arch(init).context("patched init wrapper verification failed")?;
-    let actual_machine = u16::from_le_bytes([init[18], init[19]]);
+        .ok_or_else(|| anyhow!("patched image contains an unreadable /init"))?;
     ensure!(
-        actual_machine == expected_init_machine,
-        "patched init wrapper architecture changed"
+        init.as_slice() == expected_original_init,
+        "patched image changed Android's original /init; refusing the output"
+    );
+    let original_init_rc = cpio
+        .entry_by_name(INIT_RC_BACKUP_ENTRY)
+        .and_then(CpioEntry::data)
+        .ok_or_else(|| anyhow!("patched image lost the preserved original init.rc"))?;
+    ensure!(
+        original_init_rc.as_slice() == expected_original_init_rc,
+        "patched image changed the preserved original init.rc"
+    );
+    let patched_init_rc = cpio
+        .entry_by_name(INIT_RC_ENTRY)
+        .and_then(CpioEntry::data)
+        .ok_or_else(|| anyhow!("patched image contains no readable init.rc"))?;
+    let patched_init_rc = std::str::from_utf8(patched_init_rc)
+        .context("patched init.rc is not valid UTF-8")?;
+    ensure!(
+        patched_init_rc.contains(INIT_RC_MARKER)
+            && patched_init_rc.contains("on property:sys.boot_completed=1")
+            && patched_init_rc.contains("insmod /zkfc.ko"),
+        "patched init.rc does not contain the expected delayed ZKFC module-load trigger"
     );
 
     let manifest = cpio
@@ -1005,14 +999,16 @@ fn verify_output(
         "patch manifest kernel release does not match the verified target kernel"
     );
     ensure!(
-        manifest.lines().any(|line| line == "init_wrapper=zkinit"),
-        "patch manifest does not identify the injected init wrapper"
+        manifest.lines().any(|line| line == "init_wrapper=none"),
+        "patch manifest must confirm Android's original init is not wrapped"
     );
     ensure!(
-        manifest
-            .lines()
-            .any(|line| line == "original_init=init.real"),
+        manifest.lines().any(|line| line == "original_init=init"),
         "patch manifest original-init state is inconsistent"
+    );
+    ensure!(
+        manifest.lines().any(|line| line == "module_load=property:sys.boot_completed"),
+        "patch manifest must identify the delayed module-load trigger"
     );
     ensure!(
         SUPPORTED_KMIS.contains(&expected_kmi),
@@ -1164,8 +1160,26 @@ mod tests {
         data
     }
 
+    fn synthetic_ramdisk() -> Cpio {
+        let mut cpio = Cpio::new();
+        cpio.add(
+            "init",
+            CpioEntry::regular(0o755, Box::new(b"original-init".to_vec())),
+        )
+        .unwrap();
+        cpio.add(
+            INIT_RC_ENTRY,
+            CpioEntry::regular(
+                0o644,
+                Box::new(b"on early-init\n    export TEST_PROPERTY 1\n".to_vec()),
+            ),
+        )
+        .unwrap();
+        cpio
+    }
+
     #[test]
-    fn injection_preserves_original_init_and_adds_runtime_entries() {
+    fn injection_keeps_pid1_unchanged_and_delays_module_load() {
         let machine = if cfg!(target_arch = "aarch64") {
             183u16
         } else {
@@ -1176,33 +1190,36 @@ mod tests {
             machine,
             b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0",
         );
-        let init = synthetic_elf(3, machine, b"synthetic-init");
-        let mut cpio = Cpio::new();
-        cpio.add(
-            "init",
-            CpioEntry::regular(0o755, Box::new(b"original-init".to_vec())),
-        )
-        .unwrap();
+        let mut cpio = synthetic_ramdisk();
+        let original_init = cpio.entry_by_name(INIT_ENTRY).and_then(CpioEntry::data).unwrap().to_vec();
+        let original_rc = cpio.entry_by_name(INIT_RC_ENTRY).and_then(CpioEntry::data).unwrap().to_vec();
 
-        let preserved = inject_runtime_payloads(
+        inject_runtime_payloads(
             &mut cpio,
             module,
-            init,
             "android15-6.6",
             "6.6.42-android15-12-gabcdef",
             "kernel-image",
         )
         .unwrap();
-        assert!(preserved);
-        assert!(cpio.exists("init"));
-        assert!(cpio.exists("init.real"));
-        assert!(cpio.exists("zkfc.ko"));
+
+        assert!(cpio.exists(INIT_ENTRY));
+        assert!(!cpio.exists(ORIGINAL_INIT_ENTRY));
+        assert!(cpio.exists(MODULE_ENTRY));
         assert_eq!(
-            cpio.entry_by_name("init.real")
-                .and_then(CpioEntry::data)
-                .unwrap(),
-            b"original-init"
+            cpio.entry_by_name(INIT_ENTRY).and_then(CpioEntry::data).unwrap(),
+            original_init
         );
+        assert_eq!(
+            cpio.entry_by_name(INIT_RC_BACKUP_ENTRY).and_then(CpioEntry::data).unwrap(),
+            original_rc
+        );
+        let init_rc = cpio.entry_by_name(INIT_RC_ENTRY).and_then(CpioEntry::data).unwrap();
+        let init_rc = std::str::from_utf8(init_rc).unwrap();
+        assert!(init_rc.contains(INIT_RC_MARKER));
+        assert!(init_rc.contains("on property:sys.boot_completed=1"));
+        assert!(init_rc.contains("insmod /zkfc.ko"));
+
         let manifest = cpio
             .entry_by_name("zkfc_bootpatch.conf")
             .and_then(CpioEntry::data)
@@ -1211,104 +1228,89 @@ mod tests {
         assert!(manifest.contains("kmi=android15-6.6"));
         assert!(manifest.contains("kmi_source=kernel-image"));
         assert!(manifest.contains("kernel_release=6.6.42-android15-12-gabcdef"));
-        assert!(manifest.contains("original_init=init.real"));
+        assert!(manifest.contains("init_wrapper=none"));
+        assert!(manifest.contains("original_init=init"));
+        assert!(manifest.contains("module_load=property:sys.boot_completed"));
     }
 
     #[test]
-    fn records_manual_kmi_when_kernel_has_no_branch_marker() {
+    fn rejects_unverified_manual_kmi_for_vendor_kernel() {
+        let identity = KernelIdentity {
+            release: "5.10.269-gki-g18fe99112273".to_owned(),
+            kmi: None,
+        };
+        assert!(resolve_kmi_source(&identity, "android13-5.10", None).is_err());
+        assert_eq!(
+            resolve_kmi_source(&identity, "android13-5.10", Some("android13-5.10")).unwrap(),
+            "vendor-module-vermagic"
+        );
+        assert!(resolve_kmi_source(&identity, "android13-5.10", Some("android12-5.10")).is_err());
+    }
+
+    #[test]
+    fn rejects_image_with_legacy_pid1_patch_marker() {
         let machine = if cfg!(target_arch = "aarch64") {
             183u16
         } else {
             62u16
         };
-        let module = synthetic_elf(1, machine, b"vermagic=6.6.42-generic SMP preempt\0");
-        let init = synthetic_elf(3, machine, b"synthetic-init");
-        let mut cpio = Cpio::new();
+        let module = synthetic_elf(
+            1,
+            machine,
+            b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0",
+        );
+        let mut cpio = synthetic_ramdisk();
         cpio.add(
-            "init",
+            ORIGINAL_INIT_ENTRY,
+            CpioEntry::regular(0o755, Box::new(b"old PID1 patch".to_vec())),
+        )
+        .unwrap();
+        assert!(inject_runtime_payloads(
+            &mut cpio,
+            module,
+            "android15-6.6",
+            "6.6.42-android15-12-gabcdef",
+            "kernel-image",
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn injection_refuses_ramdisk_without_original_init_or_init_rc() {
+        let machine = if cfg!(target_arch = "aarch64") {
+            183u16
+        } else {
+            62u16
+        };
+        let module = synthetic_elf(
+            1,
+            machine,
+            b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0",
+        );
+        let mut no_init = Cpio::new();
+        assert!(inject_runtime_payloads(
+            &mut no_init,
+            module.clone(),
+            "android15-6.6",
+            "6.6.42-android15-12-gabcdef",
+            "kernel-image",
+        )
+        .is_err());
+
+        let mut no_init_rc = Cpio::new();
+        no_init_rc.add(
+            INIT_ENTRY,
             CpioEntry::regular(0o755, Box::new(b"original-init".to_vec())),
         )
         .unwrap();
-
-        inject_runtime_payloads(
-            &mut cpio,
+        assert!(inject_runtime_payloads(
+            &mut no_init_rc,
             module,
-            init,
             "android15-6.6",
-            "6.6.42-generic",
-            "manual",
+            "6.6.42-android15-12-gabcdef",
+            "kernel-image",
         )
-        .unwrap();
-        let manifest = cpio
-            .entry_by_name("zkfc_bootpatch.conf")
-            .and_then(CpioEntry::data)
-            .unwrap();
-        let manifest = std::str::from_utf8(manifest).unwrap();
-        assert!(manifest.contains("kmi=android15-6.6"));
-        assert!(manifest.contains("kmi_source=manual"));
+        .is_err());
     }
 
-    #[test]
-    fn injection_refuses_a_preexisting_init_real() {
-        let machine = if cfg!(target_arch = "aarch64") {
-            183u16
-        } else {
-            62u16
-        };
-        let module = synthetic_elf(
-            1,
-            machine,
-            b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0",
-        );
-        let init = synthetic_elf(3, machine, b"synthetic-init");
-        let mut cpio = Cpio::new();
-        cpio.add(
-            "init",
-            CpioEntry::regular(0o755, Box::new(b"init".to_vec())),
-        )
-        .unwrap();
-        cpio.add(
-            "init.real",
-            CpioEntry::regular(0o755, Box::new(b"other installer".to_vec())),
-        )
-        .unwrap();
-        assert!(
-            inject_runtime_payloads(
-                &mut cpio,
-                module,
-                init,
-                "android15-6.6",
-                "6.6.42-android15-12-gabcdef",
-                "kernel-image"
-            )
-            .is_err()
-        );
-    }
-
-    #[test]
-    fn injection_refuses_ramdisk_without_original_init() {
-        let machine = if cfg!(target_arch = "aarch64") {
-            183u16
-        } else {
-            62u16
-        };
-        let module = synthetic_elf(
-            1,
-            machine,
-            b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0",
-        );
-        let init = synthetic_elf(3, machine, b"synthetic-init");
-        let mut cpio = Cpio::new();
-        assert!(
-            inject_runtime_payloads(
-                &mut cpio,
-                module,
-                init,
-                "android15-6.6",
-                "6.6.42-android15-12-gabcdef",
-                "kernel-image"
-            )
-            .is_err()
-        );
-    }
 }
