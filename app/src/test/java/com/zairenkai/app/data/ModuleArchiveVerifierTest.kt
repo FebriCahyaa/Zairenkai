@@ -42,6 +42,19 @@ class ModuleArchiveVerifierTest {
     }
 
     @Test
+    fun rejectsUnexpectedInstallerMetadata() {
+        val archive = createArchive(addUnexpectedInstallerMetadata = true)
+        try {
+            assertTrue(
+                ModuleArchiveVerifier.verify(archive)
+                    ?.contains("archive-level installer metadata mismatch") == true,
+            )
+        } finally {
+            archive.delete()
+        }
+    }
+
+    @Test
     fun rejectsPathTraversalEntries() {
         val archive = createArchive(addUnsafePath = true)
         try {
@@ -66,6 +79,7 @@ class ModuleArchiveVerifierTest {
         addUnlistedFile: Boolean = false,
         addUnsafePath: Boolean = false,
         addUnsafeDirectory: Boolean = false,
+        addUnexpectedInstallerMetadata: Boolean = false,
     ): File {
         val payload = linkedMapOf(
             "./module.prop" to "id=zairenkai\n".toByteArray(),
@@ -82,9 +96,15 @@ class ModuleArchiveVerifierTest {
         val files = linkedMapOf<String, ByteArray>().apply {
             putAll(payload)
             put("./SHA256SUMS", manifest)
+            // Installer metadata is present in the ZIP but deliberately outside SHA256SUMS.
+            put("./META-INF/com/google/android/update-binary", "#!/sbin/sh\\n".toByteArray())
+            put("./META-INF/com/google/android/updater-script", "#MAGISK\\n".toByteArray())
             if (tamperPayloadAfterManifest) put("./service.sh", "tampered after manifest".toByteArray())
             if (addUnlistedFile) put("./extra.bin", "not in manifest".toByteArray())
             if (addUnsafePath) put("../outside.bin", "path traversal".toByteArray())
+            if (addUnexpectedInstallerMetadata) {
+                put("./META-INF/com/example/unexpected", "unexpected metadata".toByteArray())
+            }
         }
         val file = File.createTempFile("zairenkai-module-test", ".zip")
         ZipOutputStream(file.outputStream().buffered()).use { zip ->

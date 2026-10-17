@@ -88,7 +88,28 @@ internal object ModuleArchiveVerifier {
                     }
                 }
             }
-            val payloadFiles = files.keys - "SHA256SUMS"
+            // Root managers consume these two installer entry points before creating MODPATH.
+            // They are archive-level metadata, not module payload, and are intentionally
+            // excluded from SHA256SUMS. Keep the allowlist exact: arbitrary META-INF
+            // files must still be rejected.
+            val allowedInstallerMetadata = setOf(
+                "META-INF/com/google/android/update-binary",
+                "META-INF/com/google/android/updater-script",
+            )
+            val installerMetadata = files.keys.filter {
+                it == "META-INF" || it.startsWith("META-INF/")
+            }.toSet()
+            if (installerMetadata != allowedInstallerMetadata) {
+                val unexpected = (installerMetadata - allowedInstallerMetadata).take(8)
+                val missingMetadata = (allowedInstallerMetadata - installerMetadata).take(8)
+                return buildString {
+                    append("archive-level installer metadata mismatch")
+                    if (unexpected.isNotEmpty()) append("; unexpected: ").append(unexpected.joinToString())
+                    if (missingMetadata.isNotEmpty()) append("; missing: ").append(missingMetadata.joinToString())
+                }
+            }
+
+            val payloadFiles = files.keys - "SHA256SUMS" - allowedInstallerMetadata
             if (listed != payloadFiles) {
                 val omitted = (payloadFiles - listed).take(8)
                 val extra = (listed - payloadFiles).take(8)

@@ -139,13 +139,18 @@ fi
 # Install only the userspace ABI that matches the running device. The old loop
 # always tried arm64-v8a first, even on x86_64 devices, which could leave a
 # present-but-unexecutable daemon and a misleading UI state.
-[ -x "$MODPATH/bin/$USER_ABI/zkfctl" ] || abort "  zkfctl binary missing for device ABI $USER_ABI"
-[ -x "$MODPATH/bin/$USER_ABI/zperfd" ] || abort "  zperfd binary missing for device ABI $USER_ABI"
+# Some root managers extract ZIP payloads without preserving Unix executable
+# bits. SHA256SUMS authenticates the bytes; check file presence here, then apply
+# and verify executable permissions on the runtime copies after they are copied.
+[ -s "$MODPATH/bin/$USER_ABI/zkfctl" ] || abort "  zkfctl binary missing or empty for device ABI $USER_ABI"
+[ -s "$MODPATH/bin/$USER_ABI/zperfd" ] || abort "  zperfd binary missing or empty for device ABI $USER_ABI"
 mkdir -p /data/adb/zkfc /data/adb/zperf/catalog /data/adb/zperf/database || abort "  cannot create runtime directories"
 cp -f "$MODPATH/bin/$USER_ABI/zkfctl" /data/adb/zkfc/zkfctl || abort "  failed to install zkfctl"
 chmod 0755 /data/adb/zkfc/zkfctl || abort "  failed to set zkfctl permissions"
+[ -x /data/adb/zkfc/zkfctl ] || abort "  installed zkfctl is not executable"
 cp -f "$MODPATH/bin/$USER_ABI/zperfd" /data/adb/zperf/zperfd || abort "  failed to install zperfd"
 chmod 0755 /data/adb/zperf/zperfd || abort "  failed to set zperfd permissions"
+[ -x /data/adb/zperf/zperfd ] || abort "  installed zperfd is not executable"
 ui_print "- zkfctl installed ($USER_ABI)"
 ui_print "- zperfd engine installed ($USER_ABI)"
 if [ -d "$MODPATH/zperf/catalog" ]; then
