@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 # Reusable module build following KernelSU-Next's split build/aggregate pattern:
-# one DDK job per KMI, then one packaging job that publishes a single artifact.
+# one DDK job per KMI builds common binaries once; channel packaging fans out afterwards.
 name: Build module
 
 on:
   workflow_call:
     inputs:
       channel:
-        description: Update channel to stamp into module metadata.
+        description: Update channel to stamp (canary/release) or both to build both packages from one KMI matrix.
         required: false
         default: canary
         type: string
@@ -21,6 +21,16 @@ on:
         required: false
         default: '20260828'
         type: string
+      server_url:
+        description: License Server HTTPS origin; optional only for PR compile validation.
+        required: false
+        default: ''
+        type: string
+      allow_unpublished_release:
+        description: Permit a non-published Release-channel validation package on a branch.
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       channel:
@@ -31,6 +41,7 @@ on:
         options:
           - canary
           - release
+          - both
       version_name:
         description: Stable X.Y.Z version for Release (for example 1.1.0)
         required: false
@@ -41,12 +52,22 @@ on:
         required: false
         default: '20260828'
         type: string
+      server_url:
+        description: Optional License Server HTTPS origin.
+        required: false
+        default: ''
+        type: string
+      allow_unpublished_release:
+        description: Permit branch-only Release validation artifacts (never publish them).
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: module-${{ github.workflow }}-${{ github.ref }}
+  group: module-${{ github.workflow }}-${{ github.ref }}-${{ inputs.channel || 'canary' }}
   cancel-in-progress: true
 
 jobs:
@@ -56,6 +77,7 @@ jobs:
     outputs:
       channel: ${{ steps.meta.outputs.channel }}
       version_name: ${{ steps.meta.outputs.version_name }}
+      base_version: ${{ steps.meta.outputs.base_version }}
       server_url: ${{ steps.meta.outputs.server_url }}
       module_version_code: ${{ steps.meta.outputs.module_version_code }}
     steps:
@@ -65,47 +87,67 @@ jobs:
         env:
           REQUESTED_CHANNEL: ${{ inputs.channel || 'canary' }}
           REQUESTED_VERSION: ${{ inputs.version_name || '' }}
-          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+          REQUESTED_SERVER_URL: ${{ inputs.server_url || vars.ZKFC_LICENSE_SERVER_URL }}
+          ALLOW_UNPUBLISHED_RELEASE: ${{ inputs.allow_unpublished_release }}
         run: |
           set -euo pipefail
           CHANNEL="$REQUESTED_CHANNEL"
-          [[ "$CHANNEL" == canary || "$CHANNEL" == release ]] || {
-            echo "::error::Channel must be canary or release."
+          [[ "$CHANNEL" == canary || "$CHANNEL" == release || "$CHANNEL" == both ]] || {
+            echo "::error::Channel must be canary, release, or both."
             exit 1
           }
+          ZKFC_LICENSE_SERVER_URL="${REQUESTED_SERVER_URL:-}"
+          # Building binaries must not be skipped just because the live worker is
+          # temporarily unavailable. Use an unmistakable non-routable origin when
+          # not configured; Canary/Release publisher workflows perform the live
+          # health + D1 check and refuse publication until the real worker is ready.
+          if [[ -z "$ZKFC_LICENSE_SERVER_URL" ]]; then
+            ZKFC_LICENSE_SERVER_URL="https://license-server-validation.invalid"
+            echo "::notice::License Server URL not configured; generating validation-only module metadata. Publication will fail its live-server gate."
+          fi
           [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
-            echo "::error::Set ZKFC_LICENSE_SERVER_URL to the HTTPS origin of the License Server Worker (no path)."
+            echo "::error::ZKFC_LICENSE_SERVER_URL must be an HTTPS origin without a path."
             exit 1
           }
-          python3 tools/ci/smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"
 
           BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
           if [[ "$CHANNEL" == canary ]]; then
             VERSION_NAME="${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}"
             URL_TAG=canary
           else
-            [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-              echo "::error::Release module builds must run from a stable vMAJOR.MINOR.PATCH tag."
-              exit 1
-            }
             VERSION_NAME="${REQUESTED_VERSION#v}"
-            [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-              echo "::error::Release version_name must be stable X.Y.Z."
-              exit 1
-            }
-            [[ "$VERSION_NAME" == "${GITHUB_REF_NAME#v}" ]] || {
-              echo "::error::Release version must match the current Git tag."
-              exit 1
-            }
-            [[ "$VERSION_NAME" == "$BASE_VERSION" ]] || {
-              echo "::error::Release tag/version must match app/build.gradle.kts versionName ($BASE_VERSION)."
-              exit 1
-            }
-            URL_TAG="$GITHUB_REF_NAME"
+            if [[ "$ALLOW_UNPUBLISHED_RELEASE" == true && "$GITHUB_REF_TYPE" != tag ]]; then
+              [[ -n "$VERSION_NAME" ]] || VERSION_NAME="$BASE_VERSION"
+              [[ "$VERSION_NAME" == "$BASE_VERSION" ]] || {
+                echo "::error::Unpublished Release validation version must match app versionName ($BASE_VERSION)."
+                exit 1
+              }
+              URL_TAG="v${VERSION_NAME}"
+              echo "::notice::Building a non-published Release-channel module validation artifact from branch $GITHUB_REF_NAME."
+            else
+              [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+                echo "::error::Release module builds must run from a stable vMAJOR.MINOR.PATCH tag."
+                exit 1
+              }
+              [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+                echo "::error::Release version_name must be stable X.Y.Z."
+                exit 1
+              }
+              [[ "$VERSION_NAME" == "${GITHUB_REF_NAME#v}" ]] || {
+                echo "::error::Release version must match the current Git tag."
+                exit 1
+              }
+              [[ "$VERSION_NAME" == "$BASE_VERSION" ]] || {
+                echo "::error::Release tag/version must match app/build.gradle.kts versionName ($BASE_VERSION)."
+                exit 1
+              }
+              URL_TAG="$GITHUB_REF_NAME"
+            fi
           fi
           MODULE_VERSION_CODE="$(python3 tools/ci/module-version-code.py)"
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "server_url=${ZKFC_LICENSE_SERVER_URL%/}" >> "$GITHUB_OUTPUT"
           echo "module_version_code=$MODULE_VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "Validated module channel=$CHANNEL version=$VERSION_NAME versionCode=$MODULE_VERSION_CODE tag=$URL_TAG"
@@ -131,8 +173,8 @@ jobs:
       kmi: ${{ matrix.kmi }}
       ddk_release: ${{ inputs.ddk_release || '20260828' }}
 
-  package:
-    name: Package flashable module (${{ needs.validate.outputs.channel }})
+  assemble:
+    name: Build shared module binaries and one full KMI bundle
     needs: [validate, lkm]
     runs-on: ubuntu-24.04
     steps:
@@ -237,37 +279,6 @@ jobs:
             exit 1
           }
 
-      - name: Stamp channel-specific module update metadata
-        env:
-          CHANNEL: ${{ needs.validate.outputs.channel }}
-          VERSION_NAME: ${{ needs.validate.outputs.version_name }}
-          ZKFC_LICENSE_SERVER_URL: ${{ needs.validate.outputs.server_url }}
-        run: |
-          set -euo pipefail
-          python3 tools/ci/test-configure-module-update.py
-          python3 tools/ci/test-module-version-code.py
-          VERSION_CODE="${{ needs.validate.outputs.module_version_code }}"
-          echo "Using validated module versionCode=$VERSION_CODE for channel=$CHANNEL"
-          URL_TAG=canary
-          if [[ "$CHANNEL" == release ]]; then URL_TAG="$GITHUB_REF_NAME"; fi
-          python3 tools/ci/configure-module-update.py \
-            --module-dir module --channel "$CHANNEL" --version-name "$VERSION_NAME" \
-            --version-code "$VERSION_CODE" --server-url "$ZKFC_LICENSE_SERVER_URL" \
-            --zip-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${URL_TAG}/Zairenkai-module.zip" \
-            --changelog-url "https://github.com/FebriCahyaa/Zairenkai/releases/tag/${URL_TAG}" \
-            --metadata-output "module-update-${CHANNEL}.json"
-
-      - name: Package module and generate checksums
-        run: |
-          set -euo pipefail
-          test -n "$(find module/lkm -type f -name 'zkfc.ko' -print -quit)"
-          : > module/SHA256SUMS
-          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
-          (cd module && zip -r9 ../Zairenkai-module.zip . -x '*.git*')
-          cp module/SHA256SUMS SHA256SUMS
-          sha256sum Zairenkai-module.zip
-          unzip -t Zairenkai-module.zip >/dev/null
-
       - name: Create standalone KMI module bundle and verify every KMI/architecture pair
         run: |
           set -euo pipefail
@@ -292,7 +303,7 @@ jobs:
           unzip -t Zairenkai-KMI-modules.zip >/dev/null
           echo "Verified 16 KMI binaries across 8 KMI lines and 2 architectures."
 
-      - name: Upload standalone KMI bundle
+      - name: Upload shared standalone KMI bundle
         uses: actions/upload-artifact@v7
         with:
           name: kmi-bundle
@@ -303,13 +314,102 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload module artifact
+      - name: Prepare channel-neutral module tree
+        run: |
+          set -euo pipefail
+          rm -f module/SHA256SUMS
+          zip -qr9 Zairenkai-module-base.zip module
+          unzip -t Zairenkai-module-base.zip >/dev/null
+
+      - name: Upload channel-neutral module tree
         uses: actions/upload-artifact@v7
         with:
-          name: module-zip
+          name: module-base
+          path: Zairenkai-module-base.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  # Metadata and module.prop are channel-specific, but the actual KMI binaries
+  # above are compiled once and shared; this avoids doubling the expensive KMI matrix.
+  package-channel:
+    name: Package flashable module / ${{ matrix.channel }}
+    needs: [validate, assemble]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: ${{ fromJSON(inputs.channel == 'both' && '["canary","release"]' || format('["{0}"]', inputs.channel)) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download common module tree
+        uses: actions/download-artifact@v7
+        with:
+          name: module-base
+          path: base-artifact
+      - name: Restore module tree
+        run: |
+          set -euo pipefail
+          test -s base-artifact/Zairenkai-module-base.zip
+          unzip -q base-artifact/Zairenkai-module-base.zip
+          test -s module/module.prop
+          test -n "$(find module/lkm -type f -name zkfc.ko -print -quit)"
+
+      - name: Stamp channel-specific module update metadata
+        env:
+          CHANNEL: ${{ matrix.channel }}
+          BASE_VERSION: ${{ needs.validate.outputs.base_version }}
+          REQUESTED_VERSION: ${{ inputs.version_name || '' }}
+          ZKFC_LICENSE_SERVER_URL: ${{ needs.validate.outputs.server_url }}
+          ALLOW_UNPUBLISHED_RELEASE: ${{ inputs.allow_unpublished_release }}
+          MODULE_VERSION_CODE: ${{ needs.validate.outputs.module_version_code }}
+        run: |
+          set -euo pipefail
+          python3 tools/ci/test-configure-module-update.py
+          python3 tools/ci/test-module-version-code.py
+          if [[ "$CHANNEL" == canary ]]; then
+            VERSION_NAME="${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}"
+            URL_TAG=canary
+          else
+            if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              VERSION_NAME="${GITHUB_REF_NAME#v}"
+              [[ "$VERSION_NAME" == "$BASE_VERSION" ]] || { echo "::error::Release tag/version must match app versionName ($BASE_VERSION)."; exit 1; }
+              URL_TAG="$GITHUB_REF_NAME"
+            elif [[ "$ALLOW_UNPUBLISHED_RELEASE" == true && "$GITHUB_REF_TYPE" != tag ]]; then
+              VERSION_NAME="$BASE_VERSION"
+              URL_TAG="v${BASE_VERSION}"
+              echo "::notice::This Release-channel module is a branch validation artifact, not a published stable package."
+            else
+              echo "::error::Release module packaging requires a stable tag unless allow_unpublished_release is explicitly true."
+              exit 1
+            fi
+          fi
+          echo "Packaging channel=$CHANNEL version=$VERSION_NAME versionCode=$MODULE_VERSION_CODE"
+          python3 tools/ci/configure-module-update.py \
+            --module-dir module --channel "$CHANNEL" --version-name "$VERSION_NAME" \
+            --version-code "$MODULE_VERSION_CODE" --server-url "$ZKFC_LICENSE_SERVER_URL" \
+            --zip-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${URL_TAG}/Zairenkai-module.zip" \
+            --changelog-url "https://github.com/FebriCahyaa/Zairenkai/releases/tag/${URL_TAG}" \
+            --metadata-output "module-update-${CHANNEL}.json"
+
+      - name: Package module and generate checksums
+        run: |
+          set -euo pipefail
+          test -n "$(find module/lkm -type f -name 'zkfc.ko' -print -quit)"
+          : > module/SHA256SUMS
+          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
+          (cd module && zip -r9 ../Zairenkai-module.zip . -x '*.git*')
+          cp module/SHA256SUMS SHA256SUMS
+          sha256sum Zairenkai-module.zip
+          unzip -t Zairenkai-module.zip >/dev/null
+
+      - name: Upload channel-specific module artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: module-zip-${{ matrix.channel }}
           path: |
             Zairenkai-module.zip
             SHA256SUMS
-            module-update-${{ needs.validate.outputs.channel }}.json
+            module-update-${{ matrix.channel }}.json
           if-no-files-found: error
           retention-days: 7

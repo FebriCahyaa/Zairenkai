@@ -1,139 +1,157 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-# Build and publish signed, optimized Canary APKs (standard + randomized Spoof)
-# from the development branch. Stable tags are handled only by release.yml.
-# The updater manifest intentionally points at the standard APK; Spoof IDs change
-# per build and therefore do not participate in in-app updates.
+# Publish only artifacts produced and verified by a successful Build Manager CI run.
+# This workflow deliberately does not compile APKs or KMI modules.
 name: App APKs
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build Manager CI"]
+    types: [completed]
     branches: [ccr-076d8b15-osiupp]
-    paths:
-      - "app/**"
-      - "rust/**"
-      - "userspace/**"
-      - "kernel/**"
-      - "module/**"
-      - "gradle/**"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
-      - "gradle.properties"
-      - ".github/workflows/app-apks.yml"
-      - ".github/workflows/android.yml"
-      - ".github/workflows/native.yml"
-      - ".github/workflows/build-lkm.yml"
-      - ".github/workflows/ddk-lkm-zkfc.yml"
-      - ".github/workflows/build-module.yml"
-      - ".github/workflows/release.yml"
-      - ".github/actions/build-bootpatch/action.yml"
-      - "native/bootpatch/**"
-      - "tools/bootpatch/**"
-      - "tools/ci/**"
-      - "tools/zkfc-license/**"
-      - "tools/release/**"
-      - "docs/security/**"
   workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful Build Manager CI run ID to publish as Canary
+        required: true
+        type: string
 
 permissions:
-  contents: read
+  actions: read
+  contents: write
+  attestations: write
+  id-token: write
 
 concurrency:
-  group: app-apks
-  cancel-in-progress: true
+  group: app-apks-canary
+  cancel-in-progress: false
 
 jobs:
-  # Fail loudly on a wrong ref; do not silently skip a release due to a feature flag.
-  config:
-    runs-on: ubuntu-24.04
-    outputs:
-      has_canary: ${{ steps.c.outputs.has_canary }}
-    steps:
-      - id: c
-        env:
-          REF_NAME: ${{ github.ref_name }}
-          REF_TYPE: ${{ github.ref_type }}
-        run: |
-          set -euo pipefail
-          if [[ "$REF_TYPE" != branch || "$REF_NAME" != ccr-076d8b15-osiupp ]]; then
-            echo "::error::Canary publication is allowed only from branch ccr-076d8b15-osiupp."
-            exit 1
-          fi
-          echo "has_canary=true" >> "$GITHUB_OUTPUT"
-          echo "Canary publication is mandatory for this branch; missing signing/server configuration will fail the build."
-
-  # Build the flashable module once for this Canary run. Stable Release calls
-  # the same reusable workflow from release.yml with its own channel metadata.
-  module:
-    needs: config
-    if: needs.config.outputs.has_canary == 'true'
-    uses: ./.github/workflows/build-module.yml
-
-  # --- Canary channel: signed, optimized prerelease --------------------------
-  canary:
-    name: Canary build (signed prerelease)
-    needs: [config, module]
-    if: needs.config.outputs.has_canary == 'true'
+  publish:
+    name: Publish verified Canary artifacts (no build steps)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     environment: canary-signing
     permissions:
+      actions: read
       contents: write
       attestations: write
       id-token: write
     steps:
-      - uses: actions/checkout@v7.0.1
+      - name: Resolve and verify source Build Manager CI run
+        id: source
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT_RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          REQUESTED_RUN_ID: ${{ inputs.source_run_id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN_ID="$EVENT_RUN_ID"
+          if [[ "$EVENT_NAME" == workflow_dispatch ]]; then RUN_ID="$REQUESTED_RUN_ID"; fi
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::A numeric Build Manager CI run ID is required."; exit 1; }
+          RUN_JSON="$(gh run view "$RUN_ID" --repo "$REPOSITORY" --json workflowName,event,headBranch,headSha,number,conclusion)"
+          WORKFLOW="$(jq -r '.workflowName' <<< "$RUN_JSON")"
+          SOURCE_EVENT="$(jq -r '.event' <<< "$RUN_JSON")"
+          BRANCH="$(jq -r '.headBranch' <<< "$RUN_JSON")"
+          SHA="$(jq -r '.headSha' <<< "$RUN_JSON")"
+          RUN_NUMBER="$(jq -r '.number' <<< "$RUN_JSON")"
+          CONCLUSION="$(jq -r '.conclusion' <<< "$RUN_JSON")"
+          [[ "$WORKFLOW" == "Build Manager CI" ]] || { echo "::error::Run $RUN_ID is not Build Manager CI (workflow=$WORKFLOW)."; exit 1; }
+          [[ "$CONCLUSION" == success ]] || { echo "::error::Source Build Manager CI run did not succeed: $CONCLUSION"; exit 1; }
+          [[ "$BRANCH" == ccr-076d8b15-osiupp ]] || { echo "::error::Canary publication only accepts the Zairenkai development branch."; exit 1; }
+          [[ "$SOURCE_EVENT" != pull_request ]] || { echo "::error::PR validation artifacts are not eligible for publication."; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ && "$RUN_NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::Source run metadata is invalid."; exit 1; }
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "run_number=$RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "source_event=$SOURCE_EVENT" >> "$GITHUB_OUTPUT"
+          echo "Publishing artifacts from $SHA (Build Manager CI run $RUN_ID, run number $RUN_NUMBER)."
+
+      - name: Checkout exact source commit
+        uses: actions/checkout@v7.0.1
         with:
+          ref: ${{ steps.source.outputs.sha }}
           fetch-depth: 0
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+      - name: Download signed standard Canary APK
+        uses: actions/download-artifact@v7.0.1
         with:
-          distribution: temurin
-          java-version: "21"
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4.0.4
+          name: zairenkai-canary-standard-signed
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts/canary-standard
+      - name: Download signed Spoof Canary APK
+        uses: actions/download-artifact@v7.0.1
         with:
-          packages: platform-tools
-      - name: Install Android SDK platform and NDK
-        run: |
-          set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
-      - name: Download module artifact for embedded KMI assets
-        uses: actions/download-artifact@v7
+          name: zairenkai-canary-spoof-signed
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts/canary-spoof
+      - name: Download flashable module artifact
+        uses: actions/download-artifact@v7.0.1
         with:
-          name: module-zip
-          path: module-artifact
-      - name: Download standalone KMI release artifact
-        uses: actions/download-artifact@v7
+          name: module-zip-canary
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts/module
+      - name: Download standalone KMI matrix artifact
+        uses: actions/download-artifact@v7.0.1
         with:
           name: kmi-bundle
-          path: kmi-artifact
-      - name: Stage module package and embedded KMI assets
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts/kmi
+
+      - name: Stage and verify downloaded artifacts
         run: |
           set -euo pipefail
-          cp module-artifact/Zairenkai-module.zip ./Zairenkai-module.zip
-          cp module-artifact/SHA256SUMS ./SHA256SUMS
-          cp module-artifact/module-update-canary.json ./module-update-canary.json
-          cp kmi-artifact/Zairenkai-KMI-modules.zip ./Zairenkai-KMI-modules.zip
-          cp kmi-artifact/Zairenkai-KMI-modules.zip.sha256 ./Zairenkai-KMI-modules.zip.sha256
-          cp kmi-artifact/Zairenkai-KMI-SHA256SUMS ./Zairenkai-KMI-SHA256SUMS
+          for file in \
+            artifacts/canary-standard/Zairenkai-canary.apk \
+            artifacts/canary-standard/Zairenkai-canary.apk.sha256 \
+            artifacts/canary-spoof/Zairenkai-canary-spoof.apk \
+            artifacts/canary-spoof/Zairenkai-canary-spoof.apk.sha256 \
+            artifacts/module/Zairenkai-module.zip \
+            artifacts/module/SHA256SUMS \
+            artifacts/module/module-update-canary.json \
+            artifacts/kmi/Zairenkai-KMI-modules.zip \
+            artifacts/kmi/Zairenkai-KMI-modules.zip.sha256 \
+            artifacts/kmi/Zairenkai-KMI-SHA256SUMS; do
+            test -s "$file" || { echo "::error::Expected signed build artifact missing: $file"; exit 1; }
+          done
+          cp artifacts/canary-standard/Zairenkai-canary.apk* .
+          cp artifacts/canary-spoof/Zairenkai-canary-spoof.apk* .
+          cp artifacts/module/Zairenkai-module.zip artifacts/module/SHA256SUMS artifacts/module/module-update-canary.json .
+          cp artifacts/kmi/Zairenkai-KMI-modules.zip artifacts/kmi/Zairenkai-KMI-modules.zip.sha256 artifacts/kmi/Zairenkai-KMI-SHA256SUMS .
+          (cd artifacts/canary-standard && sha256sum -c Zairenkai-canary.apk.sha256)
+          (cd artifacts/canary-spoof && sha256sum -c Zairenkai-canary-spoof.apk.sha256)
           sha256sum -c Zairenkai-KMI-modules.zip.sha256
-          rm -rf kmi-verify && mkdir -p kmi-verify
+          unzip -t Zairenkai-canary.apk >/dev/null
+          unzip -t Zairenkai-canary-spoof.apk >/dev/null
+          unzip -t Zairenkai-module.zip >/dev/null
+          unzip -t Zairenkai-KMI-modules.zip >/dev/null
+          rm -rf kmi-verify module
+          mkdir -p kmi-verify module
           unzip -q Zairenkai-KMI-modules.zip -d kmi-verify
           (cd kmi-verify && sha256sum -c ../Zairenkai-KMI-SHA256SUMS)
-          KMI_COUNT="$(find kmi-verify -type f -name zkfc.ko | wc -l | tr -d ' ')"
-          [[ "$KMI_COUNT" == 16 ]] || { echo "::error::KMI archive must contain 16 zkfc.ko files, found $KMI_COUNT"; exit 1; }
-          tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip
-      - name: Build boot-patch backend
-        uses: ./.github/actions/build-bootpatch
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.4.0
+          [[ "$(find kmi-verify -type f -name zkfc.ko | wc -l | tr -d ' ')" == 16 ]] || { echo "::error::Published KMI bundle must contain exactly 16 modules."; exit 1; }
+          unzip -q Zairenkai-module.zip -d module
+          (cd module && sha256sum -c SHA256SUMS)
+          cp SHA256SUMS Zairenkai-module-SHA256SUMS
+          sha256sum Zairenkai-canary.apk Zairenkai-canary-spoof.apk Zairenkai-module.zip Zairenkai-KMI-modules.zip > Zairenkai-canary-SHA256SUMS
 
-      - name: Set up Python for metadata verification
+      - name: Set up Python for metadata signing
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-
       - name: Install metadata verification dependency
         run: python -m pip install --disable-pip-version-check cryptography
 
@@ -142,25 +160,17 @@ jobs:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: python3 tools/ci/smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"
 
-      - name: Validate Canary signing and update-server configuration
+      - name: Validate metadata signing secrets
         env:
-          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
           ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
           ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          for name in ZK_KEYSTORE_BASE64 ZK_KEYSTORE_PASSWORD ZK_KEY_ALIAS ZK_KEY_PASSWORD \
-                      ZKFC_METADATA_SIGNING_KEY_B64 ZKFC_METADATA_SIGNING_PASSPHRASE; do
+          for name in ZKFC_METADATA_SIGNING_KEY_B64 ZKFC_METADATA_SIGNING_PASSPHRASE; do
             [[ -n "${!name:-}" ]] || { echo "::error::Missing required canary-signing secret: $name"; exit 1; }
           done
-          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
-            echo "::error::Set ZKFC_LICENSE_SERVER_URL in canary-signing as an HTTPS origin without a path."
-            exit 1
-          }
+          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || { echo "::error::Invalid License Server URL"; exit 1; }
           python3 tools/ci/check-api-major.py
           python3 tools/ci/test-api-major.py
           python3 tools/ci/test-update-manifest.py
@@ -168,90 +178,36 @@ jobs:
           python3 tools/ci/test-metadata-signature.py
           python3 tools/ci/test-verify-metadata.py
 
-      - name: Compute Canary version code
-        id: version
+      - name: Generate Canary changelog and signed updater manifest
+        id: metadata
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_RUN_ID: ${{ steps.source.outputs.run_id }}
+          SOURCE_RUN_NUMBER: ${{ steps.source.outputs.run_number }}
         run: |
           set -euo pipefail
           BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
-          VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$BASE_VERSION" --channel canary --run-number "$GITHUB_RUN_NUMBER")"
-          echo "base=$BASE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "name=${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
-          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
-
-      - name: Generate randomized Spoof package ID
-        id: spoof
-        run: |
-          set -euo pipefail
-          APP_ID="$(python3 tools/ci/generate-spoof-package-id.py)"
-          [[ "$APP_ID" =~ ^[a-z]{6}(\.[a-z]{6}){2}$ ]] || { echo "::error::Generated Spoof package ID is invalid"; exit 1; }
-          echo "application_id=$APP_ID" >> "$GITHUB_OUTPUT"
-          echo "Generated per-run Spoof application ID: $APP_ID"
-
-      - name: Unit tests and build signed Canary APKs (standard + Spoof)
-        env:
-          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: |
-          set -euo pipefail
-          ./gradlew :app:test :app:assembleStandardCanary :app:assembleSpoofCanary \
-            "-PversionCode=${{ steps.version.outputs.code }}" \
-            "-PspoofApplicationId=${{ steps.spoof.outputs.application_id }}" \
-            "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --no-daemon --stacktrace
-      - name: Verify both Canary APK signatures
-        env:
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          for flavor in standard spoof; do
-            SRC="$(find "app/build/outputs/apk/$flavor/canary" -type f -name '*.apk' -print -quit)"
-            [[ -n "$SRC" && -s "$SRC" ]] || { echo "::error::Canary APK missing for flavor=$flavor"; exit 1; }
-            if [[ "$flavor" == standard ]]; then OUT=Zairenkai-canary.apk; else OUT=Zairenkai-canary-spoof.apk; fi
-            cp "$SRC" "$OUT"
-            tools/ci/verify-release-apk.sh "$OUT" app/build/zk-release.jks
-            unzip -t "$OUT" >/dev/null
-            sha256sum "$OUT" > "$OUT.sha256"
-          done
-
-      - name: Stage Canary APK and signed update manifest
-        id: stage
-        env:
-          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: |
-          set -euo pipefail
-          APK="Zairenkai-canary.apk"
-          [[ -s "$APK" ]] || { echo "::error::Verified standard Canary APK was not staged"; exit 1; }
-          SHA="$(sha256sum "$APK" | cut -d' ' -f1)"
-          python3 tools/ci/generate-changelog.py --channel canary --version "${{ steps.version.outputs.name }}" --output Zairenkai-CHANGELOG.md
+          VERSION_NAME="${BASE_VERSION}-canary.${SOURCE_RUN_NUMBER}"
+          VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$BASE_VERSION" --channel canary --run-number "$SOURCE_RUN_NUMBER")"
           API_MAJOR="$(python3 tools/ci/check-api-major.py --print)"
-          BUILD_ID="${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          BUILD_ID="${SOURCE_SHA:0:12}-${SOURCE_RUN_ID}"
+          python3 tools/ci/generate-changelog.py --channel canary --version "$VERSION_NAME" --output Zairenkai-CHANGELOG.md
           python3 tools/ci/generate-update-manifest.py \
-            --apk "$APK" --output version-canary.json \
-            --version-name "${{ steps.version.outputs.name }}" \
-            --version-code "${{ steps.version.outputs.code }}" \
-            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/canary/$APK" \
-            --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$GITHUB_SHA"
-          echo "ver=${{ steps.version.outputs.name }}" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Sign and verify Canary update metadata
-        env:
-          ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
-          ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
-        run: |
-          set -euo pipefail
+            --apk Zairenkai-canary.apk --output version-canary.json \
+            --version-name "$VERSION_NAME" --version-code "$VERSION_CODE" \
+            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/canary/Zairenkai-canary.apk" \
+            --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$SOURCE_SHA"
           python3 tools/ci/sign-metadata.py --input version-canary.json --output version-canary.json.sig
           python3 tools/ci/verify-metadata.py --input version-canary.json --signature version-canary.json.sig
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Publish Canary prerelease
+      - name: Publish Canary prerelease assets
         uses: softprops/action-gh-release@v3.0.2
         with:
           tag_name: canary
-          name: "Zairenkai Canary"
+          target_commitish: ${{ steps.source.outputs.sha }}
+          name: Zairenkai Canary
           prerelease: true
           body_path: Zairenkai-CHANGELOG.md
           generate_release_notes: false
@@ -263,25 +219,27 @@ jobs:
             Zairenkai-KMI-modules.zip
             Zairenkai-KMI-modules.zip.sha256
             Zairenkai-KMI-SHA256SUMS
+            Zairenkai-module.zip
+            SHA256SUMS
+            Zairenkai-module-SHA256SUMS
+            module-update-canary.json
+            Zairenkai-canary-SHA256SUMS
             Zairenkai-CHANGELOG.md
             version-canary.json
             version-canary.json.sig
-            Zairenkai-module.zip
-            SHA256SUMS
-            module-update-canary.json
 
-      - name: Verify published Canary manifest through License Server
+      - name: Verify published Canary app manifest through License Server
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-          EXPECTED_VERSION_NAME: ${{ steps.stage.outputs.ver }}
+          EXPECTED_VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
         run: >-
           python3 tools/ci/smoke-update-server.py "$ZKFC_LICENSE_SERVER_URL" canary
           --apk Zairenkai-canary.apk --version "$EXPECTED_VERSION_NAME" --tag canary
 
-      - name: Verify published module metadata through License Server
+      - name: Verify published Canary module metadata through License Server
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-          EXPECTED_VERSION_NAME: ${{ steps.stage.outputs.ver }}
+          EXPECTED_VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
         run: >-
           python3 tools/ci/smoke-update-server.py "$ZKFC_LICENSE_SERVER_URL" canary
           --component module --version "$EXPECTED_VERSION_NAME" --tag canary

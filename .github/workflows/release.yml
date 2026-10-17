@@ -13,7 +13,7 @@ jobs:
     name: Validate monotonic stable Release tag
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
       - name: Validate stable semantic version and monotonic release order
@@ -24,31 +24,62 @@ jobs:
           python3 tools/ci/test-validate-release-tag.py
           python3 tools/ci/validate-release-tag.py --tag "$RELEASE_TAG"
 
-  # Build the module through the same reusable workflow as Canary. The only
-  # difference is the validated Release channel/version passed as inputs.
   module:
-    name: Build Release module
+    name: Full KMI matrix and signed-channel module package
     needs: validate_tag
     uses: ./.github/workflows/build-module.yml
     with:
       channel: release
       version_name: ${{ github.ref_name }}
+      server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+    permissions:
+      contents: read
+
+  # Each flavor is an independent reusable workflow job; signing and checksums
+  # are verified before its artifact is made available to the aggregate job.
+  build-manager:
+    name: Release / ${{ matrix.variant }} APK
+    needs: [validate_tag, module]
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [standard, spoof]
+    uses: ./.github/workflows/build-manager.yml
+    with:
+      channel: release
+      variant: ${{ matrix.variant }}
+      require_signing: true
+      license_server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+      version_name: ${{ github.ref_name }}
+    secrets: inherit
+    permissions:
+      contents: read
 
   package:
-    name: Package release
-    needs: [validate_tag, module]
+    name: Verify, sign release metadata and publish
+    needs: [validate_tag, module, build-manager]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     environment: production-signing
     permissions:
+      actions: read
       contents: write
       id-token: write
       attestations: write
-      artifact-metadata: write
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
+
+      - name: Set up JDK for signer verification
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools
 
       - name: Warn if ZKFC owner signing key is not provisioned
         run: |
@@ -58,68 +89,96 @@ jobs:
             echo "ZKFC owner public key is provisioned."
           fi
 
-      - uses: actions/setup-java@v6.0.1
+      - name: Download Standard Release APK artifact
+        uses: actions/download-artifact@v7.0.1
         with:
-          distribution: temurin
-          java-version: "21"
-      - uses: android-actions/setup-android@v4.0.4
+          name: zairenkai-release-standard-signed
+          path: artifacts/release-standard
+      - name: Download Spoof Release APK artifact
+        uses: actions/download-artifact@v7.0.1
         with:
-          packages: platform-tools
-      - name: Install Android SDK
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+          name: zairenkai-release-spoof-signed
+          path: artifacts/release-spoof
       - name: Download channel-specific module artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v7.0.1
         with:
-          name: module-zip
+          name: module-zip-release
           path: module-artifact
       - name: Download standalone KMI artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v7.0.1
         with:
           name: kmi-bundle
           path: kmi-artifact
 
-      - name: Verify and unpack the reusable module artifact
+      - name: Stage artifacts and verify all checksums
         run: |
           set -euo pipefail
-          test -s module-artifact/Zairenkai-module.zip
-          test -s module-artifact/SHA256SUMS
-          test -s module-artifact/module-update-release.json
-          cp module-artifact/Zairenkai-module.zip Zairenkai-module.zip
-          cp module-artifact/SHA256SUMS SHA256SUMS
-          cp module-artifact/module-update-release.json module-update-release.json
-          cp kmi-artifact/Zairenkai-KMI-modules.zip Zairenkai-KMI-modules.zip
-          cp kmi-artifact/Zairenkai-KMI-modules.zip.sha256 Zairenkai-KMI-modules.zip.sha256
-          cp kmi-artifact/Zairenkai-KMI-SHA256SUMS Zairenkai-KMI-SHA256SUMS
+          for file in \
+            artifacts/release-standard/Zairenkai-release.apk \
+            artifacts/release-standard/Zairenkai-release.apk.sha256 \
+            artifacts/release-spoof/Zairenkai-spoofed-release.apk \
+            artifacts/release-spoof/Zairenkai-spoofed-release.apk.sha256 \
+            module-artifact/Zairenkai-module.zip \
+            module-artifact/SHA256SUMS \
+            module-artifact/module-update-release.json \
+            kmi-artifact/Zairenkai-KMI-modules.zip \
+            kmi-artifact/Zairenkai-KMI-modules.zip.sha256 \
+            kmi-artifact/Zairenkai-KMI-SHA256SUMS; do
+            test -s "$file" || { echo "::error::Required matrix artifact missing: $file"; exit 1; }
+          done
+          cp artifacts/release-standard/Zairenkai-release.apk* .
+          cp artifacts/release-spoof/Zairenkai-spoofed-release.apk* .
+          cp module-artifact/Zairenkai-module.zip module-artifact/SHA256SUMS module-artifact/module-update-release.json .
+          cp kmi-artifact/Zairenkai-KMI-modules.zip kmi-artifact/Zairenkai-KMI-modules.zip.sha256 kmi-artifact/Zairenkai-KMI-SHA256SUMS .
+          cp SHA256SUMS Zairenkai-module-SHA256SUMS
+          (cd artifacts/release-standard && sha256sum -c Zairenkai-release.apk.sha256)
+          (cd artifacts/release-spoof && sha256sum -c Zairenkai-spoofed-release.apk.sha256)
           sha256sum -c Zairenkai-KMI-modules.zip.sha256
-          rm -rf kmi-verify && mkdir -p kmi-verify
+          unzip -t Zairenkai-release.apk >/dev/null
+          unzip -t Zairenkai-spoofed-release.apk >/dev/null
+          unzip -t Zairenkai-module.zip >/dev/null
+          unzip -t Zairenkai-KMI-modules.zip >/dev/null
+          rm -rf kmi-verify module
+          mkdir -p kmi-verify module
           unzip -q Zairenkai-KMI-modules.zip -d kmi-verify
           (cd kmi-verify && sha256sum -c ../Zairenkai-KMI-SHA256SUMS)
-          KMI_COUNT="$(find kmi-verify -type f -name zkfc.ko | wc -l | tr -d ' ')"
-          [[ "$KMI_COUNT" == 16 ]] || { echo "::error::KMI archive must contain 16 zkfc.ko files, found $KMI_COUNT"; exit 1; }
-          unzip -t Zairenkai-module.zip >/dev/null
-          rm -rf module
-          mkdir -p module
+          [[ "$(find kmi-verify -type f -name zkfc.ko | wc -l | tr -d ' ')" == 16 ]] || { echo "::error::KMI archive must contain exactly 16 modules."; exit 1; }
           unzip -q Zairenkai-module.zip -d module
-          test -s module/module.prop
-          test -n "$(find module/lkm -type f -name 'zkfc.ko' -print -quit)"
           (cd module && sha256sum -c SHA256SUMS)
+          python3 tools/ci/test_release_manifest.py
+          python3 tools/ci/test-version-code.py
+          python3 tools/ci/test-update-manifest.py
+          python3 tools/ci/test-metadata-signature.py
+          python3 tools/ci/test-verify-metadata.py
+          python3 tools/ci/test-verify-release-manifest.py
 
-      - name: Stage KMI-specific LKM assets in the manager APK
-        run: tools/bootpatch/stage-module-assets.sh module
-
-      - name: Build boot-patch backend
-        uses: ./.github/actions/build-bootpatch
-
-      - uses: gradle/actions/setup-gradle@v6.4.0
+      - name: Set up Python and metadata signing dependency
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install metadata verifier dependency
+        run: python -m pip install --disable-pip-version-check cryptography
 
       - name: Verify live License Server and D1 readiness
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: python3 tools/ci/smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"
 
-      - name: Validate release signing secrets
+      - name: Validate release metadata signing secrets and public key
+        env:
+          ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
+          ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          for name in ZKFC_METADATA_SIGNING_KEY_B64 ZKFC_METADATA_SIGNING_PASSPHRASE; do
+            [[ -n "${!name:-}" ]] || { echo "::error::Missing required production-signing secret: $name"; exit 1; }
+          done
+          grep -q '^-----BEGIN PUBLIC KEY-----' app/src/main/assets/security/update-metadata-public-key.pem || {
+            echo "::error::Pinned update metadata public key is not provisioned; refusing unsigned metadata."; exit 1;
+          }
+          python3 tools/ci/check-api-major.py
+
+      - name: Verify signed APKs use the configured Release certificate
         env:
           ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
           ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
@@ -128,219 +187,112 @@ jobs:
         run: |
           set -euo pipefail
           for name in ZK_KEYSTORE_BASE64 ZK_KEYSTORE_PASSWORD ZK_KEY_ALIAS ZK_KEY_PASSWORD; do
-            if [[ -z "${!name:-}" ]]; then
-              echo "::error::Missing required Actions secret: $name"
-              exit 1
-            fi
+            [[ -n "${!name:-}" ]] || { echo "::error::Missing release APK signing secret: $name"; exit 1; }
           done
           mkdir -p "$RUNNER_TEMP/zairenkai-signing"
           printf '%s' "$ZK_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/zairenkai-signing/release.p12"
-          keytool -list -keystore "$RUNNER_TEMP/zairenkai-signing/release.p12" \
-            -storepass:env ZK_KEYSTORE_PASSWORD -alias "$ZK_KEY_ALIAS" >/dev/null
-          keytool -certreq -alias "$ZK_KEY_ALIAS" \
-            -keystore "$RUNNER_TEMP/zairenkai-signing/release.p12" \
-            -storepass:env ZK_KEYSTORE_PASSWORD -keypass:env ZK_KEY_PASSWORD \
-            -file "$RUNNER_TEMP/zairenkai-signing/release-check.csr" >/dev/null
-          echo "Release keystore, alias, and key credentials are valid."
+          keytool -list -keystore "$RUNNER_TEMP/zairenkai-signing/release.p12" -storepass:env ZK_KEYSTORE_PASSWORD -alias "$ZK_KEY_ALIAS" >/dev/null
+          BT="$ANDROID_HOME/build-tools/37.0.0"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" >/dev/null
+          EXPECTED="$(keytool -exportcert -alias "$ZK_KEY_ALIAS" -keystore "$RUNNER_TEMP/zairenkai-signing/release.p12" -storepass:env ZK_KEYSTORE_PASSWORD | sha256sum | awk '{print toupper($1)}')"
+          for APK in Zairenkai-release.apk Zairenkai-spoofed-release.apk; do
+            VERIFY_OUTPUT="$("$BT/apksigner" verify --verbose --min-sdk-version 31 "$APK" 2>&1)" || { printf '%s\n' "$VERIFY_OUTPUT"; exit 1; }
+            for scheme in 'Verified using v1 scheme (JAR signing): true' 'Verified using v2 scheme (APK Signature Scheme v2): true' 'Verified using v3 scheme (APK Signature Scheme v3): true'; do
+              grep -Fq "$scheme" <<< "$VERIFY_OUTPUT" || { echo "::error::Required signature scheme missing: $scheme ($APK)"; exit 1; }
+            done
+            CERT_OUTPUT="$("$BT/apksigner" verify --print-certs "$APK" 2>&1)"
+            ACTUAL="$(printf '%s\n' "$CERT_OUTPUT" | awk '/certificate SHA-256 digest:/ { sub(/^.*certificate SHA-256 digest:[[:space:]]*/, ""); gsub(/[^[:xdigit:]]/, ""); if (length($0) == 64) { print toupper($0); exit } }')"
+            [[ "$ACTUAL" == "$EXPECTED" ]] || { echo "::error::Release signing certificate mismatch for $APK"; exit 1; }
+            sha256sum -c "$APK.sha256"
+          done
+          echo "Both separately-built Release variants are signed with the expected certificate."
 
-      - name: Embed verified root module in APK assets
-        run: tools/bootpatch/stage-embedded-module.sh Zairenkai-module.zip
-
-      - name: Generate randomized Spoof package ID
-        id: spoof
-        run: |
-          set -euo pipefail
-          APP_ID="$(python3 tools/ci/generate-spoof-package-id.py)"
-          [[ "$APP_ID" =~ ^[a-z]{6}(\.[a-z]{6}){2}$ ]] || { echo "::error::Generated Spoof package ID is invalid"; exit 1; }
-          echo "application_id=$APP_ID" >> "$GITHUB_OUTPUT"
-          echo "Generated per-release Spoof application ID: $APP_ID"
-
-      - name: Build and test official Release APK
+      - name: Generate Release changelog and standard updater manifest
         env:
-          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
         run: |
           set -euo pipefail
-          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
-            echo "::error::Set ZKFC_LICENSE_SERVER_URL in production-signing as an HTTPS origin without a path."
-            exit 1
-          }
-          VERSION_NAME="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          [[ "$VERSION_NAME" == "$TAG_VERSION" ]] || {
-            echo "::error::Release tag '$TAG_VERSION' must match app versionName '$VERSION_NAME'."
-            exit 1
-          }
-          VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$VERSION_NAME" --channel release)"
-          ./gradlew :app:test :app:assembleStandardRelease :app:assembleSpoofRelease \
-            "-PversionCode=$VERSION_CODE" \
-            "-PspoofApplicationId=${{ steps.spoof.outputs.application_id }}" \
-            "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" --no-daemon --stacktrace
-
-      - name: Stage and verify both signed Release APKs
-        env:
-          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
-          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
-          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          STANDARD_SRC="$(find app/build/outputs/apk/standard/release -type f -name '*.apk' -print -quit)"
-          SPOOF_SRC="$(find app/build/outputs/apk/spoof/release -type f -name '*.apk' -print -quit)"
-          [[ -n "$STANDARD_SRC" && -s "$STANDARD_SRC" ]] || { echo "::error::Standard Release APK not found"; exit 1; }
-          [[ -n "$SPOOF_SRC" && -s "$SPOOF_SRC" ]] || { echo "::error::Spoof Release APK not found"; exit 1; }
-          cp "$STANDARD_SRC" Zairenkai-release.apk
-          cp "$SPOOF_SRC" Zairenkai-spoofed-release.apk
-          for APK in Zairenkai-release.apk Zairenkai-spoofed-release.apk; do
-            unzip -t "$APK" >/dev/null
-            tools/ci/verify-release-apk.sh "$APK" app/build/zk-release.jks
-            sha256sum "$APK" > "$APK.sha256"
-          done
-          python3 tools/ci/generate-changelog.py --channel release --tag "$GITHUB_REF_NAME" --version "$GITHUB_REF_NAME" --output Zairenkai-CHANGELOG.md
-          VERSION_NAME="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          RELEASE_TAG="$GITHUB_REF_NAME"
+          VERSION_NAME="${RELEASE_TAG#v}"
           VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$VERSION_NAME" --channel release)"
           API_MAJOR="$(python3 tools/ci/check-api-major.py --print)"
           BUILD_ID="${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python3 tools/ci/generate-changelog.py --channel release --tag "$RELEASE_TAG" --version "$RELEASE_TAG" --output Zairenkai-CHANGELOG.md
           python3 tools/ci/generate-update-manifest.py \
             --apk Zairenkai-release.apk --output version-release.json \
             --version-name "$VERSION_NAME" --version-code "$VERSION_CODE" \
-            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${GITHUB_REF_NAME}/Zairenkai-release.apk" \
+            --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${RELEASE_TAG}/Zairenkai-release.apk" \
             --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$GITHUB_SHA"
-
-      - name: Stage module checksum manifest
-        run: cp module/SHA256SUMS Zairenkai-module-SHA256SUMS
-
-      - name: Test release metadata generator
-        run: python3 tools/ci/test_release_manifest.py
-
-      - name: Set up Python for release metadata verification
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Verify API contract and prepare metadata signer
-        run: |
-          set -euo pipefail
-          python3 tools/ci/check-api-major.py
-          python -m pip install --disable-pip-version-check cryptography
-          grep -q '^-----BEGIN PUBLIC KEY-----' app/src/main/assets/security/update-metadata-public-key.pem || {
-            echo "::error::The pinned update metadata public key is not provisioned; refusing an unsigned official release."
-            exit 1
-          }
-
-      - name: Generate release manifest
-        run: |
-          set -euo pipefail
-          python3 tools/ci/test_release_manifest.py
-          python3 tools/ci/test-version-code.py
-          python3 tools/ci/test-update-manifest.py
-          python3 tools/ci/test-metadata-signature.py
-          python3 tools/ci/test-verify-metadata.py
-          python3 tools/ci/test-verify-release-manifest.py
           python3 tools/ci/generate-release-manifest.py \
-            --version "$GITHUB_REF_NAME" \
-            --commit "$GITHUB_SHA" \
-            --run-id "$GITHUB_RUN_ID" \
-            --run-attempt "$GITHUB_RUN_ATTEMPT"
+            --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
 
-      - name: Sign stable update manifest
+      - name: Sign and verify stable update metadata
         env:
           ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
           ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
-        run: python3 tools/ci/sign-metadata.py --input version-release.json --output version-release.json.sig
+        run: |
+          set -euo pipefail
+          python3 tools/ci/sign-metadata.py --input version-release.json --output version-release.json.sig
+          python3 tools/ci/verify-metadata.py --input version-release.json --signature version-release.json.sig
+          python3 tools/ci/sign-metadata.py --input Zairenkai-release-manifest.json --output Zairenkai-release-manifest.json.sig
+          python3 tools/ci/verify-release-manifest.py --manifest Zairenkai-release-manifest.json --signature Zairenkai-release-manifest.json.sig
 
-      - name: Verify signed stable update manifest
-        run: python3 tools/ci/verify-metadata.py --input version-release.json --signature version-release.json.sig
-
-      - name: Sign release manifest
-        env:
-          ZKFC_METADATA_SIGNING_KEY_B64: ${{ secrets.ZKFC_METADATA_SIGNING_KEY_B64 }}
-          ZKFC_METADATA_SIGNING_PASSPHRASE: ${{ secrets.ZKFC_METADATA_SIGNING_PASSPHRASE }}
-        run: python3 tools/ci/sign-metadata.py --input Zairenkai-release-manifest.json --output Zairenkai-release-manifest.json.sig
-
-      - name: Verify signed release manifest and artifact hashes
-        run: python3 tools/ci/verify-release-manifest.py --manifest Zairenkai-release-manifest.json --signature Zairenkai-release-manifest.json.sig
-
-      - name: Generate release checksums
+      - name: Generate final Release checksums
         run: |
           set -euo pipefail
           sha256sum \
             Zairenkai-module.zip \
-            Zairenkai-release.apk \
-            Zairenkai-release.apk.sha256 \
-            Zairenkai-spoofed-release.apk \
-            Zairenkai-spoofed-release.apk.sha256 \
-            Zairenkai-KMI-modules.zip \
-            Zairenkai-KMI-modules.zip.sha256 \
-            Zairenkai-KMI-SHA256SUMS \
-            Zairenkai-CHANGELOG.md \
-            module-update-release.json \
-            version-release.json \
-            version-release.json.sig \
-            Zairenkai-module-SHA256SUMS \
-            Zairenkai-release-manifest.json \
-            Zairenkai-release-manifest.json.sig \
+            Zairenkai-release.apk Zairenkai-release.apk.sha256 \
+            Zairenkai-spoofed-release.apk Zairenkai-spoofed-release.apk.sha256 \
+            Zairenkai-KMI-modules.zip Zairenkai-KMI-modules.zip.sha256 Zairenkai-KMI-SHA256SUMS \
+            Zairenkai-CHANGELOG.md module-update-release.json Zairenkai-module-SHA256SUMS \
+            version-release.json version-release.json.sig \
+            Zairenkai-release-manifest.json Zairenkai-release-manifest.json.sig \
             > Zairenkai-release-SHA256SUMS
 
-      # Keyless provenance is separate from the ZKFC license key and APK upload key.
-      # These attestations bind the output hashes to the GitHub Actions build identity.
       - name: Attest module ZIP provenance
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-module.zip
-
       - name: Attest standard APK provenance
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-release.apk
-
       - name: Attest Spoof APK provenance
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-spoofed-release.apk
-
       - name: Attest standalone KMI bundle provenance
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-KMI-modules.zip
-
       - name: Attest changelog provenance
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-CHANGELOG.md
-
-      - name: Attest module updater metadata provenance
-        uses: actions/attest@v4
-        with:
-          subject-path: module-update-release.json
-
-      - name: Attest signed updater metadata provenance
+      - name: Attest updater metadata provenance
         uses: actions/attest@v4
         with:
           subject-path: version-release.json
-
-      - name: Attest updater metadata signature provenance
-        uses: actions/attest@v4
-        with:
-          subject-path: version-release.json.sig
-
       - name: Attest release manifest provenance
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-release-manifest.json
-
       - name: Attest release checksum manifest provenance
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-release-SHA256SUMS
 
-      - name: Publish release
+      - name: Publish stable Release
         uses: softprops/action-gh-release@v3.0.2
         with:
           files: |
             Zairenkai-module.zip
+            Zairenkai-module-SHA256SUMS
+            SHA256SUMS
+            module-update-release.json
             Zairenkai-release.apk
             Zairenkai-release.apk.sha256
             Zairenkai-spoofed-release.apk
@@ -351,15 +303,13 @@ jobs:
             Zairenkai-CHANGELOG.md
             version-release.json
             version-release.json.sig
-            module-update-release.json
-            Zairenkai-module-SHA256SUMS
             Zairenkai-release-manifest.json
             Zairenkai-release-manifest.json.sig
             Zairenkai-release-SHA256SUMS
           body_path: Zairenkai-CHANGELOG.md
           generate_release_notes: false
 
-      - name: Verify published Release manifest through License Server
+      - name: Verify published Release app manifest through License Server
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
           RELEASE_TAG: ${{ github.ref_name }}
@@ -368,7 +318,7 @@ jobs:
           python3 tools/ci/smoke-update-server.py "$ZKFC_LICENSE_SERVER_URL" release \
             --apk Zairenkai-release.apk --version "${RELEASE_TAG#v}" --tag "$RELEASE_TAG"
 
-      - name: Verify published module metadata through License Server
+      - name: Verify published Release module metadata through License Server
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
           RELEASE_TAG: ${{ github.ref_name }}

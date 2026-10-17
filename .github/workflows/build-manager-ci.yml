@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-# Central validation orchestrator patterned after KernelSU-Next's Build Manager CI.
-# It fans out reusable validation workflows; a full KMI/module + integrated optimized
-# full_build runs only on manual dispatch (enabled by default there). CI validation never distributes an APK.
+# Central Build Manager: validation + one KMI/module matrix + a four-row APK matrix.
+# APK variants are isolated reusable workflow jobs (Canary/Release × Standard/Spoof).
+# Pull requests compile optimized unsigned validation artifacts only; push/manual builds
+# require the protected signing environments and upload signed artifacts for publisher workflows.
 name: Build Manager CI
 
 on:
@@ -44,12 +45,6 @@ on:
       - ".github/workflows/**"
       - ".github/actions/**"
   workflow_dispatch:
-    inputs:
-      full_build:
-        description: "Build all supported KMI modules and compile optimized Canary variants (requires ZKFC_LICENSE_SERVER_URL). Full build is enabled by default for manual runs."
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -60,7 +55,7 @@ concurrency:
 
 jobs:
   android:
-    name: Android tests, optimized variants, R8 and lint
+    name: Android tests, R8 and lint
     uses: ./.github/workflows/android.yml
     permissions:
       contents: read
@@ -102,7 +97,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Verify CI orchestration and reusable workflow contracts
+      - name: Verify orchestration, matrix, signing, changelog and server contracts
         run: |
           set -euo pipefail
           python3 tools/ci/test-build-manager-workflow.py
@@ -112,106 +107,48 @@ jobs:
           python3 tools/ci/test_release_manifest.py
           python3 tools/ci/generate-spoof-package-id.py | grep -Eq '^[a-z]{6}(\.[a-z]{6}){2}$'
 
+  # Compile the supported KMI matrix once. The reusable module workflow then
+  # packages separate Canary and Release module artifacts from the shared binaries.
   module:
-    name: Full KMI matrix and module packaging
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build == true }}
+    name: Full KMI matrix + Canary/Release module packages
     uses: ./.github/workflows/build-module.yml
     with:
-      channel: canary
+      channel: both
+      allow_unpublished_release: true
       ddk_release: "20260828"
+      server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
     permissions:
       contents: read
 
+  # KernelSU-Next-style matrix: compile/sign/upload one APK per matrix row.
   build-manager:
-    name: Compile integrated optimized Canary/Release variants (not published)
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build == true }}
+    name: ${{ matrix.channel }} / ${{ matrix.variant }} APK
     needs: [module]
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - channel: canary
+            variant: standard
+          - channel: canary
+            variant: spoof
+          - channel: release
+            variant: standard
+          - channel: release
+            variant: spoof
+    uses: ./.github/workflows/build-manager.yml
+    with:
+      channel: ${{ matrix.channel }}
+      variant: ${{ matrix.variant }}
+      require_signing: ${{ github.event_name != 'pull_request' }}
+      license_server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+    secrets:
+      ZK_KEYSTORE_BASE64: ${{ github.event_name != 'pull_request' && secrets.ZK_KEYSTORE_BASE64 || '' }}
+      ZK_KEYSTORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.ZK_KEYSTORE_PASSWORD || '' }}
+      ZK_KEY_ALIAS: ${{ github.event_name != 'pull_request' && secrets.ZK_KEY_ALIAS || '' }}
+      ZK_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.ZK_KEY_PASSWORD || '' }}
     permissions:
       contents: read
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v7.0.1
-        with:
-          fetch-depth: 1
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4.0.4
-        with:
-          packages: platform-tools
-
-      - name: Install pinned Android SDK and NDK
-        run: |
-          set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
-
-      - name: Download verified module build artifact
-        uses: actions/download-artifact@v7.0.1
-        with:
-          name: module-zip
-          path: module-artifact
-
-      - name: Verify module artifact and stage KMI assets
-        run: |
-          set -euo pipefail
-          test -s module-artifact/Zairenkai-module.zip
-          test -s module-artifact/SHA256SUMS
-          test -s module-artifact/module-update-canary.json
-          cp module-artifact/Zairenkai-module.zip Zairenkai-module.zip
-          cp module-artifact/SHA256SUMS SHA256SUMS
-          cp module-artifact/module-update-canary.json module-update-canary.json
-          unzip -t Zairenkai-module.zip >/dev/null
-          # stage-module-assets verifies the embedded SHA256SUMS against
-          # the actual archive contents before anything is copied into the APK.
-          tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip
-
-      - name: Build boot-patch backend
-        uses: ./.github/actions/build-bootpatch
-
-      - name: Stage verified embedded module
-        run: tools/bootpatch/stage-embedded-module.sh Zairenkai-module.zip
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.4.0
-
-      - name: Validate update server configuration
-        env:
-          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: |
-          set -euo pipefail
-          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
-            echo "::error::Full integrated builds require ZKFC_LICENSE_SERVER_URL as the production HTTPS origin, without a path."
-            exit 1
-          }
-
-      - name: Test and build optimized Canary manager
-        env:
-          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-        run: |
-          set -euo pipefail
-          BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
-          VERSION_CODE="$(python3 tools/ci/version-code.py \
-            --version-name "$BASE_VERSION" \
-            --channel canary \
-            --run-number "$GITHUB_RUN_NUMBER")"
-          ./gradlew :app:test :app:assembleStandardCanary :app:assembleStandardRelease \
-            "-PversionCode=$VERSION_CODE" \
-            "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" \
-            --no-daemon --stacktrace
-
-      - name: Verify optimized Canary and Release outputs (validation only)
-        run: |
-          set -euo pipefail
-          test -n "$(find app/build/outputs/apk/standard/canary -type f -name '*.apk' -print -quit)"
-          test -n "$(find app/build/outputs/apk/standard/release -type f -name '*.apk' -print -quit)"
-          echo "PASS: optimized Canary and Release variants compiled; no APK is uploaded from validation CI."
 
   summary:
     name: Build Manager CI summary
@@ -232,7 +169,7 @@ jobs:
           WORKFLOW_CONTRACTS_RESULT: ${{ needs.workflow-contracts.result }}
           MODULE_RESULT: ${{ needs.module.result }}
           MANAGER_RESULT: ${{ needs.build-manager.result }}
-          FULL_BUILD_REQUESTED: ${{ inputs.full_build }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           {
@@ -240,22 +177,20 @@ jobs:
             echo
             echo "| Component | Result |"
             echo "|---|---|"
-            echo "| Android tests, R8, lint and validation variants | ${ANDROID_RESULT} |"
+            echo "| Android tests, R8 and lint | ${ANDROID_RESULT} |"
             echo "| Native crypto/UAPI/userspace/Rust/module checks | ${NATIVE_RESULT} |"
             echo "| Atlas registry and device data | ${ATLAS_RESULT} |"
             echo "| Rustfmt | ${RUSTFMT_RESULT} |"
             echo "| Clippy | ${CLIPPY_RESULT} |"
             echo "| ShellCheck | ${SHELLCHECK_RESULT} |"
             echo "| Workflow contracts | ${WORKFLOW_CONTRACTS_RESULT} |"
-            echo "| Full KMI module matrix | ${MODULE_RESULT} |"
-            echo "| Integrated optimized Canary/Release compile | ${MANAGER_RESULT} |"
+            echo "| Full KMI matrix + Canary/Release module packages | ${MODULE_RESULT} |"
+            echo "| APK matrix: Canary/Release × Standard/Spoof | ${MANAGER_RESULT} |"
             echo
-            if [[ "$FULL_BUILD_REQUESTED" != "true" ]]; then
-              echo "Full KMI/module and integrated APK build was not requested. Run this workflow manually with \`full_build=true\` after configuring \`ZKFC_LICENSE_SERVER_URL\`."
+            if [[ "$EVENT_NAME" == pull_request ]]; then
+              echo "PR policy: four optimized APK variants are compiled as unsigned validation artifacts; signing secrets are not forwarded to the build matrix."
             else
-              echo "Full build was requested. See the KMI matrix and optimized Canary/Release compile results above; CI does not publish APKs."
+              echo "Push/manual policy: all four matrix rows require channel signing, signer verification and checksummed artifact upload."
             fi
-            echo
-            echo "Official signed Canary and stable Release publication remain separate workflows."
-            echo "CI validation compiles optimized variants only; it does not publish debug or unsigned APK artifacts."
+            echo "This workflow uploads build artifacts only. Canary and stable Release publishing are separate jobs/workflows and consume these verified artifacts."
           } >> "$GITHUB_STEP_SUMMARY"

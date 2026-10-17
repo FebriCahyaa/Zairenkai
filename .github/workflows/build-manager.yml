@@ -1,0 +1,263 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Reusable one-variant builder. The caller supplies a matrix row so each
+# channel/variant has an isolated compile, signer verification, and artifact.
+name: Build signed manager variant
+
+on:
+  workflow_call:
+    inputs:
+      channel:
+        description: Build channel
+        required: true
+        type: string
+      variant:
+        description: Distribution flavor (standard or spoof)
+        required: true
+        type: string
+      require_signing:
+        description: Require official channel signing (false only for PR validation)
+        required: false
+        default: true
+        type: boolean
+      license_server_url:
+        description: HTTPS origin used in BuildConfig
+        required: false
+        default: ''
+        type: string
+      version_name:
+        description: Optional stable version/tag for a stable Release build
+        required: false
+        default: ''
+        type: string
+    secrets:
+      ZK_KEYSTORE_BASE64:
+        required: false
+      ZK_KEYSTORE_PASSWORD:
+        required: false
+      ZK_KEY_ALIAS:
+        required: false
+      ZK_KEY_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ inputs.channel }} / ${{ inputs.variant }} / ${{ inputs.require_signing && 'signed' || 'unsigned PR validation' }}
+    runs-on: ubuntu-24.04
+    environment:
+      name: ${{ inputs.require_signing && (inputs.channel == 'release' && 'production-signing' || 'canary-signing') || 'ci-validation' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout full source for changelog/build provenance
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate matrix inputs, signing material and channel version
+        id: meta
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          VARIANT: ${{ inputs.variant }}
+          REQUIRE_SIGNING: ${{ inputs.require_signing }}
+          REQUESTED_SERVER_URL: ${{ inputs.license_server_url }}
+          REQUESTED_VERSION_NAME: ${{ inputs.version_name }}
+          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ "$CHANNEL" == canary || "$CHANNEL" == release ]] || { echo "::error::Invalid channel: $CHANNEL"; exit 1; }
+          [[ "$VARIANT" == standard || "$VARIANT" == spoof ]] || { echo "::error::Invalid variant: $VARIANT"; exit 1; }
+          SERVER_URL="${REQUESTED_SERVER_URL:-}"
+          if [[ "$REQUIRE_SIGNING" == true ]]; then
+            for name in ZK_KEYSTORE_BASE64 ZK_KEYSTORE_PASSWORD ZK_KEY_ALIAS ZK_KEY_PASSWORD; do
+              [[ -n "${!name:-}" ]] || { echo "::error::Missing signing secret: $name"; exit 1; }
+            done
+          fi
+          # Integrated CI builds should compile even during a License Server outage.
+          # Canary/Release publisher workflows separately probe health + D1 and block
+          # publication if the real origin is absent or unavailable.
+          if [[ -z "$SERVER_URL" ]]; then
+            SERVER_URL="https://license-server-validation.invalid"
+            echo "::notice::Building with validation-only updater origin; this artifact is not eligible for publication until the live-server gate passes."
+          fi
+          [[ "$SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || { echo "::error::Invalid License Server origin"; exit 1; }
+
+          BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [[ "$CHANNEL" == canary ]]; then
+            VERSION_NAME="${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}"
+            VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$BASE_VERSION" --channel canary --run-number "$GITHUB_RUN_NUMBER")"
+            BUILD_TYPE=Canary
+          else
+            VERSION_NAME="${BASE_VERSION}"
+            if [[ -n "$REQUESTED_VERSION_NAME" ]]; then
+              TAG_VERSION="${REQUESTED_VERSION_NAME#v}"
+              [[ "$TAG_VERSION" == "$BASE_VERSION" ]] || {
+                echo "::error::Release tag/version '$TAG_VERSION' must match app/build.gradle.kts versionName '$BASE_VERSION'."; exit 1;
+              }
+            fi
+            VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$BASE_VERSION" --channel release)"
+            BUILD_TYPE=Release
+          fi
+          echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "build_type=$BUILD_TYPE" >> "$GITHUB_OUTPUT"
+          echo "server_url=$SERVER_URL" >> "$GITHUB_OUTPUT"
+          if [[ "$VARIANT" == spoof ]]; then
+            APP_ID="$(python3 tools/ci/generate-spoof-package-id.py)"
+            [[ "$APP_ID" =~ ^[a-z]{6}(\.[a-z]{6}){2}$ ]] || { echo "::error::Generated Spoof package ID is invalid"; exit 1; }
+            echo "spoof_application_id=$APP_ID" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Prepared channel=$CHANNEL variant=$VARIANT buildType=$BUILD_TYPE version=$VERSION_NAME versionCode=$VERSION_CODE signed=$REQUIRE_SIGNING"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK and NDK
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools
+      - name: Install pinned Android platform, build tools and NDK
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+
+      - name: Download module and standalone KMI artifacts from this workflow run
+        uses: actions/download-artifact@v7.0.1
+        with:
+          name: module-zip-${{ inputs.channel }}
+          path: module-artifact
+      - uses: actions/download-artifact@v7.0.1
+        with:
+          name: kmi-bundle
+          path: kmi-artifact
+
+      - name: Verify module/KMI package and stage all matching assets
+        run: |
+          set -euo pipefail
+          test -s module-artifact/Zairenkai-module.zip
+          test -s module-artifact/SHA256SUMS
+          test -s module-artifact/module-update-${{ inputs.channel }}.json
+          test -s kmi-artifact/Zairenkai-KMI-modules.zip
+          test -s kmi-artifact/Zairenkai-KMI-modules.zip.sha256
+          test -s kmi-artifact/Zairenkai-KMI-SHA256SUMS
+          cp module-artifact/Zairenkai-module.zip Zairenkai-module.zip
+          cp module-artifact/SHA256SUMS SHA256SUMS
+          cp module-artifact/module-update-${{ inputs.channel }}.json module-update-${{ inputs.channel }}.json
+          cp kmi-artifact/Zairenkai-KMI-modules.zip .
+          cp kmi-artifact/Zairenkai-KMI-modules.zip.sha256 .
+          cp kmi-artifact/Zairenkai-KMI-SHA256SUMS .
+          sha256sum -c Zairenkai-KMI-modules.zip.sha256
+          unzip -t Zairenkai-KMI-modules.zip >/dev/null
+          rm -rf kmi-verify module
+          mkdir -p kmi-verify module
+          unzip -q Zairenkai-KMI-modules.zip -d kmi-verify
+          (cd kmi-verify && sha256sum -c ../Zairenkai-KMI-SHA256SUMS)
+          KMI_COUNT="$(find kmi-verify -type f -name zkfc.ko | wc -l | tr -d ' ')"
+          [[ "$KMI_COUNT" == 16 ]] || { echo "::error::KMI bundle must contain exactly 16 zkfc.ko files, found $KMI_COUNT"; exit 1; }
+          unzip -q Zairenkai-module.zip -d module
+          (cd module && sha256sum -c SHA256SUMS)
+          test -s module/module.prop
+          test -n "$(find module/lkm -type f -name zkfc.ko -print -quit)"
+          tools/bootpatch/stage-module-assets.sh module
+          tools/bootpatch/stage-embedded-module.sh Zairenkai-module.zip
+
+      - name: Build boot-patch backend
+        uses: ./.github/actions/build-bootpatch
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.4.0
+
+      - name: Build exactly one optimized matrix variant
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          VARIANT: ${{ inputs.variant }}
+          BUILD_TYPE: ${{ steps.meta.outputs.build_type }}
+          VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+          SERVER_URL: ${{ steps.meta.outputs.server_url }}
+          SPOOF_APPLICATION_ID: ${{ steps.meta.outputs.spoof_application_id }}
+          ZK_KEYSTORE_BASE64: ${{ secrets.ZK_KEYSTORE_BASE64 }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ "$VARIANT" == standard || "$VARIANT" == spoof ]] || exit 2
+          FLAVOR=Standard
+          if [[ "$VARIANT" == spoof ]]; then FLAVOR=Spoof; fi
+          TASK=":app:assemble${FLAVOR}${BUILD_TYPE}"
+          if [[ "$VARIANT" == spoof ]]; then
+            ./gradlew "$TASK" "-PversionCode=$VERSION_CODE" \
+              "-PspoofApplicationId=$SPOOF_APPLICATION_ID" \
+              "-PlicenseServerUrl=$SERVER_URL" --no-daemon --stacktrace
+          else
+            ./gradlew "$TASK" "-PversionCode=$VERSION_CODE" \
+              "-PlicenseServerUrl=$SERVER_URL" --no-daemon --stacktrace
+          fi
+
+      - name: Stage and verify the single APK artifact
+        id: stage
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          VARIANT: ${{ inputs.variant }}
+          BUILD_TYPE: ${{ steps.meta.outputs.build_type }}
+          VERSION_NAME: ${{ steps.meta.outputs.version_name }}
+          VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+          REQUIRE_SIGNING: ${{ inputs.require_signing }}
+          ZK_KEYSTORE_PASSWORD: ${{ secrets.ZK_KEYSTORE_PASSWORD }}
+          ZK_KEY_ALIAS: ${{ secrets.ZK_KEY_ALIAS }}
+          ZK_KEY_PASSWORD: ${{ secrets.ZK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          SRC="$(find "app/build/outputs/apk/$VARIANT/$(printf '%s' "$BUILD_TYPE" | tr '[:upper:]' '[:lower:]')" -type f -name '*.apk' -print -quit)"
+          [[ -n "$SRC" && -s "$SRC" ]] || { echo "::error::APK output missing for $CHANNEL/$VARIANT/$BUILD_TYPE"; exit 1; }
+          case "$CHANNEL/$VARIANT" in
+            canary/standard) APK=Zairenkai-canary.apk ;;
+            canary/spoof) APK=Zairenkai-canary-spoof.apk ;;
+            release/standard) APK=Zairenkai-release.apk ;;
+            release/spoof) APK=Zairenkai-spoofed-release.apk ;;
+            *) echo "::error::Unexpected matrix row"; exit 2 ;;
+          esac
+          cp "$SRC" "$APK"
+          unzip -t "$APK" >/dev/null
+          if [[ "$REQUIRE_SIGNING" == true ]]; then
+            tools/ci/verify-release-apk.sh "$APK" app/build/zk-release.jks
+            SIGNING_STATE=signed
+          else
+            SIGNING_STATE=unsigned-validation
+            echo "::notice::PR validation artifact is intentionally unsigned and cannot be published."
+          fi
+          sha256sum "$APK" > "$APK.sha256"
+          python3 - "$APK" "$CHANNEL" "$VARIANT" "$VERSION_NAME" "$VERSION_CODE" "$SIGNING_STATE" "$GITHUB_SHA" <<'PY'
+          import json, sys
+          from pathlib import Path
+          apk, channel, variant, version_name, version_code, state, commit = sys.argv[1:]
+          Path("build-info.json").write_text(json.dumps({
+              "product": "Zairenkai", "channel": channel, "variant": variant,
+              "versionName": version_name, "versionCode": int(version_code),
+              "signing": state, "apk": apk, "commit": commit,
+          }, indent=2) + "\n", encoding="utf-8")
+          PY
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "signing_state=$SIGNING_STATE" >> "$GITHUB_OUTPUT"
+          echo "Staged $APK ($SIGNING_STATE); SHA-256: $(cut -d' ' -f1 "$APK.sha256")"
+
+      - name: Upload this channel/variant artifact only
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: zairenkai-${{ inputs.channel }}-${{ inputs.variant }}-${{ steps.stage.outputs.signing_state == 'signed' && 'signed' || 'unsigned-validation' }}
+          path: |
+            ${{ steps.stage.outputs.apk }}
+            ${{ steps.stage.outputs.apk }}.sha256
+            build-info.json
+          if-no-files-found: error
+          retention-days: 7
