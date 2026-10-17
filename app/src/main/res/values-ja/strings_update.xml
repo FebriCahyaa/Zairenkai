@@ -27,6 +27,7 @@
     <string name="update_fail_network">更新サーバーに接続できませんでした。接続を確認して再試行してください。</string>
     <string name="update_fail_notpublished">このチャンネルにはまだビルドが公開されていません。</string>
     <string name="update_fail_manifest">更新情報を読み取れませんでした。</string>
+    <string name="update_fail_spoofed">Spoof ビルドでは、ビルドごとにパッケージ ID がランダム化されるため、自動更新は無効です。新しい Spoof APK を GitHub Releases からダウンロードしてください。</string>
     <string name="update_fail_server">このビルドには License Server の URL が設定されていません。公式の Canary または Release をインストールしてください。</string>
 
     <string name="update_auto_title">更新を自動で確認</string>

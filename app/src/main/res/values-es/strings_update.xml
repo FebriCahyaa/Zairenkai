@@ -27,6 +27,7 @@
     <string name="update_fail_network">No se pudo conectar con el servidor de actualizaciones. Comprueba la conexión y vuelve a intentarlo.</string>
     <string name="update_fail_notpublished">Aún no hay ninguna compilación publicada en este canal.</string>
     <string name="update_fail_manifest">No se pudo leer la información de la actualización.</string>
+    <string name="update_fail_spoofed">Las actualizaciones automáticas están desactivadas en las compilaciones Spoof porque el ID del paquete se aleatoriza en cada compilación. Descarga una APK Spoof más reciente desde GitHub Releases.</string>
     <string name="update_fail_server">Esta compilación no tiene configurada la URL del License Server. Instala una compilación oficial Canary o Release.</string>
 
     <string name="update_auto_title">Buscar actualizaciones automáticamente</string>

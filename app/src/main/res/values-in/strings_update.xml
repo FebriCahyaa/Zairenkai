@@ -27,6 +27,7 @@
     <string name="update_fail_network">Tidak bisa menjangkau server pembaruan. Periksa koneksi lalu coba lagi.</string>
     <string name="update_fail_notpublished">Belum ada build yang dipublikasikan di kanal ini.</string>
     <string name="update_fail_manifest">Informasi pembaruan tidak bisa dibaca.</string>
+    <string name="update_fail_spoofed">Pembaruan otomatis dinonaktifkan untuk build Spoof karena ID paket diacak pada setiap build. Unduh APK Spoof yang lebih baru dari GitHub Releases.</string>
     <string name="update_fail_server">URL License Server belum dikonfigurasi pada build ini. Pasang build Canary atau Release resmi.</string>
 
     <string name="update_auto_title">Periksa pembaruan otomatis</string>

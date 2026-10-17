@@ -27,6 +27,7 @@
     <string name="update_fail_network">无法连接更新服务器。请检查网络后重试。</string>
     <string name="update_fail_notpublished">此通道尚未发布任何版本。</string>
     <string name="update_fail_manifest">无法读取更新信息。</string>
+    <string name="update_fail_spoofed">由于每次构建都会随机生成软件包 ID，Spoof 版本已停用自动更新。请从 GitHub Releases 下载较新的 Spoof APK。</string>
     <string name="update_fail_server">此版本未配置 License Server 地址。请安装官方 Canary 或 Release 版本。</string>
 
     <string name="update_auto_title">自动检查更新</string>
