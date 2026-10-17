@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="patch_flow_method_file">Pilih berkas (disarankan)</string>
-    <string name="patch_flow_method_file_sub">Patch boot.img atau init_boot.img yang cocok dengan LKM ZKFC.</string>
+    <string name="patch_flow_method_file_sub">Patch boot.img, init_boot.img, atau vendor_boot.img menggunakan LKM ZKFC yang sesuai.</string>
     <string name="patch_flow_method_direct">Pemasangan langsung</string>
     <string name="patch_flow_method_direct_sub">Pasang langsung ke slot boot aktif.</string>
     <string name="patch_flow_method_inactive">Pasang ke slot nonaktif (setelah OTA)</string>
@@ -9,14 +9,20 @@
     <string name="patch_flow_method_anykernel">Pasang AnyKernel (.zip)</string>
     <string name="patch_flow_method_anykernel_sub">Buka paket AnyKernel yang kompatibel melalui root manager.</string>
     <string name="patch_flow_mode_unavailable">Belum tersedia dalam versi ini</string>
-    <string name="patch_flow_summary">Pilih image ramdisk yang akan di-patch dan, bila diperlukan, boot.img pasangannya untuk identifikasi kernel. ZKFC harus cocok dengan keluarga kernel, cabang KMI, dan ABI simbol. Zairenkai hanya menyimpan berkas dan tidak melakukan flashing partisi.</string>
+    <string name="patch_flow_summary">Pilih image ramdisk yang benar dan, bila diperlukan, boot.img pasangannya untuk identitas kernel. Deteksi KMI mengikuti KernelSU-Next: banner kernel dahulu, lalu vermagic modul vendor opsional. Mode berkas hanya menghasilkan image patch dan tidak melakukan flashing partisi.</string>
     <string name="patch_flow_title">Patch Zairenkai ke image boot</string>
-    <string name="patch_flow_pick_image">Pilih boot.img atau init_boot.img</string>
+    <string name="patch_flow_pick_image">Pilih boot.img, init_boot.img, atau vendor_boot.img</string>
     <string name="patch_flow_selected_image">Image: %1$s</string>
     <string name="patch_flow_pick_kernel_reference">Pilih boot.img pasangan (referensi kernel, jika diperlukan)</string>
     <string name="patch_flow_selected_kernel_reference">Referensi kernel: %1$s</string>
     <string name="patch_flow_kernel_release_detected">Rilis kernel: %1$s</string>
-    <string name="patch_flow_kernel_reference_help">Pada Android 13 ke atas, generic ramdisk biasanya berada di init_boot.img. Pilih init_boot.img sebagai target patch dan boot.img dari ROM/build yang sama di sini. Untuk image yang sudah berisi kernel, kolom ini opsional.</string>
+    <string name="patch_flow_kernel_reference_help">Gunakan image dari perangkat dan build firmware yang sama. Mengikuti kebijakan partisi KernelSU-Next, KMI android12-* menargetkan boot.img; cabang KMI lain memprioritaskan init_boot.img jika partisi itu tersedia. Jika init_boot.img atau vendor_boot.img tidak memiliki payload kernel, pilih boot.img pasangannya sebagai referensi kernel. vendor_boot.img hanya didukung jika memiliki fragmen ramdisk generik bernama init_boot atau tanpa nama.</string>
+        <string name="patch_flow_pick_kmi_reference_module">Pilih .ko vendor untuk deteksi KMI (fallback KernelSU-Next)</string>
+        <string name="patch_flow_selected_kmi_reference_module">Modul referensi KMI: %1$s</string>
+        <string name="patch_flow_kmi_source">Sumber KMI: %1$s</string>
+        <string name="patch_flow_kmi_source_kernel_image">image kernel</string>
+        <string name="patch_flow_kmi_source_vendor_module">vermagic modul vendor</string>
+        <string name="patch_flow_kmi_source_manual">pilihan manual (belum terverifikasi)</string>
     <string name="patch_flow_pick_module">Pilih zkfc.ko yang sesuai (opsional jika APK ini menyertakan KMI terpilih)</string>
     <string name="patch_flow_selected_module">Modul: %1$s</string>
     <string name="patch_flow_kmi_title">KMI kernel target</string>
@@ -34,7 +40,7 @@
     <string name="patch_flow_error">Patch gagal</string>
     <string name="patch_flow_direct_unavailable">Flashing langsung dan pemasangan ke slot nonaktif belum diterapkan. Gunakan patch berkas atau paket AnyKernel yang kompatibel.</string>
     <string name="patch_flow_kmi_detecting">Mendeteksi KMI dari image yang dipilih…</string>
-    <string name="patch_flow_kmi_detected">KMI terdeteksi dari image: %1$s</string>
-    <string name="patch_flow_kmi_manual">Cabang Android KMI tidak dapat dideteksi. Pilih secara manual; aplikasi akan menampilkan rilis kernel sebagai diagnosis. KMI dan kompatibilitas versi simbol tetap harus cocok.</string>
+    <string name="patch_flow_kmi_detected">KMI terdeteksi: %1$s</string>
+    <string name="patch_flow_kmi_manual">Cabang KMI tidak ditemukan pada banner kernel maupun modul vendor opsional. Pilih manual hanya jika kamu mengetahui cabang target; kompatibilitas tetap belum terverifikasi.</string>
 <string name="patch_flow_module_bundled_hint">APK rilis dapat memakai modul bawaan yang cocok dengan KMI terpilih. Pilih berkas untuk menggantinya atau jika modul bawaan tidak tersedia.</string>    <string name="patch_flow_kmi_mismatch">KMI pilihan (%1$s) tidak cocok dengan KMI yang terdeteksi dari image (%2$s). Gunakan cabang yang terdeteksi atau pastikan image berasal dari kernel yang dimaksud.</string>
 </resources>

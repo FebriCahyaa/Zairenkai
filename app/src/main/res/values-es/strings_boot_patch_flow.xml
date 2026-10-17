@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="patch_flow_method_file">Seleccionar archivo (recomendado)</string>
-    <string name="patch_flow_method_file_sub">Parchea un boot.img o init_boot.img compatible con el LKM ZKFC correspondiente.</string>
+    <string name="patch_flow_method_file_sub">Parchea boot.img, init_boot.img o vendor_boot.img con el LKM ZKFC correspondiente.</string>
     <string name="patch_flow_method_direct">Instalación directa</string>
     <string name="patch_flow_method_direct_sub">Instala directamente en la ranura de arranque activa.</string>
     <string name="patch_flow_method_inactive">Instalar en ranura inactiva (después de OTA)</string>
@@ -9,14 +9,20 @@
     <string name="patch_flow_method_anykernel">Instalar AnyKernel (.zip)</string>
     <string name="patch_flow_method_anykernel_sub">Abre un paquete AnyKernel compatible en tu gestor root.</string>
     <string name="patch_flow_mode_unavailable">No disponible en esta versión</string>
-    <string name="patch_flow_summary">Selecciona una imagen boot/init_boot compatible y el módulo ZKFC compilado para el KMI objetivo; después genera una imagen parcheada. Zairenkai guarda un archivo y no flashea particiones.</string>
+    <string name="patch_flow_summary">Selecciona la imagen ramdisk correcta y, si hace falta, su boot.img correspondiente para identificar el kernel. La detección KMI sigue a KernelSU-Next: primero el banner del kernel y después, opcionalmente, el vermagic de un módulo vendor. El modo archivo solo genera una imagen parcheada y nunca flashea particiones.</string>
     <string name="patch_flow_title">Integrar Zairenkai en la imagen de arranque</string>
-    <string name="patch_flow_pick_image">Seleccionar boot.img o init_boot.img</string>
+    <string name="patch_flow_pick_image">Seleccionar boot.img, init_boot.img o vendor_boot.img</string>
     <string name="patch_flow_selected_image">Imagen: %1$s</string>
     <string name="patch_flow_pick_kernel_reference">Seleccionar el boot.img correspondiente (referencia del kernel, si es necesario)</string>
     <string name="patch_flow_selected_kernel_reference">Referencia del kernel: %1$s</string>
     <string name="patch_flow_kernel_release_detected">Versión del kernel: %1$s</string>
-    <string name="patch_flow_kernel_reference_help">En Android 13 y versiones posteriores, el ramdisk genérico suele estar en init_boot.img. Selecciona init_boot.img arriba como objetivo del parche y el boot.img de la misma ROM/compilación aquí. Para imágenes que ya incluyen un kernel, este campo es opcional.</string>
+    <string name="patch_flow_kernel_reference_help">Usa imágenes del mismo dispositivo y compilación de firmware. Siguiendo la política de particiones de KernelSU-Next, KMI android12-* usa boot.img; otras ramas KMI prefieren init_boot.img si existe esa partición. Si init_boot.img o vendor_boot.img no contiene kernel, selecciona el boot.img correspondiente como referencia. vendor_boot.img solo se admite si contiene un fragmento ramdisk genérico llamado init_boot o sin nombre.</string>
+        <string name="patch_flow_pick_kmi_reference_module">Seleccionar .ko de vendor para detectar KMI (alternativa de KernelSU-Next)</string>
+        <string name="patch_flow_selected_kmi_reference_module">Módulo de referencia KMI: %1$s</string>
+        <string name="patch_flow_kmi_source">Origen del KMI: %1$s</string>
+        <string name="patch_flow_kmi_source_kernel_image">imagen del kernel</string>
+        <string name="patch_flow_kmi_source_vendor_module">vermagic del módulo vendor</string>
+        <string name="patch_flow_kmi_source_manual">selección manual (sin verificar)</string>
     <string name="patch_flow_pick_module">Selecciona un zkfc.ko compatible (opcional si el APK incluye el KMI elegido)</string>
     <string name="patch_flow_selected_module">Módulo: %1$s</string>
     <string name="patch_flow_kmi_title">KMI del kernel objetivo</string>
@@ -34,7 +40,7 @@
     <string name="patch_flow_error">Error al parchear</string>
     <string name="patch_flow_direct_unavailable">La escritura directa y la instalación en la ranura inactiva aún no están implementadas. Usa el parcheo de archivos o un paquete AnyKernel compatible.</string>
     <string name="patch_flow_kmi_detecting">Detectando el KMI de la imagen seleccionada…</string>
-    <string name="patch_flow_kmi_detected">KMI detectado en la imagen: %1$s</string>
-    <string name="patch_flow_kmi_manual">No se pudo detectar el KMI del kernel en esta imagen. Selecciona el KMI de destino manualmente.</string>
+    <string name="patch_flow_kmi_detected">KMI detectado: %1$s</string>
+    <string name="patch_flow_kmi_manual">No se encontró una rama KMI en el banner del kernel ni en el módulo vendor opcional. Selecciona manualmente solo si conoces la rama correcta; la compatibilidad seguirá sin verificarse.</string>
 <string name="patch_flow_module_bundled_hint">Un APK de lanzamiento puede usar el módulo incluido para el KMI seleccionado. Elige un archivo para sustituirlo o si no hay uno compatible incluido.</string>    <string name="patch_flow_kmi_mismatch">El KMI seleccionado (%1$s) no coincide con el KMI detectado en la imagen (%2$s). Usa la rama detectada o verifica que la imagen corresponda al kernel deseado.</string>
 </resources>

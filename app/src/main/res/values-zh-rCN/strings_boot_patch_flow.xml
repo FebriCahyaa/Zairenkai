@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="patch_flow_method_file">选择文件（推荐）</string>
-    <string name="patch_flow_method_file_sub">使用匹配的 ZKFC LKM 修补兼容的 boot.img 或 init_boot.img。</string>
+    <string name="patch_flow_method_file_sub">使用匹配的 ZKFC LKM 修补 boot.img、init_boot.img 或 vendor_boot.img。</string>
     <string name="patch_flow_method_direct">直接安装</string>
     <string name="patch_flow_method_direct_sub">直接安装到当前活动的启动槽位。</string>
     <string name="patch_flow_method_inactive">安装到非活动槽位（OTA 后）</string>
@@ -9,14 +9,20 @@
     <string name="patch_flow_method_anykernel">安装 AnyKernel（.zip）</string>
     <string name="patch_flow_method_anykernel_sub">在 root 管理器中打开兼容的 AnyKernel 包。</string>
     <string name="patch_flow_mode_unavailable">此版本暂不可用</string>
-    <string name="patch_flow_summary">选择匹配的 boot/init_boot 镜像和针对目标 KMI 构建的 ZKFC 内核模块，然后生成修补后的镜像。Zairenkai 只保存文件，不会直接刷写分区。</string>
+    <string name="patch_flow_summary">选择正确的 ramdisk 镜像，并在需要时选择同一构建的 boot.img 作为内核识别参考。KMI 检测遵循 KernelSU-Next：先检查内核标识，再可选地读取 vendor 模块 vermagic。文件模式只生成修补后的镜像，不会刷写分区。</string>
     <string name="patch_flow_title">将 Zairenkai 注入启动镜像</string>
-    <string name="patch_flow_pick_image">选择 boot.img 或 init_boot.img</string>
+    <string name="patch_flow_pick_image">选择 boot.img、init_boot.img 或 vendor_boot.img</string>
     <string name="patch_flow_selected_image">镜像：%1$s</string>
     <string name="patch_flow_pick_kernel_reference">选择配套的 boot.img（如需要，用作内核参考）</string>
     <string name="patch_flow_selected_kernel_reference">内核参考：%1$s</string>
     <string name="patch_flow_kernel_release_detected">内核版本：%1$s</string>
-    <string name="patch_flow_kernel_reference_help">在 Android 13 及更高版本中，通用 ramdisk 通常位于 init_boot.img。请在上方选择 init_boot.img 作为修补目标，并在此选择同一 ROM/构建的 boot.img。对于已包含内核的镜像，此项可选。</string>
+    <string name="patch_flow_kernel_reference_help">请使用同一设备和固件构建的镜像。按照 KernelSU-Next 的分区规则，android12-* KMI 使用 boot.img；其他 KMI 分支在 init_boot 分区存在时优先使用 init_boot.img。如果 init_boot.img 或 vendor_boot.img 不包含内核，请选择对应的 boot.img 作为内核参考。vendor_boot.img 仅在包含名为 init_boot 或未命名的通用 ramdisk 分区时受支持。</string>
+        <string name="patch_flow_pick_kmi_reference_module">选择用于检测 KMI 的 vendor .ko（KernelSU-Next 回退方式）</string>
+        <string name="patch_flow_selected_kmi_reference_module">KMI 参考模块：%1$s</string>
+        <string name="patch_flow_kmi_source">KMI 来源：%1$s</string>
+        <string name="patch_flow_kmi_source_kernel_image">内核镜像</string>
+        <string name="patch_flow_kmi_source_vendor_module">vendor 模块 vermagic</string>
+        <string name="patch_flow_kmi_source_manual">手动选择（未验证）</string>
     <string name="patch_flow_pick_module">选择匹配的 zkfc.ko（此 APK 已包含所选 KMI 时可选）</string>
     <string name="patch_flow_selected_module">模块：%1$s</string>
     <string name="patch_flow_kmi_title">目标内核 KMI</string>
@@ -34,7 +40,7 @@
     <string name="patch_flow_error">修补失败</string>
     <string name="patch_flow_direct_unavailable">直接刷写和安装到非活动槽位尚未实现。请使用文件修补或兼容的 AnyKernel 包。</string>
     <string name="patch_flow_kmi_detecting">正在从所选镜像检测 KMI…</string>
-    <string name="patch_flow_kmi_detected">从镜像检测到的 KMI：%1$s</string>
-    <string name="patch_flow_kmi_manual">无法从此镜像检测内核 KMI。请手动选择目标 KMI。</string>
+    <string name="patch_flow_kmi_detected">检测到的 KMI：%1$s</string>
+    <string name="patch_flow_kmi_manual">内核标识和可选 vendor 模块中均未找到 KMI 分支。仅在确定目标分支时手动选择；兼容性仍未验证。</string>
 <string name="patch_flow_module_bundled_hint">发布版 APK 可以使用与所选 KMI 匹配的内置模块。仅在需要覆盖内置模块或没有匹配模块时选择文件。</string>    <string name="patch_flow_kmi_mismatch">所选 KMI（%1$s）与镜像检测到的 KMI（%2$s）不一致。请使用检测到的分支，或确认镜像属于目标内核。</string>
 </resources>

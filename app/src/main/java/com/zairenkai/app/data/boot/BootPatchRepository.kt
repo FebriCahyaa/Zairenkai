@@ -27,12 +27,14 @@ object BootPatchRepository {
     data class KernelDetection(
         val kmi: String?,
         val kernelRelease: String?,
+        val kmiSource: String?,
     )
 
     suspend fun patch(
         context: Context,
         bootUri: Uri,
         kernelReferenceUri: Uri?,
+        kmiReferenceModuleUri: Uri?,
         moduleUri: Uri?,
         kmi: String,
     ): Result = withContext(Dispatchers.IO) {
@@ -40,6 +42,7 @@ object BootPatchRepository {
         if (!workspace.mkdirs()) throw IOException("Cannot create a private boot-patch workspace")
         val bootFile = File(workspace, "input-ramdisk.img")
         val kernelReferenceFile = File(workspace, "kernel-reference-boot.img")
+        val kmiReferenceModuleFile = File(workspace, "kmi-reference-vendor.ko")
         val moduleFile = File(workspace, "zkfc.ko")
         val outputFile = File(workspace, "boot_zairenkai_patched.img")
 
@@ -47,6 +50,9 @@ object BootPatchRepository {
             copyUri(context, bootUri, bootFile, MAX_BOOT_BYTES)
             if (kernelReferenceUri != null) {
                 copyUri(context, kernelReferenceUri, kernelReferenceFile, MAX_BOOT_BYTES)
+            }
+            if (kmiReferenceModuleUri != null) {
+                copyUri(context, kmiReferenceModuleUri, kmiReferenceModuleFile, MAX_MODULE_BYTES)
             }
             val selectedModuleAsset = if (moduleUri == null) bundledModuleAsset(context, kmi) else null
             if (moduleUri != null) {
@@ -76,6 +82,9 @@ object BootPatchRepository {
             if (kernelReferenceUri != null) {
                 arguments += listOf("--kernel-reference", kernelReferenceFile.absolutePath)
             }
+            if (kmiReferenceModuleUri != null) {
+                arguments += listOf("--kmi-reference-module", kmiReferenceModuleFile.absolutePath)
+            }
             arguments += listOf(
                 "--module", moduleFile.absolutePath,
                 "--init", initWrapper.absolutePath,
@@ -98,15 +107,20 @@ object BootPatchRepository {
         context: Context,
         bootUri: Uri,
         kernelReferenceUri: Uri? = null,
+        kmiReferenceModuleUri: Uri? = null,
     ): KernelDetection = withContext(Dispatchers.IO) {
         val workspace = File(context.cacheDir, "zk-kmi-detect-${UUID.randomUUID()}")
         if (!workspace.mkdirs()) throw IOException("Cannot create a private KMI-detection workspace")
         try {
             val bootFile = File(workspace, "input-ramdisk.img")
             val kernelReferenceFile = File(workspace, "kernel-reference-boot.img")
+            val kmiReferenceModuleFile = File(workspace, "kmi-reference-vendor.ko")
             copyUri(context, bootUri, bootFile, MAX_BOOT_BYTES)
             if (kernelReferenceUri != null) {
                 copyUri(context, kernelReferenceUri, kernelReferenceFile, MAX_BOOT_BYTES)
+            }
+            if (kmiReferenceModuleUri != null) {
+                copyUri(context, kmiReferenceModuleUri, kmiReferenceModuleFile, MAX_MODULE_BYTES)
             }
             val helper = File(context.applicationInfo.nativeLibraryDir, "libzkbootpatch.so")
             if (!helper.isFile || !helper.canRead()) {
@@ -116,21 +130,33 @@ object BootPatchRepository {
             if (kernelReferenceUri != null) {
                 arguments += listOf("--kernel-reference", kernelReferenceFile.absolutePath)
             }
+            if (kmiReferenceModuleUri != null) {
+                arguments += listOf("--kmi-reference-module", kmiReferenceModuleFile.absolutePath)
+            }
             val log = runHelper(helper, arguments)
             val values = log.lineSequence()
-                .filter { it.startsWith("DETECTED_KMI=") || it.startsWith("DETECTED_KERNEL_RELEASE=") }
+                .filter {
+                    it.startsWith("DETECTED_KMI=") ||
+                        it.startsWith("DETECTED_KERNEL_RELEASE=") ||
+                        it.startsWith("DETECTED_KMI_SOURCE=")
+                }
                 .associate { it.substringBefore('=') to it.substringAfter('=') }
             val detectedKmi = values["DETECTED_KMI"]?.takeUnless { it == "NONE" }
             val detectedRelease = values["DETECTED_KERNEL_RELEASE"]?.takeUnless { it == "NONE" }
+            val detectedSource = values["DETECTED_KMI_SOURCE"]?.takeUnless { it == "none" }
             if (values.isEmpty()) throw IOException("Kernel detection returned no result")
-            KernelDetection(detectedKmi, detectedRelease)
+            KernelDetection(detectedKmi, detectedRelease, detectedSource)
         } finally {
             workspace.deleteRecursively()
         }
     }
 
-    suspend fun detectKmi(context: Context, bootUri: Uri, kernelReferenceUri: Uri? = null): String? =
-        detectKernel(context, bootUri, kernelReferenceUri).kmi
+    suspend fun detectKmi(
+        context: Context,
+        bootUri: Uri,
+        kernelReferenceUri: Uri? = null,
+        kmiReferenceModuleUri: Uri? = null,
+    ): String? = detectKernel(context, bootUri, kernelReferenceUri, kmiReferenceModuleUri).kmi
 
     suspend fun deleteOutput(outputFile: File) = withContext(Dispatchers.IO) {
         val workspace = outputFile.parentFile ?: return@withContext

@@ -35,8 +35,10 @@ const SUPPORTED_KMIS: &[&str] = &[
 #[derive(Default)]
 struct Args {
     boot: Option<PathBuf>,
-    /// Optional boot.img used only to identify the kernel backing init_boot.img.
+    /// Optional boot.img used only to identify the kernel backing init_boot.img/vendor_boot.img.
     kernel_reference: Option<PathBuf>,
+    /// Optional vendor *.ko whose vermagic identifies the Android KMI, matching KernelSU-Next's fallback.
+    kmi_reference_module: Option<PathBuf>,
     module: Option<PathBuf>,
     init: Option<PathBuf>,
     kmi: Option<String>,
@@ -56,9 +58,10 @@ fn run() -> Result<()> {
     if args.detect_kmi {
         let boot_path = args
             .boot
-            .context("missing --boot <boot.img|init_boot.img>")?;
-        validate_boot_file(&boot_path)?;
-        let bytes = fs::read(&boot_path).context("failed to read boot image")?;
+            .as_ref()
+            .context("missing --boot <boot.img|init_boot.img|vendor_boot.img>")?;
+        validate_boot_file(boot_path)?;
+        let bytes = fs::read(boot_path).context("failed to read kernel/ramdisk image")?;
         let image =
             BootImage::parse(&bytes).context("unsupported or malformed Android boot image")?;
         let identity = if image.get_blocks().get_kernel().is_some() {
@@ -76,25 +79,67 @@ fn run() -> Result<()> {
         } else {
             None
         };
-        match identity {
-            Some(identity) => {
-                println!("DETECTED_KERNEL_RELEASE={}", identity.release);
-                match identity.kmi {
-                    Some(kmi) => println!("DETECTED_KMI={kmi}"),
-                    None => println!("DETECTED_KMI=NONE"),
-                }
+
+        let module_kmi_info = if let Some(module_path) = args.kmi_reference_module.as_ref() {
+            ensure!(module_path.is_file(), "KMI reference vendor module does not exist");
+            let module_data = fs::read(module_path).context("failed to read KMI reference module")?;
+            let kmi = parse_kmi_from_module(&module_data).context(
+                "could not detect Android KMI from the selected vendor module vermagic",
+            )?;
+            Some((module_data, kmi))
+        } else {
+            None
+        };
+
+        let (release, kmi, source) = if let Some(identity) = identity {
+            if let (Some(image_kmi), Some((module_data, module_kmi))) =
+                (identity.kmi.as_deref(), module_kmi_info.as_ref())
+            {
+                ensure!(
+                    image_kmi == module_kmi,
+                    "kernel image KMI {image_kmi} conflicts with vendor module KMI {module_kmi}; use files from the same firmware build"
+                );
+                validate_module_kernel_family(module_data, &identity.release).context(
+                    "vendor module vermagic family does not match the target kernel release",
+                )?;
             }
-            None => {
-                println!("DETECTED_KERNEL_RELEASE=NONE");
-                println!("DETECTED_KMI=NONE");
+            if let Some(kmi) = identity.kmi {
+                (Some(identity.release), Some(kmi), Some("kernel-image"))
+            } else if let Some((module_data, kmi)) = module_kmi_info {
+                validate_module_kernel_family(&module_data, &identity.release).context(
+                    "vendor module vermagic family does not match the target kernel release",
+                )?;
+                (Some(identity.release), Some(kmi), Some("vendor-module-vermagic"))
+            } else {
+                (Some(identity.release), None, None)
             }
+        } else if let Some((_, kmi)) = module_kmi_info {
+            (None, Some(kmi), Some("vendor-module-vermagic"))
+        } else {
+            (None, None, None)
+        };
+
+        if let Some(release) = release {
+            println!("DETECTED_KERNEL_RELEASE={release}");
+        } else {
+            println!("DETECTED_KERNEL_RELEASE=NONE");
         }
+        if let Some(kmi) = kmi {
+            ensure!(
+                SUPPORTED_KMIS.contains(&kmi.as_str()),
+                "detected KMI {kmi} is not in Zairenkai's supported KernelSU-Next-compatible KMI matrix"
+            );
+            println!("DETECTED_KMI={kmi}");
+        } else {
+            println!("DETECTED_KMI=NONE");
+        }
+        println!("DETECTED_KMI_SOURCE={}", source.unwrap_or("none"));
         return Ok(());
     }
 
     let boot_path = args
         .boot
-        .context("missing --boot <boot.img|init_boot.img>")?;
+        .context("missing --boot <boot.img|init_boot.img|vendor_boot.img>")?;
     let module_path = args.module.context("missing --module <zkfc.ko>")?;
     let init_path = args.init.context("missing --init <zkinit>")?;
     let kmi = args.kmi.context("missing --kmi <androidNN-X.Y>")?;
@@ -118,6 +163,19 @@ fn run() -> Result<()> {
     );
     if let Some(reference_path) = args.kernel_reference.as_ref() {
         validate_boot_file(reference_path)?;
+    }
+    if let Some(reference_module_path) = args.kmi_reference_module.as_ref() {
+        ensure!(
+            reference_module_path.is_file(),
+            "KMI reference vendor module does not exist: {}",
+            reference_module_path.display()
+        );
+        let metadata = fs::metadata(reference_module_path)?;
+        ensure!(
+            metadata.len() > 0 && metadata.len() <= MAX_MODULE,
+            "KMI reference vendor module is invalid or exceeds {} MiB",
+            MAX_MODULE / (1024 * 1024)
+        );
     }
 
     let boot_meta = fs::metadata(&boot_path)?;
@@ -151,6 +209,13 @@ fn run() -> Result<()> {
         ensure!(
             canonical_reference != output_path,
             "output path must not overwrite the kernel-reference boot image"
+        );
+    }
+    if let Some(reference_module_path) = args.kmi_reference_module.as_ref() {
+        let canonical_reference_module = fs::canonicalize(reference_module_path)?;
+        ensure!(
+            canonical_reference_module != output_path,
+            "output path must not overwrite the KMI reference vendor module"
         );
     }
     ensure!(
@@ -191,9 +256,11 @@ fn run() -> Result<()> {
             bail!("boot header v{version} is unsupported; use Android boot header v3/v4");
         }
         BootImageVersion::Android(_) => {}
-        BootImageVersion::Vendor(_) => bail!(
-            "vendor_boot.img is not a supported ZKFC init target. Select boot.img when it contains the generic ramdisk, or init_boot.img on Android 13+"
-        ),
+        BootImageVersion::Vendor(_) => {
+            println!(
+                "- Target is vendor_boot.img; selecting init_boot-named or unnamed vendor ramdisk like KernelSU-Next."
+            );
+        }
         BootImageVersion::RawRamdisk => bail!("raw ramdisk input is not accepted here"),
     }
 
@@ -201,10 +268,10 @@ fn run() -> Result<()> {
     // the generic ramdisk normally belongs to init_boot.img; adding one to
     // boot.img can repack successfully but will not replace the real PID 1.
     let ramdisk_image = boot_image.get_blocks().get_ramdisk().ok_or_else(|| anyhow!(
-        "selected image has no generic ramdisk. On Android 13+, select init_boot.img to patch and provide the matching boot.img as the kernel reference"
+        "selected image has no generic ramdisk. On Android 13+, select init_boot.img, or explicitly select a suitable vendor_boot.img ramdisk, and provide the matching boot.img as the kernel reference"
     ))?;
     let (mut cpio, vendor_ramdisk_index) = extract_ramdisk(ramdisk_image)
-        .context("selected image does not contain a usable generic init ramdisk; choose the matching init_boot.img or supported boot.img")?;
+        .context("selected image does not contain a usable generic init ramdisk; choose the matching boot.img, init_boot.img, or supported vendor_boot.img")?;
     ensure!(
         cpio.exists(INIT_ENTRY),
         "selected ramdisk does not contain /init. Refusing to replace PID 1 in an image that cannot chainload the original init"
@@ -259,18 +326,52 @@ fn run() -> Result<()> {
     let kernel_release = identity.release.as_str();
     validate_module_kernel_family(&module_data, kernel_release)
         .context("ZKFC module Linux major/minor does not match the selected kernel family")?;
-    let image_kmi_verified = match identity.kmi.as_deref() {
+    let reference_module_data =
+        if let Some(reference_module_path) = args.kmi_reference_module.as_ref() {
+            let data = fs::read(reference_module_path)
+                .context("failed to read KMI reference vendor module")?;
+            validate_module_kernel_family(&data, kernel_release).context(
+                "KMI reference vendor module Linux family does not match the target kernel",
+            )?;
+            Some(data)
+        } else {
+            None
+        };
+    let reference_module_kmi = reference_module_data
+        .as_deref()
+        .map(parse_kmi_from_module)
+        .transpose()
+        .context("KMI reference module does not contain an Android KMI marker in vermagic")?;
+
+    let kmi_source = match identity.kmi.as_deref() {
         Some(image_kmi) => {
             ensure!(
                 image_kmi == kmi,
                 "selected KMI is {kmi}, but the referenced kernel identifies {image_kmi}"
             );
-            true
+            if let Some(reference_kmi) = reference_module_kmi.as_deref() {
+                ensure!(
+                    reference_kmi == image_kmi,
+                    "kernel image KMI {image_kmi} conflicts with vendor module KMI {reference_kmi}; use files from the same firmware build"
+                );
+            }
+            "kernel-image"
         }
         None => {
-            println!("- WARNING: kernel release has no recognizable Android KMI marker.");
-            println!("- Selected KMI {kmi} is a manual hint, not a verified kernel KMI.");
-            false
+            if let Some(reference_kmi) = reference_module_kmi.as_deref() {
+                ensure!(
+                    reference_kmi == kmi,
+                    "selected KMI is {kmi}, but vendor module vermagic identifies {reference_kmi}"
+                );
+                println!(
+                    "- KMI detected from vendor module vermagic (KernelSU-Next fallback): {reference_kmi}"
+                );
+                "vendor-module-vermagic"
+            } else {
+                println!("- WARNING: kernel release has no recognizable Android KMI marker.");
+                println!("- Selected KMI {kmi} is a manual hint, not a verified kernel KMI.");
+                "manual"
+            }
         }
     };
     println!("- Verified target kernel release: {kernel_release}");
@@ -287,7 +388,7 @@ fn run() -> Result<()> {
         init_data,
         &kmi,
         kernel_release,
-        image_kmi_verified,
+        kmi_source,
     )?;
 
     let mut new_cpio = Vec::<u8>::new();
@@ -319,19 +420,21 @@ fn run() -> Result<()> {
         target_identity.as_ref().and_then(|i| i.kmi.as_deref()),
         target_identity.as_ref().map(|i| i.release.as_str()),
         kernel_release,
-        image_kmi_verified,
+        kmi_source,
         expected_init_machine,
         true,
     )?;
     write_output_atomically(&output_path, &patched_bytes)?;
     println!("- Output file is written to");
     println!("- {}", output_path.display());
-    if image_kmi_verified {
-        println!("- Kernel KMI marker matches the selected KMI.");
-    } else {
-        println!(
-            "- WARNING: selected KMI was not discoverable in the kernel banner; runtime module compatibility is not proven."
-        );
+    match kmi_source {
+        "kernel-image" => println!("- Kernel image KMI marker matches the selected KMI."),
+        "vendor-module-vermagic" => println!(
+            "- KMI matches the selected vendor module vermagic using the KernelSU-Next fallback."
+        ),
+        _ => println!(
+            "- WARNING: KMI was selected manually; runtime module compatibility is not proven."
+        ),
     }
     println!(
         "- Done! Image structure and Linux family checks passed. The device kernel must still accept the module and publish /dev/zkfc after boot."
@@ -360,7 +463,7 @@ fn parse_args() -> Result<Args> {
     while let Some(flag) = iter.next() {
         if flag == "--help" || flag == "-h" {
             println!(
-                "Usage: zkbootpatch --boot init_boot.img --kernel-reference boot.img --module zkfc.ko --init zkinit --kmi android13-5.10 --out patched.img\n       zkbootpatch --detect-kmi --boot boot.img [--kernel-reference boot.img]"
+                "Usage: zkbootpatch --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko] --module zkfc.ko --init zkinit --kmi androidNN-X.Y --out patched.img\n       zkbootpatch --detect-kmi --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko]"
             );
             std::process::exit(0);
         }
@@ -374,6 +477,7 @@ fn parse_args() -> Result<Args> {
         match flag.as_str() {
             "--boot" => args.boot = Some(PathBuf::from(value)),
             "--kernel-reference" => args.kernel_reference = Some(PathBuf::from(value)),
+            "--kmi-reference-module" => args.kmi_reference_module = Some(PathBuf::from(value)),
             "--module" => args.module = Some(PathBuf::from(value)),
             "--init" => args.init = Some(PathBuf::from(value)),
             "--kmi" => args.kmi = Some(value),
@@ -477,6 +581,35 @@ fn module_vermagic(data: &[u8]) -> Result<String> {
     std::str::from_utf8(&rest[..end])
         .map(str::to_owned)
         .context("module vermagic is not ASCII/UTF-8")
+}
+
+fn parse_kmi_label(text: &str) -> Result<String> {
+    // Same branch normalization used by KernelSU-Next: parse Android branch
+    // and Linux major.minor from one kernel-version/vermagic string.
+    let re = Regex::new(r"(\d+\.\d+)(?:\S+)?(android\d+)")
+        .context("failed to compile KMI-from-vermagic matcher")?;
+    let captures = re
+        .captures(text)
+        .ok_or_else(|| anyhow!("string does not contain a recognizable Android KMI marker"))?;
+    let kernel_version = captures
+        .get(1)
+        .context("missing kernel major.minor in KMI string")?
+        .as_str();
+    let android_version = captures
+        .get(2)
+        .context("missing Android branch in KMI string")?
+        .as_str();
+    let kmi = format!("{android_version}-{kernel_version}");
+    ensure!(
+        SUPPORTED_KMIS.contains(&kmi.as_str()),
+        "detected KMI {kmi} is not in the supported matrix"
+    );
+    Ok(kmi)
+}
+
+fn parse_kmi_from_module(data: &[u8]) -> Result<String> {
+    let vermagic = module_vermagic(data)?;
+    parse_kmi_label(&vermagic)
 }
 
 fn module_release(data: &[u8]) -> Result<String> {
@@ -671,7 +804,7 @@ fn inject_runtime_payloads(
     init_data: Vec<u8>,
     module_kmi: &str,
     kernel_release: &str,
-    kernel_kmi_verified: bool,
+    kmi_source: &str,
 ) -> Result<bool> {
     ensure!(
         !cpio.is_magisk_patched(),
@@ -714,13 +847,9 @@ fn inject_runtime_payloads(
     // Diagnostic metadata is not a runtime module configuration file. The
     // module itself is compiled for the selected KMI.
     let patch_manifest = format!(
-        "format=2\nkmi={}\nkmi_source={}\nkernel_release={}\nmodule={}\ninit_wrapper=zkinit\noriginal_init=init.real\npatcher=zkbootpatch-0.3.0\n",
+        "format=3\nkmi={}\nkmi_source={}\nkernel_release={}\nmodule={}\ninit_wrapper=zkinit\noriginal_init=init.real\npatcher=zkbootpatch-0.3.0\n",
         module_kmi,
-        if kernel_kmi_verified {
-            "kernel-image"
-        } else {
-            "manual"
-        },
+        kmi_source,
         kernel_release,
         MODULE_ENTRY,
     );
@@ -733,10 +862,31 @@ fn inject_runtime_payloads(
 }
 
 fn extract_ramdisk(ramdisk_image: &RamdiskImage<'_>) -> Result<(Cpio, Option<usize>)> {
-    ensure!(
-        !ramdisk_image.is_vendor_ramdisk(),
-        "vendor_boot ramdisk fragments are not a supported generic init ramdisk target"
-    );
+    if ramdisk_image.is_vendor_ramdisk() {
+        // Mirror KernelSU-Next: select the ramdisk named "init_boot" first,
+        // then the unnamed generic ramdisk, never an arbitrary vendor fragment.
+        let (index, target) = ramdisk_image
+            .iter_vendor_ramdisk()
+            .enumerate()
+            .find(|(_, entry)| entry.get_name_raw() == b"init_boot")
+            .or_else(|| {
+                ramdisk_image
+                    .iter_vendor_ramdisk()
+                    .enumerate()
+                    .find(|(_, entry)| entry.get_name_raw().is_empty())
+            })
+            .ok_or_else(|| anyhow!(
+                "vendor_boot has no suitable init_boot-named or unnamed generic ramdisk fragment"
+            ))?;
+        let mut cpio_data = Vec::<u8>::new();
+        target.dump(&mut cpio_data, false)
+            .context("failed to decompress selected vendor ramdisk fragment")?;
+        return Ok((
+            Cpio::load_from_data(&cpio_data)
+                .context("selected vendor ramdisk fragment is not a supported newc CPIO archive")?,
+            Some(index),
+        ));
+    }
     let mut cpio_data = Vec::<u8>::new();
     ramdisk_image
         .dump(&mut cpio_data, false)
@@ -753,7 +903,7 @@ fn verify_output(
     expected_image_kmi: Option<&str>,
     expected_target_kernel_release: Option<&str>,
     expected_kernel_release: &str,
-    expected_kernel_kmi_verified: bool,
+    expected_kmi_source: &str,
     expected_init_machine: u16,
     expected_original_init: bool,
 ) -> Result<()> {
@@ -761,7 +911,8 @@ fn verify_output(
         BootImage::parse(bytes).context("repacked file is not a valid Android boot image")?;
     match image.get_header().get_version() {
         BootImageVersion::Android(version) if version >= 3 => {}
-        _ => bail!("repacked image is not a supported Android v3/v4 generic boot/init_boot image"),
+        BootImageVersion::Vendor(_) => {}
+        _ => bail!("repacked image is not a supported Android v3/v4 boot/init_boot/vendor_boot image"),
     }
     ensure!(
         image.get_blocks().get_ramdisk().is_some(),
@@ -832,13 +983,9 @@ fn verify_output(
             .any(|line| line == expected_manifest_line.as_str()),
         "patch manifest KMI does not match the selected KMI"
     );
-    let expected_kmi_source = if expected_kernel_kmi_verified {
-        "kmi_source=kernel-image"
-    } else {
-        "kmi_source=manual"
-    };
+    let expected_kmi_source_line = format!("kmi_source={expected_kmi_source}");
     ensure!(
-        manifest.lines().any(|line| line == expected_kmi_source),
+        manifest.lines().any(|line| line == expected_kmi_source_line),
         "patch manifest KMI provenance does not match the detected kernel metadata"
     );
     let expected_release_line = format!("kernel_release={expected_kernel_release}");
@@ -915,6 +1062,24 @@ mod tests {
     fn rejects_conflicting_android_branch() {
         let module = b"vermagic=5.10.198-android13-9-gabc SMP preempt\0";
         assert!(validate_module_kmi(module, "android12-5.10").is_err());
+    }
+
+    #[test]
+    fn parses_vendor_module_vermagic_as_kmi_fallback_like_kernelsu_next() {
+        let module = b"vermagic=5.10.269-android12-9-gki SMP preempt mod_unload modversions aarch64\0";
+        assert_eq!(parse_kmi_from_module(module).unwrap(), "android12-5.10");
+    }
+
+    #[test]
+    fn refuses_vendor_module_vermagic_without_android_branch_marker() {
+        let module = b"vermagic=5.10.269-gki-g18fe99112273 SMP preempt mod_unload modversions aarch64\0";
+        assert!(parse_kmi_from_module(module).is_err());
+    }
+
+    #[test]
+    fn refuses_vendor_module_kmi_outside_supported_matrix() {
+        let module = b"vermagic=5.10.269-android16-1-gtest SMP preempt mod_unload modversions aarch64\0";
+        assert!(parse_kmi_from_module(module).is_err());
     }
 
     #[test]
@@ -1013,7 +1178,7 @@ mod tests {
             init,
             "android15-6.6",
             "6.6.42-android15-12-gabcdef",
-            true,
+            "kernel-image",
         )
         .unwrap();
         assert!(preserved);
@@ -1059,7 +1224,7 @@ mod tests {
             init,
             "android15-6.6",
             "6.6.42-generic",
-            false,
+            "manual",
         )
         .unwrap();
         let manifest = cpio
@@ -1102,7 +1267,7 @@ mod tests {
                 init,
                 "android15-6.6",
                 "6.6.42-android15-12-gabcdef",
-                true
+                "kernel-image"
             )
             .is_err()
         );
@@ -1129,7 +1294,7 @@ mod tests {
                 init,
                 "android15-6.6",
                 "6.6.42-android15-12-gabcdef",
-                true
+                "kernel-image"
             )
             .is_err()
         );

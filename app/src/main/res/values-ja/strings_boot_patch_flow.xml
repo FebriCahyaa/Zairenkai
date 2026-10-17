@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="patch_flow_method_file">ファイルを選択（推奨）</string>
-    <string name="patch_flow_method_file_sub">対応するZKFC LKMを使用してboot.imgまたはinit_boot.imgをパッチします。</string>
+    <string name="patch_flow_method_file_sub">対応するZKFC LKMを使用してboot.img、init_boot.img、またはvendor_boot.imgをパッチします。</string>
     <string name="patch_flow_method_direct">直接インストール</string>
     <string name="patch_flow_method_direct_sub">現在アクティブなブートスロットへ直接インストールします。</string>
     <string name="patch_flow_method_inactive">非アクティブスロットへインストール（OTA後）</string>
@@ -9,14 +9,20 @@
     <string name="patch_flow_method_anykernel">AnyKernelをインストール（.zip）</string>
     <string name="patch_flow_method_anykernel_sub">互換性のあるAnyKernelパッケージをrootマネージャーで開きます。</string>
     <string name="patch_flow_mode_unavailable">このバージョンでは利用できません</string>
-    <string name="patch_flow_summary">対象KMI向けにビルドされたZKFCモジュールと対応するboot/init_bootイメージを選択し、パッチ済みイメージを作成します。Zairenkaiはファイルを保存するだけで、パーティションを書き換えません。</string>
+    <string name="patch_flow_summary">適切なramdiskイメージを選択し、必要な場合は同じビルドのboot.imgをカーネル識別用に選択します。KMI検出はKernelSU-Nextに合わせ、まずカーネルバナーを確認し、必要に応じてvendorモジュールのvermagicを使用します。ファイルモードはパッチ済みイメージを保存するだけで、パーティションを書き込みません。</string>
     <string name="patch_flow_title">ブートイメージにZairenkaiをパッチ</string>
-    <string name="patch_flow_pick_image">boot.imgまたはinit_boot.imgを選択</string>
+    <string name="patch_flow_pick_image">boot.img、init_boot.img、またはvendor_boot.imgを選択</string>
     <string name="patch_flow_selected_image">イメージ: %1$s</string>
     <string name="patch_flow_pick_kernel_reference">対応する boot.img を選択（必要な場合のカーネル参照）</string>
     <string name="patch_flow_selected_kernel_reference">カーネル参照: %1$s</string>
     <string name="patch_flow_kernel_release_detected">カーネルリリース: %1$s</string>
-    <string name="patch_flow_kernel_reference_help">Android 13 以降では、汎用 ramdisk は通常 init_boot.img にあります。上で init_boot.img をパッチ対象として選び、ここでは同じ ROM/ビルドの boot.img を選択してください。カーネルをすでに含むイメージでは、この項目は省略できます。</string>
+    <string name="patch_flow_kernel_reference_help">同じデバイスとファームウェアビルドのイメージを使用してください。KernelSU-Nextのパーティション規則に従い、android12-* KMIではboot.imgを使用し、他のKMIブランチではinit_bootパーティションがあればinit_boot.imgを優先します。init_boot.imgまたはvendor_boot.imgにカーネルがない場合、対応するboot.imgをカーネル参照として選択してください。vendor_boot.imgはinit_bootという名前、または名前なしの汎用ramdiskフラグメントがある場合のみ対応します。</string>
+        <string name="patch_flow_pick_kmi_reference_module">KMI検出用vendor .koを選択（KernelSU-Nextの代替方式）</string>
+        <string name="patch_flow_selected_kmi_reference_module">KMI参照モジュール: %1$s</string>
+        <string name="patch_flow_kmi_source">KMIソース: %1$s</string>
+        <string name="patch_flow_kmi_source_kernel_image">カーネルイメージ</string>
+        <string name="patch_flow_kmi_source_vendor_module">vendorモジュールのvermagic</string>
+        <string name="patch_flow_kmi_source_manual">手動選択（未確認）</string>
     <string name="patch_flow_pick_module">対応する zkfc.ko を選択（この APK に対象 KMI が含まれる場合は任意）</string>
     <string name="patch_flow_selected_module">モジュール: %1$s</string>
     <string name="patch_flow_kmi_title">対象カーネルKMI</string>
@@ -34,7 +40,7 @@
     <string name="patch_flow_error">パッチに失敗しました</string>
     <string name="patch_flow_direct_unavailable">直接書き込みと非アクティブスロットへのインストールはまだ実装されていません。ファイルパッチまたは互換性のあるAnyKernelパッケージを使用してください。</string>
     <string name="patch_flow_kmi_detecting">選択したイメージから KMI を検出しています…</string>
-    <string name="patch_flow_kmi_detected">イメージから検出した KMI: %1$s</string>
-    <string name="patch_flow_kmi_manual">このイメージからカーネル KMI を検出できませんでした。対象の KMI を手動で選択してください。</string>
+    <string name="patch_flow_kmi_detected">検出したKMI: %1$s</string>
+    <string name="patch_flow_kmi_manual">カーネルバナーにも任意のvendorモジュールにもKMIブランチが見つかりませんでした。正しいブランチが分かる場合のみ手動選択してください。互換性は未確認のままです。</string>
 <string name="patch_flow_module_bundled_hint">リリース APK は選択した KMI に対応する同梱モジュールを使用できます。上書きする場合、または同梱モジュールがない場合のみファイルを選択してください。</string>    <string name="patch_flow_kmi_mismatch">選択したKMI（%1$s）はイメージから検出されたKMI（%2$s）と一致しません。検出されたブランチを使うか、イメージが対象カーネルのものか確認してください。</string>
 </resources>
