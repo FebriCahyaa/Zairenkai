@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- Registro de License Server (separado de la licencia del kernel ZKFC) -->
+    <string name="system_server_enrollment_title">Registro del servidor de licencias</string>
+    <string name="system_server_not_configured">Servidor no configurado</string>
+    <string name="system_server_registered">Instalación registrada (registro local)</string>
+    <string name="system_server_not_registered">No registrada</string>
+    <string name="system_server_installation_id">ID de instalación</string>
+    <string name="system_server_fingerprint">Huella de la clave pública</string>
+    <string name="system_server_enrollment_note">Registro opcional de esta instalación de la aplicación mediante una clave Ed25519 protegida localmente. No se envían el IMEI ni el número de serie. El estado registrado corresponde al último registro local correcto, no a una consulta en tiempo real al servidor. El registro no es una licencia del kernel ZKFC ni desbloquea funciones de rendimiento; el kernel sigue verificando por separado el token .zkl firmado por su propietario.</string>
+    <string name="system_server_enroll_button">Registrar instalación</string>
+    <string name="system_server_enrolling">Registrando de forma segura…</string>
+    <string name="system_server_enroll_success">La instalación se registró con el servidor de licencias.</string>
+    <string name="system_server_challenge_expired">El desafío de registro ha caducado. Inténtalo de nuevo.</string>
+    <string name="system_server_installation_blocked">El servidor ha bloqueado esta instalación. Ponte en contacto con el propietario del proyecto.</string>
+    <string name="system_server_key_unavailable">La clave de registro protegida no está disponible. Es posible que se hayan restaurado los datos de la aplicación o que la clave de Android Keystore se haya invalidado.</string>
+    <string name="system_server_enroll_failed">Error de registro (%1$s). Comprueba la red y que el servidor esté disponible e inténtalo de nuevo.</string>
+</resources>

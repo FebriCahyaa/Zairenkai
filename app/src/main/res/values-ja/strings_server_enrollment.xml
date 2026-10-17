@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- License Server enrollment (separate from the ZKFC kernel license) -->
+    <string name="system_server_enrollment_title">License Serverへの登録</string>
+    <string name="system_server_not_configured">サーバーが設定されていません</string>
+    <string name="system_server_registered">インストール登録済み（ローカル記録）</string>
+    <string name="system_server_not_registered">未登録</string>
+    <string name="system_server_installation_id">インストール ID</string>
+    <string name="system_server_fingerprint">公開鍵のフィンガープリント</string>
+    <string name="system_server_enrollment_note">ローカルで保護された Ed25519 キーを使用して、このアプリのインストールを任意で登録します。IMEI やシリアル番号は送信しません。登録状態は最後に成功したローカル記録であり、サーバーへのリアルタイム照会ではありません。登録は ZKFC カーネルライセンスではなく、パフォーマンス機能のロックを解除しません。カーネルは引き続き、所有者が署名した .zkl トークンを独立して検証します。</string>
+    <string name="system_server_enroll_button">インストールを登録</string>
+    <string name="system_server_enrolling">安全に登録中…</string>
+    <string name="system_server_enroll_success">License Server にインストールが登録されました。</string>
+    <string name="system_server_challenge_expired">登録チャレンジの有効期限が切れました。もう一度お試しください。</string>
+    <string name="system_server_installation_blocked">このインストールはサーバーによってブロックされています。プロジェクト所有者にお問い合わせください。</string>
+    <string name="system_server_key_unavailable">保護された登録キーを利用できません。アプリデータが復元されたか、Android Keystore のキーが無効になった可能性があります。</string>
+    <string name="system_server_enroll_failed">登録に失敗しました（%1$s）。ネットワークとサーバーの準備状態を確認して、もう一度お試しください。</string>
+</resources>

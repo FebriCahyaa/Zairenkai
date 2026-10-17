@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
+<resources>
+    <!-- License Server 注册（与 ZKFC 内核许可证分开） -->
+    <string name="system_server_enrollment_title">许可证服务器注册</string>
+    <string name="system_server_not_configured">服务器尚未配置</string>
+    <string name="system_server_registered">安装已注册（本地记录）</string>
+    <string name="system_server_not_registered">未注册</string>
+    <string name="system_server_installation_id">安装 ID</string>
+    <string name="system_server_fingerprint">公钥指纹</string>
+    <string name="system_server_enrollment_note">可选地使用本地受保护的 Ed25519 密钥注册此应用安装。不会发送 IMEI 或序列号。已注册状态表示最近一次成功的本地记录，并非实时查询服务器的结果。注册不等同于 ZKFC 内核许可证，也不会解锁性能功能；内核仍会独立验证由所有者签名的 .zkl 令牌。</string>
+    <string name="system_server_enroll_button">注册此安装</string>
+    <string name="system_server_enrolling">正在安全注册…</string>
+    <string name="system_server_enroll_success">安装已成功注册到许可证服务器。</string>
+    <string name="system_server_challenge_expired">注册质询已过期，请重试。</string>
+    <string name="system_server_installation_blocked">此安装已被服务器阻止。请联系项目所有者。</string>
+    <string name="system_server_key_unavailable">无法使用受保护的注册密钥。应用数据可能已从备份恢复，或 Android Keystore 密钥已失效。</string>
+    <string name="system_server_enroll_failed">注册失败（%1$s）。请检查网络和服务器状态，然后重试。</string>
+</resources>
