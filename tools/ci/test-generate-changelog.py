@@ -30,6 +30,14 @@ class ChangelogTests(unittest.TestCase):
             git("init", "-q")
             git("config", "user.name", "CI Test")
             git("config", "user.email", "ci@example.invalid")
+            # These are disposable fixture repositories. Do not inherit a user's global
+            # GPG signing policy or Git hooks: lightweight fixture tags must never launch
+            # a signature editor or prompt for a private-key passphrase.
+            hooks = repo / ".test-hooks"
+            hooks.mkdir(exist_ok=True)
+            git("config", "commit.gpgsign", "false")
+            git("config", "tag.gpgSign", "false")
+            git("config", "core.hooksPath", str(hooks))
             (repo / "tracked.txt").write_text("base\n", encoding="utf-8")
             git("add", "tracked.txt")
             git("commit", "-m", "chore: initial baseline", "-q")
@@ -76,6 +84,14 @@ class ChangelogTests(unittest.TestCase):
             git("init", "-q")
             git("config", "user.name", "CI Test")
             git("config", "user.email", "ci@example.invalid")
+            # These are disposable fixture repositories. Do not inherit a user's global
+            # GPG signing policy or Git hooks: lightweight fixture tags must never launch
+            # a signature editor or prompt for a private-key passphrase.
+            hooks = repo / ".test-hooks"
+            hooks.mkdir(exist_ok=True)
+            git("config", "commit.gpgsign", "false")
+            git("config", "tag.gpgSign", "false")
+            git("config", "core.hooksPath", str(hooks))
             (repo / "tracked.txt").write_text("base\n", encoding="utf-8")
             git("add", "tracked.txt")
             git("commit", "-m", "chore: common root", "-q")
