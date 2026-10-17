@@ -2,12 +2,7 @@
 name: Android app
 
 on:
-  push:
-    branches: [main, ccr-076d8b15-osiupp]
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "module/**", "rust/**", "kernel/**", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", "tools/release/**", ".github/workflows/android.yml", ".github/workflows/app-apks.yml", ".github/workflows/build-module.yml", ".github/workflows/release.yml", ".github/actions/build-bootpatch/action.yml", "rust-toolchain.toml"]
-  pull_request:
-    branches: [main, ccr-076d8b15-osiupp]
-    paths: ["app/**", "gradle/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "module/**", "rust/**", "kernel/**", "userspace/**", "native/bootpatch/**", "tools/bootpatch/**", "tools/ci/**", "tools/zkfc-license/**", "tools/release/**", ".github/workflows/android.yml", ".github/workflows/app-apks.yml", ".github/workflows/build-module.yml", ".github/workflows/release.yml", ".github/actions/build-bootpatch/action.yml", "rust-toolchain.toml"]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -19,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
 
@@ -102,5 +97,18 @@ jobs:
             app/build/reports/lint-results-standardCanary.sarif
             app/build/reports/lint-results-standardCanary.xml
             app/build/intermediates/lint_intermediate_text_report/standardCanary/lintReportStandardCanary/lint-results-standardCanary.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload validation APKs and R8 mappings
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: android-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            app/build/outputs/apk/standard/canary/*.apk
+            app/build/outputs/apk/standard/release/*.apk
+            app/build/outputs/mapping/standardCanary/**
+            app/build/outputs/mapping/standardRelease/**
           if-no-files-found: warn
           retention-days: 7

@@ -128,7 +128,7 @@ For the Play Protect warning, distribution and signer checks, see [`docs/securit
 
 ## Build
 
-- **App:** CI distributes only optimized `standardCanary` and `standardRelease` APKs; the Android `debug` variant is disabled. For local CI-equivalent checks, run `./gradlew :app:testStandardCanaryUnitTest :app:testStandardReleaseUnitTest` and set `-PlicenseServerUrl=https://<your-worker-origin>`. See [`app/`](app) and [`docs/release-signing.md`](docs/release-signing.md) for signing, server configuration, and v1/v2/v3 signature checks.
+- **App:** CI distributes only optimized `standardCanary` and `standardRelease` APKs; Android `debug` APK variants are disabled. For local CI-equivalent unit tests, run `./gradlew :app:test --no-daemon --stacktrace`. Supply `-PlicenseServerUrl=https://<your-worker-origin>` when you want updater requests enabled; leaving it unset makes the updater fail closed. The central [`Build Manager CI`](docs/ci/BUILD_MANAGER_CI.md) fans out Android, native, Atlas, Rustfmt, Clippy and ShellCheck checks. Its optional full build packages all supported KMI modules and an integrated unsigned Canary validation APK. Official signed Canary/Release publication remains separate. See [`app/`](app) and [`docs/release-signing.md`](docs/release-signing.md) for signing, server configuration, and v1/v2/v3 signature checks.
 - **Engine:** `rust/zperfd` (resident Rust daemon) plus `userspace/zkfctl` (C CLI/compatibility engine).
   See [`rust/zperfd/`](rust/zperfd) and [`userspace/`](userspace). CI/release builds pin Rust
   to the reviewed stable toolchain declared in [`rust-toolchain.toml`](rust-toolchain.toml).

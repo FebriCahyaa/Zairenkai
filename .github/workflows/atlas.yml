@@ -2,19 +2,7 @@
 name: Atlas data validation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "database/**"
-      - "tools/atlas_validate.py"
-      - "tests/atlas_check.sh"
-      - ".github/workflows/atlas.yml"
-  pull_request:
-    paths:
-      - "database/**"
-      - "tools/atlas_validate.py"
-      - "tests/atlas_check.sh"
-      - ".github/workflows/atlas.yml"
+  workflow_call:
   workflow_dispatch:
 
 concurrency:
@@ -23,7 +11,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Validate Atlas registry and source boundaries

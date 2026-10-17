@@ -15,13 +15,13 @@ grep -q 'CPU_FREQ' kernel/Kconfig
 grep -q 'api_min_supported > expected' userspace/lib/libzkfc.c
 grep -q 'process.destroyForcibly()' app/src/main/java/com/zairenkai/app/data/RootShell.kt
 grep -q 'OpenOptions::new' rust/zperfd/src/nodes.rs
-grep -q 'Build zperfd' .github/workflows/release.yml
-grep -q 'zperfd started' module/service.sh
+grep -q 'Build zperfd for Android ABIs' .github/workflows/build-module.yml
+grep -q 'zperfd process alive after startup' module/service.sh
 
 printf '%s\n' 'foundation source checks passed'
 test "$(file -b --mime-type module/service.sh)" = "text/x-shellscript" || grep -q '^#!/system/bin/sh' module/service.sh
 test "$(file -b --mime-type userspace/zkfctl/main.c)" = "text/x-c" || true
-test $(grep -c 'Build zperfd and validate workspace' .github/workflows/release.yml) -eq 1
+test $(grep -c 'Build zperfd for Android ABIs' .github/workflows/build-module.yml) -eq 1
 grep -q 'chmod 0700 /data/adb/zperf' module/customize.sh
 grep -q 'version.api_compatible()' rust/zperfd/src/main.rs
 grep -q 'transaction.committed' rust/zperfd/src/state.rs
@@ -31,7 +31,7 @@ grep -q 'daemon.lock' rust/zperfd/src/main.rs
 grep -q 'args.lite' rust/zperfd/src/main.rs
 grep -q 't->lite' userspace/zkfctl/main.c
 grep -q 'tests/abi/zkfc_uapi_test.c' .github/workflows/native.yml
-grep -q 'tools/profile_validate.py database' .github/workflows/native.yml
+grep -q 'tests/atlas_check.sh' .github/workflows/atlas.yml
 grep -q 'diff -qr database module/zperf/database' .github/workflows/native.yml
 # Lite mode must reach the engine on every tweak write: ViewModel -> repository
 # -> ZperfClient -> `zperfd --lite`.
@@ -104,7 +104,7 @@ PY
 ! grep -q 'material-icons-extended' gradle/libs.versions.toml
 ! grep -R -q 'androidx.compose.material.icons.rounded.\(Shield\|Bolt\|ChevronLeft\)' app/src/main
 grep -q 'isDebuggable = false' app/build.gradle.kts
-grep -q 'useLegacyPackaging.set(true)' app/build.gradle.kts
+grep -q 'useLegacyPackaging = true' app/build.gradle.kts
 
 # Custom profiles: zperfd is the only writer and they stay off Auto/per-app.
 grep -q 'mod custom;' rust/zperfd/src/main.rs
@@ -135,7 +135,9 @@ test ! -e app/src/main/java/com/zairenkai/app/ui/components/FrameMonitor.kt
 
 # Languages: every shipped locale has resources, the list matches
 # locales_config.xml, and the setup animations are reproducible from the generator.
-for q in values-en values-en-rGB values-ja values-es values-zh-rCN; do test -d "app/src/main/res/$q"; done
+# English uses the default `values/` resources; only explicit translated locales
+# require qualifier directories here.
+for q in values-id values-ja values-es values-zh-rCN; do test -d "app/src/main/res/$q"; done
 grep -q 'android:localeConfig="@xml/locales_config"' app/src/main/AndroidManifest.xml
 tmp_lottie="$(mktemp -d)"; python3 tools/lottie/gen_setup_animations.py --out "$tmp_lottie" >/dev/null
 for f in "$tmp_lottie"/setup_*.json; do diff -q "$f" "app/src/main/res/raw/$(basename "$f")" >/dev/null; done

@@ -52,11 +52,12 @@ concurrency:
 jobs:
   validate:
     name: Validate module build inputs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       channel: ${{ steps.meta.outputs.channel }}
       version_name: ${{ steps.meta.outputs.version_name }}
       server_url: ${{ steps.meta.outputs.server_url }}
+      module_version_code: ${{ steps.meta.outputs.module_version_code }}
     steps:
       - uses: actions/checkout@v7
       - name: Validate channel, version and update server
@@ -101,10 +102,12 @@ jobs:
             }
             URL_TAG="$GITHUB_REF_NAME"
           fi
+          MODULE_VERSION_CODE="$(python3 tools/ci/module-version-code.py)"
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "server_url=${ZKFC_LICENSE_SERVER_URL%/}" >> "$GITHUB_OUTPUT"
-          echo "Validated module channel=$CHANNEL version=$VERSION_NAME versionCode=$VERSION_CODE tag=$URL_TAG"
+          echo "module_version_code=$MODULE_VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Validated module channel=$CHANNEL version=$VERSION_NAME versionCode=$MODULE_VERSION_CODE tag=$URL_TAG"
 
   # Same KMI matrix pattern used by KernelSU-Next: isolated reusable DDK builds.
   lkm:
@@ -130,7 +133,7 @@ jobs:
   package:
     name: Package flashable module (${{ needs.validate.outputs.channel }})
     needs: [validate, lkm]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -242,8 +245,8 @@ jobs:
           set -euo pipefail
           python3 tools/ci/test-configure-module-update.py
           python3 tools/ci/test-module-version-code.py
-          VERSION_CODE="$(python3 tools/ci/module-version-code.py)"
-          echo "Using monotonic module versionCode=$VERSION_CODE for channel=$CHANNEL"
+          VERSION_CODE="${{ needs.validate.outputs.module_version_code }}"
+          echo "Using validated module versionCode=$VERSION_CODE for channel=$CHANNEL"
           URL_TAG=canary
           if [[ "$CHANNEL" == release ]]; then URL_TAG="$GITHUB_REF_NAME"; fi
           python3 tools/ci/configure-module-update.py \

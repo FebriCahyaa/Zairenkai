@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate_tag:
     name: Validate monotonic stable Release tag
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -38,7 +38,7 @@ jobs:
     name: Package release
     needs: [validate_tag, module]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production-signing
     permissions:
       contents: write

@@ -2,18 +2,7 @@
 name: Clippy check
 
 on:
-  push:
-    branches: [main, ccr-076d8b15-osiupp]
-    paths:
-      - 'rust/**'
-      - 'rust-toolchain.toml'
-      - '.github/workflows/clippy.yml'
-  pull_request:
-    branches: [main, ccr-076d8b15-osiupp]
-    paths:
-      - 'rust/**'
-      - 'rust-toolchain.toml'
-      - '.github/workflows/clippy.yml'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -28,7 +17,7 @@ concurrency:
 
 jobs:
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 

@@ -46,7 +46,7 @@ jobs:
   # all signing/metadata secrets are configured. The reusable module workflow is
   # also used by release.yml with channel=release.
   config:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_canary: ${{ steps.c.outputs.has_canary }}
     steps:
@@ -81,7 +81,7 @@ jobs:
     name: Canary build (signed prerelease)
     needs: [config, module]
     if: needs.config.outputs.has_canary == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: canary-signing
     permissions:
       contents: write

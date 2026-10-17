@@ -46,7 +46,7 @@ jobs:
   validate-request:
     name: Validate approved token request
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
@@ -75,7 +75,8 @@ jobs:
             echo "::error::Invalid kernel tag format."
             exit 1
           }
-          [[ "$LICENSEE" =~ ^[A-Za-z0-9][-A-Za-z0-9 ._/+]{2,62}$ ]] || {
+          LICENSEE_RE='^[A-Za-z0-9][-A-Za-z0-9 ._/+]{2,62}$'
+          [[ "$LICENSEE" =~ $LICENSEE_RE ]] || {
             echo "::error::Licensee must be 3–63 safe printable ASCII characters."
             exit 1
           }
@@ -101,7 +102,7 @@ jobs:
     name: Issue limited grant after approval
     needs: validate-request
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: zkfc-token-issuer
     permissions:
       contents: read

@@ -2,14 +2,7 @@
 name: Native (crypto + userspace + module compile)
 
 on:
-  push:
-    # The active development branch diverges from main and is pushed to
-    # directly, so it must run the same native gates as main.
-    branches: [main, ccr-076d8b15-osiupp]
-    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "native/bootpatch/**", "database/**", "module/**", "tools/**", "rust-toolchain.toml", ".github/workflows/native.yml", ".github/workflows/build-module.yml", ".github/workflows/build-lkm.yml", ".github/workflows/ddk-lkm-zkfc.yml"]
-  pull_request:
-    branches: [main, ccr-076d8b15-osiupp]
-    paths: ["kernel/**", "userspace/**", "tests/**", "rust/**", "native/bootpatch/**", "database/**", "module/**", "tools/**", "rust-toolchain.toml", ".github/workflows/native.yml", ".github/workflows/build-module.yml", ".github/workflows/build-lkm.yml", ".github/workflows/ddk-lkm-zkfc.yml"]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -24,7 +17,7 @@ concurrency:
 jobs:
   # Independent tests intentionally have no artificial `needs:` dependency.
   crypto:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Set up Python
@@ -44,13 +37,9 @@ jobs:
           /tmp/crypto_test /tmp/vectors.txt
 
   data-plane:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Validate device and kernel data
-        run: python3 tools/profile_validate.py database
-      - name: Validate Atlas source and provider registry
-        run: python3 tools/atlas_validate.py
       - name: Verify packaged module database matches source database
         run: diff -qr database module/zperf/database
       - name: Validate measurement analyzer
@@ -62,7 +51,7 @@ jobs:
         run: bash tests/control_plane_check.sh
 
   uapi-abi:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Compile and run stable UAPI ABI checks
@@ -78,7 +67,7 @@ jobs:
           /tmp/zkfc_token_test
 
   module-compile:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Install kernel build deps + headers
@@ -92,7 +81,7 @@ jobs:
           file kernel/zkfc.ko
 
   userspace:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Set up Android SDK + NDK
@@ -121,7 +110,7 @@ jobs:
           if-no-files-found: error
 
   rust:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Set up Rust

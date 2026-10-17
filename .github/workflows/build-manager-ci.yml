@@ -1,0 +1,290 @@
+# SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
+# Central validation orchestrator patterned after KernelSU-Next's Build Manager CI.
+# It fans out reusable validation workflows; a full KMI/module + integrated Canary
+# validation APK build is opt-in to keep ordinary PR checks fast and secret-free.
+name: Build Manager CI
+
+on:
+  push:
+    branches: [main, ccr-076d8b15-osiupp]
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "module/**"
+      - "rust/**"
+      - "rust-toolchain.toml"
+      - "kernel/**"
+      - "userspace/**"
+      - "native/bootpatch/**"
+      - "tools/**"
+      - "tests/**"
+      - "database/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  pull_request:
+    branches: [main, ccr-076d8b15-osiupp]
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "module/**"
+      - "rust/**"
+      - "rust-toolchain.toml"
+      - "kernel/**"
+      - "userspace/**"
+      - "native/bootpatch/**"
+      - "tools/**"
+      - "tests/**"
+      - "database/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  workflow_dispatch:
+    inputs:
+      full_build:
+        description: "Build all supported KMI modules and an integrated Canary validation APK (requires ZKFC_LICENSE_SERVER_URL)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-manager-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android tests, optimized variants, R8 and lint
+    uses: ./.github/workflows/android.yml
+    permissions:
+      contents: read
+
+  native:
+    name: Native crypto, UAPI, userspace, Rust and module compile
+    uses: ./.github/workflows/native.yml
+    permissions:
+      contents: read
+
+  atlas:
+    name: Atlas and device registry validation
+    uses: ./.github/workflows/atlas.yml
+    permissions:
+      contents: read
+
+  rustfmt:
+    name: Rust formatting
+    uses: ./.github/workflows/rustfmt.yml
+    permissions:
+      contents: read
+
+  clippy:
+    name: Rust Clippy
+    uses: ./.github/workflows/clippy.yml
+    permissions:
+      contents: read
+
+  shellcheck:
+    name: Shell script analysis
+    uses: ./.github/workflows/shellcheck.yml
+    permissions:
+      contents: read
+
+  workflow-contracts:
+    name: CI workflow contracts
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Verify CI orchestration and reusable workflow contracts
+        run: python3 tools/ci/test-build-manager-workflow.py
+
+  module:
+    name: Full KMI matrix and module packaging
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build == true }}
+    uses: ./.github/workflows/build-module.yml
+    with:
+      channel: canary
+      ddk_release: "20260828"
+    permissions:
+      contents: read
+
+  build-manager:
+    name: Build integrated Canary validation APK
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build == true }}
+    needs: [module]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools
+
+      - name: Install pinned Android SDK and NDK
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+
+      - name: Download verified module build artifact
+        uses: actions/download-artifact@v7.0.1
+        with:
+          name: module-zip
+          path: module-artifact
+
+      - name: Verify module artifact and stage KMI assets
+        run: |
+          set -euo pipefail
+          test -s module-artifact/Zairenkai-module.zip
+          test -s module-artifact/SHA256SUMS
+          test -s module-artifact/module-update-canary.json
+          cp module-artifact/Zairenkai-module.zip Zairenkai-module.zip
+          cp module-artifact/SHA256SUMS SHA256SUMS
+          cp module-artifact/module-update-canary.json module-update-canary.json
+          unzip -t Zairenkai-module.zip >/dev/null
+          # stage-module-assets verifies the embedded SHA256SUMS against
+          # the actual archive contents before anything is copied into the APK.
+          tools/bootpatch/stage-module-assets.sh Zairenkai-module.zip
+
+      - name: Build boot-patch backend
+        uses: ./.github/actions/build-bootpatch
+
+      - name: Stage verified embedded module
+        run: tools/bootpatch/stage-embedded-module.sh Zairenkai-module.zip
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.4.0
+
+      - name: Validate update server configuration
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          [[ "$ZKFC_LICENSE_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || {
+            echo "::error::Full integrated builds require ZKFC_LICENSE_SERVER_URL as the production HTTPS origin, without a path."
+            exit 1
+          }
+
+      - name: Test and build optimized Canary manager
+        env:
+          ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          VERSION_CODE="$(python3 tools/ci/version-code.py \
+            --version-name "$BASE_VERSION" \
+            --channel canary \
+            --run-number "$GITHUB_RUN_NUMBER")"
+          ./gradlew :app:test :app:assembleStandardCanary \
+            "-PversionCode=$VERSION_CODE" \
+            "-PlicenseServerUrl=$ZKFC_LICENSE_SERVER_URL" \
+            --no-daemon --stacktrace
+
+      - name: Stage CI-only APK and checksums
+        id: artifacts
+        run: |
+          set -euo pipefail
+          SOURCE_APK="$(find app/build/outputs/apk/standard/canary -type f -name '*.apk' -print -quit)"
+          [[ -n "$SOURCE_APK" && -s "$SOURCE_APK" ]] || {
+            echo "::error::Optimized Canary APK was not produced."
+            exit 1
+          }
+          cp "$SOURCE_APK" Zairenkai-canary-validation-unsigned.apk
+          sha256sum Zairenkai-canary-validation-unsigned.apk > Zairenkai-canary-validation-unsigned.apk.sha256
+          MODULE_SHA="$(sha256sum Zairenkai-module.zip | awk '{print $1}')"
+          APK_SHA="$(sha256sum Zairenkai-canary-validation-unsigned.apk | awk '{print $1}')"
+          {
+            echo "module_sha=$MODULE_SHA"
+            echo "apk_sha=$APK_SHA"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "# Integrated Zairenkai Canary validation build"
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Run: \`$GITHUB_RUN_ID\` (attempt $GITHUB_RUN_ATTEMPT)"
+            echo "- APK: \`Zairenkai-canary-validation-unsigned.apk\`"
+            echo "- APK SHA-256: \`$APK_SHA\`"
+            echo "- Module SHA-256: \`$MODULE_SHA\`"
+            echo
+            echo "> This artifact is unsigned validation output. It is not the official distributable Canary APK."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload integrated validation artifacts
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: zairenkai-integrated-canary-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            Zairenkai-canary-validation-unsigned.apk
+            Zairenkai-canary-validation-unsigned.apk.sha256
+            Zairenkai-module.zip
+            SHA256SUMS
+            module-update-canary.json
+            app/build/outputs/mapping/standardCanary/**
+          if-no-files-found: error
+          retention-days: 14
+
+  summary:
+    name: Build Manager CI summary
+    if: ${{ always() }}
+    needs: [android, native, atlas, rustfmt, clippy, shellcheck, workflow-contracts, module, build-manager]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Write pipeline summary
+        env:
+          ANDROID_RESULT: ${{ needs.android.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
+          ATLAS_RESULT: ${{ needs.atlas.result }}
+          RUSTFMT_RESULT: ${{ needs.rustfmt.result }}
+          CLIPPY_RESULT: ${{ needs.clippy.result }}
+          SHELLCHECK_RESULT: ${{ needs.shellcheck.result }}
+          WORKFLOW_CONTRACTS_RESULT: ${{ needs.workflow-contracts.result }}
+          MODULE_RESULT: ${{ needs.module.result }}
+          MANAGER_RESULT: ${{ needs.build-manager.result }}
+          FULL_BUILD_REQUESTED: ${{ inputs.full_build }}
+        run: |
+          set -euo pipefail
+          {
+            echo "# Zairenkai Build Manager CI"
+            echo
+            echo "| Component | Result |"
+            echo "|---|---|"
+            echo "| Android tests, R8, lint and validation variants | ${ANDROID_RESULT} |"
+            echo "| Native crypto/UAPI/userspace/Rust/module checks | ${NATIVE_RESULT} |"
+            echo "| Atlas registry and device data | ${ATLAS_RESULT} |"
+            echo "| Rustfmt | ${RUSTFMT_RESULT} |"
+            echo "| Clippy | ${CLIPPY_RESULT} |"
+            echo "| ShellCheck | ${SHELLCHECK_RESULT} |"
+            echo "| Workflow contracts | ${WORKFLOW_CONTRACTS_RESULT} |"
+            echo "| Full KMI module matrix | ${MODULE_RESULT} |"
+            echo "| Integrated Canary validation APK | ${MANAGER_RESULT} |"
+            echo
+            if [[ "$FULL_BUILD_REQUESTED" != "true" ]]; then
+              echo "Full KMI/module and integrated APK build was not requested. Run this workflow manually with \`full_build=true\` after configuring \`ZKFC_LICENSE_SERVER_URL\`."
+            else
+              echo "Full build was requested. See the module matrix and integrated validation artifact above."
+            fi
+            echo
+            echo "Official signed Canary and stable Release publication remain separate workflows."
+            echo "Unsigned CI validation APKs must not be distributed to end users."
+          } >> "$GITHUB_STEP_SUMMARY"
