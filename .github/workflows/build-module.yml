@@ -229,7 +229,7 @@ jobs:
             [[ -n "$ko" && -f "$ko" ]] || { echo "::error::No zkfc.ko in $d"; exit 1; }
             mkdir -p "module/lkm/$kmi-$abidir"
             install -m 0644 "$ko" "module/lkm/$kmi-$abidir/zkfc.ko"
-            sha256sum "module/lkm/$kmi-$abidir/zkfc.ko" > "module/lkm/$kmi-$abidir/zkfc.ko.sha256"
+            (cd "module/lkm/$kmi-$abidir" && sha256sum zkfc.ko > zkfc.ko.sha256)
             count=$((count + 1))
           done
           [[ "$count" -eq 16 ]] || {

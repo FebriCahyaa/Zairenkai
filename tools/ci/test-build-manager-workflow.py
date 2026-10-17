@@ -98,6 +98,10 @@ def main() -> int:
           "Android debug variants are disabled at variant creation")
     check("Zairenkai-KMI-modules.zip" in module and "kmi-bundle" in module,
           "module workflow exports a standalone KMI bundle")
+    check('(cd "module/lkm/$kmi-$abidir" && sha256sum zkfc.ko > zkfc.ko.sha256)' in module,
+          "KMI checksum sidecars use paths relative to their own directory")
+    check('sha256sum "module/lkm/$kmi-$abidir/zkfc.ko" > "module/lkm/$kmi-$abidir/zkfc.ko.sha256"' not in module,
+          "KMI packaging does not write invalid prefixed paths into checksum sidecars")
     check('smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"' in module,
           "License Server and D1 readiness are checked before the expensive KMI matrix")
     check('smoke-license-server.py "$ZKFC_LICENSE_SERVER_URL"' in distribution and
