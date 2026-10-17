@@ -16,7 +16,7 @@
     <string name="patch_flow_pick_kernel_reference">Select matching boot.img (kernel reference, if needed)</string>
     <string name="patch_flow_selected_kernel_reference">Kernel reference: %1$s</string>
     <string name="patch_flow_kernel_release_detected">Kernel release: %1$s</string>
-    <string name="patch_flow_kernel_reference_help">Use images from the same device and firmware build. Following KernelSU-Next's partition policy, android12-* KMI targets boot.img; other KMI branches prefer init_boot.img when that partition exists. When init_boot.img or vendor_boot.img has no kernel payload, select the matching boot.img as the kernel reference. vendor_boot.img is supported only when it contains an init_boot-named or unnamed generic ramdisk fragment.</string>
+    <string name="patch_flow_kernel_reference_help">Use images from the same device and firmware build. KMI selection follows the KernelSU-Next partition policy: android12 KMI targets boot.img. Other supported KMI branches prefer init_boot.img when that partition is available. If init_boot.img or vendor_boot.img has no kernel payload, select the matching boot.img as the kernel reference. vendor_boot.img is supported only when it contains an init_boot-named or unnamed generic ramdisk fragment.</string>
         <string name="patch_flow_pick_kmi_reference_module">Select vendor .ko for KMI detection (KernelSU-Next fallback)</string>
         <string name="patch_flow_selected_kmi_reference_module">KMI reference module: %1$s</string>
         <string name="patch_flow_kmi_source">KMI source: %1$s</string>
