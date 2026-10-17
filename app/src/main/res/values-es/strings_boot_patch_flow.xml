@@ -42,5 +42,6 @@
     <string name="patch_flow_kmi_detecting">Detectando el KMI de la imagen seleccionada…</string>
     <string name="patch_flow_kmi_detected">KMI detectado: %1$s</string>
     <string name="patch_flow_kmi_manual">No se encontró una rama KMI en el banner del kernel ni en el módulo vendor opcional. Selecciona manualmente solo si conoces la rama correcta; la compatibilidad seguirá sin verificarse.</string>
+    <string name="patch_flow_kmi_unverified">Esta imagen no expone un KMI de Android verificable. Selecciona el boot.img correspondiente o un archivo vendor .ko del mismo build exacto del firmware; por seguridad, se bloquea la selección manual de KMI.</string>
 <string name="patch_flow_module_bundled_hint">Un APK de lanzamiento puede usar el módulo incluido para el KMI seleccionado. Elige un archivo para sustituirlo o si no hay uno compatible incluido.</string>    <string name="patch_flow_kmi_mismatch">El KMI seleccionado (%1$s) no coincide con el KMI detectado en la imagen (%2$s). Usa la rama detectada o verifica que la imagen corresponda al kernel deseado.</string>
 </resources>

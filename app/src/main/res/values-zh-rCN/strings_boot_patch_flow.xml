@@ -42,5 +42,6 @@
     <string name="patch_flow_kmi_detecting">正在从所选镜像检测 KMI…</string>
     <string name="patch_flow_kmi_detected">检测到的 KMI：%1$s</string>
     <string name="patch_flow_kmi_manual">内核标识和可选 vendor 模块中均未找到 KMI 分支。仅在确定目标分支时手动选择；兼容性仍未验证。</string>
+    <string name="patch_flow_kmi_unverified">此镜像未提供可验证的 Android KMI。请选择来自完全相同固件构建版本的匹配 boot.img 或 vendor .ko 文件；为确保安全，已禁用手动选择 KMI。</string>
 <string name="patch_flow_module_bundled_hint">发布版 APK 可以使用与所选 KMI 匹配的内置模块。仅在需要覆盖内置模块或没有匹配模块时选择文件。</string>    <string name="patch_flow_kmi_mismatch">所选 KMI（%1$s）与镜像检测到的 KMI（%2$s）不一致。请使用检测到的分支，或确认镜像属于目标内核。</string>
 </resources>

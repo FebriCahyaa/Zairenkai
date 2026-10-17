@@ -42,5 +42,6 @@
     <string name="patch_flow_kmi_detecting">Mendeteksi KMI dari image yang dipilih…</string>
     <string name="patch_flow_kmi_detected">KMI terdeteksi: %1$s</string>
     <string name="patch_flow_kmi_manual">Cabang KMI tidak ditemukan pada banner kernel maupun modul vendor opsional. Pilih manual hanya jika kamu mengetahui cabang target; kompatibilitas tetap belum terverifikasi.</string>
+    <string name="patch_flow_kmi_unverified">Image ini tidak menyediakan Android KMI yang dapat diverifikasi. Pilih boot.img yang cocok atau file vendor .ko dari build firmware yang persis sama; demi keamanan, pemilihan KMI manual dinonaktifkan.</string>
 <string name="patch_flow_module_bundled_hint">APK rilis dapat memakai modul bawaan yang cocok dengan KMI terpilih. Pilih berkas untuk menggantinya atau jika modul bawaan tidak tersedia.</string>    <string name="patch_flow_kmi_mismatch">KMI pilihan (%1$s) tidak cocok dengan KMI yang terdeteksi dari image (%2$s). Gunakan cabang yang terdeteksi atau pastikan image berasal dari kernel yang dimaksud.</string>
 </resources>
