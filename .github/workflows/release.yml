@@ -10,6 +10,11 @@ on:
         description: "Stable MAJOR.MINOR.PATCH version matching app/build.gradle.kts (example: 1.1.0)"
         required: true
         type: string
+      overwrite_existing_release:
+        description: "Replace an existing GitHub Release and tag for this version (destructive; use only to correct a bad release)"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -22,6 +27,7 @@ jobs:
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
       version: ${{ steps.meta.outputs.version }}
+      overwrite: ${{ steps.meta.outputs.overwrite }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -30,6 +36,7 @@ jobs:
         id: meta
         env:
           REQUESTED_VERSION: ${{ inputs.release_version }}
+          OVERWRITE_EXISTING_RELEASE: ${{ inputs.overwrite_existing_release }}
         run: |
           set -euo pipefail
           VERSION="${REQUESTED_VERSION#v}"
@@ -44,14 +51,18 @@ jobs:
           }
           RELEASE_TAG="v$VERSION"
           if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
-            echo "::error::Tag $RELEASE_TAG already exists. Choose a new version; this workflow never overwrites an existing tag/release."
-            exit 1
+            if [[ "$OVERWRITE_EXISTING_RELEASE" != "true" ]]; then
+              echo "::error::Tag $RELEASE_TAG already exists. Choose a new version or enable overwrite_existing_release to replace it."
+              exit 1
+            fi
+            echo "::warning::Overwrite enabled for $RELEASE_TAG. The existing Release/tag will be removed only after all build and signing checks pass."
           fi
           python3 tools/ci/test-validate-release-tag.py
           python3 tools/ci/validate-release-tag.py --tag "$RELEASE_TAG"
           python3 tools/ci/test-owner-key-provisioning.py
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "overwrite=$OVERWRITE_EXISTING_RELEASE" >> "$GITHUB_OUTPUT"
           echo "Validated manual Release request: $RELEASE_TAG. The tag will be created only after the build and metadata checks pass."
 
   module:
@@ -314,6 +325,20 @@ jobs:
         uses: actions/attest@v4
         with:
           subject-path: Zairenkai-release-SHA256SUMS
+
+      - name: Remove existing Release and tag when overwrite was explicitly requested
+        if: needs.validate_tag.outputs.overwrite == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.validate_tag.outputs.tag }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            gh release delete "$RELEASE_TAG" --repo "$REPOSITORY" --yes --cleanup-tag
+          elif gh api "repos/$REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            gh api --method DELETE "repos/$REPOSITORY/git/refs/tags/$RELEASE_TAG"
+          fi
 
       - name: Create stable tag and publish GitHub Release
         id: publish
