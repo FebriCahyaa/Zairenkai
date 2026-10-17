@@ -46,9 +46,9 @@ on:
   workflow_dispatch:
     inputs:
       full_build:
-        description: "Build all supported KMI modules and an integrated Canary validation APK (requires ZKFC_LICENSE_SERVER_URL)"
+        description: "Build all supported KMI modules and an integrated Canary validation APK (requires ZKFC_LICENSE_SERVER_URL). Full build is enabled by default for manual runs."
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions:
