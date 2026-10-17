@@ -328,11 +328,7 @@ fn run() -> Result<()> {
         .transpose()
         .context("KMI reference module does not contain an Android KMI marker in vermagic")?;
 
-    let kmi_source = resolve_kmi_source(
-        identity,
-        &kmi,
-        reference_module_kmi.as_deref(),
-    )?;
+    let kmi_source = resolve_kmi_source(identity, &kmi, reference_module_kmi.as_deref())?;
     println!("- Verified target kernel release: {kernel_release}");
     println!(
         "- Module Linux family: {}",
@@ -963,8 +959,8 @@ fn verify_output(
         .entry_by_name(INIT_RC_ENTRY)
         .and_then(CpioEntry::data)
         .ok_or_else(|| anyhow!("patched image contains no readable init.rc"))?;
-    let patched_init_rc = std::str::from_utf8(patched_init_rc)
-        .context("patched init.rc is not valid UTF-8")?;
+    let patched_init_rc =
+        std::str::from_utf8(patched_init_rc).context("patched init.rc is not valid UTF-8")?;
     ensure!(
         patched_init_rc.contains(INIT_RC_MARKER)
             && patched_init_rc.contains("on property:sys.boot_completed=1")
@@ -1007,7 +1003,9 @@ fn verify_output(
         "patch manifest original-init state is inconsistent"
     );
     ensure!(
-        manifest.lines().any(|line| line == "module_load=property:sys.boot_completed"),
+        manifest
+            .lines()
+            .any(|line| line == "module_load=property:sys.boot_completed"),
         "patch manifest must identify the delayed module-load trigger"
     );
     ensure!(
@@ -1191,8 +1189,16 @@ mod tests {
             b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0",
         );
         let mut cpio = synthetic_ramdisk();
-        let original_init = cpio.entry_by_name(INIT_ENTRY).and_then(CpioEntry::data).unwrap().to_vec();
-        let original_rc = cpio.entry_by_name(INIT_RC_ENTRY).and_then(CpioEntry::data).unwrap().to_vec();
+        let original_init = cpio
+            .entry_by_name(INIT_ENTRY)
+            .and_then(CpioEntry::data)
+            .unwrap()
+            .to_vec();
+        let original_rc = cpio
+            .entry_by_name(INIT_RC_ENTRY)
+            .and_then(CpioEntry::data)
+            .unwrap()
+            .to_vec();
 
         inject_runtime_payloads(
             &mut cpio,
@@ -1207,14 +1213,21 @@ mod tests {
         assert!(!cpio.exists(ORIGINAL_INIT_ENTRY));
         assert!(cpio.exists(MODULE_ENTRY));
         assert_eq!(
-            cpio.entry_by_name(INIT_ENTRY).and_then(CpioEntry::data).unwrap(),
+            cpio.entry_by_name(INIT_ENTRY)
+                .and_then(CpioEntry::data)
+                .unwrap(),
             original_init
         );
         assert_eq!(
-            cpio.entry_by_name(INIT_RC_BACKUP_ENTRY).and_then(CpioEntry::data).unwrap(),
+            cpio.entry_by_name(INIT_RC_BACKUP_ENTRY)
+                .and_then(CpioEntry::data)
+                .unwrap(),
             original_rc
         );
-        let init_rc = cpio.entry_by_name(INIT_RC_ENTRY).and_then(CpioEntry::data).unwrap();
+        let init_rc = cpio
+            .entry_by_name(INIT_RC_ENTRY)
+            .and_then(CpioEntry::data)
+            .unwrap();
         let init_rc = std::str::from_utf8(init_rc).unwrap();
         assert!(init_rc.contains(INIT_RC_MARKER));
         assert!(init_rc.contains("on property:sys.boot_completed=1"));
@@ -1265,14 +1278,16 @@ mod tests {
             CpioEntry::regular(0o755, Box::new(b"old PID1 patch".to_vec())),
         )
         .unwrap();
-        assert!(inject_runtime_payloads(
-            &mut cpio,
-            module,
-            "android15-6.6",
-            "6.6.42-android15-12-gabcdef",
-            "kernel-image",
-        )
-        .is_err());
+        assert!(
+            inject_runtime_payloads(
+                &mut cpio,
+                module,
+                "android15-6.6",
+                "6.6.42-android15-12-gabcdef",
+                "kernel-image",
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1288,29 +1303,33 @@ mod tests {
             b"vermagic=6.6.42-android15-12-gabcdef SMP preempt\0",
         );
         let mut no_init = Cpio::new();
-        assert!(inject_runtime_payloads(
-            &mut no_init,
-            module.clone(),
-            "android15-6.6",
-            "6.6.42-android15-12-gabcdef",
-            "kernel-image",
-        )
-        .is_err());
+        assert!(
+            inject_runtime_payloads(
+                &mut no_init,
+                module.clone(),
+                "android15-6.6",
+                "6.6.42-android15-12-gabcdef",
+                "kernel-image",
+            )
+            .is_err()
+        );
 
         let mut no_init_rc = Cpio::new();
-        no_init_rc.add(
-            INIT_ENTRY,
-            CpioEntry::regular(0o755, Box::new(b"original-init".to_vec())),
-        )
-        .unwrap();
-        assert!(inject_runtime_payloads(
-            &mut no_init_rc,
-            module,
-            "android15-6.6",
-            "6.6.42-android15-12-gabcdef",
-            "kernel-image",
-        )
-        .is_err());
+        no_init_rc
+            .add(
+                INIT_ENTRY,
+                CpioEntry::regular(0o755, Box::new(b"original-init".to_vec())),
+            )
+            .unwrap();
+        assert!(
+            inject_runtime_payloads(
+                &mut no_init_rc,
+                module,
+                "android15-6.6",
+                "6.6.42-android15-12-gabcdef",
+                "kernel-image",
+            )
+            .is_err()
+        );
     }
-
 }
