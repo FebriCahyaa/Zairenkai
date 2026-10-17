@@ -222,9 +222,14 @@ jobs:
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0" >/dev/null
           EXPECTED="$(keytool -exportcert -alias "$ZK_KEY_ALIAS" -keystore "$RUNNER_TEMP/zairenkai-signing/release.p12" -storepass:env ZK_KEYSTORE_PASSWORD | sha256sum | awk '{print toupper($1)}')"
           for APK in Zairenkai-release.apk Zairenkai-spoofed-release.apk; do
-            VERIFY_OUTPUT="$("$BT/apksigner" verify --verbose --min-sdk-version 31 "$APK" 2>&1)" || { printf '%s\n' "$VERIFY_OUTPUT"; exit 1; }
+            # Match the signer validation contract in verify-release-apk.sh: validate the APK from API 23, including v1.
+            VERIFY_OUTPUT="$("$BT/apksigner" verify --verbose --min-sdk-version 23 "$APK" 2>&1)" || { printf '%s\n' "$VERIFY_OUTPUT"; exit 1; }
             for scheme in 'Verified using v1 scheme (JAR signing): true' 'Verified using v2 scheme (APK Signature Scheme v2): true' 'Verified using v3 scheme (APK Signature Scheme v3): true'; do
-              grep -Fq "$scheme" <<< "$VERIFY_OUTPUT" || { echo "::error::Required signature scheme missing: $scheme ($APK)"; exit 1; }
+              grep -Fq "$scheme" <<< "$VERIFY_OUTPUT" || {
+                printf '%s\n' "$VERIFY_OUTPUT"
+                echo "::error::Required signature scheme missing: $scheme ($APK)"
+                exit 1
+              }
             done
             CERT_OUTPUT="$("$BT/apksigner" verify --print-certs "$APK" 2>&1)"
             ACTUAL="$(printf '%s\n' "$CERT_OUTPUT" | awk '/certificate SHA-256 digest:/ { sub(/^.*certificate SHA-256 digest:[[:space:]]*/, ""); gsub(/[^[:xdigit:]]/, ""); if (length($0) == 64) { print toupper($0); exit } }')"

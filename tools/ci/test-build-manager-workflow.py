@@ -49,6 +49,10 @@ def main() -> int:
     check('TASK=":app:assemble${FLAVOR}${BUILD_TYPE}"' in builder,
           "each reusable matrix call compiles exactly its selected flavor and build type")
     check("tools/ci/verify-release-apk.sh" in builder, "signed matrix APK is verified against the configured keystore")
+    check('verify --verbose --min-sdk-version 23 "$APK"' in release,
+          "Release publisher verifies the same API range used by the v1/v2/v3 APK signer")
+    check("printf '%s\\n' \"$VERIFY_OUTPUT\"" in release,
+          "Release signature-scheme failures print the actual apksigner output for diagnosis")
     check("ZK_KEYSTORE_BASE64" in builder and "ZK_KEY_ALIAS" in builder, "APK matrix uses actual signing secrets")
     check("actions/upload-artifact@v7.0.1" in builder and "zairenkai-${{ inputs.channel }}-${{ inputs.variant }}" in builder,
           "each APK matrix row uploads a distinct artifact")
