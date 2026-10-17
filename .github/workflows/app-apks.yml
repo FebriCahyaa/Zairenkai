@@ -79,7 +79,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download signed standard Canary APK
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: zairenkai-canary-standard-signed
           repository: ${{ github.repository }}
@@ -87,7 +87,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts/canary-standard
       - name: Download signed Spoof Canary APK
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: zairenkai-canary-spoof-signed
           repository: ${{ github.repository }}
@@ -95,7 +95,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts/canary-spoof
       - name: Download flashable module artifact
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: module-zip-canary
           repository: ${{ github.repository }}
@@ -103,7 +103,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts/module
       - name: Download standalone KMI matrix artifact
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: kmi-bundle
           repository: ${{ github.repository }}

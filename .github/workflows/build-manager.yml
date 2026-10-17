@@ -132,11 +132,11 @@ jobs:
           sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
 
       - name: Download module and standalone KMI artifacts from this workflow run
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: module-zip-${{ inputs.channel }}
           path: module-artifact
-      - uses: actions/download-artifact@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: kmi-bundle
           path: kmi-artifact

@@ -76,7 +76,12 @@ def main() -> int:
           "Canary publisher consumes completed Build Manager CI runs")
     check("uses: ./.github/workflows/build-module.yml" not in publisher and "build-module.yml" not in publisher,
           "Canary publisher no longer builds KMI or flashable module")
-    check("actions/download-artifact@v7.0.1" in publisher and "zairenkai-canary-standard-signed" in publisher and "zairenkai-canary-spoof-signed" in publisher,
+    all_workflow_text = "\n".join(path.read_text(encoding="utf-8") for path in WORKFLOWS.glob("*.yml"))
+    check("actions/download-artifact@v7.0.1" not in all_workflow_text,
+          "no workflow pins the nonexistent download-artifact v7.0.1 tag")
+    check("actions/download-artifact@v8.0.2" in builder and "actions/download-artifact@v8.0.2" in publisher and "actions/download-artifact@v8.0.2" in release and "actions/download-artifact@v8.0.2" in module,
+          "all artifact download workflows use the verified v8.0.2 release")
+    check("actions/download-artifact@v8.0.2" in publisher and "zairenkai-canary-standard-signed" in publisher and "zairenkai-canary-spoof-signed" in publisher,
           "Canary publisher downloads the two separately signed matrix APK artifacts")
     check("Zairenkai-KMI-modules.zip" in publisher and "module-update-canary.json" in publisher and "name: module-zip-canary" in publisher and "name: kmi-bundle" in publisher,
           "Canary publisher attaches Canary module metadata and the shared KMI artifact from Build Manager CI")

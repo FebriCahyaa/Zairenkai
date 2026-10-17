@@ -90,22 +90,22 @@ jobs:
           fi
 
       - name: Download Standard Release APK artifact
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: zairenkai-release-standard-signed
           path: artifacts/release-standard
       - name: Download Spoof Release APK artifact
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: zairenkai-release-spoof-signed
           path: artifacts/release-spoof
       - name: Download channel-specific module artifact
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: module-zip-release
           path: module-artifact
       - name: Download standalone KMI artifact
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: kmi-bundle
           path: kmi-artifact
