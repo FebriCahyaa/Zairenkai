@@ -47,6 +47,27 @@ class ChangelogTests(unittest.TestCase):
             self.assertIn("reject stale manifests", changelog)
             self.assertNotIn("initial baseline", changelog)
 
+    def test_release_changelog_can_be_generated_before_new_tag_exists(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            def git(*args):
+                subprocess.run(["git", *args], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+            git("init", "-q")
+            git("config", "user.name", "CI Test")
+            git("config", "user.email", "ci@example.invalid")
+            (repo / "tracked.txt").write_text("base\n", encoding="utf-8")
+            git("add", "tracked.txt")
+            git("commit", "-m", "chore: stable baseline", "-q")
+            git("tag", "v1.0.0")
+            (repo / "tracked.txt").write_text("release candidate\n", encoding="utf-8")
+            git("commit", "-am", "feat(release): package stable variants", "-q")
+            with patch.object(module, "ROOT", repo):
+                head, base, commits = module.collect("release", "v1.1.0")
+            self.assertEqual(base, "v1.0.0")
+            self.assertEqual(len(commits), 1)
+            self.assertIn("package stable variants", commits[0][1])
+            self.assertNotEqual(head, "")
+
     def test_collect_ignores_stable_tags_not_merged_into_head(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)

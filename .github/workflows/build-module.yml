@@ -110,6 +110,7 @@ jobs:
             exit 1
           }
 
+          python3 tools/ci/test-owner-key-provisioning.py
           BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
           if [[ "$CHANNEL" == canary ]]; then
             VERSION_NAME="${BASE_VERSION}-canary.${GITHUB_RUN_NUMBER}"
@@ -412,11 +413,16 @@ jobs:
           set -euo pipefail
           test -n "$(find module/lkm -type f -name 'zkfc.ko' -print -quit)"
           : > module/SHA256SUMS
-          (cd module && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
+          # META-INF contains the updater/installer trampoline. Recovery/root
+          # managers consume these archive-level files; they are not installed
+          # into MODPATH, so listing them in SHA256SUMS breaks the on-device
+          # payload-count check (manifest=99, installed files=97).
+          (cd module && find . -type f ! -name SHA256SUMS ! -path './META-INF/*' -print0 | sort -z | xargs -0 sha256sum) > module/SHA256SUMS
           (cd module && zip -r9 ../Zairenkai-module.zip . -x '*.git*')
           cp module/SHA256SUMS SHA256SUMS
           sha256sum Zairenkai-module.zip
           unzip -t Zairenkai-module.zip >/dev/null
+          python3 tools/ci/test-module-payload-manifest.py --module-dir module --archive Zairenkai-module.zip
 
       - name: Upload channel-specific module artifact
         uses: actions/upload-artifact@v7

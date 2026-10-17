@@ -34,16 +34,17 @@ def main() -> int:
     check("if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build == true }}" not in ci,
           "module and integrated APK jobs cannot be skipped on push/dispatch by full_build condition")
     check("uses: ./.github/workflows/build-module.yml" in ci, "Build Manager CI owns the KMI/module build")
-    check("channel: both" in ci and "allow_unpublished_release: true" in ci,
-          "Build Manager CI requests both module channels from one shared KMI matrix")
+    check("channel: canary" in ci and "channel: both" not in ci,
+          "automatic Build Manager CI creates only the Canary module package")
     check("fromJSON(inputs.channel == 'both'" in module and "package-channel:" in module,
           "module workflow dynamically fans out only requested channels after the one shared KMI matrix")
     check("uses: ./.github/workflows/build-manager.yml" in ci, "Build Manager CI fans out to the reusable APK builder")
-    for channel in ("canary", "release"):
+    for channel in ("canary",):
         check(f"channel: {channel}" in ci, f"central APK matrix includes {channel} channel")
         for variant in ("standard", "spoof"):
-            check(f"variant: {variant}" in ci, f"central APK matrix includes {channel}/{variant} row")
-            check(f"variant: {variant}" in ci and f"channel: {channel}" in ci,
+            check(f"variant: {variant}" in ci or "variant: [standard, spoof]" in ci,
+                  f"central APK matrix includes {channel}/{variant} row")
+            check("variant: [standard, spoof]" in ci and f"channel: {channel}" in ci,
                   f"the {channel}/{variant} row is independently represented in the CI matrix")
     check('TASK=":app:assemble${FLAVOR}${BUILD_TYPE}"' in builder,
           "each reusable matrix call compiles exactly its selected flavor and build type")
@@ -64,6 +65,17 @@ def main() -> int:
           "module workflow verifies one KMI bundle and uploads channel-specific flashable module artifacts")
     check('(cd "module/lkm/$kmi-$abidir" && sha256sum zkfc.ko > zkfc.ko.sha256)' in module,
           "KMI checksum sidecars use valid relative paths")
+    check("! -path './META-INF/*'" in module and "test-module-payload-manifest.py --module-dir module --archive Zairenkai-module.zip" in module,
+          "flashable module checksum manifests exclude archive-level META-INF and are verified against the finished ZIP")
+    installer = (ROOT / "module" / "customize.sh").read_text(encoding="utf-8")
+    check('! -path "$MODPATH/META-INF/*"' in installer and "archive-level installer" in installer,
+          "on-device module integrity counts only files that are installed under MODPATH")
+    check("sync-metadata-signing-secrets.py" in (ROOT / "docs/security/SECURE_RELEASE_RUNBOOK.md").read_text(encoding="utf-8"),
+          "runbook documents safe sync of the already-pinned metadata key to canary-signing")
+    check((ROOT / "tools/release/sync-metadata-signing-secrets.py").is_file(),
+          "metadata signer sync helper exists without generating or rotating the key")
+    check("test-owner-key-provisioning.py" in ci and "test-owner-key-provisioning.py" in release,
+          "CI and stable Release fail closed when ZKFC owner public key is unprovisioned")
     restore_step = module.split("- name: Restore module tree", 1)[1].split("- name: Stamp channel-specific module update metadata", 1)[0]
     check('unzip -t "$ARCHIVE"' in restore_step and 'unzip -q "$ARCHIVE" -d "$RESTORE_DIR"' in restore_step,
           "module base archive is validated and restored into a clean staging directory")
@@ -72,8 +84,8 @@ def main() -> int:
     check("license-server-validation.invalid" in module and "smoke-license-server.py" not in module,
           "KMI/module compilation is independent of live-server availability; publishers enforce readiness")
 
-    check("workflow_run:" in publisher and "Build Manager CI" in publisher,
-          "Canary publisher consumes completed Build Manager CI runs")
+    check("workflow_dispatch:" in publisher and "workflow_run:" not in publisher,
+          "Canary publishing is manual-only; successful commits do not auto-publish Releases")
     check("uses: ./.github/workflows/build-module.yml" not in publisher and "build-module.yml" not in publisher,
           "Canary publisher no longer builds KMI or flashable module")
     all_workflow_text = "\n".join(path.read_text(encoding="utf-8") for path in WORKFLOWS.glob("*.yml"))
@@ -87,6 +99,12 @@ def main() -> int:
           "Canary publisher attaches Canary module metadata and the shared KMI artifact from Build Manager CI")
     check("uses: ./.github/workflows/build-module.yml" in release and "uses: ./.github/workflows/build-manager.yml" in release,
           "stable Release orchestrates module and APK builder workflows")
+    check("workflow_dispatch:" in release and "push:" not in release.split("permissions:", 1)[0],
+          "stable Release workflow runs only from a manual Actions dispatch")
+    check("release_version:" in release and "tag_name: ${{ needs.validate_tag.outputs.tag }}" in release and "target_commitish: ${{ github.sha }}" in release,
+          "manual Release validates the requested version and creates its vX.Y.Z tag automatically after build success")
+    check("refs/tags/$RELEASE_TAG" in release and "already exists" in release,
+          "manual Release rejects existing tags and never overwrites a prior stable Release")
     check("name: module-zip-release" in release and "name: kmi-bundle" in release,
           "stable Release downloads the Release-channel module and shared KMI artifact")
     check("group: module-${{ github.workflow }}-${{ github.ref }}-${{ inputs.channel || 'canary' }}" in module,

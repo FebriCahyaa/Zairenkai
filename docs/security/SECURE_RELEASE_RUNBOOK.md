@@ -1,8 +1,7 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary -->
 # Zairenkai secure release runbook
 
-This is the required setup order for signed update metadata and scoped ZKFC token issuance.
-The checked-in update-metadata public key intentionally remains `UNPROVISIONED` until the owner creates and pins a real key on a trusted workstation. Official stable release publication must fail closed until then.
+This is the required setup order for signed update metadata and scoped ZKFC token issuance. The checked-in update-metadata PEM is the app's pinned trust anchor. Stable release publication must fail closed unless the matching existing private-key backup is available to the protected signing environment; never replace this public key in place without a dual-key migration.
 
 ## 1. Configure GitHub Environments before creating signing keys
 
@@ -10,10 +9,16 @@ Create both environments under **Settings → Environments**. Do not store these
 
 - `production-signing`: require at least one reviewer and use custom deployment ref policies that explicitly allow the repository's protected default branch and the `v*` release-tag pattern. Put all APK/metadata signing secrets here: `ZK_KEYSTORE_BASE64`, `ZK_KEYSTORE_PASSWORD`, `ZK_KEY_ALIAS`, `ZK_KEY_PASSWORD`, `ZKFC_METADATA_SIGNING_KEY_B64`, `ZKFC_METADATA_SIGNING_PASSPHRASE`.
 - Repository **Actions variable** `ZKFC_LICENSE_SERVER_URL` must contain the deployed production Worker's HTTPS origin (no path). This non-secret variable is read by CI and both distribution workflows.
-- The Canary workflow is enabled only when repository variable `ZK_CANARY_ENABLED=true`. Stable Release publication is tag-driven by `.github/workflows/release.yml` (`v*`) and separately validates all credentials within `production-signing`; it is not triggered by ordinary branch pushes.
+- Commit pushes run validation/build CI and upload temporary Actions artifacts only; they do not create GitHub Releases or stable tags. Canary publication is an explicit manual run of `.github/workflows/app-apks.yml` using a successful Build Manager CI run ID. Stable Release is started only through Actions → Release → Run workflow; enter the version matching `app/build.gradle.kts`, and `release.yml` creates the `vX.Y.Z` tag and GitHub Release automatically only after the full signed build and metadata checks pass.
 - `zkfc-token-issuer`: require reviewer approval, prevent self-review if available, and allow only the protected default branch. This environment receives tag-scoped delegated issuer credentials below.
 
 Protect the default branch with required reviews and prevent untrusted pull-request workflows from accessing release environments.
+
+## 1A. Interpreting the ZKFC API License state on a device
+
+The License Server's installation enrollment is not a ZKFC kernel API license. A UI state of `missing` means no valid `.zkl` grant is active; it cannot be fixed by setting `ZKFC_LICENSE_SERVER_URL` or by creating a new Android APK keystore. The `Owner key: Not yet` state comes from the currently running `/dev/zkfc` implementation. The current source header must pass `python3 tools/ci/test-owner-key-provisioning.py`; after correcting a module package, install the newly built `Zairenkai-module.zip` and reboot, then confirm the device's owner-key fingerprint matches the build summary. If it remains the old fingerprint, the currently running device kernel/driver is still old (or built-in) and must be rebuilt/flashed with the pinned public key; do not blindly run `init-owner` because rotating that key invalidates existing grants.
+
+After the owner key is visible, features remain locked until a real owner-signed `.zkl` token or authorized delegated grant is issued for the exact `CONFIG_ZKFC_LICENSEE_TAG` and installed/embedded. Use the existing `tools/zkfc-license/zkfc_license.py issue` flow with the owner's private key, or the protected `Issue scoped ZKFC token` workflow for a pre-authorized delegated subkey. Never fabricate a token and never put the owner private key in GitHub Secrets.
 
 ## 2. Provision the release metadata signing key
 
@@ -29,6 +34,18 @@ The helper refuses to generate a key unless the `production-signing` environment
 `app/src/main/assets/security/update-metadata-public-key.pem`
 
 Review and commit that public PEM file. Never commit the private-key backup or passphrase. Keep a second encrypted backup offline. In-place key rotation is not supported by the single-key pin; ship a dual-key migration before rotating the trust anchor.
+
+### Make the same pinned signer available to manual Canary publication
+
+`app-apks.yml` intentionally uses the separate `canary-signing` environment. If that environment does not contain the metadata signer secrets, Canary publication must fail closed with `Missing required canary-signing secret`. Do not copy a different key or generate a second key, because the application pins one public key. With the existing private-key backup and its passphrase available on your trusted machine, sync the *same* key:
+
+```sh
+python3 tools/release/sync-metadata-signing-secrets.py \
+  --repo FebriCahyaa/Zairenkai \
+  --environment canary-signing
+```
+
+The helper verifies that the existing encrypted private key matches the already-pinned public PEM before uploading the two secrets. It does not generate or rotate keys. If the private-key backup is lost, a value in GitHub Secrets cannot be read back; stop and design a deliberate dual-key migration rather than replacing the trust anchor blindly.
 
 ## 3. Provision the ZKFC owner key and the per-kernel delegated issuers
 

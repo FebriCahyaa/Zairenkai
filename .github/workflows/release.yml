@@ -1,28 +1,58 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 name: Release
 
+# Stable tags and GitHub Releases are created only from an explicit Actions run.
+# Ordinary pushes and manually pushed tags do not publish release artifacts.
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Stable MAJOR.MINOR.PATCH version matching app/build.gradle.kts (example: 1.1.0)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   validate_tag:
-    name: Validate monotonic stable Release tag
+    name: Validate manual stable Release request
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - name: Validate stable semantic version and monotonic release order
+      - name: Validate requested version and prepare the automatic tag
+        id: meta
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          REQUESTED_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
+          VERSION="${REQUESTED_VERSION#v}"
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+            echo "::error::Enter a stable semantic version such as 1.1.0 (without a leading v)."
+            exit 1
+          }
+          BASE_VERSION="$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          [[ "$VERSION" == "$BASE_VERSION" ]] || {
+            echo "::error::Requested version $VERSION must match app/build.gradle.kts versionName $BASE_VERSION. Update the app version in a separate commit first."
+            exit 1
+          }
+          RELEASE_TAG="v$VERSION"
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
+            echo "::error::Tag $RELEASE_TAG already exists. Choose a new version; this workflow never overwrites an existing tag/release."
+            exit 1
+          fi
           python3 tools/ci/test-validate-release-tag.py
           python3 tools/ci/validate-release-tag.py --tag "$RELEASE_TAG"
+          python3 tools/ci/test-owner-key-provisioning.py
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Validated manual Release request: $RELEASE_TAG. The tag will be created only after the build and metadata checks pass."
 
   module:
     name: Full KMI matrix and signed-channel module package
@@ -30,7 +60,8 @@ jobs:
     uses: ./.github/workflows/build-module.yml
     with:
       channel: release
-      version_name: ${{ github.ref_name }}
+      version_name: ${{ needs.validate_tag.outputs.version }}
+      allow_unpublished_release: true
       server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
     permissions:
       contents: read
@@ -50,7 +81,7 @@ jobs:
       variant: ${{ matrix.variant }}
       require_signing: true
       license_server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-      version_name: ${{ github.ref_name }}
+      version_name: ${{ needs.validate_tag.outputs.version }}
     secrets: inherit
     permissions:
       contents: read
@@ -58,7 +89,6 @@ jobs:
   package:
     name: Verify, sign release metadata and publish
     needs: [validate_tag, module, build-manager]
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     environment: production-signing
     permissions:
@@ -81,13 +111,8 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Warn if ZKFC owner signing key is not provisioned
-        run: |
-          if grep -Eq '^[[:space:]]*#define[[:space:]]+ZKFC_OWNER_KEY_PROVISIONED[[:space:]]+0([[:space:]]|$)' kernel/security/zkfc_owner_key.h; then
-            echo "::warning::ZKFC_OWNER_KEY_PROVISIONED=0: licensed API tokens will be rejected until the owner public key is provisioned and the kernel/module is rebuilt. No fake token will be generated."
-          else
-            echo "ZKFC owner public key is provisioned."
-          fi
+      - name: Enforce a provisioned ZKFC owner public key
+        run: python3 tools/ci/test-owner-key-provisioning.py
 
       - name: Download Standard Release APK artifact
         uses: actions/download-artifact@v8.0.2
@@ -211,10 +236,10 @@ jobs:
       - name: Generate Release changelog and standard updater manifest
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
+          RELEASE_TAG: ${{ needs.validate_tag.outputs.tag }}
+          VERSION_NAME: ${{ needs.validate_tag.outputs.version }}
         run: |
           set -euo pipefail
-          RELEASE_TAG="$GITHUB_REF_NAME"
-          VERSION_NAME="${RELEASE_TAG#v}"
           VERSION_CODE="$(python3 tools/ci/version-code.py --version-name "$VERSION_NAME" --channel release)"
           API_MAJOR="$(python3 tools/ci/check-api-major.py --print)"
           BUILD_ID="${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -225,7 +250,7 @@ jobs:
             --apk-url "https://github.com/FebriCahyaa/Zairenkai/releases/download/${RELEASE_TAG}/Zairenkai-release.apk" \
             --api-major "$API_MAJOR" --build-id "$BUILD_ID" --commit "$GITHUB_SHA"
           python3 tools/ci/generate-release-manifest.py \
-            --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
+            --version "$RELEASE_TAG" --commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
 
       - name: Sign and verify stable update metadata
@@ -285,9 +310,16 @@ jobs:
         with:
           subject-path: Zairenkai-release-SHA256SUMS
 
-      - name: Publish stable Release
+      - name: Create stable tag and publish GitHub Release
+        id: publish
         uses: softprops/action-gh-release@v3.0.2
         with:
+          tag_name: ${{ needs.validate_tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Zairenkai ${{ needs.validate_tag.outputs.tag }}
+          prerelease: false
+          draft: false
+          fail_on_unmatched_files: true
           files: |
             Zairenkai-module.zip
             Zairenkai-module-SHA256SUMS
@@ -309,10 +341,21 @@ jobs:
           body_path: Zairenkai-CHANGELOG.md
           generate_release_notes: false
 
+      - name: Verify automatically created tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.validate_tag.outputs.tag }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null
+          gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json tagName,isDraft,isPrerelease \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["tagName"] == sys.argv[1] and x["isDraft"] is False and x["isPrerelease"] is False, x; print("PASS: stable tag and published release exist")' "$RELEASE_TAG"
+
       - name: Verify published Release app manifest through License Server
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ needs.validate_tag.outputs.tag }}
         run: |
           set -euo pipefail
           python3 tools/ci/smoke-update-server.py "$ZKFC_LICENSE_SERVER_URL" release \
@@ -321,7 +364,7 @@ jobs:
       - name: Verify published Release module metadata through License Server
         env:
           ZKFC_LICENSE_SERVER_URL: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ needs.validate_tag.outputs.tag }}
         run: >-
           python3 tools/ci/smoke-update-server.py "$ZKFC_LICENSE_SERVER_URL" release
           --component module --version "${RELEASE_TAG#v}" --tag "$RELEASE_TAG"

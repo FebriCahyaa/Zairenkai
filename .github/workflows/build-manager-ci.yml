@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-# Central Build Manager: validation + one KMI/module matrix + a four-row APK matrix.
-# APK variants are isolated reusable workflow jobs (Canary/Release × Standard/Spoof).
-# Pull requests compile optimized unsigned validation artifacts only; push/manual builds
-# require the protected signing environments and upload signed artifacts for publisher workflows.
+# Commit/PR CI validates the full KMI matrix and builds only Canary Standard/Spoof APKs.
+# Stable Release signing, automatic tag creation, and GitHub Release publication are
+# intentionally isolated in release.yml and can only start from Actions -> workflow_dispatch.
+# This workflow uploads Actions artifacts only; it never publishes a GitHub Release.
 name: Build Manager CI
 
 on:
@@ -104,41 +104,35 @@ jobs:
           python3 tools/ci/test-generate-changelog.py
           python3 tools/ci/test-smoke-license-server.py
           python3 tools/ci/test-smoke-update-server.py
+          python3 tools/ci/test-module-payload-manifest.py --self-test
+          python3 tools/ci/test-owner-key-provisioning.py
           python3 tools/ci/test_release_manifest.py
           python3 tools/ci/generate-spoof-package-id.py | grep -Eq '^[a-z]{6}(\.[a-z]{6}){2}$'
 
-  # Compile the supported KMI matrix once. The reusable module workflow then
-  # packages separate Canary and Release module artifacts from the shared binaries.
+  # The full KMI matrix is still exercised on commit/PR, but automatic CI packages
+  # only the Canary module. The Release-channel package is produced by manual release.yml.
   module:
-    name: Full KMI matrix + Canary/Release module packages
+    name: Full KMI matrix + Canary module package
     uses: ./.github/workflows/build-module.yml
     with:
-      channel: both
-      allow_unpublished_release: true
+      channel: canary
       ddk_release: "20260828"
       server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
     permissions:
       contents: read
 
-  # KernelSU-Next-style matrix: compile/sign/upload one APK per matrix row.
+  # KernelSU-Next-style Canary matrix: one independent job per APK flavor.
+  # The stable Release matrix is exclusively in the manually-dispatched release.yml.
   build-manager:
-    name: ${{ matrix.channel }} / ${{ matrix.variant }} APK
+    name: Canary / ${{ matrix.variant }} APK
     needs: [module]
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - channel: canary
-            variant: standard
-          - channel: canary
-            variant: spoof
-          - channel: release
-            variant: standard
-          - channel: release
-            variant: spoof
+        variant: [standard, spoof]
     uses: ./.github/workflows/build-manager.yml
     with:
-      channel: ${{ matrix.channel }}
+      channel: canary
       variant: ${{ matrix.variant }}
       require_signing: ${{ github.event_name != 'pull_request' }}
       license_server_url: ${{ vars.ZKFC_LICENSE_SERVER_URL }}
@@ -184,13 +178,14 @@ jobs:
             echo "| Clippy | ${CLIPPY_RESULT} |"
             echo "| ShellCheck | ${SHELLCHECK_RESULT} |"
             echo "| Workflow contracts | ${WORKFLOW_CONTRACTS_RESULT} |"
-            echo "| Full KMI matrix + Canary/Release module packages | ${MODULE_RESULT} |"
-            echo "| APK matrix: Canary/Release × Standard/Spoof | ${MANAGER_RESULT} |"
+            echo "| Full KMI matrix + Canary module package | ${MODULE_RESULT} |"
+            echo "| APK matrix: Canary × Standard/Spoof | ${MANAGER_RESULT} |"
             echo
             if [[ "$EVENT_NAME" == pull_request ]]; then
-              echo "PR policy: four optimized APK variants are compiled as unsigned validation artifacts; signing secrets are not forwarded to the build matrix."
+              echo "PR policy: two optimized Canary APK variants are compiled as unsigned validation artifacts; signing secrets are not forwarded to the build matrix."
             else
-              echo "Push/manual policy: all four matrix rows require channel signing, signer verification and checksummed artifact upload."
+              echo "Push/manual policy: Canary Standard and Spoof are signed and uploaded as Actions artifacts; stable Release publication is manual-only in release.yml."
             fi
-            echo "This workflow uploads build artifacts only. Canary and stable Release publishing are separate jobs/workflows and consume these verified artifacts."
+            echo "This workflow uploads Actions artifacts only. It never publishes GitHub Release assets or creates stable tags."
+            echo "Run Actions -> Release manually for a full signed stable build; that workflow creates the vX.Y.Z tag and GitHub Release after validation."
           } >> "$GITHUB_STEP_SUMMARY"

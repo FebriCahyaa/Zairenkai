@@ -75,9 +75,14 @@ def collect(channel: str, tag: str | None) -> tuple[str, str | None, list[tuple[
     stable = [(tag_name, version_tuple(tag_name)) for tag_name in tags]
     stable = [(name, ver) for name, ver in stable if ver is not None]
     current_tag = tag
+    current_tag_exists = bool(current_tag and current_tag in tags)
     if channel == "release":
         if not current_tag:
-            current_tag = git("describe", "--tags", "--exact-match", "HEAD")
+            try:
+                current_tag = git("describe", "--tags", "--exact-match", "HEAD")
+            except RuntimeError:
+                raise ValueError("Release changelog needs --tag when drafting before the tag is created")
+            current_tag_exists = current_tag in tags
         current_version = version_tuple(current_tag)
         if current_version is None:
             raise ValueError(f"Release tag must be stable vMAJOR.MINOR.PATCH: {current_tag}")
@@ -86,9 +91,10 @@ def collect(channel: str, tag: str | None) -> tuple[str, str | None, list[tuple[
     else:
         base = stable[0][0] if stable else None
     if base:
-        revision_range = f"{base}..{head}"
-        if current_tag:
-            revision_range = f"{base}..{current_tag}"
+        # A manually requested Release is built before its vX.Y.Z tag is created.
+        # In that case describe commits through HEAD; use the tag only if it exists.
+        target = current_tag if current_tag_exists and current_tag else head
+        revision_range = f"{base}..{target}"
         raw = git("log", "--reverse", "--no-merges", "--format=%H%x09%s", revision_range)
     else:
         # A new repository with no stable tag: summarize all reachable history.

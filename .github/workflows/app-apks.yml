@@ -1,13 +1,10 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
-# Publish only artifacts produced and verified by a successful Build Manager CI run.
-# This workflow deliberately does not compile APKs or KMI modules.
+# Manually publish a previously successful Canary build from Actions artifacts.
+# This workflow deliberately has no workflow_run trigger: ordinary commits never
+# upload assets to GitHub Releases. Stable releases are handled by release.yml.
 name: App APKs
 
 on:
-  workflow_run:
-    workflows: ["Build Manager CI"]
-    types: [completed]
-    branches: [ccr-076d8b15-osiupp]
   workflow_dispatch:
     inputs:
       source_run_id:
@@ -28,7 +25,6 @@ concurrency:
 jobs:
   publish:
     name: Publish verified Canary artifacts (no build steps)
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     environment: canary-signing
     permissions:

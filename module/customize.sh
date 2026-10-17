@@ -13,11 +13,14 @@ verify_payload_manifest() {
     ui_print "! SHA256SUMS is missing; refusing an unverified module package."
     return 1
   }
-  # Detect missing or extra files, not only hash mismatches. Installer marker
-  # files and the KMI-selected copy are manager/runtime-created, not payload.
+  # Detect missing or extra files, not only hash mismatches. META-INF contains
+  # archive-level installer scripts which managers consume before populating
+  # MODPATH; it is intentionally excluded from the installed payload manifest.
+  # Installer marker files and the KMI-selected copy are runtime-created too.
   expected_count="$(awk 'NF >= 2 { n++ } END { print n + 0 }' "$MODPATH/SHA256SUMS")"
   actual_count="$(find "$MODPATH" -type f \
     ! -path "$MODPATH/SHA256SUMS" \
+    ! -path "$MODPATH/META-INF/*" \
     ! -path "$MODPATH/zkfc/zkfc.ko" \
     ! -path "$MODPATH/disable" ! -path "$MODPATH/remove" \
     ! -path "$MODPATH/update" ! -path "$MODPATH/auto_mount" \
