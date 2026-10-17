@@ -390,6 +390,7 @@ fn run() -> Result<()> {
         "vendor-module-vermagic" => println!(
             "- KMI matches the selected vendor module vermagic using the KernelSU-Next fallback."
         ),
+        other => bail!("unsupported KMI source returned by verifier: {other}"),
     }
     println!(
         "- Done! Image structure and Linux family checks passed. The device kernel must still accept the module and publish /dev/zkfc after boot."
@@ -944,7 +945,7 @@ fn verify_output(
         .and_then(CpioEntry::data)
         .ok_or_else(|| anyhow!("patched image contains an unreadable /init"))?;
     ensure!(
-        init.as_slice() == expected_original_init,
+        init == expected_original_init,
         "patched image changed Android's original /init; refusing the output"
     );
     let original_init_rc = cpio
@@ -952,7 +953,7 @@ fn verify_output(
         .and_then(CpioEntry::data)
         .ok_or_else(|| anyhow!("patched image lost the preserved original init.rc"))?;
     ensure!(
-        original_init_rc.as_slice() == expected_original_init_rc,
+        original_init_rc == expected_original_init_rc,
         "patched image changed the preserved original init.rc"
     );
     let patched_init_rc = cpio
