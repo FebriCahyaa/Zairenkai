@@ -350,8 +350,23 @@ jobs:
       - name: Restore module tree
         run: |
           set -euo pipefail
-          test -s base-artifact/Zairenkai-module-base.zip
-          unzip -q base-artifact/Zairenkai-module-base.zip
+          ARCHIVE="base-artifact/Zairenkai-module-base.zip"
+          RESTORE_DIR="$RUNNER_TEMP/zairenkai-module-restore"
+          test -s "$ARCHIVE"
+          unzip -t "$ARCHIVE" >/dev/null
+
+          # Extract into a clean staging directory. The checkout already contains
+          # module/META-INF/... files, so extracting over the checkout prompts for
+          # overwrite and fails on the non-interactive Actions runner.
+          rm -rf "$RESTORE_DIR"
+          mkdir -p "$RESTORE_DIR"
+          unzip -q "$ARCHIVE" -d "$RESTORE_DIR"
+          test -s "$RESTORE_DIR/module/module.prop"
+          test -n "$(find "$RESTORE_DIR/module/lkm" -type f -name zkfc.ko -print -quit)"
+
+          # Replace the checked-out template only after the staged archive passes validation.
+          rm -rf module
+          mv "$RESTORE_DIR/module" module
           test -s module/module.prop
           test -n "$(find module/lkm -type f -name zkfc.ko -print -quit)"
 

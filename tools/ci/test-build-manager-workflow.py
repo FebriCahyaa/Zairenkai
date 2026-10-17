@@ -64,6 +64,11 @@ def main() -> int:
           "module workflow verifies one KMI bundle and uploads channel-specific flashable module artifacts")
     check('(cd "module/lkm/$kmi-$abidir" && sha256sum zkfc.ko > zkfc.ko.sha256)' in module,
           "KMI checksum sidecars use valid relative paths")
+    restore_step = module.split("- name: Restore module tree", 1)[1].split("- name: Stamp channel-specific module update metadata", 1)[0]
+    check('unzip -t "$ARCHIVE"' in restore_step and 'unzip -q "$ARCHIVE" -d "$RESTORE_DIR"' in restore_step,
+          "module base archive is validated and restored into a clean staging directory")
+    check('rm -rf module' in restore_step and 'mv "$RESTORE_DIR/module" module' in restore_step,
+          "module restore replaces checkout files without interactive unzip overwrite prompts")
     check("license-server-validation.invalid" in module and "smoke-license-server.py" not in module,
           "KMI/module compilation is independent of live-server availability; publishers enforce readiness")
 
