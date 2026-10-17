@@ -133,6 +133,64 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
                 OutlinedButton(onClick = onOpenRuntime) { Text(stringResource(R.string.system_runtime_open)) }
             }
 
+            val enrollment = ui.serverEnrollment
+            SectionCard(stringResource(R.string.system_server_enrollment_title)) {
+                val enrollmentStatusText = when {
+                    !enrollment.configured -> stringResource(R.string.system_server_not_configured)
+                    enrollment.registered -> stringResource(R.string.system_server_registered)
+                    else -> stringResource(R.string.system_server_not_registered)
+                }
+                LabeledRow(
+                    stringResource(R.string.system_label_status),
+                    enrollmentStatusText,
+                    when {
+                        !enrollment.configured -> ZkWarn
+                        enrollment.registered -> ZkGood
+                        else -> ZkWarn
+                    },
+                )
+                if (enrollment.registered) {
+                    enrollment.installationId?.let {
+                        LabeledRow(stringResource(R.string.system_server_installation_id), it.take(8) + "…")
+                    }
+                    enrollment.fingerprint?.let {
+                        LabeledRow(stringResource(R.string.system_server_fingerprint), it.take(16) + "…")
+                    }
+                }
+                Text(
+                    stringResource(R.string.system_server_enrollment_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { vm.enrollWithLicenseServer() },
+                    enabled = enrollment.configured && !ui.serverEnrollmentBusy,
+                ) {
+                    if (ui.serverEnrollmentBusy) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(stringResource(if (ui.serverEnrollmentBusy) R.string.system_server_enrolling else R.string.system_server_enroll_button))
+                }
+                ui.serverEnrollmentResultCode?.let { resultCode ->
+                    val resultText = when (resultCode) {
+                        "registration_success" -> stringResource(R.string.system_server_enroll_success)
+                        "server_not_configured" -> stringResource(R.string.system_server_not_configured)
+                        "invalid_or_expired_challenge" -> stringResource(R.string.system_server_challenge_expired)
+                        "installation_not_active" -> stringResource(R.string.system_server_installation_blocked)
+                        "stored_enrollment_key_unavailable", "stored_enrollment_key_invalid" -> stringResource(R.string.system_server_key_unavailable)
+                        else -> stringResource(R.string.system_server_enroll_failed, resultCode)
+                    }
+                    Text(
+                        resultText,
+                        color = if (ui.serverEnrollmentSucceeded == true) ZkGood else ZkWarn,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
             val lic = ui.license
             SectionCard(stringResource(R.string.system_license_title)) {
                 LabeledRow(stringResource(R.string.system_label_status), lic?.state ?: "—",

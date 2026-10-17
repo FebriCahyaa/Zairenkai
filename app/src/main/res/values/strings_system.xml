@@ -60,6 +60,22 @@
     <string name="system_token_bad_signature">Token signature verification failed.</string>
     <string name="system_token_install_result">Token state: %1$s</string>
 
+    <!-- License Server enrollment (not the kernel ZKFC token) -->
+    <string name="system_server_enrollment_title">License Server registration</string>
+    <string name="system_server_not_configured">Server is not configured</string>
+    <string name="system_server_registered">Installation registered (local record)</string>
+    <string name="system_server_not_registered">Not registered</string>
+    <string name="system_server_installation_id">Installation ID</string>
+    <string name="system_server_fingerprint">Public-key fingerprint</string>
+    <string name="system_server_enrollment_note">Optional registration of this app installation using a locally protected Ed25519 key. It sends no IMEI or serial number. The registered state is the last successful local record, not a live server query. Registration is not a ZKFC kernel license and does not unlock performance features; the kernel still verifies its owner-signed .zkl token independently.</string>
+    <string name="system_server_enroll_button">Register installation</string>
+    <string name="system_server_enrolling">Registering securely…</string>
+    <string name="system_server_enroll_success">Installation registered with the License Server.</string>
+    <string name="system_server_challenge_expired">The registration challenge expired. Please try again.</string>
+    <string name="system_server_installation_blocked">This installation is blocked by the server. Contact the project owner.</string>
+    <string name="system_server_key_unavailable">The protected enrollment key is unavailable. App data may have been restored or the Android Keystore key may have been invalidated.</string>
+    <string name="system_server_enroll_failed">Registration failed (%1$s). Check network and server readiness, then retry.</string>
+
     <!-- Caller identity -->
     <string name="system_caller_title">Caller identity</string>
     <string name="system_label_zkfc_caps">ZKFC capabilities</string>

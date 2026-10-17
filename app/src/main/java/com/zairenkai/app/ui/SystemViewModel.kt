@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zairenkai.app.AppContainer
 import com.zairenkai.app.data.EmbeddedModuleInstaller
+import com.zairenkai.app.data.LicenseServerEnrollmentStatus
 import com.zairenkai.app.data.ModuleInstallCode
 import com.zairenkai.app.data.*
 import java.io.File
@@ -34,6 +35,10 @@ data class SystemUi(
     val moduleInstallCode: ModuleInstallCode? = null,
     val moduleInstallDetail: String? = null,
     val moduleZipReady: Boolean = false,
+    val serverEnrollment: LicenseServerEnrollmentStatus = LicenseServerEnrollmentStatus(configured = false, registered = false),
+    val serverEnrollmentBusy: Boolean = false,
+    val serverEnrollmentResultCode: String? = null,
+    val serverEnrollmentSucceeded: Boolean? = null,
 )
 
 class SystemViewModel(private val c: AppContainer) : ViewModel() {
@@ -54,6 +59,7 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
         val policy = runCatching { c.repository.policy() }.getOrNull()
         val info = runCatching { c.repository.info() }.getOrNull()
         val zperf = runCatching { c.zperf.probe() }.getOrNull()
+        val serverEnrollment = c.licenseServerEnrollment.cachedStatus()
         _ui.value = _ui.value.copy(
             loading = false,
             security = security,
@@ -61,6 +67,25 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
             policy = policy,
             info = info,
             zperf = zperf,
+            serverEnrollment = serverEnrollment,
+        )
+    }
+
+    /** Explicitly enroll this installation; does not install or issue a kernel license token. */
+    fun enrollWithLicenseServer() = viewModelScope.launch {
+        val current = _ui.value.serverEnrollment
+        if (!current.configured || _ui.value.serverEnrollmentBusy) return@launch
+        _ui.value = _ui.value.copy(
+            serverEnrollmentBusy = true,
+            serverEnrollmentResultCode = null,
+            serverEnrollmentSucceeded = null,
+        )
+        val result = c.licenseServerEnrollment.enroll()
+        _ui.value = _ui.value.copy(
+            serverEnrollment = result.status,
+            serverEnrollmentBusy = false,
+            serverEnrollmentResultCode = result.errorCode ?: if (result.successful) "registration_success" else "registration_failed",
+            serverEnrollmentSucceeded = result.successful,
         )
     }
 

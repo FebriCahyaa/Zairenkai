@@ -11,6 +11,10 @@ This design keeps the API from being used "sembarangan" (carelessly): a kernel
 cannot claim Zairenkai/ZKFC compatibility, and the boost surface cannot be
 driven, without a token the owner signed for that licensee.
 
+## License Server enrollment is separate from a ZKFC token
+
+The **System & security → License Server registration** action only registers this app installation using an Ed25519 proof-of-possession challenge. The private installation key is encrypted with AES-GCM under Android Keystore and is never uploaded. An active enrollment is not a license grant and does not change the kernel-reported token state. This release's License Server proxies signed update metadata and records installations; token issuance remains in the separately approved scoped workflow until an authenticated, installation-bound grant protocol and matching kernel verification are designed.
+
 ## Trust model
 
 ```

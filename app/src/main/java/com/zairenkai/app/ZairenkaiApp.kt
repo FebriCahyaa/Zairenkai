@@ -10,6 +10,7 @@ import android.content.Context
 import com.zairenkai.app.data.SettingsStore
 import com.zairenkai.app.data.UsageSessionStore
 import com.zairenkai.app.data.ZkfcRepository
+import com.zairenkai.app.data.LicenseServerEnrollment
 import com.zairenkai.app.data.ZperfClient
 import com.zairenkai.app.data.AppRuntimeClients
 import com.zairenkai.app.core.runtime.RuntimeSnapshotRepository
@@ -29,6 +30,7 @@ class AppContainer(app: Application) {
     val usageStore = UsageSessionStore(app)
     val fpsStore = FpsSessionStore(app)
     val updater = com.zairenkai.app.data.update.Updater(app.applicationContext)
+    val licenseServerEnrollment = LicenseServerEnrollment(app.applicationContext)
 
     /** Process-wide scope for samplers shared across screens. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

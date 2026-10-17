@@ -60,6 +60,22 @@
     <string name="system_token_bad_signature">Verifikasi tanda tangan token gagal.</string>
     <string name="system_token_install_result">Status token: %1$s</string>
 
+    <!-- Pendaftaran License Server (bukan token kernel ZKFC) -->
+    <string name="system_server_enrollment_title">Pendaftaran License Server</string>
+    <string name="system_server_not_configured">Server belum dikonfigurasi</string>
+    <string name="system_server_registered">Instalasi terdaftar (catatan lokal)</string>
+    <string name="system_server_not_registered">Belum terdaftar</string>
+    <string name="system_server_installation_id">ID instalasi</string>
+    <string name="system_server_fingerprint">Sidik kunci publik</string>
+    <string name="system_server_enrollment_note">Pendaftaran opsional untuk instalasi aplikasi ini menggunakan kunci Ed25519 yang dilindungi secara lokal. IMEI dan nomor seri tidak dikirim. Status terdaftar adalah catatan hasil sukses terakhir, bukan pemeriksaan langsung ke server. Pendaftaran ini bukan lisensi kernel ZKFC dan tidak membuka fitur performa; kernel tetap memverifikasi token .zkl bertanda tangan owner secara terpisah.</string>
+    <string name="system_server_enroll_button">Daftarkan instalasi</string>
+    <string name="system_server_enrolling">Mendaftar dengan aman…</string>
+    <string name="system_server_enroll_success">Instalasi berhasil terdaftar di License Server.</string>
+    <string name="system_server_challenge_expired">Challenge pendaftaran kedaluwarsa. Silakan coba lagi.</string>
+    <string name="system_server_installation_blocked">Instalasi ini diblokir server. Hubungi pemilik proyek.</string>
+    <string name="system_server_key_unavailable">Kunci pendaftaran yang dilindungi tidak tersedia. Data aplikasi mungkin dipulihkan dari cadangan atau kunci Android Keystore tidak lagi valid.</string>
+    <string name="system_server_enroll_failed">Pendaftaran gagal (%1$s). Periksa jaringan dan kesiapan server, lalu coba lagi.</string>
+
     <!-- Caller identity -->
     <string name="system_caller_title">Identitas pemanggil</string>
     <string name="system_label_zkfc_caps">Kapabilitas ZKFC</string>
