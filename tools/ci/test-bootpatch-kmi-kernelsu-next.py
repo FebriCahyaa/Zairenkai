@@ -72,8 +72,24 @@ def main() -> int:
           "branchless kernels permit manual KMI only with explicit opt-in and matching Linux major/minor")
     check("trusted_bundled_module" in rust and "--trusted-bundled-module" in rust,
           "native helper has a distinct trust marker for KMI-specific bundled module assets")
-    check("init_wrapper=none" in rust and "sys.boot_completed=1" in rust and "INIT_RC_BACKUP_ENTRY" in rust,
-          "patcher preserves PID 1 and delays ZKFC loading until Android boot completion")
+    check("init_wrapper=none" in rust and "on post-fs-data" in rust and "INIT_RC_BACKUP_ENTRY" in rust,
+          "patcher preserves PID 1 and loads ZKFC through Android init at post-fs-data")
+    check('module_load=post-fs-data' in rust and 'patcher=zkbootpatch-0.5.0' in rust
+          and 'module_load=property:sys.boot_completed' not in rust,
+          "format-5 manifest identifies the post-fs-data loader and no longer defers to boot-completed")
+    cargo_manifest = (ROOT / "native/bootpatch/Cargo.toml").read_text(encoding="utf-8")
+    license_catalog = (ROOT / "tools/licenses/libraries.json").read_text(encoding="utf-8")
+    toolchain = (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
+    bootpatch_action = (ROOT / ".github/actions/build-bootpatch/action.yml").read_text(encoding="utf-8")
+    android_build = (ROOT / "tools/bootpatch/build-android.sh").read_text(encoding="utf-8")
+    check('channel = "1.99.1"' in toolchain,
+          "repository Rust toolchain is pinned to the reviewed 1.99.1 patch release")
+    check("cargo +1.99.1 test --locked --manifest-path native/bootpatch/Cargo.toml" in bootpatch_action,
+          "bootpatch CI tests resolve exclusively from the committed Cargo.lock")
+    check('RUST_TOOLCHAIN="1.99.1"' in android_build and 'cargo +"$RUST_TOOLCHAIN" ndk' in android_build and '--locked' in android_build,
+          "Android cross-build uses the pinned Rust toolchain and locked dependencies")
+    check('version = "0.5.0"' in cargo_manifest and '"id": "native:zkbootpatch",\n   "version": "0.5.0"' in license_catalog,
+          "native crate and software-license catalog versions stay aligned at 0.5.0")
     check("never flashes a" in rust and "block device" in rust,
           "file patching remains non-destructive and does not silently flash a partition")
 

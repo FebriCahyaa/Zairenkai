@@ -1,21 +1,23 @@
 # SPDX-License-Identifier: LicenseRef-Zairenkai-Proprietary
 name: Build standalone boot-patch backend
-description: Test and cross-compile the separately licensed GPL boot-image patcher and init adapter for Android ABIs.
+description: Test and cross-compile the standalone GPL boot-image patcher for Android ABIs; do not package the legacy PID-1 adapter.
 runs:
   using: composite
   steps:
-    - name: Set up Rust for Android ABIs
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: aarch64-linux-android,x86_64-linux-android
-
-    - name: Install cargo-ndk
+    - name: Set up pinned Rust 1.99.1 for Android ABIs
       shell: bash
-      run: cargo install cargo-ndk --locked
+      run: |
+        set -euo pipefail
+        rustup toolchain install 1.99.1 --profile minimal
+        rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.1
 
-    - name: Test boot-patch backend
+    - name: Install locked cargo-ndk
       shell: bash
-      run: cargo test --manifest-path native/bootpatch/Cargo.toml
+      run: cargo +1.99.1 install cargo-ndk --locked
+
+    - name: Test boot-patch backend with the committed lockfile
+      shell: bash
+      run: cargo +1.99.1 test --locked --manifest-path native/bootpatch/Cargo.toml
 
     - name: Build helper for Android
       shell: bash

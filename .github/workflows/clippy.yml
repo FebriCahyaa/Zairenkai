@@ -23,8 +23,8 @@ jobs:
 
       - name: Install pinned Clippy
         run: |
-          rustup toolchain install 1.99.0 --profile minimal
-          rustup component add clippy --toolchain 1.99.0
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup component add clippy --toolchain 1.99.1
 
       - name: Cache Rust build outputs
         uses: Swatinem/rust-cache@v2
@@ -34,4 +34,4 @@ jobs:
 
       - name: Run Clippy on Rust workspace
         working-directory: rust
-        run: cargo +1.99.0 clippy --workspace --all-targets --all-features --locked -- -D warnings
+        run: cargo +1.99.1 clippy --workspace --all-targets --all-features --locked -- -D warnings

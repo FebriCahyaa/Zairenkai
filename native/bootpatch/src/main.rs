@@ -21,7 +21,7 @@ const MODULE_ENTRY: &str = "zkfc.ko";
 const INIT_ENTRY: &str = "init";
 const INIT_RC_ENTRY: &str = "init.rc";
 const INIT_RC_BACKUP_ENTRY: &str = "init.zairenkai.original.rc";
-const INIT_RC_MARKER: &str = "# Zairenkai delayed ZKFC loader; do not load modules as PID 1.";
+const INIT_RC_MARKER: &str = "# Zairenkai ZKFC loader at post-fs-data; Android PID 1 remains untouched.";
 const ORIGINAL_INIT_ENTRY: &str = "init.real"; // legacy patch marker; never overwrite an older patched image
 const SUPPORTED_KMIS: &[&str] = &[
     "android12-5.10",
@@ -819,7 +819,7 @@ fn inject_runtime_payloads(
     );
     ensure!(
         cpio.exists(INIT_RC_ENTRY),
-        "ramdisk does not contain /init.rc; refusing a patch that cannot install a delayed module-load trigger"
+        "ramdisk does not contain /init.rc; refusing a patch that cannot install a post-fs-data module-load trigger"
     );
     ensure!(
         !cpio.exists(INIT_RC_BACKUP_ENTRY),
@@ -842,19 +842,19 @@ fn inject_runtime_payloads(
         .context("ramdisk /init.rc is not valid UTF-8; refusing to rewrite init configuration")?;
     ensure!(
         !original_rc_text.contains(INIT_RC_MARKER),
-        "init.rc already contains the Zairenkai delayed module-load marker; restore a clean stock image before continuing"
+        "init.rc already contains the Zairenkai module-load marker; restore a clean stock image before continuing"
     );
 
     // Keep /init byte-for-byte intact. Preserve the original init.rc under a
-    // non-imported name, then add a late property trigger. The module is not
-    // loaded from PID 1; boot-critical Android services start first.
+    // non-imported name, then add a post-fs-data action. This runs after /data
+    // setup and before zygote-start without interposing a custom PID-1 binary.
     let mut updated_rc = original_rc;
     if !updated_rc.ends_with(b"\n") {
         updated_rc.push(b'\n');
     }
     updated_rc.extend_from_slice(
         format!(
-            "\n{INIT_RC_MARKER}\non property:sys.boot_completed=1\n    insmod /{MODULE_ENTRY}\n"
+            "\n{INIT_RC_MARKER}\non post-fs-data\n    insmod /{MODULE_ENTRY}\n"
         )
         .as_bytes(),
     );
@@ -864,9 +864,9 @@ fn inject_runtime_payloads(
         INIT_RC_ENTRY,
         CpioEntry::regular(0o644, Box::new(updated_rc)),
     )
-    .context("could not install the delayed Zairenkai init trigger")?;
+    .context("could not install the post-fs-data Zairenkai init trigger")?;
 
-    println!("- Kept Android /init unchanged; module load is deferred until sys.boot_completed=1");
+    println!("- Kept Android /init unchanged; init loads ZKFC at post-fs-data, before boot completion.");
     println!("- Adding ZKFC LKM");
     cpio.add(
         MODULE_ENTRY,
@@ -874,7 +874,7 @@ fn inject_runtime_payloads(
     )?;
 
     let patch_manifest = format!(
-        "format=4\nkmi={}\nkmi_source={}\nkernel_release={}\nmodule={}\ninit_wrapper=none\noriginal_init=init\nmodule_load=property:sys.boot_completed\npatcher=zkbootpatch-0.4.0\n",
+        "format=5\nkmi={}\nkmi_source={}\nkernel_release={}\nmodule={}\ninit_wrapper=none\noriginal_init=init\nmodule_load=post-fs-data\npatcher=zkbootpatch-0.5.0\n",
         module_kmi, kmi_source, kernel_release, MODULE_ENTRY,
     );
     println!("- Adding Zairenkai KMI diagnostic manifest");
@@ -1005,11 +1005,12 @@ fn verify_output(
         .ok_or_else(|| anyhow!("patched image contains no readable init.rc"))?;
     let patched_init_rc =
         std::str::from_utf8(patched_init_rc).context("patched init.rc is not valid UTF-8")?;
+    let expected_init_trigger = format!(
+        "{INIT_RC_MARKER}\non post-fs-data\n    insmod /{MODULE_ENTRY}"
+    );
     ensure!(
-        patched_init_rc.contains(INIT_RC_MARKER)
-            && patched_init_rc.contains("on property:sys.boot_completed=1")
-            && patched_init_rc.contains("insmod /zkfc.ko"),
-        "patched init.rc does not contain the expected delayed ZKFC module-load trigger"
+        patched_init_rc.contains(&expected_init_trigger),
+        "patched init.rc does not contain the exact post-fs-data ZKFC module-load action"
     );
 
     let manifest = cpio
@@ -1047,10 +1048,20 @@ fn verify_output(
         "patch manifest original-init state is inconsistent"
     );
     ensure!(
+        manifest.lines().any(|line| line == "format=5"),
+        "patch manifest format version is inconsistent"
+    );
+    ensure!(
         manifest
             .lines()
-            .any(|line| line == "module_load=property:sys.boot_completed"),
-        "patch manifest must identify the delayed module-load trigger"
+            .any(|line| line == "module_load=post-fs-data"),
+        "patch manifest must identify the post-fs-data module-load trigger"
+    );
+    ensure!(
+        manifest
+            .lines()
+            .any(|line| line == "patcher=zkbootpatch-0.5.0"),
+        "patch manifest patcher version is inconsistent"
     );
     ensure!(
         SUPPORTED_KMIS.contains(&expected_kmi),
@@ -1221,7 +1232,7 @@ mod tests {
     }
 
     #[test]
-    fn injection_keeps_pid1_unchanged_and_delays_module_load() {
+    fn injection_keeps_pid1_unchanged_and_loads_module_at_post_fs_data() {
         let machine = if cfg!(target_arch = "aarch64") {
             183u16
         } else {
@@ -1274,7 +1285,7 @@ mod tests {
             .unwrap();
         let init_rc = std::str::from_utf8(init_rc).unwrap();
         assert!(init_rc.contains(INIT_RC_MARKER));
-        assert!(init_rc.contains("on property:sys.boot_completed=1"));
+        assert!(init_rc.contains("on post-fs-data"));
         assert!(init_rc.contains("insmod /zkfc.ko"));
 
         let manifest = cpio
@@ -1287,7 +1298,9 @@ mod tests {
         assert!(manifest.contains("kernel_release=6.6.42-android15-12-gabcdef"));
         assert!(manifest.contains("init_wrapper=none"));
         assert!(manifest.contains("original_init=init"));
-        assert!(manifest.contains("module_load=property:sys.boot_completed"));
+        assert!(manifest.contains("format=5"));
+        assert!(manifest.contains("module_load=post-fs-data"));
+        assert!(manifest.contains("patcher=zkbootpatch-0.5.0"));
     }
 
     #[test]

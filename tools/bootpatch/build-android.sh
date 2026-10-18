@@ -3,6 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# Keep this in sync with rust-toolchain.toml and the Rust CI workflows.
+RUST_TOOLCHAIN="1.99.1"
 CRATE="$ROOT/native/bootpatch/Cargo.toml"
 TARGET="$ROOT/native/bootpatch/target"
 JNI="$ROOT/app/src/main/jniLibs"
@@ -19,14 +21,14 @@ test -d "$ANDROID_NDK_HOME/toolchains/llvm" || {
     exit 1
 }
 
-rustup target add aarch64-linux-android x86_64-linux-android
+rustup target add aarch64-linux-android x86_64-linux-android --toolchain "$RUST_TOOLCHAIN"
 test -f "$CRATE" || {
     echo "Cargo manifest not found: $CRATE" >&2
     exit 1
 }
 
 cd "$ROOT/native/bootpatch"
-cargo ndk -t arm64-v8a -t x86_64 --platform 31 build --release --bin zkbootpatch
+cargo +"$RUST_TOOLCHAIN" ndk -t arm64-v8a -t x86_64 --platform 31 build --release --bin zkbootpatch --locked
 
 for pair in "aarch64-linux-android:arm64-v8a" "x86_64-linux-android:x86_64"; do
     triple="${pair%%:*}"

@@ -185,9 +185,9 @@ jobs:
 
       - name: Set up Rust toolchain
         run: |
-          rustup toolchain install 1.99.0 --profile minimal
-          rustup component add rustfmt clippy --toolchain 1.99.0
-          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.0
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup component add rustfmt clippy --toolchain 1.99.1
+          rustup target add aarch64-linux-android x86_64-linux-android --toolchain 1.99.1
 
       - name: Cache Rust build outputs
         uses: Swatinem/rust-cache@v2

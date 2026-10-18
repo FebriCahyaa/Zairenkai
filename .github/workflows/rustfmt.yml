@@ -22,12 +22,12 @@ jobs:
 
       - name: Install pinned Rustfmt
         run: |
-          rustup toolchain install 1.99.0 --profile minimal
-          rustup component add rustfmt --toolchain 1.99.0
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup component add rustfmt --toolchain 1.99.1
 
       - name: Check Rust workspace formatting
         run: |
           set -euo pipefail
           # --check is a cargo-fmt option, not a rustfmt pass-through argument.
-          cargo +1.99.0 fmt --manifest-path rust/Cargo.toml --all --check
-          cargo +1.99.0 fmt --manifest-path native/bootpatch/Cargo.toml --check
+          cargo +1.99.1 fmt --manifest-path rust/Cargo.toml --all --check
+          cargo +1.99.1 fmt --manifest-path native/bootpatch/Cargo.toml --check

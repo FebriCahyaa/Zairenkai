@@ -6,7 +6,7 @@
 - Legacy init-chainloader reference: https://github.com/KernelSU-Next/KernelSU-Next/tree/dev/userspace/ksuinit
 - Image codec source: https://github.com/5ec1cff/android_bootimg
 - `android-bootimg` license: GPL-3.0; the corresponding license text is in `native/bootpatch/LICENSE`.
-- Current Zairenkai patcher: preserves `/init` byte-for-byte, preserves the original `init.rc`, adds `zkfc.ko` and a diagnostic manifest, defers module loading until `sys.boot_completed=1`, and reopens the output image for structural verification.
+- Current Zairenkai patcher: preserves `/init` byte-for-byte, preserves the original `init.rc`, adds `zkfc.ko` and a diagnostic manifest, loads the module from an `on post-fs-data` init action, and reopens the output image for structural verification.
 - `src/bin/zkinit.rs` is legacy-only and is not built or packaged by `tools/bootpatch/build-android.sh`. Its module autoload is intentionally disabled to prevent inserting `zkfc.ko` as PID 1.
 
 The current Android app bundles only the `zkbootpatch` executable under the native-library directory and invokes it by path. The app-private cache is used only for image/module input and output files.
