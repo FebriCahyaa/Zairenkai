@@ -115,9 +115,15 @@ try_module() {
   [ -f "$candidate" ] || return 1
   candidate_family="$(module_family "$candidate")"
   candidate_kmi="$(module_kmi "$candidate")"
-  if [ -z "$KMI" ] || [ "$candidate_kmi" != "$KMI" ] || [ -z "$KERNEL_FAMILY" ] || [ "$candidate_family" != "$KERNEL_FAMILY" ]; then
-    log -t zairenkai "skip module with KMI=${candidate_kmi:-unknown} family=${candidate_family:-unknown}: $candidate (kernel KMI=${KMI:-unknown} family=${KERNEL_FAMILY:-unknown})"
+  if [ -z "$KMI" ] || { [ -n "$candidate_kmi" ] && [ "$candidate_kmi" != "$KMI" ]; } || [ -z "$KERNEL_FAMILY" ] || [ "$candidate_family" != "$KERNEL_FAMILY" ]; then
+    log -t zairenkai "skip module with KMI=${candidate_kmi:-unmarked} family=${candidate_family:-unknown}: $candidate (selected KMI=${KMI:-unknown} family=${KERNEL_FAMILY:-unknown})"
     return 1
+  fi
+  if [ -z "$candidate_kmi" ]; then
+    # This function is only reached for the staged copy after verify_staged_ko
+    # matches its bytes against the exact selected lkm/$KMI-$ABIDIR payload.
+    # Its vermagic can omit androidNN; do not guess another catalog entry.
+    log -t zairenkai "module vermagic omits androidNN; exact staged KMI payload and Linux family verified; relying on kernel symbol/signature checks"
   fi
   LOAD_LOG="$(insmod "$candidate" 2>&1)"
   LOAD_STATUS=$?
@@ -146,10 +152,11 @@ if [ ! -e /dev/zkfc ]; then
     selected="$MODDIR/zkfc/zkfc.ko"
     if [ -f "$selected" ] && verify_staged_ko "$selected" "./lkm/$KMI-$ABIDIR/zkfc.ko"; then
       selected_kmi="$(module_kmi "$selected")"
-      if [ "$selected_kmi" = "$KMI" ] && [ "$(module_family "$selected")" = "$KERNEL_FAMILY" ]; then
+      selected_family="$(module_family "$selected")"
+      if { [ -z "$selected_kmi" ] || [ "$selected_kmi" = "$KMI" ]; } && [ "$selected_family" = "$KERNEL_FAMILY" ]; then
         try_module "$selected"
       else
-        log -t zairenkai "staged module metadata does not match running KMI=$KMI family=${KERNEL_FAMILY:-unknown}; refusing to load it"
+        log -t zairenkai "staged module metadata conflicts with running KMI=$KMI family=${KERNEL_FAMILY:-unknown}; refusing to load it"
       fi
     else
       log -t zairenkai "no integrity-verified staged module exists for exact KMI/ABI $KMI-$ABIDIR; refusing cross-KMI fallback"

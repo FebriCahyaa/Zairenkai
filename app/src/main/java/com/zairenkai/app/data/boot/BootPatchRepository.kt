@@ -37,6 +37,7 @@ object BootPatchRepository {
         kmiReferenceModuleUri: Uri?,
         moduleUri: Uri?,
         kmi: String,
+        allowUnverifiedKmi: Boolean = false,
     ): Result = withContext(Dispatchers.IO) {
         val workspace = File(context.cacheDir, "zk-bootpatch-${UUID.randomUUID()}")
         if (!workspace.mkdirs()) throw IOException("Cannot create a private boot-patch workspace")
@@ -86,6 +87,8 @@ object BootPatchRepository {
                 "--kmi", kmi,
                 "--out", outputFile.absolutePath,
             )
+            if (allowUnverifiedKmi) arguments += "--allow-unverified-kmi"
+            if (selectedModuleAsset != null) arguments += "--trusted-bundled-module"
             val log = runHelper(helper, arguments)
             if (!outputFile.isFile || outputFile.length() == 0L) {
                 throw IOException("The patch helper reported success but no output image was created.")

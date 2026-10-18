@@ -66,9 +66,8 @@ if [ ! -d "$MODPATH/lkm" ] || [ -z "$(find "$MODPATH/lkm" -type f -name 'zkfc.ko
   ui_print "- No LKM payload; using the already-present built-in ZKFC endpoint."
 fi
 
-# Fail closed when the running kernel does not expose an Android KMI branch.
-# Linux major/minor family alone is not enough to select a safe LKM; trying
-# android12/13/... modules in sequence can load an ABI-incompatible module.
+# Prefer the KMI from the kernel release; otherwise use the app handoff or
+# vendor module vermagic. Never trial-load other KMI variants by Linux family alone.
 KREL="$(uname -r)"
 ui_print "- Kernel: $KREL"
 KERNEL_FAMILY="$(echo "$KREL" | cut -d- -f1 | awk -F. 'NF >= 2 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "." $2 }')"
@@ -175,12 +174,27 @@ if [ ! -e /dev/zkfc ]; then
     ui_print "! Kernel release has no recognizable Android KMI branch: $KREL"
     abort "  no explicit or vendor-detected KMI is available; refusing to guess between same-family modules"
   fi
-  if [ ! -f "$PRIMARY" ] || [ "$(module_family "$PRIMARY")" != "$KERNEL_FAMILY" ] || [ "$(module_kmi "$PRIMARY")" != "$KMI" ]; then
-    ui_print "! No module validates for exact KMI/ABI $KMI-$ABIDIR and Linux family ${KERNEL_FAMILY:-unknown}."
-    abort "  refusing cross-KMI fallback to a module that may destabilize the system"
+  PRIMARY_FAMILY="$(module_family "$PRIMARY")"
+  PRIMARY_KMI="$(module_kmi "$PRIMARY")"
+  if [ ! -f "$PRIMARY" ] || [ -z "$PRIMARY_FAMILY" ] || [ "$PRIMARY_FAMILY" != "$KERNEL_FAMILY" ]; then
+    ui_print "! No module validates for KMI/ABI $KMI-$ABIDIR and Linux family ${KERNEL_FAMILY:-unknown}."
+    abort "  selected payload is missing or targets a different Linux family; refusing cross-family fallback"
+  fi
+  # Some GKI builds omit androidNN from vermagic even when CI built the module
+  # for a specific KMI directory. The exact KMI/ABI path is already covered by
+  # SHA256SUMS; accept a missing branch marker only for this explicitly selected
+  # payload, while always rejecting a conflicting marker. insmod still performs
+  # the kernel's symbol-version and module-signature checks at load time.
+  if [ -n "$PRIMARY_KMI" ] && [ "$PRIMARY_KMI" != "$KMI" ]; then
+    ui_print "! Selected module vermagic identifies $PRIMARY_KMI, not $KMI."
+    abort "  refusing a conflicting KMI module"
+  fi
+  if [ -z "$PRIMARY_KMI" ]; then
+    ui_print "! Module vermagic omits androidNN; selected payload path and hash match $KMI-$ABIDIR."
+    ui_print "  Kernel module loading will still validate required symbols and signature."
   fi
   cp "$PRIMARY" "$MODPATH/zkfc/zkfc.ko"
-  ui_print "- Exact KMI module staged: $KMI-$ABIDIR"
+  ui_print "- KMI/ABI catalog module staged: $KMI-$ABIDIR"
 elif [ -n "$KMI" ] && [ -f "$PRIMARY" ] && [ "$(module_kmi "$PRIMARY")" = "$KMI" ]; then
   cp "$PRIMARY" "$MODPATH/zkfc/zkfc.ko"
   ui_print "- Exact KMI module staged: $KMI-$ABIDIR"

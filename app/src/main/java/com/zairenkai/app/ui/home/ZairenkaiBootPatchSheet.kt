@@ -103,6 +103,19 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
     val kmiMismatch = detectedKmi != null && selectedKmi != null && detectedKmi != selectedKmi
     val kmiVerified = detectedKmi != null &&
         (detectedKmiSource == "kernel-image" || detectedKmiSource == "vendor-module-vermagic")
+    val detectedKernelFamily = detectedKernelRelease
+        ?.substringBefore('-')
+        ?.split('.')
+        ?.takeIf { parts -> parts.size >= 2 && parts[0].all { it.isDigit() } && parts[1].all { it.isDigit() } }
+        ?.let { parts -> "${parts[0]}.${parts[1]}" }
+    val selectedKmiFamily = selectedKmi?.substringAfter('-', missingDelimiterValue = "")
+    // Manual selection is available only after the native parser has recovered a
+    // real kernel release, and only for a KMI from the same Linux major/minor.
+    // The resulting image is explicitly marked unverified; Android's module loader
+    // still decides whether symbol CRCs and signatures are compatible at boot.
+    val manualKmiAllowed = detectedKmi == null &&
+        detectedKernelFamily != null && selectedKmiFamily == detectedKernelFamily
+    val canPatchKmi = kmiVerified || manualKmiAllowed
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -399,11 +412,27 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
-                                imageUri != null -> Text(
-                                    stringResource(R.string.patch_flow_kmi_unverified),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
+                                imageUri != null -> {
+                                    Text(
+                                        stringResource(
+                                            if (detectedKernelRelease != null) R.string.patch_flow_kmi_manual
+                                            else R.string.patch_flow_kmi_unverified,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (detectedKernelRelease != null) MaterialTheme.colorScheme.tertiary
+                                        else MaterialTheme.colorScheme.error,
+                                    )
+                                    if (manualKmiAllowed) {
+                                        Text(
+                                            stringResource(
+                                                R.string.patch_flow_kmi_source,
+                                                stringResource(R.string.patch_flow_kmi_source_manual),
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
                             detectedKernelRelease?.let { release ->
                                 Text(
@@ -463,6 +492,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                         kmiReferenceModuleUri,
                                         moduleUri,
                                         kmi,
+                                        allowUnverifiedKmi = manualKmiAllowed,
                                     )
                                     outputFile = result.outputFile
                                     log = result.log
@@ -475,7 +505,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                                 }
                             }
                         },
-                        enabled = imageUri != null && selectedKmi != null && kmiVerified && outputFile == null && !patching && !detectingKmi && !kmiMismatch,
+                        enabled = imageUri != null && selectedKmi != null && canPatchKmi && outputFile == null && !patching && !detectingKmi && !kmiMismatch,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (patching) {

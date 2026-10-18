@@ -7,7 +7,7 @@ Flashable module that:
 
 1. installs the compatibility CLI `zkfctl` to `/data/adb/zkfc/zkfctl`;
 2. installs/starts the resident `zperfd` policy engine;
-3. loads `zkfc.ko` only when the running kernel exposes a supported Android KMI and the exact KMI/ABI artifact passes metadata and hash checks; it refuses speculative same-family fallback when the KMI is unknown;
+3. loads `zkfc.ko` only from the exact selected KMI/ABI payload after manifest/hash and Linux-family checks; an explicit Android KMI marker must match, while markerless GKI vermagic is accepted only for the exact selected catalog path and remains subject to the kernel loader's symbol-version/signature checks; it never trial-loads another KMI variant;
 4. restores the persistent ZKFC token and starts the resident `zperfd` policy engine; performance state is recovered transactionally; **Zairenkai ThermoGuard** provides the kernel-side thermal boost safety envelope, and SAFE MODE prevents profile re-application after repeated failed boots.
 
 On kernels where ZKFC is built in (`CONFIG_ZKFC=y`, typical for non-GKI),
@@ -17,7 +17,7 @@ On kernels where ZKFC is built in (`CONFIG_ZKFC=y`, typical for non-GKI),
 
 ```
 module.prop            id/version/author
-customize.sh           install: require a verifiable KMI + ABI module unless ZKFC is built in
+customize.sh           install: validate selected KMI/ABI artifact and Linux family; reject conflicting branch metadata
 service.sh             boot: insmod + token restore + zperfd + fail-safe
 uninstall.sh           cleanup /data/adb/zkfc
 META-INF/.../update-binary   installer trampoline

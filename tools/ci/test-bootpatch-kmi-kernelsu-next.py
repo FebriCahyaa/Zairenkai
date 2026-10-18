@@ -68,8 +68,10 @@ def main() -> int:
           "vendor_boot selects init_boot-named ramdisk first, then unnamed generic ramdisk")
     check("replace_vendor_ramdisk(index" in rust and "BootImageVersion::Vendor(_)" in rust,
           "vendor_boot repacking replaces only the selected generic ramdisk fragment")
-    check("manual branch selection is not safe" in rust and 'kmi_source="manual"' not in rust,
-          "branchless kernels require a KMI reference instead of accepting a manual branch guess")
+    check("allow_unverified_kmi" in rust and 'Ok("manual")' in rust and "--allow-unverified-kmi" in rust,
+          "branchless kernels permit manual KMI only with explicit opt-in and matching Linux major/minor")
+    check("trusted_bundled_module" in rust and "--trusted-bundled-module" in rust,
+          "native helper has a distinct trust marker for KMI-specific bundled module assets")
     check("init_wrapper=none" in rust and "sys.boot_completed=1" in rust and "INIT_RC_BACKUP_ENTRY" in rust,
           "patcher preserves PID 1 and delays ZKFC loading until Android boot completion")
     check("never flashes a" in rust and "block device" in rust,
@@ -90,6 +92,8 @@ def main() -> int:
     sheet = (ROOT / "app/src/main/java/com/zairenkai/app/ui/home/ZairenkaiBootPatchSheet.kt").read_text(encoding="utf-8")
     check("--kmi-reference-module" in repository and "DETECTED_KMI_SOURCE=" in repository,
           "Android repository passes vendor .ko reference to the native detector and reads KMI provenance")
+    check("--trusted-bundled-module" in repository,
+          "Android repository marks only KMI/ABI-specific bundled module assets as trusted sources")
     service = (ROOT / "module/service.sh").read_text(encoding="utf-8")
     installer = (ROOT / "module/customize.sh").read_text(encoding="utf-8")
     check("refusing speculative same-family module loads" in service and "refusing cross-KMI fallback" in service,
@@ -98,6 +102,10 @@ def main() -> int:
           "installer consumes the app KMI handoff or safely detects a unique vendor-module KMI")
     check('grep -Fxq "$REQUESTED_KMI"' in installer and "Explicit KMI matches an installed vendor-module vermagic" in installer,
           "installer permits an explicit KMI only when it exactly matches one of several vendor-module candidates")
+    check('PRIMARY_KMI="$(module_kmi "$PRIMARY")"' in installer and "Module vermagic omits androidNN" in installer,
+          "installer accepts an unmarked vermagic only from the exact selected, hash-verified KMI/ABI payload")
+    check('candidate_kmi:-unmarked' in service and "module vermagic omits androidNN" in service,
+          "boot service permits the exact checksum-verified staged payload with unmarked vermagic but rejects conflicting markers")
     installer_case = installer.split('case "$REQUESTED_KMI" in', 1)[1].split('*) abort', 1)[0]
     installer_kmis = re.findall(r"android\d+-\d+\.\d+", installer_case)
     check(installer_kmis == EXPECTED_KMIS, "module installer accepts exactly the canonical KMI matrix")
@@ -111,6 +119,8 @@ def main() -> int:
           "boot service persists and revalidates the selected KMI rather than selecting a same-family module")
     check("SUPPORTED_KERNEL_KMIS" in sheet and "kmiReferenceModulePicker" in sheet and "patch_flow_pick_kmi_reference_module" in sheet,
           "boot patch UI exposes vendor module fallback instead of requiring privileged /proc reads")
+    check("manualKmiAllowed" in sheet and "canPatchKmi" in sheet and "allowUnverifiedKmi = manualKmiAllowed" in sheet,
+          "boot patch UI allows explicit manual KMI only when a real kernel release and matching Linux family are known")
     check("BootPatchRepository.patch(" in sheet and "kmiReferenceModuleUri" in sheet,
           "selected KMI reference is forwarded into the actual image patch request")
 

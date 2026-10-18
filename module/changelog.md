@@ -7,8 +7,11 @@
 - Add storage-aware I/O safety and retain memory/ZRAM safety envelopes.
 
 ## Unreleased
-- Fail closed on branchless kernel releases: do not trial-load a different KMI module based only on Linux major/minor.
-- Validate the selected staged module's KMI metadata as well as its hash before `insmod`.
+- Keep fail-closed behavior when no KMI is selected; never trial-load alternate KMI modules based only on Linux major/minor.
+- Accept markerless GKI `vermagic` only from the exact explicitly selected KMI/ABI catalog path after manifest/hash and Linux-family checks.
+- Reject any explicit Android KMI marker that conflicts with the selected target KMI.
+- Let the kernel loader perform its symbol-version and module-signature checks when `vermagic` omits `androidNN`.
+- Permit manual boot-image KMI selection only after a valid kernel release is parsed and the selected KMI matches its Linux major/minor family; record the unverified source in the patch manifest.
 - Harden zperfd path writes with component-by-component `openat()` resolution and `O_NOFOLLOW`.
 - Remove pseudo-locking of sysfs permissions; serialize writes through the durable transaction lock instead.
 - Add crash-corrupt journal rejection, boot-id fail-closed behavior, and same-boot dynamic-node baseline capture.

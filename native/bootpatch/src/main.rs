@@ -45,6 +45,11 @@ struct Args {
     kmi: Option<String>,
     out: Option<PathBuf>,
     detect_kmi: bool,
+    /// Explicitly allow user-confirmed KMI selection when the image has a valid
+    /// Linux release but exposes no Android branch marker or vendor reference.
+    allow_unverified_kmi: bool,
+    /// The .ko was selected from the signed APK's KMI/ABI-specific asset path.
+    trusted_bundled_module: bool,
 }
 
 fn main() {
@@ -56,6 +61,8 @@ fn main() {
 
 fn run() -> Result<()> {
     let args = parse_args()?;
+    let allow_unverified_kmi = args.allow_unverified_kmi;
+    let trusted_bundled_module = args.trusted_bundled_module;
     if args.detect_kmi {
         let boot_path = args
             .boot
@@ -226,13 +233,17 @@ fn run() -> Result<()> {
     let boot_data = fs::read(&boot_path).context("failed to read ramdisk target image")?;
     let module_data = fs::read(&module_path).context("failed to read ZKFC module")?;
     validate_module_arch(&module_data)?;
-    let branch_verified = validate_module_kmi(&module_data, &kmi)
+    let module_branch_verified = validate_module_kmi(&module_data, &kmi)
         .context("could not validate ZKFC module vermagic against the selected KMI")?;
-    ensure!(
-        branch_verified,
-        "zkfc.ko vermagic does not identify an Android KMI branch; refusing to patch an image without verifiable module ABI metadata"
-    );
-    println!("- ZKFC module vermagic confirms Android KMI branch: {kmi}");
+    if module_branch_verified {
+        println!("- ZKFC module vermagic confirms Android KMI branch: {kmi}");
+    } else {
+        ensure!(
+            allow_unverified_kmi || trusted_bundled_module,
+            "zkfc.ko vermagic omits androidNN. Use the APK-bundled KMI-specific module or explicitly confirm manual KMI selection after checking the firmware branch.",
+        );
+        println!("! ZKFC module vermagic omits androidNN; continuing only because the module is bundled for this KMI or manual selection was explicitly enabled.");
+    }
 
     let boot_image =
         BootImage::parse(&boot_data).context("unsupported or malformed Android boot image")?;
@@ -328,7 +339,12 @@ fn run() -> Result<()> {
         .transpose()
         .context("KMI reference module does not contain an Android KMI marker in vermagic")?;
 
-    let kmi_source = resolve_kmi_source(identity, &kmi, reference_module_kmi.as_deref())?;
+    let kmi_source = resolve_kmi_source(
+        identity,
+        &kmi,
+        reference_module_kmi.as_deref(),
+        allow_unverified_kmi,
+    )?;
     println!("- Verified target kernel release: {kernel_release}");
     println!(
         "- Module Linux family: {}",
@@ -390,6 +406,9 @@ fn run() -> Result<()> {
         "vendor-module-vermagic" => println!(
             "- KMI matches the selected vendor module vermagic using the KernelSU-Next fallback."
         ),
+        "manual" => println!(
+            "! KMI was selected manually. Linux family and module metadata were checked, but the Android branch is not independently verified; the kernel loader must validate symbols/signature at boot."
+        ),
         other => bail!("unsupported KMI source returned by verifier: {other}"),
     }
     println!(
@@ -419,12 +438,20 @@ fn parse_args() -> Result<Args> {
     while let Some(flag) = iter.next() {
         if flag == "--help" || flag == "-h" {
             println!(
-                "Usage: zkbootpatch --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko] --module zkfc.ko --kmi androidNN-X.Y --out patched.img\n       zkbootpatch --detect-kmi --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko]"
+                "Usage: zkbootpatch --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko] [--allow-unverified-kmi] [--trusted-bundled-module] --module zkfc.ko --kmi androidNN-X.Y --out patched.img\n       zkbootpatch --detect-kmi --boot <boot.img|init_boot.img|vendor_boot.img> [--kernel-reference boot.img] [--kmi-reference-module vendor.ko]"
             );
             std::process::exit(0);
         }
         if flag == "--detect-kmi" {
             args.detect_kmi = true;
+            continue;
+        }
+        if flag == "--allow-unverified-kmi" {
+            args.allow_unverified_kmi = true;
+            continue;
+        }
+        if flag == "--trusted-bundled-module" {
+            args.trusted_bundled_module = true;
             continue;
         }
         let value = iter
@@ -723,6 +750,7 @@ fn resolve_kmi_source(
     identity: &KernelIdentity,
     selected_kmi: &str,
     reference_module_kmi: Option<&str>,
+    allow_unverified_kmi: bool,
 ) -> Result<&'static str> {
     match identity.kmi.as_deref() {
         Some(image_kmi) => {
@@ -739,14 +767,27 @@ fn resolve_kmi_source(
             Ok("kernel-image")
         }
         None => {
-            let reference_kmi = reference_module_kmi.context(
-                "kernel release has no Android KMI marker. Select a vendor .ko from the exact same firmware/build to verify KMI; manual branch selection is not safe",
-            )?;
+            if let Some(reference_kmi) = reference_module_kmi {
+                ensure!(
+                    reference_kmi == selected_kmi,
+                    "selected KMI is {selected_kmi}, but vendor module vermagic identifies {reference_kmi}"
+                );
+                return Ok("vendor-module-vermagic");
+            }
+
             ensure!(
-                reference_kmi == selected_kmi,
-                "selected KMI is {selected_kmi}, but vendor module vermagic identifies {reference_kmi}"
+                allow_unverified_kmi,
+                "kernel release has no Android KMI marker. Select a vendor .ko from the exact same firmware/build, or explicitly confirm manual KMI selection",
             );
-            Ok("vendor-module-vermagic")
+            let (_, selected_family) = selected_kmi
+                .split_once('-')
+                .context("selected KMI must use androidNN-X.Y format")?;
+            let target_family = linux_version_family(&identity.release)?;
+            ensure!(
+                selected_family == target_family,
+                "manual KMI {selected_kmi} targets Linux {selected_family}, but the image kernel is Linux {target_family}"
+            );
+            Ok("manual")
         }
     }
 }
@@ -1253,12 +1294,31 @@ mod tests {
             release: "5.10.269-gki-g18fe99112273".to_owned(),
             kmi: None,
         };
-        assert!(resolve_kmi_source(&identity, "android13-5.10", None).is_err());
+        assert!(resolve_kmi_source(&identity, "android13-5.10", None, false).is_err());
         assert_eq!(
-            resolve_kmi_source(&identity, "android13-5.10", Some("android13-5.10")).unwrap(),
+            resolve_kmi_source(&identity, "android13-5.10", None, true).unwrap(),
+            "manual"
+        );
+        assert!(resolve_kmi_source(&identity, "android13-5.15", None, true).is_err());
+        assert_eq!(
+            resolve_kmi_source(
+                &identity,
+                "android13-5.10",
+                Some("android13-5.10"),
+                false,
+            )
+            .unwrap(),
             "vendor-module-vermagic"
         );
-        assert!(resolve_kmi_source(&identity, "android13-5.10", Some("android12-5.10")).is_err());
+        assert!(
+            resolve_kmi_source(
+                &identity,
+                "android13-5.10",
+                Some("android12-5.10"),
+                true,
+            )
+            .is_err()
+        );
     }
 
     #[test]
