@@ -144,6 +144,8 @@
     <string name="system_module_share_title">分享 Zairenkai 模块 ZIP</string>
     <string name="system_module_confirm_title">安装 Zairenkai 模块？</string>
     <string name="system_module_confirm_message">这会将内置模块提交给当前 Root 管理器，可能替换或更新现有的 Zairenkai 模块。更改生效前需要重启。</string>
+    <string name="system_module_kmi_prompt">选择目标内核 KMI</string>
+    <string name="system_module_kmi_warning">请选择已针对实际使用的固件/内核验证过的 KMI 分支。不要仅凭 Linux 版本选择；不确定时，请使用匹配的 boot 镜像或 vendor 模块进行验证。</string>
     <string name="system_module_confirm_install">安装模块</string>
     <string name="system_module_confirm_cancel">取消</string>
     <string name="system_token_install_button">安装 API 令牌（.zkl）</string>

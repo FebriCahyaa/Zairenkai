@@ -22,6 +22,7 @@ verify_payload_manifest() {
     ! -path "$MODPATH/SHA256SUMS" \
     ! -path "$MODPATH/META-INF/*" \
     ! -path "$MODPATH/zkfc/zkfc.ko" \
+    ! -path "$MODPATH/zkfc/target-kmi" \
     ! -path "$MODPATH/disable" ! -path "$MODPATH/remove" \
     ! -path "$MODPATH/update" ! -path "$MODPATH/auto_mount" \
     ! -path "$MODPATH/skip_mount" ! -path "$MODPATH/.core" \
@@ -77,6 +78,63 @@ KMI=""
 if [ -n "$ANDROID_BRANCH" ] && [ -n "$KERNEL_FAMILY" ]; then
   KMI="$ANDROID_BRANCH-$KERNEL_FAMILY"
 fi
+# A GKI banner may omit androidNN (for example 5.10.269-gki-<hash>). The app
+# therefore asks for an explicit KMI and passes it through the root manager's
+# installer environment. Never infer the Android branch from Linux version alone.
+REQUESTED_KMI="${ZAIRENKAI_TARGET_KMI:-}"
+if [ -z "$REQUESTED_KMI" ] && [ -r /data/adb/.zairenkai/target-kmi.pending ]; then
+  IFS= read -r REQUESTED_KMI < /data/adb/.zairenkai/target-kmi.pending || true
+  [ -z "$REQUESTED_KMI" ] || ui_print "- KMI selection received from Zairenkai installer handoff."
+fi
+# If the kernel banner omits androidNN, inspect installed vendor modules. This
+# evidence is also used to reject a manual/app selection that contradicts the
+# running firmware. Multiple distinct branches are ambiguous and fail closed.
+if [ -z "$KMI" ]; then
+  DETECTED_VENDOR_KMIS="$(
+    for root in /vendor/lib/modules /vendor_dlkm/lib/modules /system/vendor/lib/modules /odm/lib/modules /odm_dlkm/lib/modules; do
+      [ -d "$root" ] || continue
+      find "$root" -type f -name '*.ko' 2>/dev/null
+    done | while IFS= read -r candidate; do
+      release="$(grep -a -o 'vermagic=[^[:space:]]*' "$candidate" 2>/dev/null | head -1 | sed 's/^vermagic=//')"
+      branch="$(echo "$release" | grep -oE 'android[0-9]+' | head -1)"
+      numeric="$(echo "$release" | cut -d- -f1)"
+      family="$(echo "$numeric" | awk -F. 'NF >= 2 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "." $2 }')"
+      [ -n "$branch" ] && [ "$family" = "$KERNEL_FAMILY" ] || continue
+      case "$branch-$family" in
+        android12-5.10|android13-5.10|android13-5.15|android14-5.15|android14-6.1|android15-6.6|android16-6.12|android17-6.18)
+          printf '%s\n' "$branch-$family" ;;
+      esac
+    done | sort -u
+  )"
+  DETECTED_COUNT="$(printf '%s\n' "$DETECTED_VENDOR_KMIS" | awk 'NF { n++ } END { print n + 0 }')"
+  if [ "$DETECTED_COUNT" -gt 1 ]; then
+    ui_print "! Vendor modules expose conflicting KMI branches: $DETECTED_VENDOR_KMIS"
+    abort "  verify the correct KMI against this firmware; refusing an ambiguous selection"
+  elif [ "$DETECTED_COUNT" -eq 1 ]; then
+    if [ -n "$REQUESTED_KMI" ] && [ "$REQUESTED_KMI" != "$DETECTED_VENDOR_KMIS" ]; then
+      abort "  selected KMI $REQUESTED_KMI conflicts with vendor module KMI $DETECTED_VENDOR_KMIS"
+    fi
+    if [ -z "$REQUESTED_KMI" ]; then
+      REQUESTED_KMI="$DETECTED_VENDOR_KMIS"
+      ui_print "- KMI detected from vendor module vermagic: $REQUESTED_KMI"
+    fi
+  fi
+fi
+case "$REQUESTED_KMI" in
+  "") ;;
+  android12-5.10|android13-5.10|android13-5.15|android14-5.15|android14-6.1|android15-6.6|android16-6.12|android17-6.18)
+    REQUESTED_KMI_FAMILY="${REQUESTED_KMI#*-}"
+    if [ "$REQUESTED_KMI_FAMILY" != "$KERNEL_FAMILY" ]; then
+      abort "  selected KMI $REQUESTED_KMI conflicts with running Linux family ${KERNEL_FAMILY:-unknown}"
+    fi
+    if [ -n "$KMI" ] && [ "$KMI" != "$REQUESTED_KMI" ]; then
+      abort "  selected KMI $REQUESTED_KMI conflicts with kernel banner KMI $KMI"
+    fi
+    KMI="$REQUESTED_KMI"
+    ui_print "- Explicit target KMI selected: $KMI"
+    ;;
+  *) abort "  unsupported target KMI '$REQUESTED_KMI'; refusing to guess" ;;
+esac
 ARCH64="$(getprop ro.product.cpu.abi)"
 case "$ARCH64" in
   arm64-v8a|arm64*) USER_ABI="arm64-v8a"; ABIDIR="arm64" ;;
@@ -107,7 +165,7 @@ module_kmi() {
 if [ ! -e /dev/zkfc ]; then
   if [ -z "$KMI" ]; then
     ui_print "! Kernel release has no recognizable Android KMI branch: $KREL"
-    abort "  refusing to guess between same-family modules; use a kernel that exposes KMI or a built-in ZKFC driver"
+    abort "  no explicit or vendor-detected KMI is available; refusing to guess between same-family modules"
   fi
   if [ ! -f "$PRIMARY" ] || [ "$(module_family "$PRIMARY")" != "$KERNEL_FAMILY" ] || [ "$(module_kmi "$PRIMARY")" != "$KMI" ]; then
     ui_print "! No module validates for exact KMI/ABI $KMI-$ABIDIR and Linux family ${KERNEL_FAMILY:-unknown}."
@@ -121,6 +179,12 @@ elif [ -n "$KMI" ] && [ -f "$PRIMARY" ] && [ "$(module_kmi "$PRIMARY")" = "$KMI"
 else
   rm -f "$MODPATH/zkfc/zkfc.ko"
   ui_print "- Existing /dev/zkfc endpoint detected; no speculative module staged."
+fi
+if [ -n "$KMI" ]; then
+  printf '%s\n' "$KMI" > "$MODPATH/zkfc/target-kmi" || abort "  failed to persist the verified target KMI"
+  chmod 0600 "$MODPATH/zkfc/target-kmi" || abort "  failed to protect the target KMI marker"
+else
+  rm -f "$MODPATH/zkfc/target-kmi"
 fi
 
 # Install only the userspace ABI that matches the running device. The old loop
@@ -172,6 +236,7 @@ chmod 0600 /data/adb/zperf/mode 2>/dev/null || true
 set_perm /data/adb/zkfc/zkfctl 0 0 0755 u:object_r:system_file:s0 2>/dev/null
 [ -f /data/adb/zperf/zperfd ] && set_perm /data/adb/zperf/zperfd 0 0 0755 u:object_r:system_file:s0 2>/dev/null
 set_perm_recursive "$MODPATH" 0 0 0755 0644
+[ ! -f "$MODPATH/zkfc/target-kmi" ] || chmod 0600 "$MODPATH/zkfc/target-kmi"
 
 ui_print "- Installed zkfctl to /data/adb/zkfc/zkfctl"
 ui_print "- Reboot, then open the Zairenkai app"

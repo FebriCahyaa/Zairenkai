@@ -22,6 +22,29 @@ class ModuleArchiveVerifierTest {
     }
 
     @Test
+    fun acceptsSelectedKmiWhenItsModuleExistsInBundle() {
+        val archive = createArchive()
+        try {
+            assertNull(ModuleArchiveVerifier.verify(archive, "android13-5.10"))
+        } finally {
+            archive.delete()
+        }
+    }
+
+    @Test
+    fun rejectsSelectedKmiWhenItsModuleIsMissingFromBundle() {
+        val archive = createArchive()
+        try {
+            assertTrue(
+                ModuleArchiveVerifier.verify(archive, "android12-5.10")
+                    ?.contains("selected KMI has no zkfc.ko payload") == true,
+            )
+        } finally {
+            archive.delete()
+        }
+    }
+
+    @Test
     fun rejectsPayloadChangedWithoutUpdatingManifest() {
         val archive = createArchive(tamperPayloadAfterManifest = true)
         try {

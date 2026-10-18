@@ -48,6 +48,8 @@
     <string name="system_module_share_title">Bagikan ZIP modul Zairenkai</string>
     <string name="system_module_confirm_title">Pasang modul Zairenkai?</string>
     <string name="system_module_confirm_message">Modul tertanam akan dikirim ke pengelola root aktif. Modul Zairenkai yang ada mungkin diperbarui/diganti dan perlu reboot agar perubahan aktif.</string>
+    <string name="system_module_kmi_prompt">Pilih KMI kernel target</string>
+    <string name="system_module_kmi_warning">Pilih cabang KMI yang sudah diverifikasi untuk firmware/kernel persis yang akan digunakan. Jangan memilih hanya berdasarkan versi Linux; jika ragu, verifikasi melalui boot image atau modul vendor yang cocok.</string>
     <string name="system_module_confirm_install">Pasang modul</string>
     <string name="system_module_confirm_cancel">Batal</string>
     <string name="system_token_install_button">Pasang token API (.zkl)</string>

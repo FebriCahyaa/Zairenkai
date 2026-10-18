@@ -41,7 +41,7 @@ internal object ModuleArchiveVerifier {
     private const val MAX_UNCOMPRESSED_BYTES = 256L * 1024 * 1024
     private val hashLine = Regex("^([0-9a-fA-F]{64})\\s+(.+?)\\s*$")
 
-    fun verify(file: File): String? = try {
+    fun verify(file: File, targetKmi: String? = null): String? = try {
         ZipFile(file).use { zip ->
             val files = linkedMapOf<String, ZipEntry>()
             val all = zip.entries()
@@ -67,6 +67,14 @@ internal object ModuleArchiveVerifier {
             if (missing.isNotEmpty()) return "required module payload missing: ${missing.joinToString()}"
             if (files.keys.none { it.startsWith("lkm/") && it.endsWith("/zkfc.ko") }) {
                 return "no zkfc.ko kernel-module payload is present"
+            }
+            if (targetKmi != null) {
+                if (SUPPORTED_KERNEL_KMIS.none { it.id == targetKmi }) {
+                    return "unsupported target KMI: $targetKmi"
+                }
+                if (files.keys.none { it.startsWith("lkm/$targetKmi-") && it.endsWith("/zkfc.ko") }) {
+                    return "selected KMI has no zkfc.ko payload: $targetKmi"
+                }
             }
 
             val listed = linkedSetOf<String>()
@@ -157,7 +165,13 @@ internal object ModuleArchiveVerifier {
 class EmbeddedModuleInstaller(private val context: Context) {
     fun cachedZip(): File = File(context.cacheDir, "updates/Zairenkai-module.zip")
 
-    suspend fun install(): ModuleInstallOutcome = withContext(Dispatchers.IO) {
+    suspend fun install(targetKmi: String): ModuleInstallOutcome = withContext(Dispatchers.IO) {
+        if (SUPPORTED_KERNEL_KMIS.none { it.id == targetKmi }) {
+            return@withContext ModuleInstallOutcome(
+                ModuleInstallCode.INVALID_ARCHIVE,
+                "unsupported target KMI: $targetKmi",
+            )
+        }
         val expected = BuildConfig.EMBEDDED_MODULE_SHA256.trim().lowercase()
         if (!expected.matches(Regex("[0-9a-f]{64}"))) {
             return@withContext ModuleInstallOutcome(ModuleInstallCode.NOT_BUNDLED)
@@ -197,7 +211,7 @@ class EmbeddedModuleInstaller(private val context: Context) {
                 "expected=$expected actual=$actual",
             )
         }
-        ModuleArchiveVerifier.verify(archive)?.let { problem ->
+        ModuleArchiveVerifier.verify(archive, targetKmi)?.let { problem ->
             return@withContext ModuleInstallOutcome(
                 ModuleInstallCode.INVALID_ARCHIVE,
                 problem,
@@ -210,6 +224,14 @@ class EmbeddedModuleInstaller(private val context: Context) {
             SRC=${shellQuote(archive.absolutePath)}
             DST=${shellQuote(destination)}
             EXPECTED=${shellQuote(expected)}
+            TARGET_KMI=${shellQuote(targetKmi)}
+            PENDING_KMI=/data/adb/.zairenkai/target-kmi.pending
+            cleanup() { rm -f "${'$'}PENDING_KMI" "${'$'}DST"; }
+            trap cleanup EXIT
+            case "${'$'}TARGET_KMI" in
+              android12-5.10|android13-5.10|android13-5.15|android14-5.15|android14-6.1|android15-6.6|android16-6.12|android17-6.18) ;;
+              *) echo "UNSUPPORTED_TARGET_KMI=${'$'}TARGET_KMI"; exit 75 ;;
+            esac
             mkdir -p /data/adb/.zairenkai || exit 70
             chmod 0700 /data/adb/.zairenkai || exit 70
             cp -f "${'$'}SRC" "${'$'}DST" || exit 71
@@ -224,15 +246,18 @@ class EmbeddedModuleInstaller(private val context: Context) {
               exit 73
             fi
             ACTUAL="${'$'}(echo "${'$'}ACTUAL" | tr 'A-F' 'a-f')"
-            [ "${'$'}ACTUAL" = "${'$'}EXPECTED" ] || { echo COPIED_ZIP_HASH_MISMATCH; rm -f "${'$'}DST"; exit 74; }
+            [ "${'$'}ACTUAL" = "${'$'}EXPECTED" ] || { echo COPIED_ZIP_HASH_MISMATCH; exit 74; }
+            printf '%s\n' "${'$'}TARGET_KMI" > "${'$'}PENDING_KMI" || { echo TARGET_KMI_HANDOFF_WRITE_FAILED; exit 76; }
+            chmod 0600 "${'$'}PENDING_KMI" || { echo TARGET_KMI_HANDOFF_PERMISSION_FAILED; exit 76; }
+            echo "ZAIRENKAI_TARGET_KMI=${'$'}TARGET_KMI"
             if [ -x /data/adb/ksu/bin/ksud ]; then
-              /data/adb/ksu/bin/ksud module install "${'$'}DST"
+              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" /data/adb/ksu/bin/ksud module install "${'$'}DST"
               RC=${'$'}?
             elif command -v ksud >/dev/null 2>&1; then
-              ksud module install "${'$'}DST"
+              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" ksud module install "${'$'}DST"
               RC=${'$'}?
             elif command -v magisk >/dev/null 2>&1; then
-              magisk --install-module "${'$'}DST"
+              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" magisk --install-module "${'$'}DST"
               RC=${'$'}?
             else
               echo NO_SUPPORTED_ROOT_MODULE_INSTALLER
@@ -242,7 +267,7 @@ class EmbeddedModuleInstaller(private val context: Context) {
             exit "${'$'}RC"
         """.trimIndent()
         val result = RootShell.run(command, 120_000)
-        val details = (result.stdout + "\n" + result.stderr).trim().take(1200)
+        val details = (result.stdout + "\n" + result.stderr).trim().takeLast(2400)
         when {
             result.ok -> ModuleInstallOutcome(ModuleInstallCode.INSTALLED, details, shareableZip = false)
             result.exitCode == 86 -> ModuleInstallOutcome(ModuleInstallCode.MANAGER_UNAVAILABLE, details, shareableZip = true)

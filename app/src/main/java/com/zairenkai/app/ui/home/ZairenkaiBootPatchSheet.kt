@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.zairenkai.app.R
+import com.zairenkai.app.data.SUPPORTED_KERNEL_KMIS
 import com.zairenkai.app.data.boot.BootPatchRepository
 import com.zairenkai.app.ui.icons.ZkIcons
 import java.io.File
@@ -57,21 +58,6 @@ private enum class ZairenkaiInstallMode(val title: Int, val subtitle: Int) {
     FILE(R.string.patch_flow_method_file, R.string.patch_flow_method_file_sub),
     ANYKERNEL(R.string.patch_flow_method_anykernel, R.string.patch_flow_method_anykernel_sub),
 }
-
-private data class ZairenkaiKmiOption(val id: String, val label: String)
-
-// Keep this matrix aligned with KernelSU-Next's supported LKM KMI build targets
-// (kernel/build-all.sh). Choosing a label manually does not prove symbol ABI compatibility.
-private val zairenkaiKmiOptions = listOf(
-    ZairenkaiKmiOption("android12-5.10", "Android 12 · 5.10"),
-    ZairenkaiKmiOption("android13-5.10", "Android 13 · 5.10"),
-    ZairenkaiKmiOption("android13-5.15", "Android 13 · 5.15"),
-    ZairenkaiKmiOption("android14-5.15", "Android 14 · 5.15"),
-    ZairenkaiKmiOption("android14-6.1", "Android 14 · 6.1"),
-    ZairenkaiKmiOption("android15-6.6", "Android 15 · 6.6"),
-    ZairenkaiKmiOption("android16-6.12", "Android 16 · 6.12"),
-    ZairenkaiKmiOption("android17-6.18", "Android 17 · 6.18"),
-)
 
 /**
  * KernelSU-Next-inspired install flow, adapted to Zairenkai's own `zkfc.ko`.
@@ -148,7 +134,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                     detectedKmi = candidate
                     detectedKernelRelease = detection.kernelRelease
                     detectedKmiSource = detection.kmiSource
-                    if (candidate != null && zairenkaiKmiOptions.any { it.id == candidate }) {
+                    if (candidate != null && SUPPORTED_KERNEL_KMIS.any { it.id == candidate }) {
                         selectedKmi = candidate
                     }
                     status = null
@@ -192,7 +178,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                         detectedKmi = candidate
                         detectedKernelRelease = detection.kernelRelease
                         detectedKmiSource = detection.kmiSource
-                        if (candidate != null && zairenkaiKmiOptions.any { it.id == candidate }) {
+                        if (candidate != null && SUPPORTED_KERNEL_KMIS.any { it.id == candidate }) {
                             selectedKmi = candidate
                         }
                         status = null
@@ -235,7 +221,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                         detectedKmi = candidate
                         detectedKernelRelease = detection.kernelRelease
                         detectedKmiSource = detection.kmiSource
-                        if (candidate != null && zairenkaiKmiOptions.any { it.id == candidate }) {
+                        if (candidate != null && SUPPORTED_KERNEL_KMIS.any { it.id == candidate }) {
                             selectedKmi = candidate
                         }
                         status = null
@@ -382,7 +368,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(stringResource(R.string.patch_flow_kmi_title), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                selectedKmi?.let { kmi -> zairenkaiKmiOptions.firstOrNull { it.id == kmi }?.let { "${it.label} (${it.id})" } }
+                                selectedKmi?.let { kmi -> SUPPORTED_KERNEL_KMIS.firstOrNull { it.id == kmi }?.let { "${it.label} (${it.id})" } }
                                     ?: stringResource(R.string.patch_flow_kmi_not_selected),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -555,7 +541,7 @@ fun ZairenkaiBootPatchSheet(onDismiss: () -> Unit) {
             title = { Text(stringResource(R.string.patch_flow_kmi_dialog_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    zairenkaiKmiOptions.forEach { option ->
+                    SUPPORTED_KERNEL_KMIS.forEach { option ->
                         Row(
                             Modifier.fillMaxWidth().selectable(
                                 selected = selectedKmi == option.id,

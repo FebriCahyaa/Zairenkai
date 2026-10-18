@@ -133,19 +133,19 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
     }
 
     /** Installs the hash-pinned ZIP embedded into official release APKs. */
-    fun installEmbeddedModule() = viewModelScope.launch {
+    fun installEmbeddedModule(targetKmi: String) = viewModelScope.launch {
         _ui.value = _ui.value.copy(
             moduleInstalling = true,
             moduleInstallCode = null,
             moduleInstallDetail = null,
             moduleZipReady = false,
         )
-        val outcome = moduleInstaller.install()
+        val outcome = moduleInstaller.install(targetKmi)
         if (outcome.code == ModuleInstallCode.INSTALLED) c.repository.invalidate()
         _ui.value = _ui.value.copy(
             moduleInstalling = false,
             moduleInstallCode = outcome.code,
-            moduleInstallDetail = outcome.detail.take(1200).ifBlank { null },
+            moduleInstallDetail = outcome.detail.takeLast(1200).ifBlank { null },
             moduleZipReady = outcome.shareableZip && moduleInstaller.cachedZip().isFile,
         )
     }

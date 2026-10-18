@@ -144,6 +144,8 @@
     <string name="system_module_share_title">Zairenkai モジュール ZIP を共有</string>
     <string name="system_module_confirm_title">Zairenkai モジュールをインストールしますか？</string>
     <string name="system_module_confirm_message">同梱モジュールを現在の root 管理アプリに渡します。既存の Zairenkai モジュールが置き換えまたは更新される場合があり、変更の適用には再起動が必要です。</string>
+    <string name="system_module_kmi_prompt">対象カーネルの KMI を選択</string>
+    <string name="system_module_kmi_warning">使用するファームウェア／カーネルと一致することを確認した KMI ブランチを選んでください。Linux バージョンだけで選ばず、不明な場合は一致する boot image または vendor モジュールで確認してください。</string>
     <string name="system_module_confirm_install">モジュールをインストール</string>
     <string name="system_module_confirm_cancel">キャンセル</string>
     <string name="system_token_install_button">API トークンをインストール（.zkl）</string>

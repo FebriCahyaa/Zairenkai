@@ -11,13 +11,17 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
+import com.zairenkai.app.data.SUPPORTED_KERNEL_KMIS
 import com.zairenkai.app.data.ModuleInstallCode
+import androidx.compose.foundation.clickable
 import com.zairenkai.app.ui.components.CollapsingScaffold
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,6 +48,7 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
     // Capture the current translated value here, not via Context.getString in a callback.
     val moduleShareTitle = stringResource(R.string.system_module_share_title)
     var confirmModuleInstall by remember { mutableStateOf(false) }
+    var selectedModuleKmi by rememberSaveable { mutableStateOf<String?>(null) }
     val tokenPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.installToken(uri)
     }
@@ -92,7 +97,10 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
                 )
                 Spacer(Modifier.height(10.dp))
                 Button(
-                    onClick = { confirmModuleInstall = true },
+                    onClick = {
+                        selectedModuleKmi = null
+                        confirmModuleInstall = true
+                    },
                     enabled = !ui.moduleInstalling && sig != SignatureState.MODIFIED,
                 ) {
                     if (ui.moduleInstalling) {
@@ -314,12 +322,56 @@ fun SystemScreen(factory: VmFactory, onOpenRuntime: () -> Unit = {}, onOpenAbout
         AlertDialog(
             onDismissRequest = { confirmModuleInstall = false },
             title = { Text(stringResource(R.string.system_module_confirm_title)) },
-            text = { Text(stringResource(R.string.system_module_confirm_message)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.system_module_confirm_message))
+                    Text(
+                        stringResource(R.string.system_module_kmi_prompt),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        stringResource(R.string.system_module_kmi_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Column(
+                        Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        SUPPORTED_KERNEL_KMIS.forEach { option ->
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .clickable { selectedModuleKmi = option.id }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(
+                                    selected = selectedModuleKmi == option.id,
+                                    onClick = { selectedModuleKmi = option.id },
+                                )
+                                Column(Modifier.padding(start = 4.dp)) {
+                                    Text(option.label, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        option.id,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmModuleInstall = false
-                    vm.installEmbeddedModule()
-                }) { Text(stringResource(R.string.system_module_confirm_install)) }
+                TextButton(
+                    enabled = selectedModuleKmi != null,
+                    onClick = {
+                        selectedModuleKmi?.let { targetKmi ->
+                            confirmModuleInstall = false
+                            vm.installEmbeddedModule(targetKmi)
+                        }
+                    },
+                ) { Text(stringResource(R.string.system_module_confirm_install)) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmModuleInstall = false }) {

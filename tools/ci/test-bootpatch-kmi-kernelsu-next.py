@@ -75,6 +75,13 @@ def main() -> int:
     check("never flashes a" in rust and "block device" in rust,
           "file patching remains non-destructive and does not silently flash a partition")
 
+    catalog = (ROOT / "app/src/main/java/com/zairenkai/app/data/KernelKmiCatalog.kt").read_text(encoding="utf-8")
+    catalog_kmis = re.findall(r'KernelKmiTarget\("(android\d+-\d+\.\d+)"', catalog)
+    check(catalog_kmis == EXPECTED_KMIS, "both Android KMI UI flows share the canonical KMI matrix")
+    installer_app = (ROOT / "app/src/main/java/com/zairenkai/app/data/EmbeddedModuleInstaller.kt").read_text(encoding="utf-8")
+    check("target-kmi.pending" in installer_app and "ZAIRENKAI_TARGET_KMI" in installer_app,
+          "app passes the selected KMI through both root-manager environment and protected handoff file")
+
     repository = (ROOT / "app/src/main/java/com/zairenkai/app/data/boot/BootPatchRepository.kt").read_text(encoding="utf-8")
     sheet = (ROOT / "app/src/main/java/com/zairenkai/app/ui/home/ZairenkaiBootPatchSheet.kt").read_text(encoding="utf-8")
     check("--kmi-reference-module" in repository and "DETECTED_KMI_SOURCE=" in repository,
@@ -83,9 +90,20 @@ def main() -> int:
     installer = (ROOT / "module/customize.sh").read_text(encoding="utf-8")
     check("refusing speculative same-family module loads" in service and "refusing cross-KMI fallback" in service,
           "runtime service refuses speculative same-family module loads when KMI is unknown")
-    check("refusing to guess between same-family modules" in installer and 'module_kmi "$PRIMARY"' in installer,
-          "installer requires exact KMI metadata instead of selecting a same-family module")
-    check("kmiReferenceModulePicker" in sheet and "patch_flow_pick_kmi_reference_module" in sheet,
+    check("target-kmi.pending" in installer and "DETECTED_VENDOR_KMIS" in installer and "conflicts with vendor module KMI" in installer and 'module_kmi "$PRIMARY"' in installer,
+          "installer consumes the app KMI handoff or safely detects a unique vendor-module KMI")
+    installer_case = installer.split('case "$REQUESTED_KMI" in', 1)[1].split('*) abort', 1)[0]
+    installer_kmis = re.findall(r"android\d+-\d+\.\d+", installer_case)
+    check(installer_kmis == EXPECTED_KMIS, "module installer accepts exactly the canonical KMI matrix")
+    service_case = service.split('case "$STORED_KMI" in', 1)[1].split('*)', 1)[0]
+    service_kmis = re.findall(r"android\d+-\d+\.\d+", service_case)
+    check(service_kmis == EXPECTED_KMIS, "boot service validates exactly the canonical KMI matrix")
+    app_case = installer_app.split("case \"${'$'}TARGET_KMI\" in", 1)[1].split('*) echo', 1)[0]
+    app_kmis = re.findall(r"android\d+-\d+\.\d+", app_case)
+    check(app_kmis == EXPECTED_KMIS, "root-manager handoff validates exactly the canonical KMI matrix")
+    check("target-kmi" in service and "refusing cross-KMI fallback" in service,
+          "boot service persists and revalidates the selected KMI rather than selecting a same-family module")
+    check("SUPPORTED_KERNEL_KMIS" in sheet and "kmiReferenceModulePicker" in sheet and "patch_flow_pick_kmi_reference_module" in sheet,
           "boot patch UI exposes vendor module fallback instead of requiring privileged /proc reads")
     check("BootPatchRepository.patch(" in sheet and "kmiReferenceModuleUri" in sheet,
           "selected KMI reference is forwarded into the actual image patch request")

@@ -14,6 +14,7 @@ verify_payload_manifest() {
   actual_count="$(find "$MODDIR" -type f \
     ! -path "$MODDIR/SHA256SUMS" \
     ! -path "$MODDIR/zkfc/zkfc.ko" \
+    ! -path "$MODDIR/zkfc/target-kmi" \
     ! -path "$MODDIR/disable" ! -path "$MODDIR/remove" \
     ! -path "$MODDIR/update" ! -path "$MODDIR/auto_mount" \
     ! -path "$MODDIR/skip_mount" ! -path "$MODDIR/.core" \
@@ -41,6 +42,32 @@ KERNEL_FAMILY="$(echo "$KREL" | cut -d- -f1 | awk -F. 'NF >= 2 && $1 ~ /^[0-9]+$
 ANDROID_BRANCH="$(echo "$KREL" | grep -oE 'android[0-9]+' | head -1)"
 KMI=""
 if [ -n "$ANDROID_BRANCH" ] && [ -n "$KERNEL_FAMILY" ]; then KMI="$ANDROID_BRANCH-$KERNEL_FAMILY"; fi
+# customize.sh records the explicitly selected KMI when uname lacks the branch
+# marker. Validate the record against the allowlist and Linux family before use.
+TARGET_KMI_FILE="$MODDIR/zkfc/target-kmi"
+if [ -f "$TARGET_KMI_FILE" ]; then
+  STORED_KMI=""
+  IFS= read -r STORED_KMI < "$TARGET_KMI_FILE" || true
+  case "$STORED_KMI" in
+    android12-5.10|android13-5.10|android13-5.15|android14-5.15|android14-6.1|android15-6.6|android16-6.12|android17-6.18)
+      STORED_KMI_FAMILY="${STORED_KMI#*-}"
+      if [ "$STORED_KMI_FAMILY" != "$KERNEL_FAMILY" ]; then
+        log -t zairenkai "stored target KMI $STORED_KMI conflicts with running Linux family ${KERNEL_FAMILY:-unknown}"
+        KMI=""
+      elif [ -n "$KMI" ] && [ "$KMI" != "$STORED_KMI" ]; then
+        log -t zairenkai "stored target KMI $STORED_KMI conflicts with kernel-banner KMI $KMI"
+        KMI=""
+      else
+        KMI="$STORED_KMI"
+        log -t zairenkai "using installer-validated target KMI $KMI"
+      fi
+      ;;
+    *)
+      log -t zairenkai "invalid target KMI marker; refusing to load ZKFC"
+      KMI=""
+      ;;
+  esac
+fi
 ARCH64="$(getprop ro.product.cpu.abi)"
 case "$ARCH64" in
   arm64-v8a|arm64*) USER_ABI="arm64-v8a"; ABIDIR="arm64" ;;

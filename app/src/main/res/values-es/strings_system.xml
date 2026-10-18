@@ -144,6 +144,8 @@
     <string name="system_module_share_title">Compartir ZIP del módulo Zairenkai</string>
     <string name="system_module_confirm_title">¿Instalar el módulo Zairenkai?</string>
     <string name="system_module_confirm_message">Se enviará el módulo incluido al gestor root activo. Puede reemplazar o actualizar el módulo Zairenkai existente y requiere reiniciar para aplicar los cambios.</string>
+    <string name="system_module_kmi_prompt">Selecciona el KMI del kernel de destino</string>
+    <string name="system_module_kmi_warning">Elige la rama KMI verificada para el firmware/kernel exacto que usarás. No la elijas solo por la versión de Linux; si tienes dudas, verifícala con una imagen de arranque o un módulo del proveedor coincidente.</string>
     <string name="system_module_confirm_install">Instalar módulo</string>
     <string name="system_module_confirm_cancel">Cancelar</string>
     <string name="system_token_install_button">Instalar token API (.zkl)</string>
