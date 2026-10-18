@@ -242,7 +242,9 @@ fn run() -> Result<()> {
             allow_unverified_kmi || trusted_bundled_module,
             "zkfc.ko vermagic omits androidNN. Use the APK-bundled KMI-specific module or explicitly confirm manual KMI selection after checking the firmware branch.",
         );
-        println!("! ZKFC module vermagic omits androidNN; continuing only because the module is bundled for this KMI or manual selection was explicitly enabled.");
+        println!(
+            "! ZKFC module vermagic omits androidNN; continuing only because the module is bundled for this KMI or manual selection was explicitly enabled."
+        );
     }
 
     let boot_image =
@@ -1301,23 +1303,12 @@ mod tests {
         );
         assert!(resolve_kmi_source(&identity, "android13-5.15", None, true).is_err());
         assert_eq!(
-            resolve_kmi_source(
-                &identity,
-                "android13-5.10",
-                Some("android13-5.10"),
-                false,
-            )
-            .unwrap(),
+            resolve_kmi_source(&identity, "android13-5.10", Some("android13-5.10"), false,)
+                .unwrap(),
             "vendor-module-vermagic"
         );
         assert!(
-            resolve_kmi_source(
-                &identity,
-                "android13-5.10",
-                Some("android12-5.10"),
-                true,
-            )
-            .is_err()
+            resolve_kmi_source(&identity, "android13-5.10", Some("android12-5.10"), true,).is_err()
         );
     }
 
