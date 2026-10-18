@@ -21,7 +21,8 @@ const MODULE_ENTRY: &str = "zkfc.ko";
 const INIT_ENTRY: &str = "init";
 const INIT_RC_ENTRY: &str = "init.rc";
 const INIT_RC_BACKUP_ENTRY: &str = "init.zairenkai.original.rc";
-const INIT_RC_MARKER: &str = "# Zairenkai ZKFC loader at post-fs-data; Android PID 1 remains untouched.";
+const INIT_RC_MARKER: &str =
+    "# Zairenkai ZKFC loader at post-fs-data; Android PID 1 remains untouched.";
 const ORIGINAL_INIT_ENTRY: &str = "init.real"; // legacy patch marker; never overwrite an older patched image
 const SUPPORTED_KMIS: &[&str] = &[
     "android12-5.10",
@@ -853,10 +854,7 @@ fn inject_runtime_payloads(
         updated_rc.push(b'\n');
     }
     updated_rc.extend_from_slice(
-        format!(
-            "\n{INIT_RC_MARKER}\non post-fs-data\n    insmod /{MODULE_ENTRY}\n"
-        )
-        .as_bytes(),
+        format!("\n{INIT_RC_MARKER}\non post-fs-data\n    insmod /{MODULE_ENTRY}\n").as_bytes(),
     );
     cpio.mv(INIT_RC_ENTRY, INIT_RC_BACKUP_ENTRY)
         .context("could not preserve the original init.rc")?;
@@ -866,7 +864,9 @@ fn inject_runtime_payloads(
     )
     .context("could not install the post-fs-data Zairenkai init trigger")?;
 
-    println!("- Kept Android /init unchanged; init loads ZKFC at post-fs-data, before boot completion.");
+    println!(
+        "- Kept Android /init unchanged; init loads ZKFC at post-fs-data, before boot completion."
+    );
     println!("- Adding ZKFC LKM");
     cpio.add(
         MODULE_ENTRY,
@@ -1005,9 +1005,8 @@ fn verify_output(
         .ok_or_else(|| anyhow!("patched image contains no readable init.rc"))?;
     let patched_init_rc =
         std::str::from_utf8(patched_init_rc).context("patched init.rc is not valid UTF-8")?;
-    let expected_init_trigger = format!(
-        "{INIT_RC_MARKER}\non post-fs-data\n    insmod /{MODULE_ENTRY}"
-    );
+    let expected_init_trigger =
+        format!("{INIT_RC_MARKER}\non post-fs-data\n    insmod /{MODULE_ENTRY}");
     ensure!(
         patched_init_rc.contains(&expected_init_trigger),
         "patched init.rc does not contain the exact post-fs-data ZKFC module-load action"
