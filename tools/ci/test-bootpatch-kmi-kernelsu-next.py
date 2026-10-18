@@ -81,6 +81,10 @@ def main() -> int:
     installer_app = (ROOT / "app/src/main/java/com/zairenkai/app/data/EmbeddedModuleInstaller.kt").read_text(encoding="utf-8")
     check("target-kmi.pending" in installer_app and "ZAIRENKAI_TARGET_KMI" in installer_app,
           "app passes the selected KMI through both root-manager environment and protected handoff file")
+    check('KSU_NEXT_PACKAGE = "com.rifsxd.ksunext"' in installer_app and 'KSU_NEXT_CLI_NAME = "libksud.so"' in installer_app,
+          "module installer discovers the version-matched KernelSU-Next Manager CLI")
+    check("KernelSU-Next-Manager-libksud" in installer_app and "module-install.log" in installer_app and 'tail -n 160' in installer_app,
+          "module install captures the root manager's real error tail in a protected diagnostic log")
 
     repository = (ROOT / "app/src/main/java/com/zairenkai/app/data/boot/BootPatchRepository.kt").read_text(encoding="utf-8")
     sheet = (ROOT / "app/src/main/java/com/zairenkai/app/ui/home/ZairenkaiBootPatchSheet.kt").read_text(encoding="utf-8")
@@ -92,6 +96,8 @@ def main() -> int:
           "runtime service refuses speculative same-family module loads when KMI is unknown")
     check("target-kmi.pending" in installer and "DETECTED_VENDOR_KMIS" in installer and "conflicts with vendor module KMI" in installer and 'module_kmi "$PRIMARY"' in installer,
           "installer consumes the app KMI handoff or safely detects a unique vendor-module KMI")
+    check('grep -Fxq "$REQUESTED_KMI"' in installer and "Explicit KMI matches an installed vendor-module vermagic" in installer,
+          "installer permits an explicit KMI only when it exactly matches one of several vendor-module candidates")
     installer_case = installer.split('case "$REQUESTED_KMI" in', 1)[1].split('*) abort', 1)[0]
     installer_kmis = re.findall(r"android\d+-\d+\.\d+", installer_case)
     check(installer_kmis == EXPECTED_KMIS, "module installer accepts exactly the canonical KMI matrix")

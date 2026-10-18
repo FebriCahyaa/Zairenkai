@@ -9,6 +9,8 @@
 package com.zairenkai.app.data
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import com.zairenkai.app.BuildConfig
 import java.io.BufferedOutputStream
 import java.io.File
@@ -219,6 +221,10 @@ class EmbeddedModuleInstaller(private val context: Context) {
         }
 
         val destination = "/data/adb/.zairenkai/module-${actual.take(16)}.zip"
+        // KernelSU-Next Manager invokes the libksud shipped with its own APK.
+        // Prefer that version-matched CLI; a standalone /data/adb/ksu/bin/ksud
+        // may be missing or out of sync with the currently installed manager.
+        val ksuNextCli = kernelSuNextManagerCli().orEmpty()
         val command = """
             set +e
             SRC=${shellQuote(archive.absolutePath)}
@@ -226,7 +232,10 @@ class EmbeddedModuleInstaller(private val context: Context) {
             EXPECTED=${shellQuote(expected)}
             TARGET_KMI=${shellQuote(targetKmi)}
             PENDING_KMI=/data/adb/.zairenkai/target-kmi.pending
-            cleanup() { rm -f "${'$'}PENDING_KMI" "${'$'}DST"; }
+            INSTALL_LOG=/data/adb/.zairenkai/module-install.log
+            RAW_LOG=/data/adb/.zairenkai/module-install.log.raw
+            KSU_NEXT_CLI=${shellQuote(ksuNextCli)}
+            cleanup() { rm -f "${'$'}PENDING_KMI" "${'$'}DST" "${'$'}RAW_LOG"; }
             trap cleanup EXIT
             case "${'$'}TARGET_KMI" in
               android12-5.10|android13-5.10|android13-5.15|android14-5.15|android14-6.1|android15-6.6|android16-6.12|android17-6.18) ;;
@@ -234,6 +243,7 @@ class EmbeddedModuleInstaller(private val context: Context) {
             esac
             mkdir -p /data/adb/.zairenkai || exit 70
             chmod 0700 /data/adb/.zairenkai || exit 70
+            rm -f "${'$'}INSTALL_LOG" "${'$'}RAW_LOG"
             cp -f "${'$'}SRC" "${'$'}DST" || exit 71
             chmod 0600 "${'$'}DST" || { rm -f "${'$'}DST"; exit 72; }
             if command -v sha256sum >/dev/null 2>&1; then
@@ -250,29 +260,71 @@ class EmbeddedModuleInstaller(private val context: Context) {
             printf '%s\n' "${'$'}TARGET_KMI" > "${'$'}PENDING_KMI" || { echo TARGET_KMI_HANDOFF_WRITE_FAILED; exit 76; }
             chmod 0600 "${'$'}PENDING_KMI" || { echo TARGET_KMI_HANDOFF_PERMISSION_FAILED; exit 76; }
             echo "ZAIRENKAI_TARGET_KMI=${'$'}TARGET_KMI"
-            if [ -x /data/adb/ksu/bin/ksud ]; then
-              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" /data/adb/ksu/bin/ksud module install "${'$'}DST"
+            : > "${'$'}RAW_LOG" || { echo INSTALL_LOG_CREATE_FAILED; exit 77; }
+            chmod 0600 "${'$'}RAW_LOG" || { echo INSTALL_LOG_PERMISSION_FAILED; exit 77; }
+            BACKEND=unknown
+            if [ -n "${'$'}KSU_NEXT_CLI" ] && [ -x "${'$'}KSU_NEXT_CLI" ]; then
+              BACKEND=KernelSU-Next-Manager-libksud
+              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" "${'$'}KSU_NEXT_CLI" module install "${'$'}DST" >"${'$'}RAW_LOG" 2>&1
+              RC=${'$'}?
+            elif [ -x /data/adb/ksu/bin/ksud ]; then
+              BACKEND=ksud
+              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" /data/adb/ksu/bin/ksud module install "${'$'}DST" >"${'$'}RAW_LOG" 2>&1
               RC=${'$'}?
             elif command -v ksud >/dev/null 2>&1; then
-              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" ksud module install "${'$'}DST"
+              BACKEND=ksud-PATH
+              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" ksud module install "${'$'}DST" >"${'$'}RAW_LOG" 2>&1
               RC=${'$'}?
             elif command -v magisk >/dev/null 2>&1; then
-              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" magisk --install-module "${'$'}DST"
+              BACKEND=Magisk
+              ZAIRENKAI_TARGET_KMI="${'$'}TARGET_KMI" magisk --install-module "${'$'}DST" >"${'$'}RAW_LOG" 2>&1
               RC=${'$'}?
             else
-              echo NO_SUPPORTED_ROOT_MODULE_INSTALLER
+              echo NO_SUPPORTED_ROOT_MODULE_INSTALLER >>"${'$'}RAW_LOG"
               RC=86
+            fi
+            # Keep only the tail of the root manager's real installer output. The
+            # root shell executor caps pipe output, so printing unzip progress first
+            # could otherwise hide the actual customize.sh failure reason.
+            tail -n 160 "${'$'}RAW_LOG" > "${'$'}INSTALL_LOG" 2>/dev/null || cp -f "${'$'}RAW_LOG" "${'$'}INSTALL_LOG"
+            chmod 0600 "${'$'}INSTALL_LOG" 2>/dev/null || true
+            echo "ZAIRENKAI_INSTALL_BACKEND=${'$'}BACKEND"
+            echo "ZAIRENKAI_INSTALL_EXIT=${'$'}RC"
+            if [ -s "${'$'}INSTALL_LOG" ]; then
+              cat "${'$'}INSTALL_LOG"
+            else
+              echo INSTALLER_RETURNED_NO_OUTPUT
             fi
             rm -f "${'$'}DST"
             exit "${'$'}RC"
         """.trimIndent()
         val result = RootShell.run(command, 120_000)
-        val details = (result.stdout + "\n" + result.stderr).trim().takeLast(2400)
+        val details = (result.stdout + "\n" + result.stderr).trim().takeLast(6000)
         when {
             result.ok -> ModuleInstallOutcome(ModuleInstallCode.INSTALLED, details, shareableZip = false)
             result.exitCode == 86 -> ModuleInstallOutcome(ModuleInstallCode.MANAGER_UNAVAILABLE, details, shareableZip = true)
             else -> ModuleInstallOutcome(ModuleInstallCode.ROOT_INSTALL_FAILED, "exit=${result.exitCode}: $details", shareableZip = true)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun kernelSuNextManagerCli(): String? = try {
+        val packageManager = context.packageManager
+        val managerInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getApplicationInfo(
+                KSU_NEXT_PACKAGE,
+                PackageManager.ApplicationInfoFlags.of(0L),
+            )
+        } else {
+            packageManager.getApplicationInfo(KSU_NEXT_PACKAGE, 0)
+        }
+        File(managerInfo.nativeLibraryDir, KSU_NEXT_CLI_NAME)
+            .takeIf { it.isFile }
+            ?.absolutePath
+    } catch (_: PackageManager.NameNotFoundException) {
+        null
+    } catch (_: SecurityException) {
+        null
     }
 
     private fun sha256(file: File): String = file.inputStream().buffered().use { input ->
@@ -298,5 +350,7 @@ class EmbeddedModuleInstaller(private val context: Context) {
     private companion object {
         const val ASSET_PATH = "embedded/Zairenkai-module.zip"
         const val MAX_ARCHIVE_BYTES = 128L * 1024 * 1024
+        const val KSU_NEXT_PACKAGE = "com.rifsxd.ksunext"
+        const val KSU_NEXT_CLI_NAME = "libksud.so"
     }
 }

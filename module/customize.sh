@@ -108,8 +108,16 @@ if [ -z "$KMI" ]; then
   )"
   DETECTED_COUNT="$(printf '%s\n' "$DETECTED_VENDOR_KMIS" | awk 'NF { n++ } END { print n + 0 }')"
   if [ "$DETECTED_COUNT" -gt 1 ]; then
-    ui_print "! Vendor modules expose conflicting KMI branches: $DETECTED_VENDOR_KMIS"
-    abort "  verify the correct KMI against this firmware; refusing an ambiguous selection"
+    ui_print "! Vendor modules expose multiple KMI branches: $DETECTED_VENDOR_KMIS"
+    if [ -n "$REQUESTED_KMI" ]; then
+      if printf '%s\n' "$DETECTED_VENDOR_KMIS" | grep -Fxq "$REQUESTED_KMI"; then
+        ui_print "- Explicit KMI matches an installed vendor-module vermagic; continuing with exact payload checks."
+      else
+        abort "  selected KMI $REQUESTED_KMI is not present in installed vendor-module vermagic candidates"
+      fi
+    else
+      abort "  choose an explicit KMI matching this firmware; refusing an ambiguous automatic selection"
+    fi
   elif [ "$DETECTED_COUNT" -eq 1 ]; then
     if [ -n "$REQUESTED_KMI" ] && [ "$REQUESTED_KMI" != "$DETECTED_VENDOR_KMIS" ]; then
       abort "  selected KMI $REQUESTED_KMI conflicts with vendor module KMI $DETECTED_VENDOR_KMIS"

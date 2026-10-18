@@ -145,7 +145,7 @@ class SystemViewModel(private val c: AppContainer) : ViewModel() {
         _ui.value = _ui.value.copy(
             moduleInstalling = false,
             moduleInstallCode = outcome.code,
-            moduleInstallDetail = outcome.detail.takeLast(1200).ifBlank { null },
+            moduleInstallDetail = outcome.detail.takeLast(6000).ifBlank { null },
             moduleZipReady = outcome.shareableZip && moduleInstaller.cachedZip().isFile,
         )
     }

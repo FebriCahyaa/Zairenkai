@@ -17,6 +17,9 @@
 
     <!-- The FPS recorder lets the user pick installed games/apps by their launcher entry. -->
     <queries>
+        <!-- Match KernelSU-Next Manager's own package so module installs use
+             the same version-matched libksud.so entry point as its UI. -->
+        <package android:name="com.rifsxd.ksunext" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
